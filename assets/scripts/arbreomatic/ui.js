@@ -343,6 +343,12 @@ $("#zoom-reset").click(function() {
     return false;
 });
 
+$("#zoom-expand").click(function() {
+    let preview_block = document.querySelector('#preview')
+    if (document.fullscreenElement) document.exitFullscreen(); else preview_block.requestFullscreen();
+    return false;
+});
+
 const zoomButtons = $(".button-zoom");
 
 zoomButtons.mousedown(function() {
