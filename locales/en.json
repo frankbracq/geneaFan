@@ -74,6 +74,7 @@
     "zoom_in": "Zoom in",
     "zoom_out": "Zoom out",
     "zoom_reset": "Center",
+    "full_screen_toggle":"Full Screen",
     "use_mouse": "Use the mouse to browse the preview",
     "informations": "Informations",
     "generation_count": "Generation count:",

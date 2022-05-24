@@ -136,6 +136,38 @@ function resetZoom() {
     }
 }
 
+function fullscreen(){
+    // if already full screen; exit
+    // else go fullscreen
+    if (
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement
+    ) {
+        if (document.exitFullscreen) {
+        document.exitFullscreen();
+        } else if (document.mozCancelFullScreen) {
+        document.mozCancelFullScreen();
+        } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+        document.msExitFullscreen();
+        }
+    } else {
+        element = $('#preview').get(0);
+        if (element.requestFullscreen) {
+        element.requestFullscreen();
+        } else if (element.mozRequestFullScreen) {
+        element.mozRequestFullScreen();
+        } else if (element.webkitRequestFullscreen) {
+        element.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+        } else if (element.msRequestFullscreen) {
+        element.msRequestFullscreen();
+        }
+    }
+}
+
 const COLORING_NONE = 'none',
     COLORING_DUAL = 'dual',
     COLORING_GRADIENT = 'gradient',
@@ -340,6 +372,11 @@ $("#zoom-minus").click(function() {
 
 $("#zoom-reset").click(function() {
     resetZoom();
+    return false;
+});
+
+$("#full-screen-toggle").click(function() {
+    fullscreen();
     return false;
 });
 
@@ -632,6 +669,20 @@ $(document).ready(function() {
         $('body').css('overflow', 'auto'); // Enable scrolling
     }
 });
+
+//reset zoom level when the document goes into fullscreen
+document.addEventListener("fullscreenchange", function () {
+    resetZoom();
+}, false);
+document.addEventListener("mozfullscreenchange", function () {
+    resetZoom();
+}, false);
+document.addEventListener("webkitfullscreenchange", function () {
+    resetZoom();
+}, false);
+document.addEventListener("msfullscreenchange", function () {
+   resetZoom();
+}, false);
 
 // TODO remove (debug)
 //loadExternal('test.ged');

@@ -75,6 +75,7 @@
         "zoom_in": "Agrandir",
         "zoom_out": "Rétrécir",
         "zoom_reset": "Recentrer",
+        "full_screen_toggle":"Plein Écran",
         "use_mouse": "Utilisez la souris pour déplacer ou agrandir l'aperçu",
         "informations": "Informations",
         "generation_count": "Nombre de générations&#8239;:",
