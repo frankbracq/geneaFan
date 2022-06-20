@@ -209,7 +209,8 @@
                 <button type="button" class="btn btn-light button-zoom" id="zoom-minus" title="${__('arbreomatic.zoom_out')}">
                             <i class="fas fa-minus" aria-hidden="true"></i>
                         </button>
-                <span id="tip"><i class="fas fa-arrows-alt" aria-hidden="true"></i> <em><%=__('arbreomatic.use_mouse')%></em></span>
+                <!-- <span id="tip"><i class="fas fa-arrows-alt" aria-hidden="true"></i> <em><%=__('arbreomatic.use_mouse')%></em></span> -->
+                <span id="tip"><em><%=__('arbreomatic.use_mouse')%></em></span>
             </div>
         </div>
     </div>
@@ -253,8 +254,8 @@
                     <div class="input-group col-6">
                         <select class="form-control parameter" id="select-places" disabled>
                                         <option value="0"><%=__('arbreomatic.places_format_list.full')%></option>
-                                        <option value="1" selected><%=__('arbreomatic.places_format_list.city_only')%></option>
-                                        <option value="2"><%=__('arbreomatic.places_format_list.nothing')%></option>
+                                        <option value="1"><%=__('arbreomatic.places_format_list.city_only')%></option>
+                                        <option value="2" selected><%=__('arbreomatic.places_format_list.nothing')%></option>
                                     </select>
                     </div>
                 </div>
@@ -336,7 +337,7 @@
                 <div class="form-group row mt-2 mb-2">
                     <label for="fan-angle" class="col-form-label col-8"><%=__('arbreomatic.fan_angle')%></label>
                     <div class="input-group col-4">
-                        <input class="form-control parameter" type="number" id="fan-angle" min="180" max="360" value="270" aria-describedby="inputGroupPrepend" disabled>
+                        <input class="form-control parameter" type="number" id="fan-angle" min="180" max="360" value="360" aria-describedby="inputGroupPrepend" disabled>
                         <div class="invalid-feedback">
                             <%=__('arbreomatic.choose_an_angle')%>
                         </div>
@@ -376,7 +377,7 @@
                 <div class="form-group row mb-3">
                     <label for="title" class="col-form-label col-6"><%=__('arbreomatic.primary_title')%></label>
                     <div class="input-group col-6">
-                        <input class="form-control parameter" type="text" id="title" value="Commandez cet éventail sur genealogi.es" placeholder="${__('common.none')}" disabled>
+                        <input class="form-control parameter" type="text" id="title" value="Commandez cet éventail sur genealog.ie" placeholder="${__('common.none')}" disabled>
                     </div>
                 </div>
 
@@ -449,7 +450,7 @@
                 <div class="form-group row mb-3">
                     <label for="size-pixels" class="col-form-label col-8"><%=__('arbreomatic.width_pixels')%></label>
                     <div class="input-group col-4">
-                        <input class="form-control parameter" type="number" id="size-pixels" min="200" max="6000" value="3000" aria-describedby="size-pixels-prepend" disabled>
+                        <input class="form-control parameter" type="number" id="size-pixels" min="200" max="6000" value="907" aria-describedby="size-pixels-prepend" disabled>
                         <div class="input-group-append">
                             <span class="input-group-text" id="size-pixels-prepend">px</span>
                         </div>
