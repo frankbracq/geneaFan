@@ -3,12 +3,38 @@ const parseGedcom = require('parse-gedcom');
 const Utils = require('./utils');
 
 const EMPTY = "";
-const TAG_HEAD = "HEAD", TAG_ENCODING = "CHAR", TAG_FORMAT = "FORM", TAG_INDIVIDUAL = "INDI", TAG_FAMILY = "FAM", TAG_CHILD = "CHIL", TAG_HUSBAND = "HUSB", TAG_WIFE = "WIFE",
-    TAG_NAME = "NAME", TAG_GIVEN_NAME = "GIVN", TAG_SURNAME = "SURN", TAG_SURNAME_PREFIX = "SPFX", TAG_BIRTH = "BIRT", TAG_BAPTISM = "CHR", TAG_DEATH = "DEAT", TAG_BURIAL = "BURI", TAG_SEX = "SEX",
-    TAG_DATE = "DATE", TAG_PLACE = "PLAC", TAG_MARRIAGE = "MARR", TAG_SIGNATURE = "SIGN", TAG_EVENT = "EVEN", TAG_TYPE = "TYPE", TAG_NOTE = "NOTE", TAG_OCCUPATION = "OCCU";
-const TAG_YES = "YES", TAG_ANSI = "ANSI";
-const TAG_ABOUT = 'ABT', TAG_BEFORE = 'BEF', TAG_AFTER = 'AFT';
-const TAG_GREGORIAN = '@#DGREGORIAN@', TAG_REPUBLICAN = '@#DFRENCH R@';
+const TAG_HEAD = "HEAD",
+    TAG_ENCODING = "CHAR",
+    TAG_FORMAT = "FORM",
+    TAG_INDIVIDUAL = "INDI",
+    TAG_FAMILY = "FAM",
+    TAG_CHILD = "CHIL",
+    TAG_HUSBAND = "HUSB",
+    TAG_WIFE = "WIFE",
+    TAG_NAME = "NAME",
+    TAG_GIVEN_NAME = "GIVN",
+    TAG_SURNAME = "SURN",
+    TAG_SURNAME_PREFIX = "SPFX",
+    TAG_BIRTH = "BIRT",
+    TAG_BAPTISM = "CHR",
+    TAG_DEATH = "DEAT",
+    TAG_BURIAL = "BURI",
+    TAG_SEX = "SEX",
+    TAG_DATE = "DATE",
+    TAG_PLACE = "PLAC",
+    TAG_MARRIAGE = "MARR",
+    TAG_SIGNATURE = "SIGN",
+    TAG_EVENT = "EVEN",
+    TAG_TYPE = "TYPE",
+    TAG_NOTE = "NOTE",
+    TAG_OCCUPATION = "OCCU";
+const TAG_YES = "YES",
+    TAG_ANSI = "ANSI";
+const TAG_ABOUT = 'ABT',
+    TAG_BEFORE = 'BEF',
+    TAG_AFTER = 'AFT';
+const TAG_GREGORIAN = '@#DGREGORIAN@',
+    TAG_REPUBLICAN = '@#DFRENCH R@';
 const TAGS_MONTH = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 const TAGS_MONTH_REPUBLICAN = ['VEND', 'BRUM', 'FRIM', 'NIVO', 'PLUV', 'VENT', 'GERM', 'FLOR', 'PRAI', 'MESS', 'THER', 'FRUC', 'COMP'];
 
@@ -37,9 +63,9 @@ function getFirst(array, def) {
 }
 
 function buildIndividual(json, config) {
-    if(json == null) {
+    if (json == null) {
         const dummyEvent = {};
-        return {id: null, name: '', surname: '', birth: dummyEvent, death: dummyEvent};
+        return { id: null, name: '', surname: '', birth: dummyEvent, death: dummyEvent };
     }
 
     const names = json.tree.filter(byTag(TAG_NAME));
@@ -55,106 +81,113 @@ function buildIndividual(json, config) {
 
     const firstOccupation = getFirst(occupations.concat(occupationsOld), null);
 
-    if(!name || !surname) { // Use NAME instead (compatibility with old software)
+    if (!name || !surname) { // Use NAME instead (compatibility with old software)
         names.map(o => {
             const split = o.data.split('/').map(s => s.trim().replace(/_/, ' '));
-            if(!name)
+            if (!name)
                 name = split[0];
-            if(split.length > 1 && !surname)
+            if (split.length > 1 && !surname)
                 surname = split[1];
         })
     }
 
-    if(surnamePrefix) { // Surname prefix
+    if (surnamePrefix) { // Surname prefix
         surname = surnamePrefix.split(',').map(s => s.trim()).join(' ') + ' ' + surname;
     }
 
-    let birthTags = [TAG_BIRTH], deathTags = [TAG_DEATH];
-    const birthTagsExt = [TAG_BAPTISM], deathTagsExt = [TAG_BURIAL];
+    let birthTags = [TAG_BIRTH],
+        deathTags = [TAG_DEATH];
+    const birthTagsExt = [TAG_BAPTISM],
+        deathTagsExt = [TAG_BURIAL];
 
-    if(config.substituteEvents) {
+    if (config.substituteEvents) {
         birthTags = birthTags.concat(birthTagsExt);
         deathTags = deathTags.concat(deathTagsExt);
     }
 
     function buildEventFallback(tags) {
         let first = null;
-        for(let i = 0; i < tags.length; i++) {
+        for (let i = 0; i < tags.length; i++) {
             const tag = tags[i];
             first = getFirst(json.tree.filter(byTag(tag)), null);
-            if(first !== null) {
+            if (first !== null) {
                 break;
             }
         }
         return buildEvent(first, config);
     }
 
-    const birthData = buildEventFallback(birthTags), deathData = buildEventFallback(deathTags);
+    const birthData = buildEventFallback(birthTags),
+        deathData = buildEventFallback(deathTags);
 
-    return {id: json.pointer, name: name, surname: surname, birth: birthData, death: deathData, sex: sex, canSign: canSign, occupation: firstOccupation};
+    return { id: json.pointer, name: name, surname: surname, birth: birthData, death: deathData, sex: sex, canSign: canSign, occupation: firstOccupation };
 }
 
 function buildEvent(event, config) {
-    if(event == null) {
+    if (event == null) {
         return {};
     }
 
     const date = getFirst(event.tree.filter(byTag(TAG_DATE)).map(o => o.data).map(s => {
         let trimed = s.trim();
         let isRepublican = false;
-        if(trimed.startsWith(TAG_GREGORIAN)) {
+        if (trimed.startsWith(TAG_GREGORIAN)) {
             trimed = trimed.substring(TAG_GREGORIAN.length)
-        } else if(trimed.startsWith(TAG_REPUBLICAN)) {
+        } else if (trimed.startsWith(TAG_REPUBLICAN)) {
             trimed = trimed.substring(TAG_REPUBLICAN.length);
             isRepublican = true;
         }
         let split = trimed.trim().split(/\s+/);
-        const objDef = {display: config.dates.showInvalidDates ? s : EMPTY};
-        if(split.length === 0)
+        const objDef = { display: config.dates.showInvalidDates ? s : EMPTY };
+        if (split.length === 0)
             return objDef;
         let prefix = '';
-        const replacement = {[TAG_ABOUT]: '~', [TAG_BEFORE]: '<', [TAG_AFTER]: '>'};
+        const replacement = {
+            [TAG_ABOUT]: '~',
+            [TAG_BEFORE]: '<',
+            [TAG_AFTER]: '>'
+        };
         let isYearLegit = true;
-        if(replacement[split[0]]) {
-            if(split.length === 1)
+        if (replacement[split[0]]) {
+            if (split.length === 1)
                 return objDef;
             isYearLegit = split[0] === TAG_ABOUT;
             prefix += replacement[split[0]];
             split = split.slice(1, split.length);
         }
 
-        if(split.length > 3)
+        if (split.length > 3)
             return objDef;
         const year = parseInt(split[split.length - 1], 10);
         const yearDisplay = isRepublican ? republicanConversion[year - 1] : year + '';
-        if(split[split.length - 1] !== year + '')
+        if (split[split.length - 1] !== year + '')
             return objDef;
         let obj = {};
-        if(isYearLegit) {
+        if (isYearLegit) {
             const republicanCalendarStart = 1792;
             obj.year = isRepublican ? year + republicanCalendarStart : year;
         }
-        if(split.length === 1) {
+        if (split.length === 1) {
             obj.display = prefix + yearDisplay;
             return obj;
         }
         const month = (isRepublican ? TAGS_MONTH_REPUBLICAN : TAGS_MONTH).indexOf(split[split.length - 2]) + 1;
-        if(month === 0)
+        if (month === 0)
             return objDef;
         let day = 0;
-        if(split.length !== 2) {
+        if (split.length !== 2) {
             day = split[0];
             const date = new Date(year, month - 1, day);
             const isValidDate = (Boolean(+date) && date.getDate() == day) || isRepublican; // Assume correct if republican, for now
-            if(!isValidDate)
+            if (!isValidDate)
                 return objDef;
         }
-        if(config.dates.showYearsOnly) {
+        if (config.dates.showYearsOnly) {
             obj.display = prefix + yearDisplay;
             return obj;
         } else {
             const sep = '/';
-            if(day === 0)
+            if (day === 0)
                 obj.display = Utils.padTwoDigits(month) + sep + yearDisplay;
             else
                 obj.display = Utils.padTwoDigits(day) + sep + Utils.padTwoDigits(month) + sep + yearDisplay;
@@ -166,19 +199,19 @@ function buildEvent(event, config) {
         const obj = {};
         let reduced;
         const split = original.split(/\s*,\s*/);
-        if((config.places.hasSpecialFormat || (split.length === 5 || split.length === 6) && (!split[1] || parseInt(split[1]) + '' === split[1]))
-            && Math.max(...[config.places.townIndex, config.places.departementIndex, config.places.countryIndex]) < split.length) {
-            if(config.places.subdivisionIndex < split.length) // Special case
+        if ((config.places.hasSpecialFormat || (split.length === 5 || split.length === 6) && (!split[1] || parseInt(split[1]) + '' === split[1])) &&
+            Math.max(...[config.places.townIndex, config.places.departementIndex, config.places.countryIndex]) < split.length) {
+            if (config.places.subdivisionIndex < split.length) // Special case
                 obj.subdivision = split[config.places.subdivisionIndex];
             obj.town = split[config.places.townIndex];
             obj.departement = split[config.places.departementIndex];
             obj.country = split[config.places.countryIndex];
             reduced = (obj.subdivision ? obj.subdivision + ', ' : '') + obj.town;
         } else {
-            if(split.length < 3) {
+            if (split.length < 3) {
                 reduced = original;
             } else {
-                if(split.length > 3) {
+                if (split.length > 3) {
                     obj.subdivision = split.slice(0, split.length - 3).map(s => s.trim()).join(', ');
                 }
                 obj.town = split[split.length - 3];
@@ -188,8 +221,8 @@ function buildEvent(event, config) {
             }
         }
 
-        if(config.places.showPlaces) {
-            if(config.places.showReducedPlaces) {
+        if (config.places.showPlaces) {
+            if (config.places.showReducedPlaces) {
                 obj.display = reduced;
             } else {
                 obj.display = original;
@@ -201,12 +234,13 @@ function buildEvent(event, config) {
         return obj;
     }), EMPTY);
 
-    return {date: date, place: place};
+    return { date: date, place: place };
 }
 
 function buildHierarchy(json, config) {
 
-    const individuals = json.filter(byTag(TAG_INDIVIDUAL)), families = json.filter(byTag(TAG_FAMILY));
+    const individuals = json.filter(byTag(TAG_INDIVIDUAL)),
+        families = json.filter(byTag(TAG_FAMILY));
 
     const placeFormatArray = json.filter(byTag(TAG_HEAD)).flatMap(o => o.tree).filter(byTag(TAG_PLACE)).flatMap(o => o.tree).filter(byTag(TAG_FORMAT));
     let hasSpecialPlaceFormat = placeFormatArray.length > 0;
@@ -217,11 +251,17 @@ function buildHierarchy(json, config) {
     config.places.departementIndex = 2;
     config.places.countryIndex = 4;
 
-    if(hasSpecialPlaceFormat) {
+    if (hasSpecialPlaceFormat) {
         const format = placeFormatArray[0].data.trim().split(/\s*,\s*/);
-        const subdivision = "Subdivision", town = "Town", departement = "County", country = "Country";
-        const placeSubdivisionPos = format.indexOf(subdivision), placeTownPos = format.indexOf(town), placeDepartementPos = format.indexOf(departement), placeCountryPos = format.indexOf(country);
-        if(placeSubdivisionPos === -1 || placeTownPos === -1 || placeDepartementPos === -1 || placeCountryPos === -1) // what?
+        const subdivision = "Subdivision",
+            town = "Town",
+            departement = "County",
+            country = "Country";
+        const placeSubdivisionPos = format.indexOf(subdivision),
+            placeTownPos = format.indexOf(town),
+            placeDepartementPos = format.indexOf(departement),
+            placeCountryPos = format.indexOf(country);
+        if (placeSubdivisionPos === -1 || placeTownPos === -1 || placeDepartementPos === -1 || placeCountryPos === -1) // what?
             hasSpecialPlaceFormat = false;
         else {
             config.places.subdivisionIndex = placeSubdivisionPos;
@@ -247,11 +287,11 @@ function buildHierarchy(json, config) {
         let obj = buildIndividual(individual, config);
         obj.sosa = sosa;
         obj.generation = height;
-        if(individual == null) { // Special case: placeholder individuals
+        if (individual == null) { // Special case: placeholder individuals
             obj.sex = sosa % 2 === 0;
         }
 
-        if(config.computeChildrenCount) { // On-demand property
+        if (config.computeChildrenCount) { // On-demand property
             const forTag = obj.sex == null ? null : (obj.sex ? TAG_HUSBAND : TAG_WIFE);
             const familiesAsParent = families.filter(f => f.tree.some(t => t.tag === forTag && individual != null && t.data === individual.pointer)).flatMap(f => f.tree.filter(byTag(TAG_CHILD)));
             obj.childrenCount = individual != null ? familiesAsParent.length : null;
@@ -260,10 +300,10 @@ function buildHierarchy(json, config) {
         if (height < maxHeight) {
             const familyA = individual != null ? families.filter(byChild(individual)) : [];
 
-            if(familyA.length === 0 && config.showMissing) {
+            if (familyA.length === 0 && config.showMissing) {
                 obj.children = [buildRecursive(null, obj, sosa * 2, height + 1), buildRecursive(null, obj, sosa * 2 + 1, height + 1)];
                 obj.marriage = {};
-            } else if(familyA.length > 0) {
+            } else if (familyA.length > 0) {
                 const family = familyA[0];
 
                 function getParent(tag) {
@@ -271,7 +311,8 @@ function buildHierarchy(json, config) {
                     return !config.showMissing || parent.length > 0 ? parent : [null];
                 }
 
-                const husbandA = getParent(TAG_HUSBAND), wifeA = getParent(TAG_WIFE);
+                const husbandA = getParent(TAG_HUSBAND),
+                    wifeA = getParent(TAG_WIFE);
 
                 const parents = (husbandA.map(h => buildRecursive(h, obj, sosa * 2, height + 1)))
                     .concat(wifeA.map(w => buildRecursive(w, obj, sosa * 2 + 1, height + 1)));
@@ -303,13 +344,13 @@ function toJson(data) {
     const isLikelyAnsi = (new RegExp(triggers)).test(text);
     const isAnsi = getFirst(parsed.filter(byTag(TAG_HEAD)).flatMap(a => a.tree.filter(byTag(TAG_ENCODING)).map(a => a.data)), null) === TAG_ANSI;
 
-    if(isLikelyAnsi || isAnsi) { // Conversion and reparsing needed
+    if (isLikelyAnsi || isAnsi) { // Conversion and reparsing needed
         console.log("ANSI detected, converting");
         const extendedAsciiTable = "€?‚ƒ„…†‡ˆ‰Š‹Œ?Ž??‘’“”•–—˜™š›œ?žŸ?¡¢£¤¥¦§¨©ª«¬?®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ"; // Let's hope this doesn't cause issues with IDEs
         const builder = [];
         const mask = 0x80;
 
-        for(let i = 0; i < view.length; i++) {
+        for (let i = 0; i < view.length; i++) {
             const charCode = view[i];
             builder.push((charCode & mask) === 0 ? String.fromCharCode(charCode) : extendedAsciiTable.charAt(charCode ^ mask));
         }
@@ -323,7 +364,7 @@ function toJson(data) {
 
 function getIndividualsList(json) {
     return json.filter(byTag(TAG_INDIVIDUAL)).map(
-        ind => buildIndividual(ind, {dates: {showInvalidDates: false, showYearsOnly: true}, places: {showPlaces: false}})
+        ind => buildIndividual(ind, { dates: { showInvalidDates: false, showYearsOnly: true }, places: { showPlaces: false } })
     );
 }
 
@@ -337,17 +378,24 @@ function Utf8ArrayToStr(array) {
     i = 0;
     while (i < len) {
         c = array[i++];
-        switch (c >> 4)
-        {
-            case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:
-            // 0xxxxxxx
-            out += String.fromCharCode(c);
-            break;
-            case 12: case 13:
-            // 110x xxxx   10xx xxxx
-            char2 = array[i++];
-            out += String.fromCharCode(((c & 0x1F) << 6) | (char2 & 0x3F));
-            break;
+        switch (c >> 4) {
+            case 0:
+            case 1:
+            case 2:
+            case 3:
+            case 4:
+            case 5:
+            case 6:
+            case 7:
+                // 0xxxxxxx
+                out += String.fromCharCode(c);
+                break;
+            case 12:
+            case 13:
+                // 110x xxxx   10xx xxxx
+                char2 = array[i++];
+                out += String.fromCharCode(((c & 0x1F) << 6) | (char2 & 0x3F));
+                break;
             case 14:
                 // 1110 xxxx  10xx xxxx  10xx xxxx
                 char2 = array[i++];
