@@ -4,7 +4,7 @@
   "./js/assets_scripts_geneafan_departementData_js.bundle.js": "dist/./js/assets_scripts_geneafan_departementData_js.bundle.6c2c928d49889985d073.js",
   "./js/assets_scripts_geneafan_countryData_js.bundle.js": "dist/./js/assets_scripts_geneafan_countryData_js.bundle.697e99bee725d0fade9e.js",
   "commons.css": "dist/./css/commons.css",
-  "commons.js": "dist/./js/commons.bundle.6c6d6ee5f54fe645967d.js",
+  "commons.js": "dist/./js/commons.bundle.06bcbdb4583c80dda620.js",
   "bootstrap-icons.woff?": "dist/39795c0b4513de014cf8.woff?dd67030699838ea613ee6dbda90effa6",
   "images/cover_arbreomatic.png": "dist/images/cover_arbreomatic.png",
   "bootstrap-icons.woff2?": "dist/b7bcc075b395c14ce8c2.woff2?dd67030699838ea613ee6dbda90effa6",
@@ -15,7 +15,7 @@
   "images/Boxes_270_8 Generations-Mariages_Optimized.svg": "dist/images/Boxes_270_8 Generations-Mariages_Optimized.svg",
   "images/Fan_270_8GM.svg": "dist/images/Fan_270_8GM.svg",
   "images/Boxes_270_8_Generations_Mariages_Optimized_Rearranged.svg": "dist/images/Boxes_270_8_Generations_Mariages_Optimized_Rearranged.svg",
-  "en/index.html": "dist/en/index.html",
+  "index.html": "dist/index.html",
   "images/apple-icon-180x180.png": "dist/images/apple-icon-180x180.png",
   "images/apple-icon-152x152.png": "dist/images/apple-icon-152x152.png",
   "images/apple-icon-precomposed.png": "dist/images/apple-icon-precomposed.png",
@@ -50,5 +50,5 @@
   "assets_scripts_geneafan_departementData_js.bundle.js.map": "dist/./js/assets_scripts_geneafan_departementData_js.bundle.6c2c928d49889985d073.js.map",
   "assets_scripts_geneafan_countryData_js.bundle.js.map": "dist/./js/assets_scripts_geneafan_countryData_js.bundle.697e99bee725d0fade9e.js.map",
   "commons.css.map": "dist/./css/commons.css.map",
-  "commons.bundle.js.map": "dist/./js/commons.bundle.6c6d6ee5f54fe645967d.js.map"
+  "commons.bundle.js.map": "dist/./js/commons.bundle.06bcbdb4583c80dda620.js.map"
 }

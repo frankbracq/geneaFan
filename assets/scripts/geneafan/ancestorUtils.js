@@ -41,8 +41,6 @@ function traceAncestors(id, ancestorMap) {
 }
 
 // Function to get the oldest ancestor (= root in FamilyTreeJS) of a node using ancestorMap
-import _ from 'lodash';
-
 export function getOldestAncestorOf(individualId, prioritize = "both") {
     console.time('getOldestAncestorOf');
     let ancestorMap = getAncestorMapCache();
