@@ -1,0 +1,376 @@
+:root {
+  --color-dark: #32273b;
+  --color-light: #c8a47e;
+  --bg-color-light: #f1f1f1;
+  --bg-color-dark: #e0e0e0;
+  --map-height: 800px;
+  --offcanvas-bg-color: #e0e0e0;
+  --offcanvas-padding: 20px;
+  --tab1-height: 100vh; // Remplacez par la hauteur réelle de tab1
+  --tab-header-height: 50px;
+  --navdepartementColor: #c8a47e;
+  --navTextColor: rgb(144, 144, 150);
+  --activeColor: #32273b;
+}
+
+html {
+  @media (prefers-reduced-motion: no-preference) {
+    scroll-behavior: smooth;
+  }
+}
+
+html,
+body {
+  background-color: var(--bg-color-light);
+  color: var(--color-light);
+  font-family: 'Montserrat', sans-serif;
+  height: 100vh;
+  margin: 0;
+  min-width: 600px;
+  overflow: hidden;
+  padding: 0;
+}
+
+#overlay {
+  background-color: rgba(255, 255, 255, 0.5);
+  height: 100%;
+  left: 0;
+  position: fixed;
+  top: 0;
+  visibility: visible;
+  width: 100%;
+  z-index: 1;
+
+  &.overlay-hidden {
+    opacity: 0;
+    transition: visibility 0.2s, opacity 0.2s linear;
+    visibility: hidden;
+  }
+}
+
+#loading {
+  left: 50%;
+  position: absolute;
+  text-align: center;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+}
+
+.custom-spinner {
+  width: 3rem;
+  height: 3rem;
+  color: var(--color-dark);
+}
+
+#alert {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+.container,
+.container-fluid {
+  padding-left: var(--bs-gutter-x, .75rem);
+  padding-right: var(--bs-gutter-x, .75rem);
+}
+
+.container {
+  height: 100vh;
+  max-width: 100%;
+}
+
+.tab-content {
+  overflow-y: hidden;
+}
+
+a {
+  text-decoration: none;
+}
+
+header {
+  background-color: var(--bg-color-light);
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.input-file-container {
+  display: inline-block;
+  overflow: hidden;
+  position: relative;
+
+  input[type="file"] {
+    opacity: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+  }
+}
+
+.tooltip-inner {
+  background-color: #000;
+  border-radius: 4px;
+  color: #fff;
+  max-width: 200px;
+  padding: 3px 8px;
+  text-align: center;
+}
+
+svg#logo {
+  overflow: visible;
+}
+
+.offcanvas-body {
+  background-color: var(--color-light);
+  max-width: none !important;
+  overflow: visible;
+  padding: 0 !important;
+}
+
+.offcanvas.offcanvas-top {
+  height: fit-content !important;
+}
+
+.card-body {
+  padding: 0;
+}
+
+.advanced-settings {
+  background-color: var(--bg-color-dark);
+  border-top: 1px solid rgba(0, 0, 0, .125);
+  display: none;
+  padding: 15px;
+}
+
+div.row {
+  margin: 0;
+}
+
+input#file {
+  font-size: calc(10px + 1.8vmin);
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.btn {
+  background-color: var(--color-dark);
+  border-color: var(--color-light);
+  color: var(--color-light);
+
+  &:hover {
+    background-color: var(--color-light);
+    border-color: var(--color-dark);
+    color: var(--color-dark);
+  }
+}
+
+div.file-button {
+  overflow: hidden;
+  position: relative;
+}
+
+.small-button {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Family tree styles
+#familyTree {
+  max-height: 100vh;
+  width: 100%;
+  background-color: var(--bg-color-dark);
+  overflow: hidden;
+  position: relative;
+}
+
+.blurred rect,
+.blurred image,
+.blurred text,
+.blurred use {
+  filter: blur(5px) grayscale(85%);
+}
+
+.selected rect {
+  fill: #FFCA28 !important;
+}
+
+
+#fanDisplay {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+#fanContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-height: 100vh;
+  width: 100%;
+  background-color: var(--bg-color-dark);
+  overflow: hidden;
+  position: relative;
+
+  &:fullscreen #fan {
+    cursor: grab;
+  }
+}
+
+#fan {
+  position: relative;
+  max-height: calc(var(--tab1-height) - var(--tab-header-height) - 20px);
+  /* Maintient la hauteur sous le contrôle tout en permettant de réduire si nécessaire */
+  width: 100%;
+  /* Ajuste la largeur à 100% du conteneur */
+  height: auto;
+  /* Conserve le ratio d'aspect */
+}
+
+.parameter-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+
+  label {
+    font-weight: bold;
+  }
+}
+
+.svg-pan-zoom-control {
+  position: absolute;
+  top: 40px; // Changez cela pour déplacer les contrôles verticalement
+  left: 10px;
+}
+
+.btn-outline-primary {
+  margin-right: 0.5rem;
+}
+
+.form-check-input {
+  margin-left: 0.5rem;
+}
+
+.form-select {
+  background-image: none;
+  border: none;
+}
+
+.form-control {
+  padding: 0 !important;
+}
+
+.card-header {
+  border-bottom: 0;
+  padding: 0.75rem 1.25rem;
+}
+
+#gradient-preview {
+  background-color: white;
+  border: 1px solid #ced4da;
+  border-radius: .25rem;
+  height: 30px;
+  width: 100%;
+}
+
+#tip {
+  bottom: 30px;
+  left: 50%;
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+
+  &.tip-hidden {
+    opacity: 0;
+    transition: visibility 0.2s linear, opacity 0.2s linear;
+    visibility: hidden;
+  }
+}
+
+#initial-group {
+  margin: 0;
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  top: 50%;
+  transform: translateY(-50%);
+  user-select: none;
+  width: 100%;
+  z-index: 5;
+}
+
+.preview-drop {
+  border: 5px dashed #3b3b3b;
+}
+
+.form-check {
+  display: inline-block;
+  margin: 0 10px;
+}
+
+#advancedModal .modal-content,
+#emailModal .modal-content,
+#confirmationModal .modal-content {
+  background-color: var(--bg-color-dark);
+}
+
+#personDetails .offcanvas-body {
+  background-color: var(--bg-color-dark);
+  color: var(--color-dark);
+  padding: 20px;
+}
+
+#familyMap {
+  height: 100%;
+  width: 100%;
+  min-height: 400px;
+
+  @media (min-width: 768px) {
+    height: 100vh;
+  }
+}
+
+#individualMapContainer {
+  max-width: none;
+  width: 50%;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+}
+
+#advanced-parameters {
+  right: 10px;
+  top: 200px;
+}
+
+.box {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: var(--bg-color-dark);
+}
+
+#familyAnimation {
+  position: relative;
+  width: 100%;
+  height: 600px;
+  background-color: white; // Ensure the background is white to make the SVG content visible
+}
+
+.node {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+.link {
+  stroke: #999;
+  stroke-opacity: 0.6;
+}
+
+.label {
+  font: 10px sans-serif;
+}

@@ -1,0 +1,40 @@
+$white: #ffffff;
+
+$theme-colors: (
+    "light":      #efebe5,
+    "dark":       #df4d40,
+    "primary":    #1a4f71,
+    "secondary":  #3f799c,
+    "info":       #4da8c2,
+    "accent1":    #a51e08,
+    "accent2":    #66d2cf,
+    "accent3":    #93bdbe,
+    "success":    #0cb261,
+    "warning":    #e9ce0a,
+    "danger":     #fb040a,
+);
+
+// Import Bootstrap functions
+@import "~bootstrap/scss/functions";
+
+// Import Bootstrap and other vendor styles
+@import "./vendors/bootstrap";
+@import "./vendors/bootstrap-colorpicker";
+
+// Import custom styles
+@import "./pages/index";
+@import "./pages/horizontal-timeline";
+
+// Import Bootstrap components as needed
+@import "node_modules/bootstrap/scss/offcanvas";
+
+// Import font
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: normal;
+  src: url("https://static1.squarespace.com/static/61d847565e8825750f6808c1/t/64230b452dfc586bc97d2d87/1680018245260/montserrat-v25-latin-regular.woff2") format("woff2");
+  font-display: swap;
+  }
+
+

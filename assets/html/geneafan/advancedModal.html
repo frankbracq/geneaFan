@@ -1,0 +1,386 @@
+<div
+  class="modal fade"
+  id="advancedModal"
+  tabindex="-1"
+  role="dialog"
+  aria-labelledby="advancedModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="advancedModalLabel">Paramètres avancés</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Fermer"
+        ></button>
+      </div>
+      <div class="modal-body">
+        <div class="col-12" id="advanced">
+          <div class="row g-0">
+            <div class="col-6">
+              <h5><%= __('geneafan.informations') %></h5>
+
+              <div class="mb-3 row mb-3">
+                <label for="max-generations" class="col-form-label col-8"
+                  ><%= __('geneafan.generation_count') %></label
+                >
+                <div class="input-group col-4">
+                  <input
+                    class="form-control parameter"
+                    type="number"
+                    id="max-generations"
+                    min="1"
+                    max="10"
+                    value="8"
+                    enabled
+                  />
+                </div>
+              </div>
+
+              <div class="mb-3 row">
+                <label
+                  class="form-check-label col-form-label col-6"
+                  for="select-dates"
+                  ><%= __('geneafan.dates_format') %></label
+                >
+                <div class="input-group col-6">
+                  <select
+                    class="form-select parameter"
+                    id="select-dates"
+                    disabled
+                  >
+                    <option value="0" selected>
+                      <%= __('geneafan.date_yyyy') %>
+                    </option>
+                    <option value="1">
+                      <%= __('geneafan.date_ddmmyyyy') %>
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="mb-3 row my-2">
+                <div class="col-12">
+                  <div class="form-check">
+                    <input
+                      type="checkbox"
+                      class="form-check-input parameter"
+                      id="show-invalid-dates"
+                      disabled
+                    />
+                    <label class="form-check-label" for="show-invalid-dates"
+                      ><%= __('geneafan.display_invalid_dates') %></label
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <div class="mb-3 row mt-4">
+                <label
+                  class="form-check-label col-form-label col-6"
+                  for="select-places"
+                  ><%= __('geneafan.places_format') %></label
+                >
+                <div class="input-group col-6">
+                  <select
+                    class="form-select parameter"
+                    id="select-places"
+                    enabled
+                  >
+                    <option value="0">
+                      <%= __('geneafan.places_format_list.full') %>
+                    </option>
+                    <option selected value="1">
+                      <%= __('geneafan.places_format_list.city_only') %>
+                    </option>
+                    <option value="2">
+                      <%= __('geneafan.places_format_list.nothing') %>
+                    </option>
+                  </select>
+                </div>
+              </div>
+              <!-- Marriages -->
+
+              <div class="mb-3 row mt-4">
+                <label
+                  class="form-check-label col-form-label col-6"
+                  for="select-name-order"
+                  ><%= __('geneafan.names_order') %></label
+                >
+                <div class="input-group col-6">
+                  <select
+                    class="form-select parameter"
+                    id="select-name-order"
+                    disabled
+                  >
+                    <option value="0" selected>
+                      <%= __('geneafan.names_order_list.given_surname') %>
+                    </option>
+                    <option value="1">
+                      <%= __('geneafan.names_order_list.surname_given') %>
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="mb-3 row mt-2">
+                <label
+                  class="form-check-label col-form-label col-6"
+                  for="select-name-display"
+                  ><%= __('geneafan.names_to_display') %></label
+                >
+                <div class="input-group col-6">
+                  <select
+                    class="form-select parameter"
+                    id="select-name-display"
+                    disabled
+                  >
+                    <option value="0">
+                      <%= __('geneafan.names_to_display_list.all') %>
+                    </option>
+                    <option value="1" selected>
+                      <%= __('geneafan.names_to_display_list.first') %>
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="mb-3 row mt-3 mb-3">
+                <div class="col-12">
+                  <div class="form-check">
+                    <input
+                      type="checkbox"
+                      class="form-check-input parameter"
+                      id="substitute-events"
+                      enabled
+                    />
+                    <label class="form-check-label" for="substitute-events"
+                      ><%= __('geneafan.substitute_missing_events') %>
+                      <i
+                        class="fas fa-question-circle"
+                        data-bs-toggle="tooltip"
+                        title="${__('geneafan.substitute_missing_events_hint')}"
+                      ></i
+                    ></label>
+                  </div>
+                </div>
+              </div>
+
+              <h5><%= __('geneafan.recent_people') %></h5>
+
+              <div class="mb-3 row my-2">
+                <label
+                  class="form-check-label col-form-label col-6"
+                  for="select-hidden-generations"
+                  ><%= __('geneafan.informations_to_hide') %></label
+                >
+                <div class="input-group col-6">
+                  <select
+                    class="form-select parameter"
+                    id="select-hidden-generations"
+                    disabled
+                  >
+                    <option value="0" selected>
+                      <%= __('geneafan.informations_to_hide_list.none') %>
+                    </option>
+                    <option value="1">
+                      <%= __('geneafan.informations_to_hide_list.events') %>
+                    </option>
+                    <option value="2">
+                      <%= __('geneafan.informations_to_hide_list.all_but') %>
+                    </option>
+                    <option value="3">
+                      <%= __('geneafan.informations_to_hide_list.all') %>
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="mb-3 row mb-2">
+                <label
+                  for="hidden-generations-count"
+                  class="col-form-label col-8"
+                  ><%= __('geneafan.affected_generations') %></label
+                >
+                <div class="input-group col-4">
+                  <input
+                    class="form-control parameter"
+                    type="number"
+                    id="hidden-generations-count"
+                    min="1"
+                    max="8"
+                    value="1"
+                    disabled
+                  />
+                </div>
+              </div>
+
+              <h5><%= __('geneafan.format') %></h5>
+
+              <div class="mb-3 row mt-2 mb-2"></div>
+
+              <div class="mb-3 row mt-2">
+                <div class="col-12">
+                  <div class="form-check">
+                    <input
+                      type="checkbox"
+                      class="form-check-input parameter"
+                      id="show-chronology"
+                      enabled
+                    />
+                    <label class="form-check-label" for="show-chronology"
+                      ><%= __('geneafan.chronology') %></label
+                    >
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="col-6">
+              <h5 style="display: none"><%=__('geneafan.annotations')%></h5>
+
+              <div class="mb-3 row mb-3" style="display: none">
+                <label for="title" class="col-form-label col-6"
+                  ><%=__('geneafan.primary_title')%></label
+                >
+                <div class="input-group col-6">
+                  <input
+                    class="form-control parameter"
+                    type="text"
+                    id="title"
+                    value=""
+                    placeholder="${__('common.none')}"
+                    enabled
+                  />
+                </div>
+              </div>
+
+              <h5><%=__('geneafan.measurements')%></h5>
+              <h6><%=__('geneafan.title_title')%></h6>
+
+              <div class="mb-3 row mb-2">
+                <div class="mb-3 row mb-2">
+                  <label for="title-size" class="col-form-label col-6"
+                    ><%=__('geneafan.title_size')%></label
+                  >
+                  <div class="input-group col-6 my-auto">
+                    <input
+                      type="range"
+                      class="form-range parameter"
+                      id="title-size"
+                      min="50"
+                      max="250"
+                      value="100"
+                      enabled
+                    />
+                  </div>
+
+                  <label for="title-margin" class="col-form-label col-6"
+                    ><%=__('geneafan.title_margin')%></label
+                  >
+                  <div class="input-group col-6 my-auto">
+                    <input
+                      type="range"
+                      class="form-range parameter"
+                      id="title-margin"
+                      min="0"
+                      max="250"
+                      value="25"
+                      enabled
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <h6><%=__('geneafan.strokes')%></h6>
+
+              <div class="mb-3 row mb-2">
+                <label for="stroke-weight" class="col-form-label col-6"
+                  ><%=__('geneafan.stroke_weight')%></label
+                >
+                <div class="input-group col-6 my-auto">
+                  <input
+                    type="range"
+                    class="form-range parameter"
+                    id="stroke-weight"
+                    min="5"
+                    max="30"
+                    value="20"
+                    enabled
+                  />
+                </div>
+              </div>
+
+              <h6><%=__('geneafan.box_sizes')%></h6>
+
+              <div class="mb-3 row mb-2">
+                <label for="weightg1" class="col-form-label col-6"
+                  ><%=__('geneafan.box_sizes_list.generation_1')%></label
+                >
+                <div class="input-group col-6 my-auto">
+                  <input
+                    type="range"
+                    class="form-range parameter"
+                    id="weightg1"
+                    min="90"
+                    max="250"
+                    value="100"
+                    enabled
+                  />
+                </div>
+
+                <label for="weightg2" class="col-form-label col-6"
+                  ><%=__('geneafan.box_sizes_list.generation_2_4')%></label
+                >
+                <div class="input-group col-6 my-auto">
+                  <input
+                    type="range"
+                    class="form-range parameter"
+                    id="weightg2"
+                    min="90"
+                    max="250"
+                    value="100"
+                    enabled
+                  />
+                </div>
+
+                <label for="weightg3" class="col-form-label col-6"
+                  ><%=__('geneafan.box_sizes_list.generation_5_8')%></label
+                >
+                <div class="input-group col-6 my-auto">
+                  <input
+                    type="range"
+                    class="form-range parameter"
+                    id="weightg3"
+                    min="90"
+                    max="250"
+                    value="170"
+                    enabled
+                  />
+                </div>
+
+                <label for="weightg4" class="col-form-label col-6"
+                  ><%=__('geneafan.box_sizes_list.generation_9_plus')%></label
+                >
+                <div class="input-group col-6 my-auto">
+                  <input
+                    type="range"
+                    class="form-range parameter"
+                    id="weightg4"
+                    min="90"
+                    max="250"
+                    value="140"
+                    enabled
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
