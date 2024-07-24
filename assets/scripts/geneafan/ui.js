@@ -221,19 +221,24 @@ function ordinalSuffixOf(i) {
 function initializeSvgPanZoom() {
     let instance = getSvgPanZoomInstance();
     if (instance) {
-        // console.log("Reusing existing svgPanZoom instance", instance);
         instance.updateBBox();
         return instance;
     }
 
-    // Creating a new instance if none exists
+    // Check if the fan tab is active before initializing svgPanZoom
+    const fanContainer = document.getElementById('fanContainer');
+    if (!fanContainer || fanContainer.offsetParent === null) {
+        console.warn("The fan container is not visible. Skipping svgPanZoom initialization.");
+        return null;
+    }
+
     instance = svgPanZoom('#fan', {
         zoomEnabled: true,
         controlIconsEnabled: true,
         fit: true,
         center: true
     });
-    // console.log("Creating a new svgPanZoom instance", instance);
+
     var mapElement = document.querySelector('#fan');
     if (mapElement) {
         mapElement.addEventListener("dblclick", function (event) {
@@ -249,7 +254,6 @@ function initializeSvgPanZoom() {
         console.error("L'élément SVG '#fan' n'a pas été trouvé dans le DOM.");
     }
 
-    // Saving the instance in the global state manager.
     setSvgPanZoomInstance(instance);
     return instance;
 }
@@ -561,8 +565,9 @@ reaction(
     }
 );
 
-export function onSettingChange() {
-    console.log("onSettingChange");
+// Fonction pour gérer les paramètres et la configuration
+function updateFanConfig() {
+    console.log("updateFanConfig");
     try {
         const selectedValues = getSelectedValues();
         const dimensions = calculateDimensions(
@@ -572,13 +577,54 @@ export function onSettingChange() {
         );
 
         let config = createConfig(selectedValues);
-        updateConfig(config);
+        updateConfig(config); // Mise à jour de la configuration dans le store MobX
 
         const hasRootPerson = config.root !== undefined && config.root !== null && config.root !== "";
+        if (hasRootPerson) {
+            rootPersonName = formatName(config.rootPersonName);
+            filename = (
+                __("Éventail généalogique de ") +
+                rootPersonName +
+                " créé sur genealog.ie"
+            ).replace(/[|&;$%@"<>()+,]/g, "");
+
+            config.filename = filename;
+            updateConfig(config); // Mise à jour de la configuration avec le nom de fichier
+            updateFilename(config.filename);
+        } else {
+            filename = __("Éventail vide créé sur genealog.ie").replace(/[|&;$%@"<>()+,]/g, "");
+            config.filename = filename;
+            updateConfig(config); // Mise à jour de la configuration avec le nom de fichier
+            updateFilename(config.filename);
+        }
+
+        return config;
+    } catch (error) {
+        console.error("Error in updateFanConfig:", error);
+        return null;
+    }
+}
+
+// Fonction pour gérer le rendu et l'affichage du SVG
+function renderFan(config) {
+    console.log("renderFan");
+    try {
+        if (!config) {
+            console.error("No configuration provided for rendering.");
+            return false;
+        }
 
         let svgElement = document.querySelector('#fan');
         let svgPanZoomInstance = getSvgPanZoomInstance();
 
+        // Vérifie si le conteneur est visible avant de procéder
+        const fanContainer = document.getElementById('fanContainer');
+        if (!fanContainer || fanContainer.offsetParent === null) {
+            console.warn("The fan container is not visible. Skipping rendering.");
+            return false;
+        }
+
+        // Si l'élément SVG existe et qu'une instance svgPanZoom est déjà présente, la détruire
         if (svgElement && svgPanZoomInstance) {
             svgPanZoomInstance.destroy();
             setSvgPanZoomInstance(null);
@@ -586,8 +632,7 @@ export function onSettingChange() {
             console.warn("SVG not found in the DOM, cannot destroy svgPanZoomInstance.");
         }
 
-        let result;
-        result = draw();
+        let result = draw(); // Dessin de l'éventail généalogique
         initializeAscendantTimeline();
 
         if (!result) {
@@ -606,39 +651,21 @@ export function onSettingChange() {
             console.error("SVG not found in the DOM after drawing.");
         }
 
-        if (hasRootPerson) {
-            rootPersonName = formatName(result.rootPersonName);
-            filename = (
-                __("Éventail généalogique de ") +
-                formatName(result.rootPersonName) +
-                " créé sur genealog.ie"
-            ).replace(/[|&;$%@"<>()+,]/g, "");
-
-            config.filename = filename;
-            updateConfig(config);
-            updateFilename(config.filename);
-        } else {
-            filename = __("Éventail vide créé sur genealog.ie").replace(/[|&;$%@"<>()+,]/g, "");
-            config.filename = filename;
-            updateConfig(config);
-            updateFilename(config.filename);
-        }
-
-        shouldShowInitialMessage = false;
-        document.getElementById('initial-group').style.display = 'none';
-        document.getElementById("loading").style.display = "none";
-        document.getElementById("overlay").classList.add("overlay-hidden");
-
-        if (dimensions !== previousDimensions) {
-            previousDimensions = dimensions;
-        }
-
-        resizeSvg();
+        resizeSvg(); // Ajuste le SVG en fonction de la taille du conteneur
 
         return true;
     } catch (error) {
-        console.error("Error in onSettingChange:", error);
+        console.error("Error in renderFan:", error);
         return false;
+    }
+}
+
+// Fonction appelée lors des changements de paramètres
+export function onSettingChange() {
+    console.log("onSettingChange");
+    const config = updateFanConfig(); // Mise à jour de la configuration
+    if (config) {
+        renderFan(config); // Rendu du SVG
     }
 }
 
