@@ -384,26 +384,7 @@ const strokeWeight = document.querySelector("#stroke-weight") || {
 const hiddenGenerationsCount = document.querySelector(
     "#hidden-generations-count"
 ) || { value: "1" }; // Default number
-/*
-const textContrast = document.querySelector("#text-contrast") || { value: "1" }; // Default number
-const saturation = document.querySelector("#saturation") || { value: "100" }; // Default number
-const value = document.querySelector("#value") || { value: "85" }; // Default number
-const randomSelection = document.querySelector("#random-selection") || {
-    checked: false,
-}; // Default boolean
-const colorIndividuals = document.querySelector("#color-individuals") || {
-    checked: false,
-}; // Default boolean
-const colorMarriages = document.querySelector("#color-marriages") || {
-    checked: false,
-}; // Default boolean
-const color1 = document.querySelector("#color1") || { value: "#ffffff" }; // Default string for color
-const color2 = document.querySelector("#color2") || { value: "#000000" }; // Default string for color
-const colorStart = document.querySelector("#color-start") || {
-    value: "#ffffff",
-}; // Default string for color
-const colorEnd = document.querySelector("#color-end") || { value: "#000000" }; // Default string for color
-*/
+
 // Function to get the value of a radio button
 let getRadioButtonValue = (name, parseJson = false) => {
     let value = document.querySelector(`input[name="${name}"]:checked`).value;
@@ -503,7 +484,7 @@ function createConfig(selectedValues, filename) {
 
     // Utilisation des variables pour les poids de génération et d'autres sélections dynamiques
     return {
-        root: $("#individual-select").val(), // Corrigé ici
+        root: $("#individual-select").val(),
         maxGenerations,
         angle: (2 * Math.PI * fanAngle) / 360.0,
         dates: {
@@ -543,13 +524,9 @@ function createConfig(selectedValues, filename) {
 }
 
 function formatName(rootPersonName) {
-    let firstName = rootPersonName.name ? rootPersonName.name.split(" ")[0] : "";
-    return (
-        (firstName || rootPersonName.surname ? " " : "") +
-        firstName +
-        (firstName && rootPersonName.surname ? " " : "") +
-        (rootPersonName.surname ? rootPersonName.surname : "")
-    );
+    let firstName = rootPersonName?.name?.split(" ")[0] || "";
+    let surname = rootPersonName?.surname || "";
+    return `${firstName} ${surname}`.trim();
 }
 
 // MobX action to update the configuration after a parameter change
@@ -557,133 +534,121 @@ const updateConfig = action((newConfig) => {
     configStore.setConfig(newConfig);
 });
 
+// Ajout de la réaction MobX pour surveiller les changements de config.root
 reaction(
     () => configStore.config.root,
     (root) => {
-        console.log('Reaction in ui.js - config.root has changed:', root);
-        onSettingChange();
+      console.log('config.root has changed:', root);
+      onSettingChange();
     }
-);
-
-// Fonction pour gérer les paramètres et la configuration
-function updateFanConfig() {
-    console.log("updateFanConfig");
-    try {
-        const selectedValues = getSelectedValues();
-        const dimensions = calculateDimensions(
-            selectedValues.fanAngle,
-            selectedValues.maxGenerations,
-            selectedValues.showMarriages
-        );
-
-        let config = createConfig(selectedValues);
-        updateConfig(config); // Mise à jour de la configuration dans le store MobX
-
-        const hasRootPerson = config.root !== undefined && config.root !== null && config.root !== "";
-        if (hasRootPerson) {
-            rootPersonName = formatName(config.rootPersonName);
-            filename = (
-                __("Éventail généalogique de ") +
-                rootPersonName +
-                " créé sur genealog.ie"
-            ).replace(/[|&;$%@"<>()+,]/g, "");
-
-            config.filename = filename;
-            updateConfig(config); // Mise à jour de la configuration avec le nom de fichier
-            updateFilename(config.filename);
-        } else {
-            filename = __("Éventail vide créé sur genealog.ie").replace(/[|&;$%@"<>()+,]/g, "");
-            config.filename = filename;
-            updateConfig(config); // Mise à jour de la configuration avec le nom de fichier
-            updateFilename(config.filename);
-        }
-
-        return config;
-    } catch (error) {
-        console.error("Error in updateFanConfig:", error);
-        return null;
-    }
-}
-
-// Fonction pour gérer le rendu et l'affichage du SVG
-function renderFan(config) {
-    console.log("renderFan");
-    try {
-        if (!config) {
-            console.error("No configuration provided for rendering.");
-            return false;
-        }
-
-        let svgElement = document.querySelector('#fan');
-        let svgPanZoomInstance = getSvgPanZoomInstance();
-
-        // Vérifie si le conteneur est visible avant de procéder
-        const fanContainer = document.getElementById('fanContainer');
-        if (!fanContainer || fanContainer.offsetParent === null) {
-            console.warn("The fan container is not visible. Skipping rendering.");
-            return false;
-        }
-
-        // Si l'élément SVG existe et qu'une instance svgPanZoom est déjà présente, la détruire
-        if (svgElement && svgPanZoomInstance) {
-            svgPanZoomInstance.destroy();
-            setSvgPanZoomInstance(null);
-        } else if (!svgElement) {
-            console.warn("SVG not found in the DOM, cannot destroy svgPanZoomInstance.");
-        }
-
-        let result = draw(); // Dessin de l'éventail généalogique
-        initializeAscendantTimeline();
-
-        if (!result) {
-            console.error("Drawing the fan failed.");
-            return false;
-        }
-
-        if (svgElement) {
-            try {
-                svgPanZoomInstance = initializeSvgPanZoom();
-                setSvgPanZoomInstance(svgPanZoomInstance);
-            } catch (error) {
-                console.error("Error while resetting svgPanZoom:", error);
-            }
-        } else {
-            console.error("SVG not found in the DOM after drawing.");
-        }
-
-        resizeSvg(); // Ajuste le SVG en fonction de la taille du conteneur
-
-        return true;
-    } catch (error) {
-        console.error("Error in renderFan:", error);
-        return false;
-    }
-}
-
-// Fonction appelée lors des changements de paramètres
-export function onSettingChange() {
+  );
+  
+  // Fonction onSettingChange (existe déjà dans votre fichier)
+  export function onSettingChange() {
     console.log("onSettingChange");
-    const config = updateFanConfig(); // Mise à jour de la configuration
-    if (config) {
-        renderFan(config); // Rendu du SVG
+    try {
+      const selectedValues = getSelectedValues();
+      const dimensions = calculateDimensions(
+        selectedValues.fanAngle,
+        selectedValues.maxGenerations,
+        selectedValues.showMarriages
+      );
+  
+      let config = createConfig(selectedValues);
+      updateConfig(config); // Utiliser l'action MobX
+  
+      const hasRootPerson = config.root !== undefined && config.root !== null && config.root !== "";
+  
+      let svgElement = document.querySelector('#fan');
+      let svgPanZoomInstance = getSvgPanZoomInstance();
+  
+      if (svgElement && svgPanZoomInstance) {
+        svgPanZoomInstance.destroy();
+        setSvgPanZoomInstance(null);
+      } else if (!svgElement) {
+        console.warn("SVG not found in the DOM, cannot destroy svgPanZoomInstance.");
+      }
+  
+      let result;
+      result = draw();
+      initializeAscendantTimeline();
+  
+      if (!result) {
+        console.error("Drawing the fan failed.");
+        return false;
+      }
+  
+      if (svgElement) {
+        try {
+          svgPanZoomInstance = initializeSvgPanZoom();
+          setSvgPanZoomInstance(svgPanZoomInstance);
+        } catch (error) {
+          console.error("Error while resetting svgPanZoom:", error);
+        }
+      } else {
+        console.error("SVG not found in the DOM after drawing.");
+      }
+  
+      if (hasRootPerson) {
+        rootPersonName = formatName(result.rootPersonName);
+        filename = (
+          __("Éventail généalogique de ") +
+          formatName(result.rootPersonName) +
+          " créé sur genealog.ie"
+        ).replace(/[|&;$%@"<>()+,]/g, "");
+  
+        config.filename = filename;
+        updateConfig(config); // Utiliser l'action MobX
+        updateFilename(config.filename);
+      } else {
+        filename = __("Éventail vide créé sur genealog.ie").replace(/[|&;$%@"<>()+,]/g, "");
+        config.filename = filename;
+        updateConfig(config); // Utiliser l'action MobX
+        updateFilename(config.filename);
+      }
+  
+      shouldShowInitialMessage = false;
+      document.getElementById('initial-group').style.display = 'none';
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("overlay").classList.add("overlay-hidden");
+  
+      if (dimensions !== previousDimensions) {
+        previousDimensions = dimensions;
+      }
+  
+      // resizeSvg();
+  
+      return true;
+    } catch (error) {
+      console.error("Error in onSettingChange:", error);
+      return false;
     }
-}
+  }
+  
 
-async function onFileChange(data) {
-    document.getElementById('overlay').classList.remove('overlay-hidden');
-    document.getElementById("loading").style.display = "block";
-
-    // Disable tabs and force display of tab1
+function handleTabsAndOverlay(shouldShowLoading) {
     const tabsToDisable = ["tab2", "tab3", "tab4"];
     tabsToDisable.forEach(tabId => {
         const tabLink = document.querySelector(`a[href="#${tabId}"]`);
         if (tabLink) {
-            tabLink.classList.add('disabled');
-            tabLink.setAttribute('aria-disabled', 'true');
-            tabLink.setAttribute('tabindex', '-1'); // Make it non-focusable
+            tabLink.classList.toggle('disabled', shouldShowLoading);
+            tabLink.setAttribute('aria-disabled', shouldShowLoading ? 'true' : 'false');
+            tabLink.setAttribute('tabindex', shouldShowLoading ? '-1' : '0');
         }
     });
-    document.querySelector('a[href="#tab1"]').click(); // Force display of tab1
+
+    if (shouldShowLoading) {
+        document.getElementById('overlay').classList.remove('overlay-hidden');
+        document.getElementById("loading").style.display = "block";
+        document.querySelector('a[href="#tab1"]').click(); // Force l'affichage de tab1
+    } else {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("overlay").classList.add("overlay-hidden");
+    }
+}
+
+async function onFileChange(data) {
+    handleTabsAndOverlay(true); // Activer le chargement et désactiver les onglets
 
     clearAllStates();
 
@@ -693,97 +658,109 @@ async function onFileChange(data) {
     setGedFileUploaded(true);
 
     try {
-        await setFamilyTowns({});
+      await setFamilyTowns({});
 
-        let json = toJson(data);
-        let result = await getAllPlaces(json);
-        setSourceData(result.json);
+      let json = toJson(data);
+      let result = await getAllPlaces(json);
+      setSourceData(result.json);
 
-        try {
-            await updateFamilyTownsViaProxy();
-            updateIndividualTownsFromFamilyTowns(getIndividualsCache());
-            setIndividualsCache(getIndividualsCache());
+      try {
+        await updateFamilyTownsViaProxy();
+        updateIndividualTownsFromFamilyTowns(getIndividualsCache());
+        setIndividualsCache(getIndividualsCache());
+      } catch (error) {
+        console.error("Error updating geolocation:", error);
+      }
 
-        } catch (error) {
-            console.error("Error updating geolocation:", error);
-        }
+      googleMapManager.loadMarkersData();
 
-        googleMapManager.loadMarkersData();
+      const selectElement = document.getElementById("individual-select");
+      selectElement.innerHTML = ""; // Efface tout contenu résiduel
+      const placeholderOption = new Option("", "", true, true);
+      placeholderOption.disabled = true;
+      selectElement.appendChild(placeholderOption);
 
-        const selectElement = document.getElementById("individual-select");
-        selectElement.innerHTML = "";  // Efface tout contenu résiduel
-        const placeholderOption = new Option("", "", true, true);
-        placeholderOption.disabled = true;
-        selectElement.appendChild(placeholderOption);
+      if (!tomSelect) {
+        initializeTomSelect();
+      }
 
-        if (!tomSelect) {
-            initializeTomSelect();
-        }
+      tomSelect.clearOptions();
 
-        tomSelect.clearOptions();
+      result = getIndividualsList(result.json);
+      let individuals = result.individualsList;
+      individuals.forEach((individual) => {
+        tomSelect.addOption({
+          value: individual.id,
+          text: `${individual.surname} ${individual.name} ${individual.id} ${
+            individual.birthYear ? individual.birthYear : "?"
+          }-${individual.deathYear ? individual.deathYear : ""}`,
+        });
+      });
 
-        result = getIndividualsList(result.json);
-        let individuals = result.individualsList;
-        individuals.forEach((individual) => {
-            tomSelect.addOption({ value: individual.id, text: `${individual.surname} ${individual.name} ${individual.id} ${individual.birthYear ? individual.birthYear : "?"}-${individual.deathYear ? individual.deathYear : ""}` });
+      let rootId;
+      if (gedcomFileName === "demo.ged") {
+        rootId = "@I111@";
+        tomSelect.setValue(rootId);
+      } else {
+        const individualsWithBirthDates = individuals.map((individual) => {
+          const birthDate = individual.birthDate;
+          let date;
+          if (birthDate.includes("/")) {
+            const [day, month, year] = birthDate.split("/").reverse();
+            date = new Date(year, month - 1, day || 1);
+          } else {
+            date = new Date(birthDate, 0, 1);
+          }
+
+          return {
+            id: individual.id,
+            birthDate: date,
+          };
         });
 
-        if (gedcomFileName === "demo.ged") {
-            tomSelect.setValue("@I111@");
-        } else {
-            const individualsWithBirthDates = individuals.map(individual => {
-                const birthDate = individual.birthDate;
-                let date;
-                if (birthDate.includes("/")) {
-                    const [day, month, year] = birthDate.split("/").reverse();
-                    date = new Date(year, month - 1, day || 1);
-                } else {
-                    date = new Date(birthDate, 0, 1);
-                }
-
-                return {
-                    id: individual.id,
-                    birthDate: date,
-                };
-            });
-
-            const latestIndividual = _.maxBy(individualsWithBirthDates, 'birthDate');
-            if (latestIndividual) {
-                tomSelect.setValue(latestIndividual.id);
-            }
+        const latestIndividual = _.maxBy(
+          individualsWithBirthDates,
+          "birthDate"
+        );
+        if (latestIndividual) {
+          rootId = latestIndividual.id;
+          tomSelect.setValue(rootId);
         }
+      }
 
-        const event = new Event('change', { bubbles: true });
-        tomSelect.dropdown_content.dispatchEvent(event);
+      const event = new Event("change", { bubbles: true });
+      tomSelect.dropdown_content.dispatchEvent(event);
 
-        [
-            ...document.querySelectorAll(".parameter"),
-            document.getElementById("individual-select"),
-            document.getElementById("download-menu"),
-            document.getElementById("fanParametersDisplay"),
-            document.getElementById("treeParametersDisplay"),
-            document.getElementById("fullscreenButton")
-        ].forEach((el) => {
-            el.disabled = false;
+      [
+        ...document.querySelectorAll(".parameter"),
+        document.getElementById("individual-select"),
+        document.getElementById("download-menu"),
+        document.getElementById("fanParametersDisplay"),
+        document.getElementById("treeParametersDisplay"),
+        document.getElementById("fullscreenButton"),
+      ].forEach((el) => {
+        el.disabled = false;
+      });
+
+      updateConfig({ root: rootId });
+
+      // Recherchez l'individu correspondant et mettez à jour config.rootPersonName
+      const rootPerson = individuals.find(
+        (individual) => individual.id === rootId
+      );
+      if (rootPerson) {
+        configStore.setConfig({
+          ...configStore.getConfig, // Utilisation correcte du getter
+          rootPersonName: {
+            name: rootPerson.name,
+            surname: rootPerson.surname,
+          },
         });
-
-        const initialRootId = tomSelect.getValue();
-        updateConfig({ root: tomSelect.getValue() });
-
+      }
     } catch (error) {
         console.error("General Error:", error);
     } finally {
-        document.getElementById("loading").style.display = "none";
-        document.getElementById("overlay").classList.add("overlay-hidden");
-
-        tabsToDisable.forEach(tabId => {
-            const tabLink = document.querySelector(`a[href="#${tabId}"]`);
-            if (tabLink) {
-                tabLink.classList.remove('disabled');
-                tabLink.removeAttribute('aria-disabled');
-                tabLink.removeAttribute('tabindex');
-            }
-        });
+        handleTabsAndOverlay(false); // Désactiver le chargement et activer les onglets
     }
 }
 

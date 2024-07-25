@@ -736,6 +736,7 @@ export function drawFan() {
     createTextElements(textsGroup, defs, descendants, showMarriages);
 
     adjustFanVerticalPosition(svg, mmToPixels(fanHeightInMm), mmToPixels(frameHeightInMm), scale);
+    
     console.timeEnd('drawFan');
     return {
         data: data,

@@ -3,6 +3,7 @@ import { makeAutoObservable } from "mobx";
 class ConfigStore {
   config = {
       root: null,
+      rootPersonName: "",
       maxGenerations: 8,
       angle: Math.PI,
       dates: {
