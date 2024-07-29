@@ -105,32 +105,35 @@ export function setupParameterEventListeners(onSettingChange) {
             updateConfig({ root: selectedRoot });  // Use the MobX action to update the store
         });
     }
-
-    const tomSelect = getTomSelectInstance();
-    console.log("TomSelect:", tomSelect);
-
-    setupPersonLinkEventListener(tomSelect);
 }
 
-
 // Event listener for person links
-function setupPersonLinkEventListener(tomSelect) {
+export function setupPersonLinkEventListener() {
+    const tomSelect = getTomSelectInstance();
+    if (!tomSelect) {
+        console.error('tomSelect is undefined');
+        return;
+    }
+
     document.addEventListener('click', function(event) {
         const target = event.target;
         if (target.matches('.person-link')) {
             event.preventDefault();
             const personId = target.getAttribute('data-person-id');
-            console.log("Person ID:", personId);
-            
-            // Ensure tomSelect is not undefined before calling setValue
-            if (tomSelect) {
-                tomSelect.setValue(personId);
+            tomSelect.setValue(personId);
+            const changeEvent = new Event('change', { bubbles: true });
+            tomSelect.dropdown_content.dispatchEvent(changeEvent);
 
-                // Trigger the change event to notify all listeners
-                const changeEvent = new Event('change', { bubbles: true });
-                tomSelect.dropdown_content.dispatchEvent(changeEvent);
-            } else {
-                console.error('tomSelect is undefined');
+            // Fermer les offcanvas si ouverts
+            const individualMapContainer = document.getElementById('individualMapContainer');
+            const personDetails = document.getElementById('personDetails');
+
+            if (individualMapContainer && individualMapContainer.classList.contains('show')) {
+                Offcanvas.getInstance(individualMapContainer).hide();
+            }
+
+            if (personDetails && personDetails.classList.contains('show')) {
+                Offcanvas.getInstance(personDetails).hide();
             }
         }
     });
@@ -178,11 +181,6 @@ function setupFullscreenToggle() {
 }
 
 function setupTabAndUIEventListeners() {
-    document.getElementById('fanParametersDisplay').addEventListener('click', function() {
-        var fanParametersOffcanvas = new Offcanvas(document.getElementById('fanParameters'));
-        fanParametersOffcanvas.show();
-    });
-
     document.querySelectorAll('.dropdown-menu a').forEach(element => {
         element.addEventListener('click', function() {
             var dropdownButton = this.closest('.dropdown');
@@ -190,6 +188,13 @@ function setupTabAndUIEventListeners() {
             dropdownButton.querySelector('.dropdown-menu').classList.remove('show');
         });
     });
+
+    const tabFan = document.querySelector('[href="#tab1"]');
+    if (tabFan) {
+        tabFan.addEventListener('shown.bs.tab', function () {
+            onSettingChange(); 
+        });
+    }
 
     const tabFamilyMap = document.querySelector('[href="#tab2"]');
     if (tabFamilyMap) {
@@ -202,6 +207,11 @@ function setupTabAndUIEventListeners() {
             }
         });
     }
+
+    document.getElementById('fanParametersDisplay').addEventListener('click', function() {
+        var fanParametersOffcanvas = new Offcanvas(document.getElementById('fanParameters'));
+        fanParametersOffcanvas.show();
+    });
 
     document.getElementById('treeParametersDisplay').addEventListener('click', function() {
         var treeParametersOffcanvas = new Offcanvas(document.getElementById('treeParameters'));
@@ -216,24 +226,24 @@ let handleCityLinkClickRef = event => handleCityLinkClick(event);
 let closePopoverOnClickOutsideRef = event => closePopoverOnClickOutside(event);
 
 // Fonction principale pour configurer tous les écouteurs d'événements
-export const addEventListeners = () => {
-    document.addEventListener('click', event => {
-        handleCityLinkClick(event);
-        closePopoverOnClickOutside(event);
-    });
-
-    // Paramètres et écouteurs d'événements liés aux paramètres déjà existants
-    setupParameterEventListeners(onSettingChange);
-
-    // Ajouter les écouteurs spécifiques aux onglets et autres UI nécessitant le DOM chargé
-    setupTabAndUIEventListeners();
-}
-
 export const setupAllEventListeners = () => {
+    const initializeEventListeners = () => {
+        document.addEventListener('click', event => {
+            handleCityLinkClick(event);
+            closePopoverOnClickOutside(event);
+        });
+
+        // Paramètres et écouteurs d'événements liés aux paramètres déjà existants
+        setupParameterEventListeners(onSettingChange);
+
+        // Ajouter les écouteurs spécifiques aux onglets et autres UI nécessitant le DOM chargé
+        setupTabAndUIEventListeners();
+    };
+
     if (document.readyState === "loading") {
-        document.addEventListener('DOMContentLoaded', addEventListeners);
+        document.addEventListener('DOMContentLoaded', initializeEventListeners);
     } else {
-        addEventListeners();
+        initializeEventListeners();
     }
 }
 

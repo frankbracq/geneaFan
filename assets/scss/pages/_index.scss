@@ -270,14 +270,6 @@ div.file-button {
   padding: 0.75rem 1.25rem;
 }
 
-#gradient-preview {
-  background-color: white;
-  border: 1px solid #ced4da;
-  border-radius: .25rem;
-  height: 30px;
-  width: 100%;
-}
-
 #tip {
   bottom: 30px;
   left: 50%;
@@ -293,19 +285,19 @@ div.file-button {
 }
 
 #initial-group {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   margin: 0;
   pointer-events: none;
   position: absolute;
   text-align: center;
   top: 50%;
-  transform: translateY(-50%);
+  left: 50%;
+  transform: translate(-50%, -50%);
   user-select: none;
   width: 100%;
   z-index: 5;
-}
-
-.preview-drop {
-  border: 5px dashed #3b3b3b;
 }
 
 .form-check {
@@ -373,4 +365,14 @@ div.file-button {
 
 .label {
   font: 10px sans-serif;
+}
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.event-header h6 {
+  margin: 0;
 }

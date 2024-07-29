@@ -76,7 +76,7 @@ function formatIndividualsData(individualsCache) {
 let family;
 let initializing = false; 
 
-function initializeFamilyTree() {
+export function initializeFamilyTree() {
     console.log('Initializing family tree');
     initializing = true;
 
@@ -175,19 +175,23 @@ function initializeFamilyTree() {
     initializing = false;
 }
 
+// Use reaction to specifically monitor root changes
 reaction(
-    () => configStore.getConfig.root,
+    () => configStore.config.root,
     (newRootId) => {
         console.log("Reaction in tree.js - New root ID detected:", newRootId);
         if (!initializing) {
+            console.log("Not initializing, proceeding with update.");
             if (!family) {
+                console.log("Family instance is not initialized. Initializing now...");
                 initializeFamilyTree();
             }
             const rootId = getOldestAncestorOf(newRootId, "both");
-            console.log('Oldest ancestor Id in reaction:', rootId);
+            console.log('Oldest ancestor ID determined by getOldestAncestorOf:', rootId);
             family.config.roots = [rootId];
-            console.log('Family config', family.config);
             family.draw();
+        } else {
+            console.log("Currently initializing, skipping update.");
         }
     }
 );

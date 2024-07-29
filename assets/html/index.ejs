@@ -9,7 +9,6 @@
     <meta name="author" content="Genealog.ie">
     <meta name="robots" content="noindex, follow">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <!-- Suppression des méta-données Twitter et OpenGraph redondantes pour simplification -->
 </head>
 <body>
     <header>
@@ -27,10 +26,10 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#tab2" data-bs-toggle="tab"><%= __('geneafan.view_family_map') %></a>
+                        <a class="nav-link disabled" href="#tab2" data-bs-toggle="tab"><%= __('geneafan.view_family_map') %></a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#tab3" data-bs-toggle="tab">
+                        <a class="nav-link disabled" href="#tab3" data-bs-toggle="tab">
                             <%= __('geneafan.view_family_tree') %>
                             <button class="btn btn-secondary btn-sm spacedS" id="treeParametersDisplay" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="<%= __('geneafan.tooltip_tree_parameters') %>">
                                 <i class="bi bi-sliders"></i>
@@ -38,7 +37,7 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#tab4" data-bs-toggle="tab"><%= __('geneafan.view_ascendant_timeline') %></a>
+                        <a class="nav-link disabled" href="#tab4" data-bs-toggle="tab"><%= __('geneafan.view_ascendant_timeline') %></a>
                     </li>
                 </ul>
             </div>
@@ -140,12 +139,6 @@
                 <div class="tab-pane fade show active" id="tab1">
                     <div class="row position-relative" id="fanDisplay">
                         <div id="initial-group">
-                            <div>
-                                <h5>
-                                    <%=__('geneafan.click_to_load_ellipsis')%>
-                                </h5>
-                                <em>(<%=__('geneafan.or_drag_and_drop')%>)</em>
-                            </div>
                             <div>
                                 <h5>
                                     <strong>

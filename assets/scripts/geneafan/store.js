@@ -46,12 +46,15 @@ class ConfigStore {
   }
 
   setConfig(newConfig) {
-      this.config = { ...this.config, ...newConfig };
-  }
+    // console.log("Updating config with new values:", newConfig);
+    this.config = { ...this.config, ...newConfig };
+    // console.log("Updated config:", this.config);
+}
 
-  get getConfig() {
-      return this.config;
-  }
+get getConfig() {
+    // console.log("Accessing config:", this.config);
+    return this.config;
+}
 }
 
 const configStore = new ConfigStore();

@@ -15,14 +15,14 @@ export function initializeTomSelect() {
             direction: "asc"
         },
         dropdownParent: "body",
-        placeholder: __("arbreomatic.choose_root_placeholder"),
+        placeholder: __("geneafan.choose_root_placeholder"),
         allowClear: true,
         maxItems: 1,
         closeAfterSelect: true,
         plugins: ['dropdown_input', 'clear_button']
     });
 
-    tomSelect.addOption({ value: "", text: __("arbreomatic.choose_root_placeholder"), disabled: true });
+    tomSelect.addOption({ value: "", text: __("geneafan.choose_root_placeholder"), disabled: true });
     tomSelect.addItem("", true);
 }
 

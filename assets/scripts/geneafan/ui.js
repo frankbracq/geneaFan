@@ -9,7 +9,6 @@ import {
     setGedFileUploaded,
     getGedFileUploaded,
     setFamilyTowns,
-    clearFamilyEvents,
     setSvgPanZoomInstance,
     getSvgPanZoomInstance,
     gmapApiKey,
@@ -22,7 +21,6 @@ import {
 } from "./state.js";
 import configStore from './store';
 import {
-    downloadJSON,
     debounce,
     updateFamilyTownsViaProxy,
     updateIndividualTownsFromFamilyTowns,
@@ -40,6 +38,7 @@ import {
 import {
     setupAllEventListeners,
     handleEmailSubmit,
+    setupPersonLinkEventListener,
 } from "./eventListeners.js";
 import { googleMapManager } from './mapManager.js';
 import { initializeAscendantTimeline } from './ascendantTimeline.js';
@@ -109,9 +108,11 @@ function handleOffcanvasHide() {
 }
 
 export function displayPersonDetailsUI(personDetails) {
+    console.log("displayPersonDetailsUI:", personDetails);  
     const {
         name,
         surname,
+        personLink,
         formattedOccupations,
         formattedSiblings,
         individualTowns,
@@ -122,7 +123,8 @@ export function displayPersonDetailsUI(personDetails) {
     const personDetailsLabelElement = document.getElementById("personDetailsLabel");
     const individualTimelineElement = document.getElementById("individualTimeline");
 
-    personDetailsLabelElement.textContent = `${name} ${surname}`;
+    // Display the person's name in the offcanvas header
+    personDetailsLabelElement.innerHTML = `<h4>${personLink}</h4>`;
 
     const eventTypeDescriptions = {
         birth: "Naissance",
@@ -163,8 +165,10 @@ export function displayPersonDetailsUI(personDetails) {
     
         const li = document.createElement('li');
         li.innerHTML = `
-            <a href="#!">${description}</a>
-            <a href="#!" class="float-end">${event.date || 'Date inconnue'}</a>
+            <div class="event-header">
+                <h6 class="mt-0">${description}</h6>
+                <h6 class="float-end">${event.date || 'Date inconnue'}</h6>
+            </div>
             <p class="mt-0">${event.description}</p>
         `;
         timelineFragment.appendChild(li);
@@ -216,46 +220,6 @@ function ordinalSuffixOf(i) {
         return "er";
     }
     return "ème";
-}
-
-function initializeSvgPanZoom() {
-    let instance = getSvgPanZoomInstance();
-    if (instance) {
-        instance.updateBBox();
-        return instance;
-    }
-
-    // Check if the fan tab is active before initializing svgPanZoom
-    const fanContainer = document.getElementById('fanContainer');
-    if (!fanContainer || fanContainer.offsetParent === null) {
-        console.warn("The fan container is not visible. Skipping svgPanZoom initialization.");
-        return null;
-    }
-
-    instance = svgPanZoom('#fan', {
-        zoomEnabled: true,
-        controlIconsEnabled: true,
-        fit: true,
-        center: true
-    });
-
-    var mapElement = document.querySelector('#fan');
-    if (mapElement) {
-        mapElement.addEventListener("dblclick", function (event) {
-            event.stopImmediatePropagation();
-        }, true);
-
-        mapElement.addEventListener("wheel", function (event) {
-            if (event.ctrlKey) {
-                event.preventDefault();
-            }
-        }, { passive: false });
-    } else {
-        console.error("L'élément SVG '#fan' n'a pas été trouvé dans le DOM.");
-    }
-
-    setSvgPanZoomInstance(instance);
-    return instance;
 }
 
 function resizeSvg() {
@@ -529,103 +493,146 @@ function formatName(rootPersonName) {
     return `${firstName} ${surname}`.trim();
 }
 
+export function displayFan() {
+    const instance = svgPanZoom("#fan", {
+        zoomEnabled: true,
+        controlIconsEnabled: true,
+        fit: true,
+        center: true,
+    });
+
+    var mapElement = document.querySelector("#fan");
+    if (mapElement) {
+        mapElement.addEventListener(
+            "dblclick",
+            function (event) {
+                event.stopImmediatePropagation();
+            },
+            true
+        );
+
+        mapElement.addEventListener(
+            "wheel",
+            function (event) {
+                if (event.ctrlKey) {
+                    event.preventDefault();
+                }
+            },
+            { passive: false }
+        );
+    } else {
+        console.error("L'élément SVG '#fan' n'a pas été trouvé dans le DOM.");
+    }
+
+    setSvgPanZoomInstance(instance);
+    return instance;
+}
+
 // MobX action to update the configuration after a parameter change
 const updateConfig = action((newConfig) => {
     configStore.setConfig(newConfig);
 });
 
-// Ajout de la réaction MobX pour surveiller les changements de config.root
+// Function to check if the fan container is visible
+const isFanContainerVisible = () => {
+    const fanContainer = document.getElementById("fanContainer");
+    return fanContainer && fanContainer.offsetParent !== null;
+};
+
+// MobX reaction to monitor changes in config.root
 reaction(
     () => configStore.config.root,
     (root) => {
-      console.log('config.root has changed:', root);
-      onSettingChange();
+        console.log('in ui.js config.root has changed:', root);
+        if (!isFanContainerVisible()) {
+            console.warn(
+                "The fan container is not visible. Skipping svgPanZoom initialization."
+            );
+            return null;
+        }
+        // Call onSettingChange only if fanContainer is visible
+        onSettingChange();
     }
-  );
-  
-  // Fonction onSettingChange (existe déjà dans votre fichier)
-  export function onSettingChange() {
+);
+
+
+/**
+ * Handles changes in settings by updating the configuration, 
+ * redrawing the fan chart, and managing the SVG instance.
+ */
+export function onSettingChange() {
     console.log("onSettingChange");
     try {
-      const selectedValues = getSelectedValues();
-      const dimensions = calculateDimensions(
-        selectedValues.fanAngle,
-        selectedValues.maxGenerations,
-        selectedValues.showMarriages
-      );
-  
-      let config = createConfig(selectedValues);
-      updateConfig(config); // Utiliser l'action MobX
-  
-      const hasRootPerson = config.root !== undefined && config.root !== null && config.root !== "";
-  
-      let svgElement = document.querySelector('#fan');
-      let svgPanZoomInstance = getSvgPanZoomInstance();
-  
-      if (svgElement && svgPanZoomInstance) {
-        svgPanZoomInstance.destroy();
-        setSvgPanZoomInstance(null);
-      } else if (!svgElement) {
-        console.warn("SVG not found in the DOM, cannot destroy svgPanZoomInstance.");
-      }
-  
-      let result;
-      result = draw();
-      initializeAscendantTimeline();
-  
-      if (!result) {
-        console.error("Drawing the fan failed.");
-        return false;
-      }
-  
-      if (svgElement) {
-        try {
-          svgPanZoomInstance = initializeSvgPanZoom();
-          setSvgPanZoomInstance(svgPanZoomInstance);
-        } catch (error) {
-          console.error("Error while resetting svgPanZoom:", error);
-        }
-      } else {
-        console.error("SVG not found in the DOM after drawing.");
-      }
-  
-      if (hasRootPerson) {
-        rootPersonName = formatName(result.rootPersonName);
-        filename = (
-          __("Éventail généalogique de ") +
-          formatName(result.rootPersonName) +
-          " créé sur genealog.ie"
-        ).replace(/[|&;$%@"<>()+,]/g, "");
-  
-        config.filename = filename;
-        updateConfig(config); // Utiliser l'action MobX
-        updateFilename(config.filename);
-      } else {
-        filename = __("Éventail vide créé sur genealog.ie").replace(/[|&;$%@"<>()+,]/g, "");
-        config.filename = filename;
-        updateConfig(config); // Utiliser l'action MobX
-        updateFilename(config.filename);
-      }
-  
-      shouldShowInitialMessage = false;
-      document.getElementById('initial-group').style.display = 'none';
-      document.getElementById("loading").style.display = "none";
-      document.getElementById("overlay").classList.add("overlay-hidden");
-  
-      if (dimensions !== previousDimensions) {
-        previousDimensions = dimensions;
-      }
-  
-      // resizeSvg();
-  
-      return true;
-    } catch (error) {
-      console.error("Error in onSettingChange:", error);
-      return false;
-    }
-  }
-  
+        const selectedValues = getSelectedValues();
+        const dimensions = calculateDimensions(
+            selectedValues.fanAngle,
+            selectedValues.maxGenerations,
+            selectedValues.showMarriages
+        );
 
+        let config = createConfig(selectedValues);
+        updateConfig(config); // Use MobX action
+
+        const hasRootPerson = config.root !== undefined && config.root !== null && config.root !== "";
+
+        let svgElement = document.querySelector('#fan');
+        let svgPanZoomInstance = getSvgPanZoomInstance();
+
+        if (svgElement && svgPanZoomInstance) {
+            console.log("SVG and svgPanZoomInstance exist, destroying the instance.");
+            svgPanZoomInstance.destroy();
+            setSvgPanZoomInstance(null);
+        } else if (!svgElement) {
+            console.warn("SVG not found in the DOM, cannot destroy svgPanZoomInstance.");
+        }
+
+        let result;
+        result = draw();
+
+        if (!result) {
+            console.error("Drawing the fan failed.");
+            return false;
+        }
+        initializeAscendantTimeline();
+
+        displayFan();
+        
+        if (hasRootPerson) {
+            rootPersonName = formatName(result.rootPersonName);
+            filename = (
+                __("Éventail généalogique de ") +
+                formatName(result.rootPersonName) +
+                " créé sur genealog.ie"
+            ).replace(/[|&;$%@"<>()+,]/g, "");
+
+            config.filename = filename;
+            updateConfig(config); // Use MobX action
+            updateFilename(config.filename);
+        } else {
+            filename = __("Éventail vide créé sur genealog.ie").replace(/[|&;$%@"<>()+,]/g, "");
+            config.filename = filename;
+            updateConfig(config); // Use MobX action
+            updateFilename(config.filename);
+        }
+
+        shouldShowInitialMessage = false;
+        document.getElementById('initial-group').style.display = 'none';
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("overlay").classList.add("overlay-hidden");
+
+        if (dimensions !== previousDimensions) {
+            previousDimensions = dimensions;
+        }
+
+        // resizeSvg();
+
+        return true;
+    } catch (error) {
+        console.error("Error in onSettingChange:", error);
+        return false;
+    }
+}
+  
 function handleTabsAndOverlay(shouldShowLoading) {
     const tabsToDisable = ["tab2", "tab3", "tab4"];
     tabsToDisable.forEach(tabId => {
@@ -761,6 +768,7 @@ async function onFileChange(data) {
         console.error("General Error:", error);
     } finally {
         handleTabsAndOverlay(false); // Désactiver le chargement et activer les onglets
+        setupPersonLinkEventListener();
     }
 }
 
@@ -791,14 +799,14 @@ function loadFile(input) {
                 onFileChange(data);
             } else {
                 console.error("Erreur lors du chargement du fichier :", this.status);
-                window.alert(__("arbreomatic.cannot_read_this_file"));
+                window.alert(__("geneafan.cannot_read_this_file"));
             }
         };
 
         xhr.onerror = function (e) {
             isLoadingFile = false;
             console.error("Erreur réseau lors du chargement du fichier.");
-            window.alert(__("arbreomatic.cannot_read_this_file"));
+            window.alert(__("geneafan.cannot_read_this_file"));
         };
 
         xhr.send();
@@ -835,46 +843,10 @@ document.getElementById('file').addEventListener('change', function (e) {
     loadFile(e.target.files);
 });
 
-document.getElementById('fanDisplay').addEventListener('click', function () {
-    if (shouldShowInitialMessage) {
-        document.getElementById('file').click();
-    }
-});
-
-document.getElementById('fanDisplay').addEventListener('drop', function (e) {
-    document.getElementById('preview').classList.remove('preview-drop');
-    if (e.dataTransfer && e.dataTransfer.files.length > 0) {
-        e.preventDefault();
-        e.stopPropagation();
-        loadFile(e.dataTransfer.files);
-    }
-    return false;
-});
-
-document.getElementById('fanDisplay').addEventListener('dragover', function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    return false;
-});
-
-document.getElementById('fanDisplay').addEventListener('dragenter', function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (shouldShowInitialMessage) {
-        document.getElementById('preview').classList.add('preview-drop');
-    }
-    return false;
-});
-
-document.getElementById('fanDisplay').addEventListener('dragleave', function () {
-    document.getElementById('preview').classList.remove('preview-drop');
-    return false;
-});
 
 function handleEmailSubmitWrapper() {
     handleEmailSubmit(rootPersonName);
 }
-
 
 function promptForEmail(rootPersonName) {
     var emailModal = new Modal(document.getElementById("emailModal"));

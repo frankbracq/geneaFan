@@ -1,4 +1,4 @@
-import _, { get, set, sortedLastIndex } from "lodash";
+import _, { first, get, set, sortedLastIndex } from "lodash";
 import moment from "moment";
 import parseGedcom from "parse-gedcom";
 import {
@@ -15,8 +15,6 @@ import {
     getFamilyTowns,
     setFamilyTowns,
     addToFamilyEvents,
-    getFamilyEvents,
-    getAscendantEvents,
     addToAscendantEvents,
     clearAscendantEvents,
     getSourceData,
@@ -212,6 +210,31 @@ function processOccupations(individualJson) {
     return formattedOccupations;
 }
 
+function formatPersonLink(id, name) {
+    return `<a href="#"><span class="person-link" data-person-id="${id}">${name}</span></a>`;
+}
+
+function formatSiblings(siblings) {
+    return `<ul class="list-unstyled">${_.map(
+        siblings,
+        (s) =>
+            `<li>-${formatPersonLink(s.id, s.name)} (${s.birthDate} - ${s.deathDate})</li>`
+    ).join("\n")}</ul>`;
+}
+
+function formatChild(child) {
+    const birthMoment = moment(child.birthDate, "DD/MM/YYYY");
+    const deathMoment = child.deathDate
+        ? moment(child.deathDate, "DD/MM/YYYY")
+        : null;
+    const ageAtDeath = deathMoment
+        ? ` à ${deathMoment.diff(birthMoment, "years")} ans`
+        : "";
+    return `${formatPersonLink(child.id, child.name)}${
+        child.deathDate ? ` (†${child.deathDate}${ageAtDeath})` : ""
+    }`;
+}
+
 function extractBasicInfo(individualJson) {
     const names = individualJson.tree.filter(byTag(TAG_NAME));
     const nameInfo = names.map((o) =>
@@ -226,6 +249,9 @@ function extractBasicInfo(individualJson) {
         true
     );
 
+    let fullName = `${name.split(" ")[0]} ${surname}`;
+    let personLink = formatPersonLink(individualJson.pointer, fullName);
+
     const genderMap = { 'M': 'male', 'F': 'female' };
 
     const result = individualJson.tree.reduce((acc, curr) => {
@@ -237,7 +263,7 @@ function extractBasicInfo(individualJson) {
         return acc;
     }, { gender: 'male', canSign: false });
 
-    return { name, surname, gender: result.gender, canSign: result.canSign };
+    return { name, surname, gender: result.gender, canSign: result.canSign, personLink };
 }
 
 function getRelativeDetails(individualID, allIndividuals) {
@@ -397,7 +423,7 @@ function processMarriages(
 
     const marriages = _.map(individualFamilyInfo.spouses, (spouseInfo, spouseId) => {
         const { details: spouseDetails, children, marriage } = spouseInfo;
-
+    
         // Process the details of the marriage event
         const event = {
             tree: [{ tag: 'DATE', data: marriage.date }, { tag: 'PLAC', data: marriage.place }],
@@ -407,58 +433,38 @@ function processMarriages(
             event,
             individualTowns
         );
-
+    
         // Add the family ID to the event details
-        const eventDetails = { ...rawEventDetails, eventId: '' };
-
+        const eventDetails = { ...rawEventDetails, eventId: '', spouseId }; // Add spouseId here
+    
         // Get the spouse's name
         const spouseName = spouseDetails.name;
-
+    
         // Generate the formatted marriage description
         let gender = "";  // Assume that gender is determined elsewhere or can be added here
         let age = "";  // Assume that age is determined elsewhere or can be added here
-
+    
         const formattedMarriage = generateEventDescription(
             "MARR",
             {
                 ...eventDetails,
                 spouseName: spouseName,
+                spouseId: spouseId // Pass spouseId to eventData
             },
             gender,
             age
         );
-
+    
         // Get the couple's details
         const couple = {
             husband: individualPointer,
             wife: spouseId
         };
-
+    
         return { formattedMarriage, children, spouseName, eventDetails, couple };
     });
 
     return marriages;
-}
-
-function formatSiblings(siblings) {
-    return `<ul class="list-unstyled">${_.map(
-        siblings,
-        (s) =>
-            `<li>-<a href="#"><span class="person-link" data-person-id="${s.id}">${s.name}</span></a>(${s.birthDate} - ${s.deathDate})</li>`
-    ).join("\n")}</ul>`;
-}
-
-function formatChild(child) {
-    const birthMoment = moment(child.birthDate, "DD/MM/YYYY");
-    const deathMoment = child.deathDate
-        ? moment(child.deathDate, "DD/MM/YYYY")
-        : null;
-    const ageAtDeath = deathMoment
-        ? ` à ${deathMoment.diff(birthMoment, "years")} ans`
-        : "";
-    return `${child.name}${
-        child.deathDate ? ` (†${child.deathDate}${ageAtDeath})` : ""
-    }`;
 }
 
 let cachedDepartementData = null;
@@ -522,9 +528,9 @@ async function processPlace({ data: original, tree } = {}) {
         placeObj.countryColor = countryMatch.color;
     }
 
-    // Si le pays est vide ou égal à France, chercher les codes postaux ou départementaux
+    // If the country is empty or equal to France, search for postal or departmental codes
     if (!placeObj.country || placeObj.country === "France") {
-        const codeRegex = /\b\d{5}\b|\(\d{2}\)/; // Modifié pour inclure le département entre parenthèses
+        const codeRegex = /\b\d{5}\b|\(\d{2}\)/; 
         const codeMatch = original.match(codeRegex);
     
         if (codeMatch) {
@@ -572,7 +578,7 @@ async function processPlace({ data: original, tree } = {}) {
         }
     }
 
-    // Extraction des données de géolocalisation si disponibles
+    // Extraction of geolocation data if available
     if (_.isArray(tree)) {
         const mapNode = _.find(tree, { tag: "MAP" });
         if (mapNode && _.isArray(mapNode.tree)) {
@@ -737,7 +743,7 @@ function generateEventDescription(eventType, eventData, gender, age, deceased) {
     case "MARR":
         // Ajout du conjoint pour le mariage, si disponible
         if (eventData.spouseName) {
-            additionalDetails = ` avec ${eventData.spouseName}`;
+            additionalDetails = ` avec <a href="#"><span class="person-link" data-person-id=${eventData.spouseId}>${eventData.spouseName}</span></a>`;
         }
         break;
     case "DEAT":
@@ -806,7 +812,7 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
     let age;
     let deceased = false;
 
-    const { name, surname, gender, canSign } = extractBasicInfo(individualJson);
+    const { name, surname, gender, canSign, personLink } = extractBasicInfo(individualJson);
     const { birthTags, deathTags } = handleEventTags();
 
     const birthData = buildEventFallback(individualJson, birthTags, individualTowns).eventDetails;
@@ -932,6 +938,7 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
         id: individualJson.pointer,
         name,
         surname,
+        personLink,
         birthDate: birthData.date,
         birthDepartement: birthData.departement || "",
         birthCountry: birthData.country || "",
