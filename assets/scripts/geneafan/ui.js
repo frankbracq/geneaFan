@@ -12,14 +12,14 @@ import {
     setSvgPanZoomInstance,
     getSvgPanZoomInstance,
     gmapApiKey,
-    tomSelect,
+    getTomSelectInstance,
     initializeTomSelect,
     setSourceData,
     setIndividualsCache,
     getIndividualsCache,
     clearAllStates
 } from "./state.js";
-import configStore from './store';
+import configStore, { setTomSelectValue } from './store';
 import {
     debounce,
     updateFamilyTownsViaProxy,
@@ -108,7 +108,6 @@ function handleOffcanvasHide() {
 }
 
 export function displayPersonDetailsUI(personDetails) {
-    console.log("displayPersonDetailsUI:", personDetails);  
     const {
         name,
         surname,
@@ -266,6 +265,7 @@ async function resetUI() {
         individualSelectElement.innerHTML = "";
     }
 
+    let tomSelect = getTomSelectInstance();
     if (tomSelect) {
         tomSelect.clearOptions();
         tomSelect.clear();
@@ -543,7 +543,6 @@ const isFanContainerVisible = () => {
 reaction(
     () => configStore.config.root,
     (root) => {
-        console.log('in ui.js config.root has changed:', root);
         if (!isFanContainerVisible()) {
             console.warn(
                 "The fan container is not visible. Skipping svgPanZoom initialization."
@@ -551,6 +550,7 @@ reaction(
             return null;
         }
         // Call onSettingChange only if fanContainer is visible
+        console.log("Root changed. Reaction calling onSettingChange with root =", root);
         onSettingChange();
     }
 );
@@ -561,7 +561,6 @@ reaction(
  * redrawing the fan chart, and managing the SVG instance.
  */
 export function onSettingChange() {
-    console.log("onSettingChange");
     try {
         const selectedValues = getSelectedValues();
         const dimensions = calculateDimensions(
@@ -654,6 +653,26 @@ function handleTabsAndOverlay(shouldShowLoading) {
     }
 }
 
+function findLatestIndividual(individuals) {
+  const individualsWithBirthDates = individuals.map((individual) => {
+    const birthDate = individual.birthDate;
+    let date;
+    if (birthDate.includes("/")) {
+      const [day, month, year] = birthDate.split("/").reverse();
+      date = new Date(year, month - 1, day || 1);
+    } else {
+      date = new Date(birthDate, 0, 1);
+    }
+
+    return {
+      id: individual.id,
+      birthDate: date,
+    };
+  });
+
+  return _.maxBy(individualsWithBirthDates, "birthDate");
+}
+
 async function onFileChange(data) {
     handleTabsAndOverlay(true); // Activer le chargement et désactiver les onglets
 
@@ -665,105 +684,86 @@ async function onFileChange(data) {
     setGedFileUploaded(true);
 
     try {
-      await setFamilyTowns({});
+        await setFamilyTowns({});
 
-      let json = toJson(data);
-      let result = await getAllPlaces(json);
-      setSourceData(result.json);
+        let json = toJson(data);
+        let result = await getAllPlaces(json);
+        setSourceData(result.json);
 
-      try {
-        await updateFamilyTownsViaProxy();
-        updateIndividualTownsFromFamilyTowns(getIndividualsCache());
-        setIndividualsCache(getIndividualsCache());
-      } catch (error) {
-        console.error("Error updating geolocation:", error);
-      }
-
-      googleMapManager.loadMarkersData();
-
-      const selectElement = document.getElementById("individual-select");
-      selectElement.innerHTML = ""; // Efface tout contenu résiduel
-      const placeholderOption = new Option("", "", true, true);
-      placeholderOption.disabled = true;
-      selectElement.appendChild(placeholderOption);
-
-      if (!tomSelect) {
-        initializeTomSelect();
-      }
-
-      tomSelect.clearOptions();
-
-      result = getIndividualsList(result.json);
-      let individuals = result.individualsList;
-      individuals.forEach((individual) => {
-        tomSelect.addOption({
-          value: individual.id,
-          text: `${individual.surname} ${individual.name} ${individual.id} ${
-            individual.birthYear ? individual.birthYear : "?"
-          }-${individual.deathYear ? individual.deathYear : ""}`,
-        });
-      });
-
-      let rootId;
-      if (gedcomFileName === "demo.ged") {
-        rootId = "@I111@";
-        tomSelect.setValue(rootId);
-      } else {
-        const individualsWithBirthDates = individuals.map((individual) => {
-          const birthDate = individual.birthDate;
-          let date;
-          if (birthDate.includes("/")) {
-            const [day, month, year] = birthDate.split("/").reverse();
-            date = new Date(year, month - 1, day || 1);
-          } else {
-            date = new Date(birthDate, 0, 1);
-          }
-
-          return {
-            id: individual.id,
-            birthDate: date,
-          };
-        });
-
-        const latestIndividual = _.maxBy(
-          individualsWithBirthDates,
-          "birthDate"
-        );
-        if (latestIndividual) {
-          rootId = latestIndividual.id;
-          tomSelect.setValue(rootId);
+        try {
+            await updateFamilyTownsViaProxy();
+            updateIndividualTownsFromFamilyTowns(getIndividualsCache());
+            setIndividualsCache(getIndividualsCache());
+        } catch (error) {
+            console.error("Error updating geolocation:", error);
         }
-      }
 
-      const event = new Event("change", { bubbles: true });
-      tomSelect.dropdown_content.dispatchEvent(event);
+        googleMapManager.loadMarkersData();
 
-      [
-        ...document.querySelectorAll(".parameter"),
-        document.getElementById("individual-select"),
-        document.getElementById("download-menu"),
-        document.getElementById("fanParametersDisplay"),
-        document.getElementById("treeParametersDisplay"),
-        document.getElementById("fullscreenButton"),
-      ].forEach((el) => {
-        el.disabled = false;
-      });
+        const selectElement = document.getElementById("individual-select");
+        selectElement.innerHTML = ""; // Efface tout contenu résiduel
+        const placeholderOption = new Option("", "", true, true);
+        placeholderOption.disabled = true;
+        selectElement.appendChild(placeholderOption);
 
-      updateConfig({ root: rootId });
+        // Utilisation de configStore pour gérer tomSelect
+        let tomSelect = getTomSelectInstance();
+        if (!tomSelect) {
+            initializeTomSelect();
+            tomSelect = getTomSelectInstance();
+        }
 
-      // Recherchez l'individu correspondant et mettez à jour config.rootPersonName
-      const rootPerson = individuals.find(
-        (individual) => individual.id === rootId
-      );
-      if (rootPerson) {
-        configStore.setConfig({
-          ...configStore.getConfig, // Utilisation correcte du getter
-          rootPersonName: {
-            name: rootPerson.name,
-            surname: rootPerson.surname,
-          },
+        tomSelect.clearOptions();
+
+        result = getIndividualsList(result.json);
+        let individuals = result.individualsList;
+        individuals.forEach((individual) => {
+            tomSelect.addOption({
+                value: individual.id,
+                text: `${individual.surname} ${individual.name} ${individual.id} ${
+                    individual.birthYear ? individual.birthYear : "?"
+                }-${individual.deathYear ? individual.deathYear : ""}`,
+            });
         });
-      }
+
+        let rootId;
+        if (gedcomFileName === "demo.ged") {
+            rootId = "@I111@";
+        } else {
+            const latestIndividual = findLatestIndividual(individuals);
+            if (latestIndividual) {
+                rootId = latestIndividual.id;
+            }
+        }
+        configStore.setTomSelectValue(rootId);
+
+        const event = new Event("change", { bubbles: true });
+        tomSelect.dropdown_content.dispatchEvent(event);
+
+        [
+            ...document.querySelectorAll(".parameter"),
+            document.getElementById("individual-select"),
+            document.getElementById("download-menu"),
+            document.getElementById("fanParametersDisplay"),
+            document.getElementById("treeParametersDisplay"),
+            document.getElementById("fullscreenButton"),
+        ].forEach((el) => {
+            el.disabled = false;
+        });
+
+        configStore.setConfig({ root: rootId });
+
+        // Recherchez l'individu correspondant et mettez à jour config.rootPersonName
+        const rootPerson = individuals.find((individual) => individual.id === rootId);
+        if (rootPerson) {
+            configStore.setConfig({
+                ...configStore.getConfig, // Utilisation correcte du getter
+                rootPersonName: {
+                    name: rootPerson.name,
+                    surname: rootPerson.surname,
+                },
+            });
+        }
     } catch (error) {
         console.error("General Error:", error);
     } finally {

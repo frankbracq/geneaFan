@@ -1,38 +1,14 @@
-import TomSelect from 'tom-select';
-import 'tom-select/dist/css/tom-select.css';
 import _ from 'lodash';
+import configStore from './store';
 
-export let tomSelect;
+// Fonctions pour initialiser et obtenir l'instance de tomSelect via configStore
+export const initializeTomSelect = () => {
+    configStore.initializeTomSelect();
+};
 
-/**
- * Initialize the TomSelect instance with specific configuration.
- */
-export function initializeTomSelect() {
-    tomSelect = new TomSelect("#individual-select", {
-        create: false,
-        sortField: {
-            field: "text",
-            direction: "asc"
-        },
-        dropdownParent: "body",
-        placeholder: __("geneafan.choose_root_placeholder"),
-        allowClear: true,
-        maxItems: 1,
-        closeAfterSelect: true,
-        plugins: ['dropdown_input', 'clear_button']
-    });
-
-    tomSelect.addOption({ value: "", text: __("geneafan.choose_root_placeholder"), disabled: true });
-    tomSelect.addItem("", true);
-}
-
-/**
- * Get the current state of the TomSelect instance.
- * @returns {TomSelect} The current TomSelect instance.
- */
-export function getTomSelectInstance() {
-    return tomSelect;
-}
+export const getTomSelectInstance = () => {
+    return configStore.tomSelect;
+};
 
 /**
  * Clear all relevant states when a new file is loaded.

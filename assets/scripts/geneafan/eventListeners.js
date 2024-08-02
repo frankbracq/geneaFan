@@ -139,6 +139,49 @@ export function setupPersonLinkEventListener() {
     });
 }
 
+function updateUIAfterUndoRedo() {
+    const root = configStore.getConfig.root;
+    if (root) {
+        // Mise à jour de tomSelect
+        const tomSelect = getTomSelectInstance();
+        if (tomSelect) {
+            tomSelect.setValue(root);
+            const changeEvent = new Event('change', { bubbles: true });
+            tomSelect.dropdown_content.dispatchEvent(changeEvent);
+        } else {
+            console.error('tomSelect is undefined');
+        }
+    }
+}
+
+// Configure event listeners for undo/redo buttons and keyboard shortcuts
+function setupUndoRedoEventListeners() {
+    document.getElementById('undoButton').addEventListener('click', () => {
+        console.log('Undo button clicked');
+        configStore.undo();
+        updateUIAfterUndoRedo();
+    });
+
+    document.getElementById('redoButton').addEventListener('click', () => {
+        console.log('Redo button clicked');
+        configStore.redo();
+        updateUIAfterUndoRedo();
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+            event.preventDefault();
+            configStore.undo();
+            updateUIAfterUndoRedo();
+        }
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+            event.preventDefault();
+            configStore.redo();
+            updateUIAfterUndoRedo();
+        }
+    });
+}
+
 function setupFullscreenToggle() {
     const fullscreenButton = document.getElementById('fullscreenButton');
     const fanContainer = document.getElementById('fanContainer');
@@ -238,7 +281,11 @@ export const setupAllEventListeners = () => {
 
         // Ajouter les écouteurs spécifiques aux onglets et autres UI nécessitant le DOM chargé
         setupTabAndUIEventListeners();
+
+        // Ajouter les écouteurs pour undo/redo
+        setupUndoRedoEventListeners();
     };
+
 
     if (document.readyState === "loading") {
         document.addEventListener('DOMContentLoaded', initializeEventListeners);

@@ -32,7 +32,7 @@ function getAllDescendants(individualId, genealogyGraph) {
 
 // Function to filter individuals by retaining only the root and its descendants
 function getFilteredFamilyTreeData(familyTreeData, genealogyGraph, roots) {
-    console.time('getFilteredFamilyTreeData');
+    // console.time('getFilteredFamilyTreeData');
     const allDescendants = new Set();
     roots.forEach(root => {
         const descendants = getAllDescendants(root, genealogyGraph);
@@ -54,7 +54,7 @@ function getFilteredFamilyTreeData(familyTreeData, genealogyGraph, roots) {
             individual.pids = [''];
         }
     });
-    console.timeEnd('getFilteredFamilyTreeData');
+    // console.timeEnd('getFilteredFamilyTreeData');
     return filteredFamilyTreeData;
 }
 
@@ -77,19 +77,19 @@ let family;
 let initializing = false; 
 
 export function initializeFamilyTree() {
-    console.log('Initializing family tree');
+    // console.log('Initializing family tree');
     initializing = true;
 
     let familyTreeData = getFamilyTreeData();
     if (familyTreeData.length === 0) {
-        console.log('Creating family tree data');
+        // console.log('Creating family tree data');
         familyTreeData = formatIndividualsData(getIndividualsCache());
         setFamilyTreeData(familyTreeData);
     }
 
     const config = configStore.getConfig;
     const initialRootId = config.root;
-    console.log('Initial root ID', initialRootId);
+    // console.log('Initial root ID', initialRootId);
     let focusedNodeId = initialRootId;
 
     family = new FamilyTree(document.getElementById('familyTree'), {
@@ -114,11 +114,11 @@ export function initializeFamilyTree() {
     });
 
     family.onInit(() => {
-        console.log('Family tree onInit');
+        // console.log('Family tree onInit');
         const rootNode = family.getNode(initialRootId);
         if (rootNode) {
             const rootId = getOldestAncestorOf(rootNode.id, "both");
-            console.log('Oldest ancestor Id on init:', rootId);
+            // console.log('Oldest ancestor Id on init:', rootId);
             family.config.roots = [rootId];
             family.draw();
         }
@@ -130,7 +130,7 @@ export function initializeFamilyTree() {
     });
 
     family.on('redraw', function () {
-        console.log('Family tree redraw');
+        // console.log('Family tree redraw');
         document.querySelector('#familyTree svg').addEventListener('dblclick', function (e) {
             if (e.target.closest('svg')) {
                 focusedNodeId = null;
@@ -139,7 +139,7 @@ export function initializeFamilyTree() {
     });
 
     family.on("prerender", function (sender, args) {
-        console.log('Family tree prerender');
+        // console.log('Family tree prerender');
         const nodes = args.res.nodes;
         if (focusedNodeId == null) {
             Object.keys(nodes).forEach(id => {
@@ -179,19 +179,19 @@ export function initializeFamilyTree() {
 reaction(
     () => configStore.config.root,
     (newRootId) => {
-        console.log("Reaction in tree.js - New root ID detected:", newRootId);
+        // console.log("Reaction in tree.js - New root ID detected:", newRootId);
         if (!initializing) {
-            console.log("Not initializing, proceeding with update.");
+            // console.log("Not initializing, proceeding with update.");
             if (!family) {
-                console.log("Family instance is not initialized. Initializing now...");
+                // console.log("Family instance is not initialized. Initializing now...");
                 initializeFamilyTree();
             }
             const rootId = getOldestAncestorOf(newRootId, "both");
-            console.log('Oldest ancestor ID determined by getOldestAncestorOf:', rootId);
+            // console.log('Oldest ancestor ID determined by getOldestAncestorOf:', rootId);
             family.config.roots = [rootId];
             family.draw();
         } else {
-            console.log("Currently initializing, skipping update.");
+            // console.log("Currently initializing, skipping update.");
         }
     }
 );

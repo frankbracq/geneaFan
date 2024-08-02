@@ -4,7 +4,6 @@ import { getAncestorMapCache, setAncestorMapCache, getGenealogyGraph, setCommonA
 // Create a map for quick ancestor lookup
 // This function is only called if the map is not already cached
 export function createAncestorMap(edges) {
-    console.time('createAncestorMap');
     const ancestorMap = new Map();
     edges.forEach(edge => {
         if (!ancestorMap.has(edge.target)) {
@@ -16,7 +15,6 @@ export function createAncestorMap(edges) {
             ancestorMap.get(edge.target).mid = edge.source;
         }
     });
-    console.timeEnd('createAncestorMap');
     return ancestorMap;
 }
 
@@ -42,7 +40,6 @@ function traceAncestors(id, ancestorMap) {
 
 // Function to get the oldest ancestor (= root in FamilyTreeJS) of a node using ancestorMap
 export function getOldestAncestorOf(individualId, prioritize = "both") {
-    console.time('getOldestAncestorOf');
     let ancestorMap = getAncestorMapCache();
     if (ancestorMap.size === 0) {
         const genealogyGraph = getGenealogyGraph();
@@ -80,14 +77,11 @@ export function getOldestAncestorOf(individualId, prioritize = "both") {
 
         oldestAncestor = currentId;
     }
-    console.timeEnd('getOldestAncestorOf');
     return oldestAncestor;
 }
 
 // Function to find the closest common ancestor
 export function closestAncestor(graph, id1, id2) {
-    console.time('closestAncestor');
-
     let ancestorMap = getAncestorMapCache();
     if (ancestorMap.size === 0) {
         ancestorMap = createAncestorMap(graph.edges);
@@ -99,11 +93,9 @@ export function closestAncestor(graph, id1, id2) {
 
     for (let ancestor of ancestors1) {
         if (ancestors2.has(ancestor)) {
-            console.timeEnd('closestAncestor');
             return ancestor;
         }
     }
-    console.timeEnd('closestAncestor');
     return null;
 }
 

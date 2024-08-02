@@ -607,7 +607,7 @@ async function processPlace({ data: original, tree } = {}) {
 
 function processDate(s) {
     if (typeof s !== "string") {
-        console.error("Error: Input is not a string.", s);
+        // console.error("Error: Input is not a string.", s);
         return "";
     }
 
