@@ -136,7 +136,7 @@
     </header>
     <main>
         <div class="container">
-            <!-- Contenu des onglets -->
+            <!-- Tab content -->
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="tab1">
                     <div class="row position-relative" id="fanDisplay">
@@ -149,16 +149,11 @@
                                 </h5>
                             </div>
                         </div>
-                        <!-- Conteneur de l'éventail -->
+                        <!-- Fan container -->
                         <div class="col-12 container-fluid align-items-center mt-2" id="fanContainer">
                             <svg id="fan"></svg>
                         </div>
-                        <div class="col-12 container-fluid align-items-center mt-2 d-none" id="selectRootIndividual">
-                            <h5>
-                                <%=__('geneafan.select_root_individual')%>
-                            </h5>
-                        </div>
-                        <!-- Offcanvas pour les paramètres de l'éventail -->
+                        <!-- Offcanvas for fan settings -->
                         <div class="offcanvas offcanvas-start" tabindex="-1" id="fanParameters" aria-labelledby="fanParametersLabel">
                             <div class="offcanvas-header">
                                 <h5 class="offcanvas-title" id="fanParametersLabel">Paramètres de l'éventail</h5>
@@ -168,96 +163,102 @@
                             <div class="offcanvas-body">
                                 <div class="container-fluid">
                                     <div class="row col-12 mx-auto">
-                                            <!-- Paramètre de l'angle du fan -->
-                                            <div class="mb-3 parameter-row">
-                                                <label class="form-label">Angle de l'éventail</label>
-                                                <div class="btn-group" role="group" aria-label="Angle de l'éventail">
-                                                    <input type="radio" class="btn-check parameter" name="fanAngle"
-                                                        id="fan-angle-270" value="270" checked>
-                                                    <label class="btn btn-outline-primary" for="fan-angle-270">270°</label>
-                                                    <input type="radio" class="btn-check parameter" name="fanAngle"
-                                                        id="fan-angle-360" value="360">
-                                                    <label class="btn btn-outline-primary" for="fan-angle-360">360°</label>
-                                                </div>
+                                        <!-- Paramètre de l'angle du fan -->
+                                        <div class="mb-3 parameter-row">
+                                            <label class="form-label">Angle de l'éventail</label>
+                                            <div class="btn-group" role="group" aria-label="Angle de l'éventail">
+                                                <input type="radio" class="btn-check parameter" name="fanAngle" id="fan-angle-270"
+                                                    value="270" checked>
+                                                <label class="btn btn-outline-primary" for="fan-angle-270">270°</label>
+                                                <input type="radio" class="btn-check parameter" name="fanAngle" id="fan-angle-360"
+                                                    value="360">
+                                                <label class="btn btn-outline-primary" for="fan-angle-360">360°</label>
                                             </div>
-    
-                                            <!-- Paramètre du nombre de générations -->
-                                            <div class="mb-3 parameter-row">
-                                                <label class="form-label">Nombre de générations</label>
-                                                <div class="btn-group" role="group" aria-label="Nombre de générations">
-                                                    <input type="radio" class="btn-check parameter" name="max-generations"
-                                                        id="max-generations-7" value="7">
-                                                    <label class="btn btn-outline-primary" for="max-generations-7">7</label>
-                                                    <input type="radio" class="btn-check parameter" name="max-generations"
-                                                        id="max-generations-8" value="8" checked>
-                                                    <label class="btn btn-outline-primary" for="max-generations-8">8</label>
-                                                </div>
+                                        </div>
+                
+                                        <!-- Paramètre du nombre de générations -->
+                                        <div class="mb-3 parameter-row">
+                                            <label class="form-label">Nombre de générations</label>
+                                            <div class="btn-group" role="group" aria-label="Nombre de générations">
+                                                <input type="radio" class="btn-check parameter" name="max-generations"
+                                                    id="max-generations-7" value="7">
+                                                <label class="btn btn-outline-primary" for="max-generations-7">7</label>
+                                                <input type="radio" class="btn-check parameter" name="max-generations"
+                                                    id="max-generations-8" value="8" checked>
+                                                <label class="btn btn-outline-primary" for="max-generations-8">8</label>
                                             </div>
-    
-                                            <!-- Paramètre d'affichage des mariages -->
-                                            <div class="mb-3 parameter-row">
-                                                <label class="form-label">Affichage des mariages</label>
-                                                <div class="btn-group" role="group" aria-label="Affichage des mariages">
-                                                    <input type="radio" class="btn-check parameter" name="showMarriages" id="showMarriages-true" value="true" checked>
-                                                    <label class="btn btn-outline-primary" for="showMarriages-true">Oui</label>
-                                                    <input type="radio" class="btn-check parameter" name="showMarriages" id="showMarriages-false" value="false">
-                                                    <label class="btn btn-outline-primary" for="showMarriages-false">Non</label>
-                                                </div>
+                                        </div>
+                
+                                        <!-- Paramètre d'affichage des mariages -->
+                                        <div class="mb-3 parameter-row">
+                                            <label class="form-label">Affichage des mariages</label>
+                                            <div class="btn-group" role="group" aria-label="Affichage des mariages">
+                                                <input type="radio" class="btn-check parameter" name="showMarriages"
+                                                    id="showMarriages-true" value="true" checked>
+                                                <label class="btn btn-outline-primary" for="showMarriages-true">Oui</label>
+                                                <input type="radio" class="btn-check parameter" name="showMarriages"
+                                                    id="showMarriages-false" value="false">
+                                                <label class="btn btn-outline-primary" for="showMarriages-false">Non</label>
                                             </div>
-    
-                                            <!-- Autres paramètres -->
-                                            <div class="mb-3 parameter-row">
-                                                <label class="form-label">Orientation dynamique du texte</label>
-                                                <div class="btn-group" role="group" aria-label="Orientation dynamique du texte">
-                                                    <input type="radio" class="btn-check parameter" name="invert-text-arc" id="invert-text-arc-true" value="true"
-                                                        checked>
-                                                    <label class="btn btn-outline-primary" for="invert-text-arc-true">Oui</label>
-                                                    <input type="radio" class="btn-check parameter" name="invert-text-arc" id="invert-text-arc-false" value="false">
-                                                    <label class="btn btn-outline-primary" for="invert-text-arc-false">Non</label>
-                                                </div>
+                                        </div>
+                
+                                        <!-- Autres paramètres -->
+                                        <div class="mb-3 parameter-row">
+                                            <label class="form-label">Orientation dynamique du texte</label>
+                                            <div class="btn-group" role="group" aria-label="Orientation dynamique du texte">
+                                                <input type="radio" class="btn-check parameter" name="invert-text-arc"
+                                                    id="invert-text-arc-true" value="true" checked>
+                                                <label class="btn btn-outline-primary" for="invert-text-arc-true">Oui</label>
+                                                <input type="radio" class="btn-check parameter" name="invert-text-arc"
+                                                    id="invert-text-arc-false" value="false">
+                                                <label class="btn btn-outline-primary" for="invert-text-arc-false">Non</label>
                                             </div>
-                                            <div class="mb-3 parameter-row">
-                                                <label class="form-label">Affichage des cases vides</label>
-                                                <div class="btn-group" role="group" aria-label="Affichage des cases vides">
-                                                    <input type="radio" class="btn-check parameter" name="showMissing" id="showMissing-true" value="true" checked>
-                                                    <label class="btn btn-outline-primary" for="showMissing-true">Oui</label>
-                                                    <input type="radio" class="btn-check parameter" name="showMissing" id="showMissing-false" value="false">
-                                                    <label class="btn btn-outline-primary" for="showMissing-false">Non</label>
-                                                </div>
+                                        </div>
+                                        <div class="mb-3 parameter-row">
+                                            <label class="form-label">Affichage des cases vides</label>
+                                            <div class="btn-group" role="group" aria-label="Affichage des cases vides">
+                                                <input type="radio" class="btn-check parameter" name="showMissing" id="showMissing-true"
+                                                    value="true" checked>
+                                                <label class="btn btn-outline-primary" for="showMissing-true">Oui</label>
+                                                <input type="radio" class="btn-check parameter" name="showMissing"
+                                                    id="showMissing-false" value="false">
+                                                <label class="btn btn-outline-primary" for="showMissing-false">Non</label>
                                             </div>
-                                            <!-- Coloriage de l'éventail -->
-                                            <div class="mb-3 parameter-row">
-                                                <label class="form-label">Coloriage de l'éventail</label>
-                                                <div class="btn-group" role="group" aria-label="Coloriage de l'éventail">
-                                                    <input type="radio" class="btn-check parameter" name="fanColor"
-                                                        id="fan-color-none" value="none" checked>
-                                                    <label class="btn btn-outline-primary" for="fan-color-none">Non</label>
-                                                    <input type="radio" class="btn-check parameter" name="fanColor"
-                                                        id="fan-color-departement" value="departement">
-                                                    <label class="btn btn-outline-primary" for="fan-color-departement">Géographique</label>
-                                                    <input type="radio" class="btn-check parameter" name="fanColor"
-                                                        id="fan-color-individual" value="individual">
-                                                    <label class="btn btn-outline-primary" for="fan-color-individual">Individuel</label>
-                                                </div>
+                                        </div>
+                                        <!-- Coloriage de l'éventail -->
+                                        <div class="mb-3 parameter-row">
+                                            <label class="form-label">Coloriage de l'éventail</label>
+                                            <div class="btn-group" role="group" aria-label="Coloriage de l'éventail">
+                                                <input type="radio" class="btn-check parameter" name="fanColor" id="fan-color-none"
+                                                    value="none" checked>
+                                                <label class="btn btn-outline-primary" for="fan-color-none">Non</label>
+                                                <input type="radio" class="btn-check parameter" name="fanColor"
+                                                    id="fan-color-departement" value="departement">
+                                                <label class="btn btn-outline-primary" for="fan-color-departement">Géographique</label>
+                                                <input type="radio" class="btn-check parameter" name="fanColor"
+                                                    id="fan-color-individual" value="individual">
+                                                <label class="btn btn-outline-primary" for="fan-color-individual">Individuel</label>
                                             </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-    
+                
                     </div>
                 </div>
                 <div class="tab-pane fade" id="tab2">
                     <div class="row flex-nowrap" id="familyMap"></div>
                 </div>
                 <div class="tab-pane fade" id="tab3">
-                    <div id="familyTree" ></div>
-                    <!-- Offcanvas pour les paramètres de l'arbre-->
+                    <div class="row position-relative" id="treeDisplay"></div>
+                    <!-- Tree container -->
+                    <div class="col-12 container-fluid align-items-center mt-2" id="treeContainer" style="height: 95vh;"></div>
+                    <!-- Offcanvas for tree settings -->
                     <div class="offcanvas offcanvas-start" tabindex="-1" id="treeParameters" aria-labelledby="treeParametersLabel">
                         <div class="offcanvas-header">
                             <h5 class="offcanvas-title" id="treeParametersLabel">Paramètres de l'arbre</h5>
-                            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                                aria-label="Close"></button>
+                            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                         </div>
                         <div class="offcanvas-body">
                             <div class="container-fluid">
@@ -266,7 +267,8 @@
                                         <div class="mb-3 parameter-row">
                                             <label for="commonAncestor" class="form-label">Recherche</label>
                                             <div class="btn-group" role="group">
-                                                <button type="button" id="commonAncestor" class="btn btn-primary">Ancêtre commun</button>
+                                                <button type="button" id="commonAncestor" class="btn btn-primary">Ancêtre
+                                                    commun</button>
                                             </div>
                                         </div>
                                     </div>
@@ -274,6 +276,7 @@
                             </div>
                         </div>
                     </div>
+                </div>
                 </div>
                 <div class="tab-pane fade" id="tab4">
                     <div class="horizontal-timeline" id="ascendantTimeline"></div>

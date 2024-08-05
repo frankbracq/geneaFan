@@ -82,7 +82,7 @@ class ConfigStore {
         const previousRoot = this.config.root;
         this.config = { ...this.config, ...newConfig };
 
-        // Save the root change in the history only if config.root has changed
+        // Enregistrer le changement de root dans l'historique seulement si config.root a changé
         if (newConfig.root !== previousRoot) {
             if (this.currentConfigIndex < this.configHistory.length - 1) {
                 this.configHistory = this.configHistory.slice(0, this.currentConfigIndex + 1);
@@ -106,7 +106,7 @@ class ConfigStore {
             // Utilisation de setTomSelectValue pour mettre à jour tomSelect
             this.setTomSelectValue(previousRoot);
 
-            // Triggering the `change` event to simulate a user interaction
+            // Déclenchement de l'événement `change` pour simuler une interaction utilisateur
             const changeEvent = new Event("change", { bubbles: true });
             this.tomSelect.dropdown_content.dispatchEvent(changeEvent);
         } else {
@@ -117,8 +117,26 @@ class ConfigStore {
     redo() {
         if (this.currentConfigIndex < this.configHistory.length - 1) {
             this.currentConfigIndex++;
-            this.config.root = this.configHistory[this.currentConfigIndex].root;
+            const nextRoot = this.configHistory[this.currentConfigIndex].root;
+            this.config.root = nextRoot;
+
+            console.log(`Redo action performed. Current index: ${this.currentConfigIndex}, Current root: ${this.config.root}`);
+
+            // Utilisation de setTomSelectValue pour mettre à jour tomSelect
+            this.setTomSelectValue(nextRoot);
+
+            // Déclenchement de l'événement `change` pour simuler une interaction utilisateur
+            const changeEvent = new Event("change", { bubbles: true });
+            this.tomSelect.dropdown_content.dispatchEvent(changeEvent);
+        } else {
+            console.warn("No more actions to redo.");
         }
+    }
+
+    resetConfigHistory() {
+        this.configHistory = [];
+        this.currentConfigIndex = -1;
+        console.log("Config history has been reset.");
     }
 
     get getConfig() {

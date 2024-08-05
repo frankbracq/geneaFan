@@ -1,27 +1,36 @@
 import { handleUploadAndPost } from './downloads.js';
 import { displayPersonDetailsUI, onSettingChange } from './ui.js';
 import { googleMapManager } from './mapManager.js';
-import { Tooltip, Offcanvas, Modal } from 'bootstrap'
+import { Tooltip, Offcanvas, Modal } from 'bootstrap';
 import screenfull from 'screenfull';
 import { getFamilyTowns, getSvgPanZoomInstance, getTomSelectInstance } from './state.js';
-import { action } from 'mobx'; 
+import { action } from 'mobx';
 import configStore from './store';
+
+// WeakMap to store event listener references
+const eventListenersMap = new WeakMap();
+
+// Function to validate email and handle the response
+async function validateEmail(email) {
+    const response = await fetch('https://emailvalidation.genealogie.workers.dev/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+    });
+    return response.json();
+}
 
 // Gestionnaire pour la soumission de l'email
 export async function handleEmailSubmit(rootPersonName) {
     try {
-        const response = await fetch('https://emailvalidation.genealogie.workers.dev/', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: document.getElementById("userEmailInput").value })
-        });
-        const data = await response.json();
+        const emailInput = document.getElementById("userEmailInput").value;
+        const data = await validateEmail(emailInput);
+        
         if (data.result === "ok" || data.result === "ok_for_all") {
-            const userEmail = document.getElementById("userEmailInput").value;
-            localStorage.setItem("userEmail", userEmail);
+            localStorage.setItem("userEmail", emailInput);
             const emailModal = new Modal(document.getElementById('emailModal'));
             emailModal.hide();
-            handleUploadAndPost(rootPersonName, userEmail); 
+            handleUploadAndPost(rootPersonName, emailInput);
         } else {
             alert("L'adresse de courriel indiquée n'a pu être validée. Veuillez modifier votre saisie.");
         }
@@ -30,45 +39,37 @@ export async function handleEmailSubmit(rootPersonName) {
     }
 }
 
+// Setup tooltips with HTML support
 export function setupTooltips() {
     const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
     tooltipTriggerList.forEach(tooltipTriggerEl => {
-        new Tooltip(tooltipTriggerEl, { 
-            html: true // Activer le support HTML dans les tooltips
-        });
+        new Tooltip(tooltipTriggerEl, { html: true });
     });
 }
 
 // Listener for custom 'showPersonDetails' event
-document.addEventListener('showPersonDetails', function(event) {
+document.addEventListener('showPersonDetails', event => {
     displayPersonDetailsUI(event.detail);
 });
 
-// Fonction pour gérer les clics sur les liens des villes
+// Handle city link clicks with delegation
 function handleCityLinkClick(event) {
     if (event.target.classList.contains('city-link')) {
         const townKey = event.target.dataset.townKey;
-        const townDetails = getFamilyTowns()[townKey];  // Ensure this function returns a valid object
-
-        // Convert latitude and longitude to float numbers
+        const townDetails = getFamilyTowns()[townKey];
         const latitude = parseFloat(townDetails.latitude);
         const longitude = parseFloat(townDetails.longitude);
 
         if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
             const marker = googleMapManager.markers[townKey];
             if (marker) {
-                // Center the map on the marker and adjust the zoom level
                 googleMapManager.map.setCenter(new google.maps.LatLng(latitude, longitude));
                 googleMapManager.map.setZoom(10);
-
-                // Check for an existing InfoWindow or create a new one
                 if (!marker.infowindow) {
                     marker.infowindow = new google.maps.InfoWindow({
-                        content: marker.getTitle()  // Assumes getTitle() method is properly implemented
+                        content: marker.getTitle()
                     });
                 }
-
-                // Open the InfoWindow associated with the marker
                 marker.infowindow.open(googleMapManager.map, marker);
             } else {
                 console.error("No marker found for this town key:", townKey);
@@ -79,7 +80,7 @@ function handleCityLinkClick(event) {
     }
 }
 
-// Fonction pour fermer le popover en cliquant à l'extérieur
+// Close popover on outside click
 function closePopoverOnClickOutside(event) {
     const popover = document.getElementById('customPopover');
     if (popover && !popover.contains(event.target)) {
@@ -87,27 +88,27 @@ function closePopoverOnClickOutside(event) {
     }
 }
 
-// Action pour mettre à jour la configuration
-const updateConfig = action((newConfig) => {
+// Update configuration action
+const updateConfig = action(newConfig => {
     configStore.setConfig(newConfig);
 });
 
-export function setupParameterEventListeners(onSettingChange) {
+// Setup parameter event listeners
+export function setupParameterEventListeners() {
     document.querySelectorAll('.parameter').forEach(item => {
         item.addEventListener('change', onSettingChange);
     });
 
-    // Event listener for the root selection dropdown
     const individualSelect = document.getElementById('individual-select');
     if (individualSelect) {
         individualSelect.addEventListener('change', () => {
             const selectedRoot = individualSelect.value;
-            updateConfig({ root: selectedRoot });  // Use the MobX action to update the store
+            updateConfig({ root: selectedRoot });
         });
     }
 }
 
-// Event listener for person links
+// Setup person link event listener with delegation
 export function setupPersonLinkEventListener() {
     const tomSelect = getTomSelectInstance();
     if (!tomSelect) {
@@ -115,34 +116,30 @@ export function setupPersonLinkEventListener() {
         return;
     }
 
-    document.addEventListener('click', function(event) {
-        const target = event.target;
-        if (target.matches('.person-link')) {
+    document.addEventListener('click', event => {
+        if (event.target.matches('.person-link')) {
             event.preventDefault();
-            const personId = target.getAttribute('data-person-id');
+            const personId = event.target.getAttribute('data-person-id');
             tomSelect.setValue(personId);
             const changeEvent = new Event('change', { bubbles: true });
             tomSelect.dropdown_content.dispatchEvent(changeEvent);
 
-            // Fermer les offcanvas si ouverts
             const individualMapContainer = document.getElementById('individualMapContainer');
             const personDetails = document.getElementById('personDetails');
-
-            if (individualMapContainer && individualMapContainer.classList.contains('show')) {
+            if (individualMapContainer?.classList.contains('show')) {
                 Offcanvas.getInstance(individualMapContainer).hide();
             }
-
-            if (personDetails && personDetails.classList.contains('show')) {
+            if (personDetails?.classList.contains('show')) {
                 Offcanvas.getInstance(personDetails).hide();
             }
         }
     });
 }
 
+// Update UI after undo/redo actions
 function updateUIAfterUndoRedo() {
     const root = configStore.getConfig.root;
     if (root) {
-        // Mise à jour de tomSelect
         const tomSelect = getTomSelectInstance();
         if (tomSelect) {
             tomSelect.setValue(root);
@@ -154,43 +151,49 @@ function updateUIAfterUndoRedo() {
     }
 }
 
-// Configure event listeners for undo/redo buttons and keyboard shortcuts
+// Setup undo/redo event listeners
 function setupUndoRedoEventListeners() {
-    document.getElementById('undoButton').addEventListener('click', () => {
-        console.log('Undo button clicked');
+    const undoHandler = () => {
         configStore.undo();
         updateUIAfterUndoRedo();
-    });
-
-    document.getElementById('redoButton').addEventListener('click', () => {
-        console.log('Redo button clicked');
+    };
+    const redoHandler = () => {
         configStore.redo();
         updateUIAfterUndoRedo();
-    });
-
-    document.addEventListener('keydown', (event) => {
+    };
+    const keydownHandler = event => {
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
             event.preventDefault();
-            configStore.undo();
-            updateUIAfterUndoRedo();
+            undoHandler();
         }
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
             event.preventDefault();
-            configStore.redo();
-            updateUIAfterUndoRedo();
+            redoHandler();
         }
-    });
+    };
+
+    document.getElementById('undoButton').addEventListener('click', undoHandler);
+    document.getElementById('redoButton').addEventListener('click', redoHandler);
+    document.addEventListener('keydown', keydownHandler);
+
+    // Store references in WeakMap
+    eventListenersMap.set(document.getElementById('undoButton'), undoHandler);
+    eventListenersMap.set(document.getElementById('redoButton'), redoHandler);
+    eventListenersMap.set(document, keydownHandler);
 }
 
+// Setup fullscreen toggle
 function setupFullscreenToggle() {
     const fullscreenButton = document.getElementById('fullscreenButton');
     const fanContainer = document.getElementById('fanContainer');
 
-    fullscreenButton.addEventListener('click', function() {
+    const fullscreenHandler = () => {
         if (screenfull.isEnabled) {
             screenfull.toggle(fanContainer);
         }
-    });
+    };
+
+    fullscreenButton.addEventListener('click', fullscreenHandler);
 
     if (screenfull.isEnabled) {
         screenfull.on('change', () => {
@@ -198,35 +201,47 @@ function setupFullscreenToggle() {
             panZoomInstance.updateBBox();
             panZoomInstance.fit();
             panZoomInstance.center();
-    
+
             const fan = document.getElementById('fan');
-    
+
             if (screenfull.isFullscreen) {
                 panZoomInstance.disableDblClickZoom(false);
-    
-                fan.addEventListener('mousedown', function() {
+
+                const mousedownHandler = () => {
                     fan.style.cursor = 'grabbing';
-                });
-    
-                fan.addEventListener('mouseup', function() {
+                };
+                const mouseupHandler = () => {
                     fan.style.cursor = 'grab';
-                });
+                };
+
+                fan.addEventListener('mousedown', mousedownHandler);
+                fan.addEventListener('mouseup', mouseupHandler);
+
+                // Store references in WeakMap
+                eventListenersMap.set(fan, { mousedownHandler, mouseupHandler });
             } else {
                 panZoomInstance.enableDblClickZoom(true);
                 panZoomInstance.reset();
-                // Remove the mousedown and mouseup event listeners when not in fullscreen
                 fan.style.cursor = 'default';
-                fan.removeEventListener('mousedown', function() {});
-                fan.removeEventListener('mouseup', function() {});
+
+                const handlers = eventListenersMap.get(fan);
+                if (handlers) {
+                    fan.removeEventListener('mousedown', handlers.mousedownHandler);
+                    fan.removeEventListener('mouseup', handlers.mouseupHandler);
+                }
             }
         });
     }
+
+    // Store reference in WeakMap
+    eventListenersMap.set(fullscreenButton, fullscreenHandler);
 }
 
+// Setup tab and UI event listeners
 function setupTabAndUIEventListeners() {
     document.querySelectorAll('.dropdown-menu a').forEach(element => {
         element.addEventListener('click', function() {
-            var dropdownButton = this.closest('.dropdown');
+            const dropdownButton = this.closest('.dropdown');
             dropdownButton.classList.remove('show');
             dropdownButton.querySelector('.dropdown-menu').classList.remove('show');
         });
@@ -234,14 +249,14 @@ function setupTabAndUIEventListeners() {
 
     const tabFan = document.querySelector('[href="#tab1"]');
     if (tabFan) {
-        tabFan.addEventListener('shown.bs.tab', function () {
-            onSettingChange(); 
+        tabFan.addEventListener('shown.bs.tab', () => {
+            onSettingChange();
         });
     }
 
     const tabFamilyMap = document.querySelector('[href="#tab2"]');
     if (tabFamilyMap) {
-        tabFamilyMap.addEventListener('show.bs.tab', function (e) {
+        tabFamilyMap.addEventListener('show.bs.tab', () => {
             if (googleMapManager.map) {
                 googleMapManager.moveMapToContainer('tab2');
                 googleMapManager.activateMapMarkers();
@@ -251,13 +266,13 @@ function setupTabAndUIEventListeners() {
         });
     }
 
-    document.getElementById('fanParametersDisplay').addEventListener('click', function() {
-        var fanParametersOffcanvas = new Offcanvas(document.getElementById('fanParameters'));
+    document.getElementById('fanParametersDisplay').addEventListener('click', () => {
+        const fanParametersOffcanvas = new Offcanvas(document.getElementById('fanParameters'));
         fanParametersOffcanvas.show();
     });
 
-    document.getElementById('treeParametersDisplay').addEventListener('click', function() {
-        var treeParametersOffcanvas = new Offcanvas(document.getElementById('treeParameters'));
+    document.getElementById('treeParametersDisplay').addEventListener('click', () => {
+        const treeParametersOffcanvas = new Offcanvas(document.getElementById('treeParameters'));
         treeParametersOffcanvas.show();
     });
 
@@ -265,10 +280,7 @@ function setupTabAndUIEventListeners() {
     setupTooltips();
 }
 
-let handleCityLinkClickRef = event => handleCityLinkClick(event);
-let closePopoverOnClickOutsideRef = event => closePopoverOnClickOutside(event);
-
-// Fonction principale pour configurer tous les écouteurs d'événements
+// Setup all event listeners
 export const setupAllEventListeners = () => {
     const initializeEventListeners = () => {
         document.addEventListener('click', event => {
@@ -276,16 +288,10 @@ export const setupAllEventListeners = () => {
             closePopoverOnClickOutside(event);
         });
 
-        // Paramètres et écouteurs d'événements liés aux paramètres déjà existants
-        setupParameterEventListeners(onSettingChange);
-
-        // Ajouter les écouteurs spécifiques aux onglets et autres UI nécessitant le DOM chargé
+        setupParameterEventListeners();
         setupTabAndUIEventListeners();
-
-        // Ajouter les écouteurs pour undo/redo
         setupUndoRedoEventListeners();
     };
-
 
     if (document.readyState === "loading") {
         document.addEventListener('DOMContentLoaded', initializeEventListeners);
@@ -294,6 +300,7 @@ export const setupAllEventListeners = () => {
     }
 }
 
+// Setup advanced modal
 export function setupAdvancedModal(modalPath) {
     $('#advanced-parameters').click(function() {
         $('#advancedModal').load(modalPath, function() {

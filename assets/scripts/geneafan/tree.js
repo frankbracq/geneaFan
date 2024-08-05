@@ -89,12 +89,12 @@ export function initializeFamilyTree() {
 
     const config = configStore.getConfig;
     const initialRootId = config.root;
-    // console.log('Initial root ID', initialRootId);
+    console.log('Initial root ID', initialRootId);
     let focusedNodeId = initialRootId;
 
-    family = new FamilyTree(document.getElementById('familyTree'), {
+    family = new FamilyTree(document.getElementById('treeContainer'), {
         mouseScrool: FamilyTree.action.none,
-        scaleInitial: FamilyTree.match.height,
+        scaleInitial: FamilyTree.match.boundary,
         roots: [initialRootId],
         nodeBinding: {
             field_0: 'name',
@@ -114,7 +114,7 @@ export function initializeFamilyTree() {
     });
 
     family.onInit(() => {
-        // console.log('Family tree onInit');
+        console.log('Family tree onInit');
         const rootNode = family.getNode(initialRootId);
         if (rootNode) {
             const rootId = getOldestAncestorOf(rootNode.id, "both");
@@ -131,15 +131,15 @@ export function initializeFamilyTree() {
 
     family.on('redraw', function () {
         // console.log('Family tree redraw');
-        document.querySelector('#familyTree svg').addEventListener('dblclick', function (e) {
-            if (e.target.closest('svg')) {
-                focusedNodeId = null;
-            }
-        });
+        document.querySelector('#treeContainer svg').addEventListener('dblclick', function (e) {
+                if (e.target.closest('svg')) {
+                    focusedNodeId = null;
+                }
+            });
     });
 
     family.on("prerender", function (sender, args) {
-        // console.log('Family tree prerender');
+        console.log('Family tree prerender');
         const nodes = args.res.nodes;
         if (focusedNodeId == null) {
             Object.keys(nodes).forEach(id => {

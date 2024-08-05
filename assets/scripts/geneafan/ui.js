@@ -19,7 +19,7 @@ import {
     getIndividualsCache,
     clearAllStates
 } from "./state.js";
-import configStore, { setTomSelectValue } from './store';
+import configStore, { setTomSelectValue, resetConfigHistory } from './store';
 import {
     debounce,
     updateFamilyTownsViaProxy,
@@ -303,6 +303,8 @@ async function resetUI() {
             element.addEventListener('change', onSettingChange);
         }
     });
+
+    configStore.resetConfigHistory();
 }
 
 let shouldShowInitialMessage = true;

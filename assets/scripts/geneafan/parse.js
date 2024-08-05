@@ -164,14 +164,6 @@ export function formatName(str, isSurname) {
     return str;
 }
 
-/*
-const startTime = Date.now();  // Start timer
-
-const endTime = Date.now();  // End timer
-totalExecutionTime += endTime - startTime;  // Add the time taken for this call to the total
-console.log(`Total execution time for processMarriages: ${totalExecutionTime}ms`); 
-*/
-
 // Fonction pour formater l'occupation
 function formatOccupation(occupation) {
     if (!occupation) return null; // Retourne null si l'occupation n'est pas définie

@@ -6,7 +6,7 @@
   --map-height: 800px;
   --offcanvas-bg-color: #e0e0e0;
   --offcanvas-padding: 20px;
-  --tab1-height: 100vh; // Remplacez par la hauteur réelle de tab1
+  --tab-height: 100vh; // Remplacez par la hauteur réelle de tab1
   --tab-header-height: 50px;
   --navdepartementColor: #c8a47e;
   --navTextColor: rgb(144, 144, 150);
@@ -136,13 +136,6 @@ svg#logo {
   padding: 0;
 }
 
-.advanced-settings {
-  background-color: var(--bg-color-dark);
-  border-top: 1px solid rgba(0, 0, 0, .125);
-  display: none;
-  padding: 15px;
-}
-
 div.row {
   margin: 0;
 }
@@ -179,31 +172,27 @@ div.file-button {
   justify-content: center;
 }
 
-// Family tree styles
-#familyTree {
-  max-height: 100vh;
-  width: 100%;
-  background-color: var(--bg-color-dark);
-  overflow: hidden;
-  position: relative;
-}
-
-.blurred rect,
-.blurred image,
-.blurred text,
-.blurred use {
-  filter: blur(5px) grayscale(85%);
-}
-
-.selected rect {
-  fill: #FFCA28 !important;
-}
-
-
 #fanDisplay {
   position: relative;
   width: 100%;
   overflow: hidden;
+}
+
+// Tab1 (fan) styles
+#initial-group {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  pointer-events: none;
+  position: absolute;
+  text-align: center;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  user-select: none;
+  width: 100%;
+  z-index: 5;
 }
 
 #fanContainer {
@@ -223,12 +212,12 @@ div.file-button {
 
 #fan {
   position: relative;
-  max-height: calc(var(--tab1-height) - var(--tab-header-height) - 20px);
   /* Maintient la hauteur sous le contrôle tout en permettant de réduire si nécessaire */
+  max-height: calc(var(--tab-height) - var(--tab-header-height) - 20px);
+    /* Ajuste la largeur à 100% du conteneur */
   width: 100%;
-  /* Ajuste la largeur à 100% du conteneur */
+    /* Conserve le ratio d'aspect */
   height: auto;
-  /* Conserve le ratio d'aspect */
 }
 
 .parameter-row {
@@ -248,8 +237,57 @@ div.file-button {
   left: 10px;
 }
 
-.btn-outline-primary {
-  margin-right: 0.5rem;
+// Tab2 (map) styles
+#familyMap {
+  height: 100%;
+  width: 100%;
+  min-height: 400px;
+
+  @media (min-width: 768px) {
+    height: 100vh;
+  }
+}
+
+// Tab3 (tree) styles
+#treeContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-height: calc(var(--tab-height) - var(--tab-header-height) - 20px);
+  width: 100%;
+
+  overflow: hidden;
+  position: relative;
+}
+
+.blurred rect,
+.blurred image,
+.blurred text,
+.blurred use {
+  filter: blur(5px) grayscale(85%);
+}
+
+.selected rect {
+  fill: #FFCA28 !important;
+}
+
+svg.tommy .node.male>rect {
+  fill: #039be5;
+}
+
+svg.tommy .node.female>rect {
+  fill: #FF46A3;
+}
+
+[data-l-id] path {
+  stroke: var(--color-dark);
+  stroke-width: 3px;
+}
+
+.field_0 {
+  font-family: 'Montserrat', sans-serif;
+  text-transform: uppercase;
+  fill: #cfcfcf;
 }
 
 .form-check-input {
@@ -270,36 +308,6 @@ div.file-button {
   padding: 0.75rem 1.25rem;
 }
 
-#tip {
-  bottom: 30px;
-  left: 50%;
-  position: absolute;
-  transform: translateX(-50%);
-  white-space: nowrap;
-
-  &.tip-hidden {
-    opacity: 0;
-    transition: visibility 0.2s linear, opacity 0.2s linear;
-    visibility: hidden;
-  }
-}
-
-#initial-group {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin: 0;
-  pointer-events: none;
-  position: absolute;
-  text-align: center;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  user-select: none;
-  width: 100%;
-  z-index: 5;
-}
-
 .form-check {
   display: inline-block;
   margin: 0 10px;
@@ -311,22 +319,14 @@ div.file-button {
   background-color: var(--bg-color-dark);
 }
 
+// Person details offcanvas
 #personDetails .offcanvas-body {
   background-color: var(--bg-color-dark);
   color: var(--color-dark);
   padding: 20px;
 }
 
-#familyMap {
-  height: 100%;
-  width: 100%;
-  min-height: 400px;
-
-  @media (min-width: 768px) {
-    height: 100vh;
-  }
-}
-
+// Individual map offcanvas
 #individualMapContainer {
   max-width: none;
   width: 50%;
@@ -344,13 +344,6 @@ div.file-button {
 .box {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   background-color: var(--bg-color-dark);
-}
-
-#familyAnimation {
-  position: relative;
-  width: 100%;
-  height: 600px;
-  background-color: white; // Ensure the background is white to make the SVG content visible
 }
 
 .node {
@@ -377,7 +370,4 @@ div.file-button {
   margin: 0;
 }
 
-#undoButton, #redoButton {
-  font-size: 24px; 
-  cursor: pointer; 
-}
+
