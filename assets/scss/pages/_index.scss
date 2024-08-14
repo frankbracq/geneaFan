@@ -172,10 +172,13 @@ div.file-button {
   justify-content: center;
 }
 
-#fanDisplay {
-  position: relative;
-  width: 100%;
+.tab-label {
+  display: inline-block;
+  max-width: 150px; /* Ajustez selon vos besoins */
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle; /* Assurez-vous que le texte est aligné au centre verticalement */
 }
 
 // Tab1 (fan) styles
@@ -193,6 +196,12 @@ div.file-button {
   user-select: none;
   width: 100%;
   z-index: 5;
+}
+
+#fanDisplay {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
 }
 
 #fanContainer {
@@ -248,7 +257,7 @@ div.file-button {
   }
 }
 
-// Tab3 (tree) styles
+// Family tree styles (tab #3)
 #treeContainer {
   display: flex;
   justify-content: center;

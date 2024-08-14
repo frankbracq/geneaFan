@@ -32,8 +32,10 @@ import {
     updateMarriages,
     addChildrenPerCouple,
     addAgeAtFirstChild,
+    setFamilyTreeData,
 } from "./state.js";
 import configStore from './store';
+import { initializeFamilyTree } from './tree';
 import jsonpointer from 'jsonpointer';
 
 const EMPTY = "";
@@ -1301,21 +1303,38 @@ function prebuildindividualsCache() {
     console.timeEnd("prebuildindividualsCache");
     return individualsCache;
 }
+// Function to format data for FamilyTreeJS 
+function formatFamilyTreeData(individualsCache) {
+    console.time("formatFamilyTreeData");
+    const formattedData = Array.from(individualsCache.values()).map(data => ({
+        id: data.id,
+        fid: data.fatherId,
+        mid: data.motherId,
+        pids: data.spouseIds,
+        name: `${data.name} ${data.surname}`,
+        birthDate: data.birthDate,
+        deathDate: data.deathYear,
+        gender: data.gender,
+        display: true
+    }));
+    console.timeEnd("formatFamilyTreeData");
+    return formattedData;
+}
 
 // Fonction appelée depuis ui.js pour préparer la liste déroulante de sélection de l'individu racine
 function getIndividualsList() {
-    // Définition de la configuration
-    const config = {
-        dates: { showInvalidDates: false, showYearsOnly: true },
-        places: { showPlaces: false },
-    };
-
-    // Construire au préalable le cache des individus avec toutes leurs informations
+    // Build the cache of individuals with all their information
     const individualsCache = prebuildindividualsCache();
-    clearSourceData(); // Réinitialiser les données source pour éviter les fuites de mémoire
+    clearSourceData(); // Reset source data to avoid memory leaks
+
+    // Preparing data for FamilyTreeJS
+    const familyTreeData = formatFamilyTreeData(individualsCache);
+    setFamilyTreeData(familyTreeData);
+    initializeFamilyTree(); // Call the function to initialize FamilyTreeJS
+
     setIndividualsCache(individualsCache);
 
-    // Convertir la carte en liste
+    // Convert the map to a list
     const individualsList = Array.from(individualsCache.values());
     return { individualsList };
 }

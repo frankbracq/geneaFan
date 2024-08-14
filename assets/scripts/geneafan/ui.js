@@ -19,7 +19,7 @@ import {
     getIndividualsCache,
     clearAllStates
 } from "./state.js";
-import configStore, { setTomSelectValue, resetConfigHistory } from './store';
+import configStore from './store';
 import {
     debounce,
     updateFamilyTownsViaProxy,
@@ -42,7 +42,6 @@ import {
 } from "./eventListeners.js";
 import { googleMapManager } from './mapManager.js';
 import { initializeAscendantTimeline } from './ascendantTimeline.js';
-import { initializeFamilyTree } from './tree.js';
 import { importData } from './neo4jSearch.js';
 
 let config;
@@ -392,20 +391,14 @@ function getSelectedValues() {
 function calculateDimensions(fanAngle, maxGenerations, showMarriages) {
     const dimensionsMap = {
         270: {
-            8: {
-                true: { fanDimensionsInMm: "301x257", frameDimensionsInMm: "331x287" },
-                false: { fanDimensionsInMm: "301x257", frameDimensionsInMm: "331x287" },
-            },
+            8: { fanDimensionsInMm: "301x257", frameDimensionsInMm: "331x287" }, // same dimensions with or without marriages
             7: {
                 true: { fanDimensionsInMm: "301x257", frameDimensionsInMm: "331x287" },
                 false: { fanDimensionsInMm: "245x245", frameDimensionsInMm: "260x260" },
             },
         },
         360: {
-            8: {
-                true: { fanDimensionsInMm: "297x297", frameDimensionsInMm: "331x331" },
-                false: { fanDimensionsInMm: "297x297", frameDimensionsInMm: "331x331" },
-            },
+            8: { fanDimensionsInMm: "297x297", frameDimensionsInMm: "331x331" },
             7: {
                 true: { fanDimensionsInMm: "297x297", frameDimensionsInMm: "331x331" },
                 false: { fanDimensionsInMm: "245x245", frameDimensionsInMm: "260x260" },
@@ -413,13 +406,15 @@ function calculateDimensions(fanAngle, maxGenerations, showMarriages) {
         },
     };
 
-    const dimensions = dimensionsMap[fanAngle][maxGenerations][showMarriages];
-    return {
-        fanDimensionsInMm: dimensions ? dimensions.fanDimensionsInMm : undefined,
-        frameDimensionsInMm: dimensions
-            ? dimensions.frameDimensionsInMm
-            : undefined,
-    };
+    const defaultDimensions = { fanDimensionsInMm: undefined, frameDimensionsInMm: undefined };
+    const angleDimensions = dimensionsMap[fanAngle];
+    if (!angleDimensions) return defaultDimensions;
+
+    const generationDimensions = angleDimensions[maxGenerations];
+    if (!generationDimensions) return defaultDimensions;
+
+    const dimensions = generationDimensions[showMarriages] || generationDimensions;
+    return dimensions || defaultDimensions;
 }
 
 function createConfig(selectedValues, filename) {

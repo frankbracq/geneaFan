@@ -42,7 +42,7 @@
         "title": "Genealogies",
         "description": "Générateur d'éventail généalogique",
         "view_fan_chart": "Ascendance",
-        "view_family_map": "Géographie",
+        "view_family_map": "Lieux",
         "view_family_tree": "Arbre",
         "view_ascendant_timeline": "Chronologie",
         "gedcom_file": "1. Chargez votre fichier GEDCOM",
