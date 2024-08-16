@@ -1,10 +1,10 @@
-import { handleUploadAndPost } from './downloads.js';
-import { displayPersonDetailsUI, onSettingChange } from './ui.js';
-import { googleMapManager } from './mapManager.js';
-import { Tooltip, Offcanvas, Modal } from 'bootstrap';
+import {handleUploadAndPost} from './downloads.js';
+import {displayPersonDetailsUI, onSettingChange} from './ui.js';
+import {googleMapManager} from './mapManager.js';
+import {Modal, Offcanvas, Tooltip} from 'bootstrap';
 import screenfull from 'screenfull';
-import { getFamilyTowns, getSvgPanZoomInstance, getTomSelectInstance } from './state.js';
-import { action } from 'mobx';
+import {getFamilyTowns, getSvgPanZoomInstance, getTomSelectInstance} from './state.js';
+import {action} from 'mobx';
 import configStore from './store';
 
 // WeakMap to store event listener references
@@ -25,7 +25,7 @@ export async function handleEmailSubmit(rootPersonName) {
     try {
         const emailInput = document.getElementById("userEmailInput").value;
         const data = await validateEmail(emailInput);
-        
+
         if (data.result === "ok" || data.result === "ok_for_all") {
             localStorage.setItem("userEmail", emailInput);
             const emailModal = new Modal(document.getElementById('emailModal'));
@@ -237,6 +237,78 @@ function setupFullscreenToggle() {
     eventListenersMap.set(fullscreenButton, fullscreenHandler);
 }
 
+const calculateItemWidth = (items) => items.reduce((acc, item) => acc + item.getBoundingClientRect().width, 0);
+
+function setupResponsiveTabs() {
+    const tabContainer = document.getElementById('tab-container');
+    const moreDrawer = document.getElementById('more-drawer');
+    const moreTabBtn = document.getElementById('more-tab-btn');
+    const innerContainer = tabContainer.children[0];
+    const innerTabsItems = [...tabContainer.querySelectorAll('li')]
+    const drawerTabsItems = [...moreDrawer.querySelectorAll('li')]
+    const totalWidth = calculateItemWidth(innerTabsItems);
+    const containerWidth = tabContainer.getBoundingClientRect().width;
+
+    if (totalWidth > containerWidth) {
+        while (calculateItemWidth(innerTabsItems) > tabContainer.getBoundingClientRect().width) {
+            const lastItem = innerTabsItems.pop()
+            moreDrawer.prepend(lastItem)
+            // innerContainer.removeChild(lastItem)
+        }
+
+        moreTabBtn.style.visibility = 'visible';
+        return
+    }
+
+    const distance = tabContainer.offsetWidth - innerContainer.offsetWidth;
+
+    if (drawerTabsItems.length) {
+        let firstElementWidth = drawerTabsItems[0].getBoundingClientRect().width;
+        let isNextStep = distance > firstElementWidth
+        if (!isNextStep) return;
+
+        while (isNextStep) {
+            const firstItem = drawerTabsItems.shift()
+            innerContainer.appendChild(firstItem)
+            // moreDrawer.removeChild(firstItem)
+            innerTabsItems.push(firstItem)
+            firstElementWidth = firstItem.getBoundingClientRect().width;
+            isNextStep = (tabContainer.offsetWidth - innerContainer.offsetWidth > firstElementWidth) && drawerTabsItems.length
+        }
+
+        if (!drawerTabsItems.length) {
+            moreTabBtn.style.visibility = 'hidden'
+            moreDrawer.style.visibility = 'hidden'
+        }
+    }
+}
+
+function clickOutsideListener(elements, callback) {
+    function handleClickOutside(event) {
+        event.stopPropagation()
+        if (!elements.some(element => element.contains(event.target))) callback();
+    }
+
+    document.addEventListener('click', handleClickOutside);
+
+    return () => {
+        document.removeEventListener('click', handleClickOutside);
+    };
+}
+
+function setupTabResizeListener() {
+    const moreTabBtn = document.getElementById('more-tab-btn');
+    const moreDrawer = document.getElementById('more-drawer');
+    clickOutsideListener([moreDrawer, moreTabBtn], () => {
+        moreDrawer.style.visibility = 'hidden'
+    })
+    moreTabBtn.addEventListener('click', () => {
+        const visibility = window.getComputedStyle(moreDrawer).visibility
+        moreDrawer.style.visibility = visibility === 'hidden' ? 'visible' : 'hidden'
+    });
+    window.addEventListener('resize', setupResponsiveTabs);
+}
+
 // Setup tab and UI event listeners
 function setupTabAndUIEventListeners() {
     document.querySelectorAll('.dropdown-menu a').forEach(element => {
@@ -291,6 +363,10 @@ export const setupAllEventListeners = () => {
         setupParameterEventListeners();
         setupTabAndUIEventListeners();
         setupUndoRedoEventListeners();
+        setTimeout(() => {
+            setupResponsiveTabs();
+            setupTabResizeListener();
+        })
     };
 
     if (document.readyState === "loading") {
