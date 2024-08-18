@@ -15,35 +15,46 @@
         <!-- Header with tabs, tom-select element, dropdowns and fullscreen button -->
         <div class="fixed-top d-flex justify-content-between align-items-center" style="padding-left: 5px; padding-right: 5px;" id="tab-header">
             <!-- Section with tab headers -->
-            <div id="tab-container" class="d-flex">
-                <ul class="nav nav-tabs" id="tab-nav">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#tab1" data-bs-toggle="tab">
-                            <span class="tab-label"><%= __('geneafan.view_fan_chart') %></span>
-                            <button class="btn btn-secondary btn-sm spacedS" id="fanParametersDisplay" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="<%= __('geneafan.tooltip_fan_parameters') %>">
-                                <i class="bi bi-sliders"></i>
-                            </button>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link disabled" href="#tab2" data-bs-toggle="tab">
-                            <span class="tab-label"><%= __('geneafan.view_family_map') %></span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link disabled" href="#tab3" data-bs-toggle="tab">
-                            <span class="tab-label"><%= __('geneafan.view_family_tree') %></span>
-                            <button class="btn btn-secondary btn-sm spacedS" id="treeParametersDisplay" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="<%= __('geneafan.tooltip_tree_parameters') %>">
-                                <i class="bi bi-sliders"></i>
-                            </button>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link disabled" href="#tab4" data-bs-toggle="tab">
-                            <span class="tab-label"><%= __('geneafan.view_ascendant_timeline') %></span>
-                        </a>
-                    </li>
-                </ul>
+            <div class="left-header" role="tablist">
+                <div id="tab-container" class="d-flex">
+                    <ul class="nav nav-tabs" id="tab-nav">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#tab1" data-bs-toggle="tab">
+                                <span class="tab-label"><%= __('geneafan.view_fan_chart') %></span>
+                                <button class="btn btn-secondary btn-sm spacedS" id="fanParametersDisplay" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="<%= __('geneafan.tooltip_fan_parameters') %>">
+                                    <i class="bi bi-sliders"></i>
+                                </button>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link disabled" href="#tab2" data-bs-toggle="tab">
+                                <span class="tab-label"><%= __('geneafan.view_family_map') %></span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link disabled" href="#tab3" data-bs-toggle="tab">
+                                <span class="tab-label"><%= __('geneafan.view_family_tree') %></span>
+                                <button class="btn btn-secondary btn-sm spacedS" id="treeParametersDisplay" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="<%= __('geneafan.tooltip_tree_parameters') %>">
+                                    <i class="bi bi-sliders"></i>
+                                </button>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link disabled" href="#tab4" data-bs-toggle="tab">
+                                <span class="tab-label"><%= __('geneafan.view_ascendant_timeline') %></span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div id="burger-menu" class="burger-menu">
+                    <div type="button" id="more-tab-btn" class="more-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 4 18">
+                            <path fill="var(--bg-color-dark)" fill-rule="evenodd" d="M0 2a2 2 0 1 0 4 0 2 2 0 0 0-4 0m2 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4m0 7a2 2 0 1 1 0-4 2 2 0 0 1 0 4" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <ul id="more-drawer" class="nav-tabs more-content">
+                    </ul>
+                </div>
             </div>
             <!-- Section with the tom-select element -->
             <div class="d-flex justify-content-center col-4 mx-auto align-items-center">
@@ -99,7 +110,7 @@
                 </div>
                 <div style="display: flex;">
                     <button class="btn btn-secondary" id="fullscreenButton" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="<%= __('geneafan.tooltip_full_screen') %>">
-                        <i class="bi bi-arrows-fullscreen"></i> 
+                        <i class="bi bi-arrows-fullscreen"></i>
                     </button>
                 </div>
                 <!--
@@ -118,7 +129,7 @@
                 -->
             </div>
         </div>
-        
+
         <div id="overlay">
             <div id="loading">
                 <div class="spinner-border custom-spinner" role="status">
@@ -136,7 +147,7 @@
             <span id="alert-content"></span>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
-        
+
     </header>
     <main>
         <div class="container">
@@ -179,7 +190,7 @@
                                                 <label class="btn btn-outline-primary" for="fan-angle-360">360°</label>
                                             </div>
                                         </div>
-                
+
                                         <!-- Paramètre du nombre de générations -->
                                         <div class="mb-3 parameter-row">
                                             <label class="form-label">Nombre de générations</label>
@@ -192,7 +203,7 @@
                                                 <label class="btn btn-outline-primary" for="max-generations-8">8</label>
                                             </div>
                                         </div>
-                
+
                                         <!-- Paramètre d'affichage des mariages -->
                                         <div class="mb-3 parameter-row">
                                             <label class="form-label">Affichage des mariages</label>
@@ -205,7 +216,7 @@
                                                 <label class="btn btn-outline-primary" for="showMarriages-false">Non</label>
                                             </div>
                                         </div>
-                
+
                                         <!-- Autres paramètres -->
                                         <div class="mb-3 parameter-row">
                                             <label class="form-label">Orientation dynamique du texte</label>
@@ -248,7 +259,7 @@
                                 </div>
                             </div>
                         </div>
-                
+
                     </div>
                 </div>
                 <div class="tab-pane fade" id="tab2">
@@ -296,7 +307,7 @@
                         <h5 class="modal-title" id="emailModalLabel">Saisissez l'adresse à laquelle vous souhaitez
                             recevoir le PDF de l'éventail sans filigrane.</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-    
+
                         </button>
                     </div>
                     <div class="modal-body">
@@ -309,7 +320,7 @@
                 </div>
             </div>
         </div>
-    
+
         <div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog" aria-labelledby="confirmationModalLabel"
             aria-hidden="true">
             <div class="modal-dialog" role="document">
@@ -317,7 +328,7 @@
                     <div class="modal-header">
                         <h5 class="modal-title" id="confirmationModalLabel">Confirmation</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-    
+
                         </button>
                     </div>
                     <div class="modal-body">
@@ -329,7 +340,7 @@
                 </div>
             </div>
         </div>
-    
+
         <!-- Offcanvas for individuals -->
         <div class="offcanvas offcanvas-end" tabindex="-1" id="personDetails" aria-labelledby="personDetailsLabel">
             <div class="offcanvas-header">
@@ -340,7 +351,7 @@
                 <div id="individualTimeline" class="text-start"></div>
             </div>
         </div>
-    
+
         <div class="offcanvas offcanvas-start map-width" tabindex="-1" id="individualMapContainer"
             aria-labelledby="individualMapLabel">
             <div class="offcanvas-header">

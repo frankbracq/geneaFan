@@ -63,6 +63,7 @@ class ConfigStore {
             allowClear: true,
             maxItems: 1,
             closeAfterSelect: true,
+            dropdownContentClass: 'ts-dropdown-content dropdown-content-modifiers',
             plugins: ['dropdown_input', 'clear_button']
         });
 
