@@ -42,7 +42,6 @@ import {
 } from "./eventListeners.js";
 import { googleMapManager } from './mapManager.js';
 import { initializeAscendantTimeline } from './ascendantTimeline.js';
-import { importData } from './neo4jSearch.js';
 
 let config;
 let rootPersonName;
