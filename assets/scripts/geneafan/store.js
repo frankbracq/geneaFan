@@ -91,8 +91,8 @@ class ConfigStore {
             this.configHistory.push({ root: newConfig.root }); // Stocker seulement root
             this.currentConfigIndex++;
 
-            console.log(`Config set. Current index: ${this.currentConfigIndex}, Root: ${this.config.root}`);
-            console.log('Current configHistory:', this.configHistory);
+            // console.log(`Config set. Current index: ${this.currentConfigIndex}, Root: ${this.config.root}`);
+            // console.log('Current configHistory:', this.configHistory);
         }
     }
 
@@ -102,7 +102,7 @@ class ConfigStore {
             const previousRoot = this.configHistory[this.currentConfigIndex].root;
             this.config.root = previousRoot;
 
-            console.log(`Undo action performed. Current index: ${this.currentConfigIndex}, Current root: ${this.config.root}`);
+            // console.log(`Undo action performed. Current index: ${this.currentConfigIndex}, Current root: ${this.config.root}`);
 
             // Utilisation de setTomSelectValue pour mettre à jour tomSelect
             this.setTomSelectValue(previousRoot);
@@ -121,7 +121,7 @@ class ConfigStore {
             const nextRoot = this.configHistory[this.currentConfigIndex].root;
             this.config.root = nextRoot;
 
-            console.log(`Redo action performed. Current index: ${this.currentConfigIndex}, Current root: ${this.config.root}`);
+            // console.log(`Redo action performed. Current index: ${this.currentConfigIndex}, Current root: ${this.config.root}`);
 
             // Utilisation de setTomSelectValue pour mettre à jour tomSelect
             this.setTomSelectValue(nextRoot);
@@ -137,7 +137,7 @@ class ConfigStore {
     resetConfigHistory() {
         this.configHistory = [];
         this.currentConfigIndex = -1;
-        console.log("Config history has been reset.");
+        // console.log("Config history has been reset.");
     }
 
     get getConfig() {

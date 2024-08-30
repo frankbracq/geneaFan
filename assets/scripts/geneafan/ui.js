@@ -28,24 +28,24 @@ import {
 import { toJson, getIndividualsList, getAllPlaces } from "./parse.js";
 import { draw } from "./fan.js";
 import {
+    downloadContent,
+    downloadPNG,
     fanAsXml,
     generateFileName,
     generatePdf,
-    downloadContent,
-    downloadPNG,
+    handleUploadAndPost,
     updateFilename,
 } from "./downloads.js";
 import {
     setupAllEventListeners,
-    handleEmailSubmit,
     setupPersonLinkEventListener,
 } from "./eventListeners.js";
 import { googleMapManager } from './mapManager.js';
 import { initializeAscendantTimeline } from './ascendantTimeline.js';
+import { handleUserAuthentication } from './users.js';
 
 let config;
 let rootPersonName;
-let isEmailButtonListenerAdded = false;
 
 let previousDimensions = null;
 
@@ -103,6 +103,107 @@ function handleOffcanvasHide() {
     if (offCanvasIndividualMapInstance) {
         offCanvasIndividualMapInstance.hide();
     }
+}
+export function displayPersonDetailsUI1(personDetails) {
+    const {
+        name,
+        surname,
+        personLink,
+        formattedOccupations,
+        formattedSiblings,
+        individualTowns,
+        individualEvents,
+        deceased
+    } = personDetails.data;
+
+    // Utilisation du template pour personDetailsLabel
+    const personDetailsLabelTemplate = document.getElementById("person-details-label-template");
+    const personDetailsLabelElement = document.getElementById("personDetailsLabel");
+    const clonedLabelTemplate = document.importNode(personDetailsLabelTemplate.content, true);
+    clonedLabelTemplate.querySelector('h4').innerHTML = personLink;
+    personDetailsLabelElement.innerHTML = ''; // Nettoyage du contenu précédent
+    personDetailsLabelElement.appendChild(clonedLabelTemplate);
+
+    const eventTypeDescriptions = {
+        birth: "Naissance",
+        marriage: "Mariage",
+        death: "Décès",
+        today: "Aujourd'hui",
+    };
+
+    const birthEvent = individualEvents.find(event => event.type === 'birth') || { type: 'birth', date: '', description: 'Date inconnue' };
+    const deathEvent = individualEvents.find(event => event.type === 'death');
+
+    const otherEvents = individualEvents
+        .filter(event => event.type !== 'birth' && event.type !== 'death')
+        .sort((a, b) => {
+            const dateA = a.date ? new Date(a.date.split("/").reverse().join("-")) : new Date();
+            const dateB = b.date ? new Date(a.date.split("/").reverse().join("-")) : new Date();
+            return dateA - dateB;
+        });
+
+    const timelineEvents = [birthEvent, ...otherEvents];
+    if (deceased && deathEvent) {
+        timelineEvents.push(deathEvent);
+    }
+
+    // Utilisation du template pour individualTimelineElement
+    const timelineTemplate = document.getElementById("person-details-timeline-template");
+    const individualTimelineElement = document.getElementById("individualTimeline");
+    const clonedTimelineTemplate = document.importNode(timelineTemplate.content, true);
+    const timelineFragment = document.createDocumentFragment();
+    
+    let childBirthCount = 0;
+    timelineEvents.forEach(event => {
+        let description;
+        if (event.type === "child-birth") {
+            description = `${++childBirthCount}${ordinalSuffixOf(childBirthCount)} enfant${event.ageAtEvent ? ` à ${event.ageAtEvent} ans` : ''}`;
+        } else if (event.type === "death" || event.type === "marriage") {
+            const eventTypePrefix = event.type === "death" ? "Décès" : "Mariage";
+            description = `${eventTypePrefix}${event.ageAtEvent ? ` à ${event.ageAtEvent} ans` : ''}`;
+        } else {
+            description = eventTypeDescriptions[event.type] || _.startCase(event.type);
+        }
+
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <div class="event-header">
+                <h6 class="mt-0">${description}</h6>
+                <h6 class="float-end">${event.date || 'Date inconnue'}</h6>
+            </div>
+            <p class="mt-0">${event.description}</p>
+        `;
+        timelineFragment.appendChild(li);
+    });
+
+    clonedTimelineTemplate.querySelector('.timeline-3').appendChild(timelineFragment);
+
+    const siblingsSection = formattedSiblings ? `
+        <h6>Fratrie</h6>
+        <ul class="list-group">
+            <li class="list-group-item">${formattedSiblings}</li>
+        </ul>` : '';
+
+    const occupationsSection = formattedOccupations ? `
+        <h6 class="mt-2">Profession</h6>
+        <ul class="list-group">
+            <li class="list-group-item">${formattedOccupations}</li>
+        </ul>` : '';
+
+    clonedTimelineTemplate.querySelector('.additional-info').innerHTML = `${siblingsSection}${occupationsSection}`;
+    
+    individualTimelineElement.innerHTML = ''; // Nettoyage du contenu précédent
+    individualTimelineElement.appendChild(clonedTimelineTemplate);
+
+    // Gestion de la carte et des événements d'affichage
+    if (!googleMapManager.map) {
+        googleMapManager.initMapIfNeeded();
+    }
+
+    const individualTownKeys = Object.keys(individualTowns);
+    googleMapManager.activateMapMarkers(individualTownKeys);
+
+    showOffCanvasDetails();
 }
 
 export function displayPersonDetailsUI(personDetails) {
@@ -839,30 +940,18 @@ document.getElementById('file').addEventListener('change', function (e) {
     loadFile(e.target.files);
 });
 
-
-function handleEmailSubmitWrapper() {
-    handleEmailSubmit(rootPersonName);
-}
-
-function promptForEmail(rootPersonName) {
-    var emailModal = new Modal(document.getElementById("emailModal"));
-    emailModal.show();
-    var emailButton = document.getElementById("email");
-    if (emailButton) {
-        if (isEmailButtonListenerAdded) {
-            emailButton.removeEventListener("click", handleEmailSubmitWrapper);
-            isEmailButtonListenerAdded = false;
-        }
-        emailButton.addEventListener("click", handleEmailSubmitWrapper);
-        isEmailButtonListenerAdded = true;
-    } else {
-        console.log("Did not find email button");
-    }
-}
-
+// Download buttons
 document.getElementById('download-pdf').addEventListener('click', function (event) {
-    promptForEmail(rootPersonName);
     event.preventDefault(); // Prevent default link action
+
+    handleUserAuthentication(async (userInfo) => {
+        if (userInfo) {  // Vérifier si les informations de l'utilisateur sont disponibles
+            const userEmail = userInfo.email; // Récupère l'email de l'utilisateur
+            await handleUploadAndPost(rootPersonName, userEmail); // Appel de la fonction avec l'email de l'utilisateur
+        } else {
+            console.error("L'utilisateur n'est pas connecté ou les informations sont manquantes.");
+        }
+    });
 });
 
 document.getElementById('download-pdf-watermark').addEventListener('click', function (event) {

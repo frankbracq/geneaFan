@@ -54,7 +54,6 @@ function getFrameDimensions(frameDimensionsInMm) {
     return frameDimensionsInMm.split('x').map(Number);
 }
 
-
 export function generatePdf(config, watermark = true) {
     return new Promise((resolve, reject) => {
         // console.log('Starting generatePdf...');
@@ -114,7 +113,6 @@ export function generatePdf(config, watermark = true) {
         const stream = doc.pipe(blobStream());
         stream.on('finish', function() {
             const blob = stream.toBlob('application/pdf');
-            console.log('Promise resolved');
             resolve(blob);
         });
 
@@ -166,10 +164,26 @@ async function uploadFilesToUploadcare(config, userEmail) {
         return `https://ucarecdn.com/${data.file}/`;
     };
 
-    const pngUrl = await uploadFile(pngBlob, `${config.filename} by ${userEmail}.png`);
-    const pdfUrl = await uploadFile(pdfBlob, `${config.filename} by ${userEmail}.pdf`);
+    const [pngUrl, pdfUrl] = await Promise.all([
+        uploadFile(pngBlob, `${config.filename} par ${userEmail}.png`),
+        uploadFile(pdfBlob, `${config.filename} par ${userEmail}.pdf`)
+    ]);
 
     return { pngUrl, pdfUrl, pdfBlob }; // Retourner les URLs et le blob PDF pour une utilisation ultérieure
+}
+
+// Utility function to show the confirmation modal
+function showConfirmationModal(message) {
+    const confirmationModalElement = document.getElementById('confirmationModal');
+    const confirmationModal = new Modal(confirmationModalElement);
+
+    // Get the modal body element where the message will be inserted
+    const modalBodyElement = confirmationModalElement.querySelector('.modal-body');
+
+    // Insert the dynamic message into the modal body
+    modalBodyElement.innerHTML = message;
+
+    confirmationModal.show();
 }
 
 async function postDataToMake(config, pngUrl, pdfUrl, rootPersonName, userEmail, pdfBlob) {
@@ -183,20 +197,17 @@ async function postDataToMake(config, pngUrl, pdfUrl, rootPersonName, userEmail,
 
     const response = await fetch(postUrl, { method: 'POST', body: formData });
     if (response.ok) {
-        // Succès
-        showConfirmationModal('Consultez votre boîte de courriel dans quelques minutes.');
-        // console.log('Fin processus.');
+        // Success
+        showConfirmationModal(`Le fichier PDF de votre éventail sera envoyé dans quelques minutes à l'adresse ${userEmail}.`);
     } else {
-        // Échec
-        showConfirmationModal('Erreur lors de l\'envoi du PDF.');
+        // Failure
+        showConfirmationModal("Erreur lors de l'envoi du PDF.");
     }
 }
 
-export async function handleUploadAndPost(rootPersonName) {
+export async function handleUploadAndPost(rootPersonName, userEmail) {
     const config = configStore.getConfig; // Get the current configuration state
-    const userEmail = localStorage.getItem("userEmail") || "anonymous";
-    const overlay = document.getElementById('overlay'); // Assurez-vous que votre overlay a l'ID 'overlay'
-    // console.log('appel à handleUploadAndPost');
+    const overlay = document.getElementById('overlay'); // Make sure your overlay has the ID 'overlay'
     try {
         // Show the overlay
         overlay.classList.remove('overlay-hidden');
@@ -210,19 +221,12 @@ export async function handleUploadAndPost(rootPersonName) {
         overlay.classList.add('overlay-hidden');
     } catch (error) {
         console.error('Error:', error);
-        const confirmationModal = new Modal(document.getElementById('confirmationModal'));
-        confirmationModal.show();
+        showConfirmationModal('An error occurred. Please try again.');
 
         // Hide the overlay
         overlay.classList.remove('overlay-visible');
         overlay.classList.add('overlay-hidden');
     }
-}
-
-export function showConfirmationModal(message) {
-    const confirmationModalElement = document.getElementById('confirmationModal');
-    const confirmationModal = new Modal(confirmationModalElement);
-    confirmationModal.show();
 }
 
 function generatePNG(config, transparency) {

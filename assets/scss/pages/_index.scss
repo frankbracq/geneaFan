@@ -172,13 +172,63 @@ div.file-button {
   justify-content: center;
 }
 
-.tab-label {
-  display: inline-block;
-  max-width: 150px; /* Ajustez selon vos besoins */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: middle; /* Assurez-vous que le texte est aligné au centre verticalement */
+// Responsive tab header
+.dropdown-content-modifiers {
+  max-height: 600px !important;
+}
+
+.burger-menu {
+  position: relative;
+}
+
+.more-btn {
+  height: 100%;
+  cursor: pointer;
+  visibility: hidden;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.more-content {
+  position: absolute;
+  top: 40px;
+  display: flex;
+  padding: 6px;
+  flex-direction: column;
+  border-color: var(--color-light);
+  border-width: 2px;
+  width: 150px;
+  background: #fff;
+  z-index: 10;
+  gap: 8px;
+  visibility: hidden;
+  border-radius: 4px;
+
+  &>li {
+    list-style: none;
+    width: 100%;
+  }
+
+  & .nav-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.left-header {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  align-items: center;
+  margin-right: 20px;
+
+  &>#tab-container {
+    flex: 1;
+  }
 }
 
 // Tab1 (fan) styles
@@ -379,60 +429,4 @@ svg.tommy .node.female>rect {
   margin: 0;
 }
 
-.dropdown-content-modifiers {
-  max-height: 600px !important;
-}
 
-.burger-menu {
-  position: relative;
-}
-
-.more-btn {
-  height: 100%;
-  cursor: pointer;
-  visibility: hidden;
-
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-}
-
-.more-content {
-  position: absolute;
-  top: 40px;
-  display: flex;
-  padding: 6px;
-  flex-direction: column;
-  border-color: var(--color-light);
-  border-width: 2px;
-  width: 150px;
-  background: #fff;
-  z-index: 10;
-  gap: 8px;
-  visibility: hidden;
-  border-radius: 4px;
-
-  & > li {
-    list-style: none;
-    width: 100%;
-  }
-
-  & .nav-link {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-}
-
-.left-header {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  align-items: center;
-  margin-right: 20px;
-
-  & > #tab-container {
-    flex: 1;
-}
-}

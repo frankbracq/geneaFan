@@ -1,4 +1,3 @@
-import {handleUploadAndPost} from './downloads.js';
 import {displayPersonDetailsUI, onSettingChange} from './ui.js';
 import {googleMapManager} from './mapManager.js';
 import {Modal, Offcanvas, Tooltip} from 'bootstrap';
@@ -9,35 +8,6 @@ import configStore from './store';
 
 // WeakMap to store event listener references
 const eventListenersMap = new WeakMap();
-
-// Function to validate email and handle the response
-async function validateEmail(email) {
-    const response = await fetch('https://emailvalidation.genealogie.workers.dev/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-    });
-    return response.json();
-}
-
-// Gestionnaire pour la soumission de l'email
-export async function handleEmailSubmit(rootPersonName) {
-    try {
-        const emailInput = document.getElementById("userEmailInput").value;
-        const data = await validateEmail(emailInput);
-
-        if (data.result === "ok" || data.result === "ok_for_all") {
-            localStorage.setItem("userEmail", emailInput);
-            const emailModal = new Modal(document.getElementById('emailModal'));
-            emailModal.hide();
-            handleUploadAndPost(rootPersonName, emailInput);
-        } else {
-            alert("L'adresse de courriel indiquée n'a pu être validée. Veuillez modifier votre saisie.");
-        }
-    } catch (error) {
-        alert("Erreur lors de la validation de l'email. Veuillez recommencer.");
-    }
-}
 
 // Setup tooltips with HTML support
 export function setupTooltips() {
