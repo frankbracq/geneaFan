@@ -104,107 +104,6 @@ function handleOffcanvasHide() {
         offCanvasIndividualMapInstance.hide();
     }
 }
-export function displayPersonDetailsUI1(personDetails) {
-    const {
-        name,
-        surname,
-        personLink,
-        formattedOccupations,
-        formattedSiblings,
-        individualTowns,
-        individualEvents,
-        deceased
-    } = personDetails.data;
-
-    // Utilisation du template pour personDetailsLabel
-    const personDetailsLabelTemplate = document.getElementById("person-details-label-template");
-    const personDetailsLabelElement = document.getElementById("personDetailsLabel");
-    const clonedLabelTemplate = document.importNode(personDetailsLabelTemplate.content, true);
-    clonedLabelTemplate.querySelector('h4').innerHTML = personLink;
-    personDetailsLabelElement.innerHTML = ''; // Nettoyage du contenu précédent
-    personDetailsLabelElement.appendChild(clonedLabelTemplate);
-
-    const eventTypeDescriptions = {
-        birth: "Naissance",
-        marriage: "Mariage",
-        death: "Décès",
-        today: "Aujourd'hui",
-    };
-
-    const birthEvent = individualEvents.find(event => event.type === 'birth') || { type: 'birth', date: '', description: 'Date inconnue' };
-    const deathEvent = individualEvents.find(event => event.type === 'death');
-
-    const otherEvents = individualEvents
-        .filter(event => event.type !== 'birth' && event.type !== 'death')
-        .sort((a, b) => {
-            const dateA = a.date ? new Date(a.date.split("/").reverse().join("-")) : new Date();
-            const dateB = b.date ? new Date(a.date.split("/").reverse().join("-")) : new Date();
-            return dateA - dateB;
-        });
-
-    const timelineEvents = [birthEvent, ...otherEvents];
-    if (deceased && deathEvent) {
-        timelineEvents.push(deathEvent);
-    }
-
-    // Utilisation du template pour individualTimelineElement
-    const timelineTemplate = document.getElementById("person-details-timeline-template");
-    const individualTimelineElement = document.getElementById("individualTimeline");
-    const clonedTimelineTemplate = document.importNode(timelineTemplate.content, true);
-    const timelineFragment = document.createDocumentFragment();
-    
-    let childBirthCount = 0;
-    timelineEvents.forEach(event => {
-        let description;
-        if (event.type === "child-birth") {
-            description = `${++childBirthCount}${ordinalSuffixOf(childBirthCount)} enfant${event.ageAtEvent ? ` à ${event.ageAtEvent} ans` : ''}`;
-        } else if (event.type === "death" || event.type === "marriage") {
-            const eventTypePrefix = event.type === "death" ? "Décès" : "Mariage";
-            description = `${eventTypePrefix}${event.ageAtEvent ? ` à ${event.ageAtEvent} ans` : ''}`;
-        } else {
-            description = eventTypeDescriptions[event.type] || _.startCase(event.type);
-        }
-
-        const li = document.createElement('li');
-        li.innerHTML = `
-            <div class="event-header">
-                <h6 class="mt-0">${description}</h6>
-                <h6 class="float-end">${event.date || 'Date inconnue'}</h6>
-            </div>
-            <p class="mt-0">${event.description}</p>
-        `;
-        timelineFragment.appendChild(li);
-    });
-
-    clonedTimelineTemplate.querySelector('.timeline-3').appendChild(timelineFragment);
-
-    const siblingsSection = formattedSiblings ? `
-        <h6>Fratrie</h6>
-        <ul class="list-group">
-            <li class="list-group-item">${formattedSiblings}</li>
-        </ul>` : '';
-
-    const occupationsSection = formattedOccupations ? `
-        <h6 class="mt-2">Profession</h6>
-        <ul class="list-group">
-            <li class="list-group-item">${formattedOccupations}</li>
-        </ul>` : '';
-
-    clonedTimelineTemplate.querySelector('.additional-info').innerHTML = `${siblingsSection}${occupationsSection}`;
-    
-    individualTimelineElement.innerHTML = ''; // Nettoyage du contenu précédent
-    individualTimelineElement.appendChild(clonedTimelineTemplate);
-
-    // Gestion de la carte et des événements d'affichage
-    if (!googleMapManager.map) {
-        googleMapManager.initMapIfNeeded();
-    }
-
-    const individualTownKeys = Object.keys(individualTowns);
-    googleMapManager.activateMapMarkers(individualTownKeys);
-
-    showOffCanvasDetails();
-}
 
 export function displayPersonDetailsUI(personDetails) {
     const {
@@ -215,31 +114,52 @@ export function displayPersonDetailsUI(personDetails) {
         formattedSiblings,
         individualTowns,
         individualEvents,
-        deceased
+        deceased,
     } = personDetails.data;
 
-    const personDetailsLabelElement = document.getElementById("personDetailsLabel");
-    const individualTimelineElement = document.getElementById("individualTimeline");
+    const personDetailsLabelElement = document.getElementById('personDetailsLabel');
+    const individualTimelineElement = document.getElementById('individualTimeline');
 
-    // Display the person's name in the offcanvas header
+    // Affiche le nom de la personne dans l'en-tête
     personDetailsLabelElement.innerHTML = `<h4>${personLink}</h4>`;
 
     const eventTypeDescriptions = {
-        birth: "Naissance",
-        marriage: "Mariage",
-        death: "Décès",
+        birth: 'Naissance',
+        marriage: 'Mariage',
+        death: 'Décès',
         today: "Aujourd'hui",
     };
 
-    const birthEvent = individualEvents.find(event => event.type === 'birth') || { type: 'birth', date: '', description: 'Date inconnue' };
-    const deathEvent = individualEvents.find(event => event.type === 'death');
+    // Fonction pour parser les dates au format "dd/mm/yyyy"
+    const parseDateString = (dateString) => {
+        if (!dateString) return null;
+        const [day, month, year] = dateString.split('/');
+        return new Date(year, month - 1, day);
+    };
+
+    const birthEvent =
+        individualEvents.find((event) => event.type === 'birth') || {
+            type: 'birth',
+            date: '',
+            description: 'Date inconnue',
+        };
+    const deathEvent = individualEvents.find((event) => event.type === 'death');
 
     const otherEvents = individualEvents
-        .filter(event => event.type !== 'birth' && event.type !== 'death')
+        .filter((event) => event.type !== 'birth' && event.type !== 'death')
         .sort((a, b) => {
-            const dateA = a.date ? new Date(a.date.split("/").reverse().join("-")) : new Date();
-            const dateB = b.date ? new Date(b.date.split("/").reverse().join("-")) : new Date();
-            return dateA - dateB;
+            const dateA = parseDateString(a.date);
+            const dateB = parseDateString(b.date);
+
+            if (dateA && dateB) {
+                return dateA - dateB;
+            } else if (dateA) {
+                return -1;
+            } else if (dateB) {
+                return 1;
+            } else {
+                return 0;
+            }
         });
 
     const timelineEvents = [birthEvent, ...otherEvents];
@@ -250,17 +170,26 @@ export function displayPersonDetailsUI(personDetails) {
     const timelineFragment = document.createDocumentFragment();
     let childBirthCount = 0;
 
-    timelineEvents.forEach(event => {
-        let description;
-        if (event.type === "child-birth") {
-            description = `${++childBirthCount}${ordinalSuffixOf(childBirthCount)} enfant${event.ageAtEvent ? ` à ${event.ageAtEvent} ans` : ''}`;
-        } else if (event.type === "death" || event.type === "marriage") {
-            const eventTypePrefix = event.type === "death" ? "Décès" : "Mariage";
-            description = `${eventTypePrefix}${event.ageAtEvent ? ` à ${event.ageAtEvent} ans` : ''}`;
-        } else {
-            description = eventTypeDescriptions[event.type] || _.startCase(event.type);
+    const getEventDescription = (event, childBirthOrder) => {
+        const ageText = event.ageAtEvent ? ` à ${event.ageAtEvent} ans` : '';
+        switch (event.type) {
+            case 'child-birth':
+                return `${childBirthOrder}${ordinalSuffixOf(childBirthOrder)} enfant${ageText}`;
+            case 'death':
+                return `Décès${ageText}`;
+            case 'marriage':
+                return `Mariage${ageText}`;
+            default:
+                return eventTypeDescriptions[event.type] || _.startCase(event.type);
         }
-    
+    };
+
+    timelineEvents.forEach((event) => {
+        if (event.type === 'child-birth') {
+            childBirthCount++;
+        }
+        const description = getEventDescription(event, childBirthCount);
+
         const li = document.createElement('li');
         li.innerHTML = `
             <div class="event-header">
@@ -272,20 +201,21 @@ export function displayPersonDetailsUI(personDetails) {
         timelineFragment.appendChild(li);
     });
 
-    const siblingsSection = formattedSiblings ? `
-        <h6>Fratrie</h6>
-        <ul class="list-group">
-            <li class="list-group-item">${formattedSiblings}</li>
-        </ul>` : '';
+    // Création des sections supplémentaires
+    const createSection = (title, content) => {
+        return `
+            <h6>${title}</h6>
+            <ul class="list-group">
+                <li class="list-group-item">${content}</li>
+            </ul>
+        `;
+    };
 
-    const occupationsSection = formattedOccupations ? `
-        <h6 class="mt-2">Profession</h6>
-        <ul class="list-group">
-            <li class="list-group-item">${formattedOccupations}</li>
-        </ul>` : '';
-
+    const siblingsSection = formattedSiblings ? createSection('Fratrie', formattedSiblings) : '';
+    const occupationsSection = formattedOccupations ? createSection('Profession', formattedOccupations) : '';
     const additionalInfo = `${siblingsSection}${occupationsSection}`;
 
+    // Construction du conteneur principal
     const container = document.createElement('div');
     container.classList.add('container');
     container.innerHTML = `
@@ -301,6 +231,7 @@ export function displayPersonDetailsUI(personDetails) {
     individualTimelineElement.innerHTML = '';
     individualTimelineElement.appendChild(container);
 
+    // Gestion de la carte Google Maps
     if (!googleMapManager.map) {
         googleMapManager.initMapIfNeeded();
     }
@@ -408,7 +339,7 @@ async function resetUI() {
 
 let shouldShowInitialMessage = true;
 let filename = "";
-let gedcomFileName = "";
+
 
 // Initialization of selections for static elements at the beginning of the script
 const selectDates = document.querySelector("#select-dates") || { value: "1" }; // 0 = yyyy / 1 = ddmmyyyy
@@ -750,7 +681,7 @@ function handleTabsAndOverlay(shouldShowLoading) {
     }
 }
 
-function findLatestIndividual(individuals) {
+function findYoungestIndividual(individuals) {
   const individualsWithBirthDates = individuals.map((individual) => {
     const birthDate = individual.birthDate;
     let date;
@@ -770,7 +701,7 @@ function findLatestIndividual(individuals) {
   return _.maxBy(individualsWithBirthDates, "birthDate");
 }
 
-async function onFileChange(data) {
+export async function onFileChange(data) {
     handleTabsAndOverlay(true); // Activer le chargement et désactiver les onglets
 
     clearAllStates();
@@ -824,14 +755,8 @@ async function onFileChange(data) {
         });
 
         let rootId;
-        if (gedcomFileName === "demo.ged") {
-            rootId = "@I111@";
-        } else {
-            const latestIndividual = findLatestIndividual(individuals);
-            if (latestIndividual) {
-                rootId = latestIndividual.id;
-            }
-        }
+        const gedcomFileName = configStore.getConfig.gedcomFileName;
+        rootId = (gedcomFileName === "demo.ged") ? "@I111@" : findYoungestIndividual(individuals)?.id;
         configStore.setTomSelectValue(rootId);
 
         const event = new Event("change", { bubbles: true });
@@ -869,87 +794,17 @@ async function onFileChange(data) {
     }
 }
 
-/* Code to manage the upload of GEDCOM files */
-let isLoadingFile = false;
-
-function loadFile(input) {
-    if (isLoadingFile) {
-        console.log("Un chargement de fichier est déjà en cours.");
-        return;
-    }
-    isLoadingFile = true;
-
-    if (typeof input === 'string') {
-        // Load remote file
-        const xhr = new XMLHttpRequest();
-        xhr.open("GET", input, true);
-        xhr.responseType = "arraybuffer";
-
-        xhr.onload = function (e) {
-            isLoadingFile = false;
-            if (this.status === 200) {
-                const data = xhr.response;
-
-                // Extract the file name from the URL
-                gedcomFileName = input.split("/").pop();
-
-                onFileChange(data);
-            } else {
-                console.error("Erreur lors du chargement du fichier :", this.status);
-                window.alert(__("geneafan.cannot_read_this_file"));
-            }
-        };
-
-        xhr.onerror = function (e) {
-            isLoadingFile = false;
-            console.error("Erreur réseau lors du chargement du fichier.");
-            window.alert(__("geneafan.cannot_read_this_file"));
-        };
-
-        xhr.send();
-    } else {
-        // Load local file
-        const file = input[0];
-        // console.log("File loaded:", file);
-        const reader = new FileReader();
-
-        reader.addEventListener("loadend", function () {
-            isLoadingFile = false;
-            const data = reader.result;
-
-            // Set the gedcomFileName from the local file name
-            gedcomFileName = file.name;
-
-            onFileChange(data);
-        });
-
-        reader.readAsArrayBuffer(file);
-    }
-}
-
-// Demo file loading
-Array.from(document.getElementsByClassName('sample')).forEach(function (element) {
-    element.addEventListener('click', function (e) {
-        loadFile(e.target.getAttribute('data-link'));
-        return false;
-    });
-});
-
-// User file loading
-document.getElementById('file').addEventListener('change', function (e) {
-    loadFile(e.target.files);
-});
-
 // Download buttons
 document.getElementById('download-pdf').addEventListener('click', function (event) {
     event.preventDefault(); // Prevent default link action
 
+    // Utiliser la fonction handleUserAuthentication
     handleUserAuthentication(async (userInfo) => {
         if (userInfo) {  // Vérifier si les informations de l'utilisateur sont disponibles
             const userEmail = userInfo.email; // Récupère l'email de l'utilisateur
             await handleUploadAndPost(rootPersonName, userEmail); // Appel de la fonction avec l'email de l'utilisateur
         } else {
-            console.error("L'utilisateur n'est pas connecté ou les informations sont manquantes.");
+            console.error("Erreur lors de la connexion de l'utilisateur.");
         }
     });
 });

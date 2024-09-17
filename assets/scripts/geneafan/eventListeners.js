@@ -1,4 +1,6 @@
 import {displayPersonDetailsUI, onSettingChange} from './ui.js';
+import {loadFile} from './uploads.js';
+import { handleUserAuthentication } from './users.js';
 import {googleMapManager} from './mapManager.js';
 import {Modal, Offcanvas, Tooltip} from 'bootstrap';
 import screenfull from 'screenfull';
@@ -279,6 +281,22 @@ function setupTabResizeListener() {
     window.addEventListener('resize', setupResponsiveTabs);
 }
 
+// Function to initialize file loading event listeners
+const setupFileLoadingEventListeners = () => {
+    // Demo file loading
+    Array.from(document.getElementsByClassName('sample')).forEach(function (element) {
+        element.addEventListener('click', function (e) {
+            loadFile(e.target.getAttribute('data-link'));
+            return false;
+        });
+    });
+
+    // User file loading
+    document.getElementById('file').addEventListener('change', function (e) {
+        loadFile(e.target.files);
+    });
+};
+
 // Setup tab and UI event listeners
 function setupTabAndUIEventListeners() {
     document.querySelectorAll('.dropdown-menu a').forEach(element => {
@@ -286,6 +304,29 @@ function setupTabAndUIEventListeners() {
             const dropdownButton = this.closest('.dropdown');
             dropdownButton.classList.remove('show');
             dropdownButton.querySelector('.dropdown-menu').classList.remove('show');
+        });
+    });
+
+    document.getElementById('manage-family').addEventListener('click', async function(event) {
+        event.preventDefault();
+        console.log('Manage family clicked');
+    
+        await handleUserAuthentication(async (userInfo) => {
+            if (userInfo) {
+                console.log('User authenticated:', userInfo);
+                const orgSwitcherDiv = document.getElementById('organization-switcher');
+    
+                // Check that the element exists
+                if (orgSwitcherDiv) {
+                    console.log('Dynamic content found');
+                    
+                    Clerk.mountOrganizationSwitcher(orgSwitcherDiv);
+                } else {
+                    console.error("The 'dynamic-content' element was not found.");
+                }
+            } else {
+                console.error("Error during user login.");
+            }
         });
     });
 
@@ -332,6 +373,7 @@ export const setupAllEventListeners = () => {
 
         setupParameterEventListeners();
         setupTabAndUIEventListeners();
+        setupFileLoadingEventListeners()
         setupUndoRedoEventListeners();
         setTimeout(() => {
             setupResponsiveTabs();

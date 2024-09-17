@@ -41,6 +41,7 @@ class ConfigStore {
         computeChildrenCount: false,
         filename: "",
         coloringOption: "childrencount",
+        gedcomFileName: "",
     };
 
     configHistory = [];
@@ -94,6 +95,10 @@ class ConfigStore {
             // console.log(`Config set. Current index: ${this.currentConfigIndex}, Root: ${this.config.root}`);
             // console.log('Current configHistory:', this.configHistory);
         }
+    }
+
+    setGedcomFileName(fileName) {
+        this.config.gedcomFileName = fileName;
     }
 
     undo() {

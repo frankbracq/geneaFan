@@ -207,7 +207,7 @@ async function postDataToMake(config, pngUrl, pdfUrl, rootPersonName, userEmail,
 
 export async function handleUploadAndPost(rootPersonName, userEmail) {
     const config = configStore.getConfig; // Get the current configuration state
-    const overlay = document.getElementById('overlay'); // Make sure your overlay has the ID 'overlay'
+    const overlay = document.getElementById('overlay'); 
     try {
         // Show the overlay
         overlay.classList.remove('overlay-hidden');
