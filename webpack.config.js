@@ -106,10 +106,13 @@ module.exports = Object.keys(locale).map(lang => {
                 'zlib': require.resolve('browserify-zlib'),
                 'util': require.resolve('util/'),
                 'crypto': require.resolve('crypto-browserify'),
-                'buffer': require.resolve('buffer')
+                'buffer': require.resolve('buffer'),
+                "path": require.resolve("path-browserify"),
+                "os": require.resolve("os-browserify/browser"),
             },
             alias: {
-                fs: 'pdfkit/js/virtual-fs.js'
+                fs: 'pdfkit/js/virtual-fs.js',
+                'process/browser': 'process/browser.js'
             }
         },
         stats: {

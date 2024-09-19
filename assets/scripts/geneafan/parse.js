@@ -1106,8 +1106,6 @@ function buildHierarchy() {
     return hierarchy;
 }
 
-const fs = require("fs");
-
 function toJson(data) {
     const triggers = "[�]";
     const view = new Uint8Array(data);

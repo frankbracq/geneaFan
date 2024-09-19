@@ -1,5 +1,5 @@
 import {displayPersonDetailsUI, onSettingChange} from './ui.js';
-import {loadFile} from './uploads.js';
+import { loadFile } from './uploads.js';
 import { handleUserAuthentication } from './users.js';
 import {googleMapManager} from './mapManager.js';
 import {Modal, Offcanvas, Tooltip} from 'bootstrap';
@@ -307,28 +307,30 @@ function setupTabAndUIEventListeners() {
         });
     });
 
-    document.getElementById('manage-family').addEventListener('click', async function(event) {
-        event.preventDefault();
-        console.log('Manage family clicked');
-    
-        await handleUserAuthentication(async (userInfo) => {
-            if (userInfo) {
-                console.log('User authenticated:', userInfo);
-                const orgSwitcherDiv = document.getElementById('organization-switcher');
-    
-                // Check that the element exists
-                if (orgSwitcherDiv) {
-                    console.log('Dynamic content found');
-                    
-                    Clerk.mountOrganizationSwitcher(orgSwitcherDiv);
-                } else {
-                    console.error("The 'dynamic-content' element was not found.");
-                }
-            } else {
-                console.error("Error during user login.");
-            }
-        });
+    // Gestionnaire d'événement pour le bouton "Gérer ma famille"
+document.getElementById('manage-family').addEventListener('click', async function(event) {
+    event.preventDefault();
+    console.log('Bouton "Gérer ma famille" cliqué');
+
+    await handleUserAuthentication(async (user) => {
+        if (user) {
+            console.log('Utilisateur authentifié:', user);
+
+            //const dynamicContentDiv = document.getElementById('dynamic-content');
+
+            // Afficher le formulaire de création d'organisation
+            //dynamicContentDiv.innerHTML = `
+            //    <div id="create-organization"></div>
+            //`;
+
+            const createOrgDiv = document.getElementById('create-organization')
+
+            Clerk.openCreateOrganization(createOrgDiv)
+        } else {
+            console.error("Erreur lors de la connexion de l'utilisateur.");
+        }
     });
+});
 
     const tabFan = document.querySelector('[href="#tab1"]');
     if (tabFan) {

@@ -1,6 +1,6 @@
 import _, { set } from 'lodash';
 import svgPanZoom from "svg-pan-zoom";
-import { Modal, Offcanvas } from "bootstrap";
+import { Offcanvas } from "bootstrap";
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { Loader } from "@googlemaps/js-api-loader";
 import { v4 as uuidv4 } from 'uuid';
