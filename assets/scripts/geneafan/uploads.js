@@ -1,12 +1,9 @@
-import { f0 } from 'file0';
 import { Modal } from 'bootstrap'; 
+import Uppy from '@uppy/core';
+import AwsS3 from '@uppy/aws-s3';
 import configStore from './store';
 import { onFileChange } from "./ui.js";
 import { handleUserAuthentication } from './users.js';
-
-require('dotenv').config();
-const f0SecretKey = process.env.F0_SECRET_KEY;
-console.log('F0 Secret Key:', f0SecretKey);
 
 /* Code to manage the upload of GEDCOM files */
 let isLoadingFile = false;
@@ -187,28 +184,75 @@ function showFamilyNameModal(file, userInfo) {
 async function saveGedcomFile(file, familyName, userInfo) {
   const clerkId = userInfo.id;
   if (!clerkId) {
-      alert('Impossible de récupérer votre identifiant utilisateur.');
-      readAndProcessFile(file);
-      return;
+    alert('Impossible de récupérer votre identifiant utilisateur.');
+    readAndProcessFile(file);
+    return;
   }
 
-  const newFileName = `${clerkId}_${familyName}.ged`;
+  const newFileName = `${clerkId}_fam_${familyName}.ged`;
   console.log('Nouveau nom de fichier:', newFileName);
 
   try {
-    const token = await f0.createToken(newFileName, {
-      expiresIn: "1h",
+    // Initialiser Uppy pour l'upload du fichier avec une URL signée
+    const uppy = new Uppy({
+      autoProceed: true,
     });
 
-      // Uploader le fichier en utilisant le SDK
-      await f0.useToken(token).set(file);
+    uppy.use(AwsS3, {
+      async getUploadParameters(file) {
+        // Requête pour obtenir l'URL signée via l'API Vercel
+        const response = await fetch('https://generate-signed-url.vercel.app/api/generate-signed-url', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            filename: newFileName,
+            contentType: file.type,
+          }),
+        });
 
+        if (!response.ok) {
+          throw new Error('Erreur lors de la récupération de l\'URL signée.');
+        }
+
+        const data = await response.json();
+        console.log('URL signée obtenue:', data.url);
+
+        // Retourner l'URL signée obtenue de Vercel
+        return {
+          method: 'PUT',
+          url: data.url, // L'URL signée obtenue de Vercel
+          headers: {
+            'Content-Type': file.type,
+          },
+        };
+      },
+    });
+
+    // Ajouter le fichier à Uppy
+    uppy.addFile({
+      name: newFileName,
+      type: file.type,
+      data: file, // Le fichier Blob/File à uploader
+    });
+
+    // Attendre que l'upload soit terminé
+    const uploadResult = await uppy.upload();
+    console.log('Upload terminé:', uploadResult);
+
+    if (uploadResult.failed.length === 0) {
       console.log('Fichier enregistré avec succès.');
-  } catch (error) {
-      console.error('Erreur lors de l\'enregistrement du fichier :', error);
-  }
+      readAndProcessFile(file); // Lire et traiter le fichier après l'upload
+    } else {
+      console.error('Erreur lors de l\'upload du fichier :', uploadResult.failed);
+      alert('Erreur lors de l\'upload du fichier.');
+    }
 
-  readAndProcessFile(file);
+  } catch (error) {
+    console.error('Erreur lors de l\'enregistrement du fichier :', error);
+    alert('Erreur lors de l\'upload du fichier.');
+  }
 }
 
 function readAndProcessFile(file) {
