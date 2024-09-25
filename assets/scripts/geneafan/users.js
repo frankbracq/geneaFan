@@ -47,13 +47,3 @@ export async function handleUserAuthentication(callback) {
         displaySignInForm();
     }
 }
-
-export async function openOrganizationManagement() {
-    await handleUserAuthentication(async (userInfo) => {
-        if (userInfo) {
-            Clerk.openOrganizationProfile();
-        } else {
-            console.error("Erreur lors de la connexion de l'utilisateur.");
-        }
-    });
-}

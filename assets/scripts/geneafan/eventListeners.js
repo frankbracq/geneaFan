@@ -1,12 +1,12 @@
-import {displayPersonDetailsUI, onSettingChange} from './ui.js';
-import { loadFile } from './uploads.js';
-import { handleUserAuthentication } from './users.js';
+import {displayPersonDetailsUI, onSettingChange, showGedcomFilesModal} from './ui.js';
+import { loadGedcomFile, fetchUserGedcomFiles } from './uploads.js';
 import {googleMapManager} from './mapManager.js';
 import {Modal, Offcanvas, Tooltip} from 'bootstrap';
 import screenfull from 'screenfull';
 import {getFamilyTowns, getSvgPanZoomInstance, getTomSelectInstance} from './state.js';
 import {action} from 'mobx';
 import configStore from './store';
+import { handleUserAuthentication } from './users.js';
 
 // WeakMap to store event listener references
 const eventListenersMap = new WeakMap();
@@ -286,80 +286,93 @@ const setupFileLoadingEventListeners = () => {
     // Demo file loading
     Array.from(document.getElementsByClassName('sample')).forEach(function (element) {
         element.addEventListener('click', function (e) {
-            loadFile(e.target.getAttribute('data-link'));
+            loadGedcomFile(e.target.getAttribute('data-link'));
             return false;
         });
     });
 
     // User file loading
     document.getElementById('file').addEventListener('change', function (e) {
-        loadFile(e.target.files);
+        loadGedcomFile(e.target.files);
     });
 };
 
 // Setup tab and UI event listeners
 function setupTabAndUIEventListeners() {
-    document.querySelectorAll('.dropdown-menu a').forEach(element => {
-        element.addEventListener('click', function() {
-            const dropdownButton = this.closest('.dropdown');
-            dropdownButton.classList.remove('show');
-            dropdownButton.querySelector('.dropdown-menu').classList.remove('show');
+    document.querySelectorAll(".dropdown-menu a").forEach((element) => {
+        element.addEventListener("click", function () {
+            const dropdownButton = this.closest(".dropdown");
+            dropdownButton.classList.remove("show");
+            dropdownButton.querySelector(".dropdown-menu").classList.remove("show");
         });
     });
 
-    // Gestionnaire d'événement pour le bouton "Gérer ma famille"
-document.getElementById('manage-family').addEventListener('click', async function(event) {
-    event.preventDefault();
-    console.log('Bouton "Gérer ma famille" cliqué');
-
-    await handleUserAuthentication(async (user) => {
-        if (user) {
-            console.log('Utilisateur authentifié:', user);
-
-            //const dynamicContentDiv = document.getElementById('dynamic-content');
-
-            // Afficher le formulaire de création d'organisation
-            //dynamicContentDiv.innerHTML = `
-            //    <div id="create-organization"></div>
-            //`;
-
-            const createOrgDiv = document.getElementById('create-organization')
-
-            Clerk.openCreateOrganization(createOrgDiv)
-        } else {
-            console.error("Erreur lors de la connexion de l'utilisateur.");
-        }
-    });
-});
-
     const tabFan = document.querySelector('[href="#tab1"]');
     if (tabFan) {
-        tabFan.addEventListener('shown.bs.tab', () => {
+        tabFan.addEventListener("shown.bs.tab", () => {
             onSettingChange();
         });
     }
 
     const tabFamilyMap = document.querySelector('[href="#tab2"]');
     if (tabFamilyMap) {
-        tabFamilyMap.addEventListener('show.bs.tab', () => {
+        tabFamilyMap.addEventListener("show.bs.tab", () => {
             if (googleMapManager.map) {
-                googleMapManager.moveMapToContainer('tab2');
+                googleMapManager.moveMapToContainer("tab2");
                 googleMapManager.activateMapMarkers();
-                google.maps.event.trigger(googleMapManager.map, 'resize');
+                google.maps.event.trigger(googleMapManager.map, "resize");
                 googleMapManager.map.setCenter({ lat: 46.2276, lng: 2.2137 });
             }
         });
     }
 
-    document.getElementById('fanParametersDisplay').addEventListener('click', () => {
-        const fanParametersOffcanvas = new Offcanvas(document.getElementById('fanParameters'));
-        fanParametersOffcanvas.show();
-    });
+    // Event listener for "Mes fichiers GEDCOM"
+    document
+        .getElementById("myGedcomFilesMenuItem")
+        .addEventListener("click", function (e) {
+            e.preventDefault();
 
-    document.getElementById('treeParametersDisplay').addEventListener('click', () => {
-        const treeParametersOffcanvas = new Offcanvas(document.getElementById('treeParameters'));
-        treeParametersOffcanvas.show();
-    });
+            // Call handleUserAuthentication to ensure the user is authenticated
+            handleUserAuthentication(async (userInfo) => {
+                if (userInfo) {
+                    try {
+                        // Fetch the list of files for the authenticated user
+                        var files = await fetchUserGedcomFiles(userInfo.id);
+                        console.log('Files:', files);
+                        if (files.length === 0) {
+                            window.alert('No files found for this user.');
+                        } else {
+                            // Display the modal with the list of files
+                            showGedcomFilesModal(files);
+                        }
+                    } catch (error) {
+                        console.error('Error retrieving files:', error);
+                        window.alert('An error occurred while retrieving your GEDCOM files.');
+                    }
+                } else {
+                    // The user is not authenticated
+                    window.alert('You need to be authenticated to access your GEDCOM files.');
+                }
+            });
+        });
+
+    document
+        .getElementById("fanParametersDisplay")
+        .addEventListener("click", () => {
+            const fanParametersOffcanvas = new Offcanvas(
+                document.getElementById("fanParameters")
+            );
+            fanParametersOffcanvas.show();
+        });
+
+    document
+        .getElementById("treeParametersDisplay")
+        .addEventListener("click", () => {
+            const treeParametersOffcanvas = new Offcanvas(
+                document.getElementById("treeParameters")
+            );
+            treeParametersOffcanvas.show();
+        });
 
     setupFullscreenToggle();
     setupTooltips();

@@ -73,32 +73,42 @@
             <!-- Section with dropdowns and the fullscreen button -->
             <div id="right-container" class="d-flex justify-content-end">
                 <div class="dropdown spacedS">
-                    <button class="btn btn-secondary dropdown-toggle w-100" type="button" id="fileDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                        <%= __('geneafan.load_gedcom') %>
+                    <button class="btn btn-secondary dropdown-toggle w-100" type="button" id="gedcomMenu" data-bs-toggle="dropdown"
+                        aria-expanded="false">
+                        GEDCOM
                     </button>
-                    <ul class="dropdown-menu" aria-labelledby="fileDropdown">
+                    <ul class="dropdown-menu" aria-labelledby="gedcomMenu">
+                        <!-- Upload a new GEDCOM file -->
                         <li>
                             <a class="dropdown-item" href="#">
                                 <div class="input-file-container text-center">
                                     <%= __('geneafan.your_gedcom_file') %>
-                                    <input type="file" name="file" id="file" accept=".ged,.gedcom">
+                                        <input type="file" name="file" id="file" accept=".ged,.gedcom">
                                 </div>
                             </a>
                         </li>
+                
+                        <!-- My GEDCOM Files -->
                         <li>
-                            <a class="dropdown-item sample" href="#" id="sample-toggle"
-                            data-link="https://files.genealog.ie/demo.ged">
-                                <%= __('geneafan.or_try_sample') %>
+                            <a class="dropdown-item" href="#" id="myGedcomFilesMenuItem">
+                                Mes fichiers GEDCOM
                             </a>
                         </li>
-                        <!-- Nouvel élément pour "Gérer ma famille" -->
+                
+                        <!-- Separator -->
                         <li>
-                            <a class="dropdown-item" href="#" id="manage-family">
-                                Gérer ma famille
+                            <hr class="dropdown-divider">
+                        </li>
+                
+                        <!-- Use the sample GEDCOM file -->
+                        <li>
+                            <a class="dropdown-item sample" href="#" id="sample-toggle" data-link="https://files.genealog.ie/demo.ged">
+                                <%= __('geneafan.or_try_sample') %>
                             </a>
                         </li>
                     </ul>
                 </div>
+
                 <div class="dropdown spacedS">
                     <button class="btn btn-secondary dropdown-toggle" type="button" id="download-menu" data-bs-toggle="dropdown"
                             aria-haspopup="true" aria-expanded="false" disabled>

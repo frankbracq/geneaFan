@@ -1,6 +1,6 @@
 import _, { set } from 'lodash';
 import svgPanZoom from "svg-pan-zoom";
-import { Offcanvas } from "bootstrap";
+import {Modal, Offcanvas, Tooltip} from "bootstrap";
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { Loader } from "@googlemaps/js-api-loader";
 import { v4 as uuidv4 } from 'uuid';
@@ -583,7 +583,6 @@ reaction(
     }
 );
 
-
 /**
  * Handles changes in settings by updating the configuration, 
  * redrawing the fan chart, and managing the SVG instance.
@@ -870,6 +869,81 @@ $("#print").click(function () {
 
     return false;
 });
+
+export function showGedcomFilesModal(files) {
+    // Remove existing modal if it exists
+    const existingModal = document.getElementById('gedcomFilesModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // Create the modal content
+    const modalContainer = document.createElement('div');
+    modalContainer.innerHTML = `
+    <div class="modal fade" id="gedcomFilesModal" tabindex="-1" aria-labelledby="gedcomFilesModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="gedcomFilesModalLabel">My GEDCOM Files</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <!-- Files table -->
+            <table class="table">
+              <thead>
+                <tr>
+                  <th scope="col">File Name</th>
+                  <th scope="col">Status</th>
+                  <th scope="col" class="text-end">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${files.map(file => `
+                  <tr>
+                    <td>${file.name}</td>
+                    <td>${file.status === 'owned' ? 'Owner' : 'Authorized'}</td>
+                    <td class="text-end">
+                      <!-- Download icon -->
+                      <a href="${file.signedUrl}" class="text-decoration-none me-2" data-bs-toggle="tooltip" title="Download">
+                        <i class="bi bi-download"></i>
+                      </a>
+                      <!-- Share icon (only if owner) -->
+                      ${file.status === 'owned' ? `
+                      <a href="#" class="text-decoration-none me-2" data-bs-toggle="tooltip" title="Share" onclick="shareFile('${file.id}')">
+                        <i class="bi bi-share"></i>
+                      </a>
+                      ` : ''}
+                      <!-- Delete icon (only if owner) -->
+                      ${file.status === 'owned' ? `
+                      <a href="#" class="text-decoration-none" data-bs-toggle="tooltip" title="Delete" onclick="deleteFile('${file.id}')">
+                        <i class="bi bi-trash"></i>
+                      </a>
+                      ` : ''}
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    `;
+
+    // Append the modal to the document body
+    document.body.appendChild(modalContainer);
+
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(modalContainer.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+      new Tooltip(tooltipTriggerEl);
+    });
+
+    // Initialize and show the modal
+    var gedcomFilesModalElement = document.getElementById('gedcomFilesModal');
+    var gedcomFilesModal = new Modal(gedcomFilesModalElement);
+    gedcomFilesModal.show();
+}
 
 // Prevent the user from entering invalid quantities
 document.querySelectorAll('input[type=number]').forEach(function (input) {
