@@ -36,6 +36,7 @@ import {
     handleUploadAndPost,
     updateFilename,
 } from "./downloads.js";
+import { loadGedcomFile } from './uploads.js';
 import {
     setupAllEventListeners,
     setupPersonLinkEventListener,
@@ -880,55 +881,55 @@ export function showGedcomFilesModal(files) {
     // Create the modal content
     const modalContainer = document.createElement('div');
     modalContainer.innerHTML = `
-    <div class="modal fade" id="gedcomFilesModal" tabindex="-1" aria-labelledby="gedcomFilesModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="gedcomFilesModalLabel">My GEDCOM Files</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <div class="modal-body">
-            <!-- Files table -->
-            <table class="table">
-              <thead>
-                <tr>
-                  <th scope="col">File Name</th>
-                  <th scope="col">Status</th>
-                  <th scope="col" class="text-end">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${files.map(file => `
-                  <tr>
-                    <td>${file.name}</td>
-                    <td>${file.status === 'owned' ? 'Owner' : 'Authorized'}</td>
-                    <td class="text-end">
-                      <!-- Download icon -->
-                      <a href="${file.signedUrl}" class="text-decoration-none me-2" data-bs-toggle="tooltip" title="Download">
-                        <i class="bi bi-download"></i>
-                      </a>
-                      <!-- Share icon (only if owner) -->
-                      ${file.status === 'owned' ? `
-                      <a href="#" class="text-decoration-none me-2" data-bs-toggle="tooltip" title="Share" onclick="shareFile('${file.id}')">
-                        <i class="bi bi-share"></i>
-                      </a>
-                      ` : ''}
-                      <!-- Delete icon (only if owner) -->
-                      ${file.status === 'owned' ? `
-                      <a href="#" class="text-decoration-none" data-bs-toggle="tooltip" title="Delete" onclick="deleteFile('${file.id}')">
-                        <i class="bi bi-trash"></i>
-                      </a>
-                      ` : ''}
-                    </td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
+<div class="modal fade" id="gedcomFilesModal" tabindex="-1" aria-labelledby="gedcomFilesModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="gedcomFilesModalLabel">My GEDCOM Files</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <!-- Files table -->
+        <table class="table" id="gedcomFilesTable">
+          <thead>
+            <tr>
+              <th scope="col">File Name</th>
+              <th scope="col">Status</th>
+              <th scope="col" class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${files.map(file => `
+              <tr>
+                <td>${file.name}</td>
+                <td>${file.status === 'owned' ? 'Owner' : 'Authorized'}</td>
+                <td class="text-end">
+                  <!-- Download icon -->
+                  <a href="#" class="text-decoration-none me-2 action-icon" data-action="download" data-link="${file.signedUrl}" data-bs-toggle="tooltip" title="Download">
+                    <i class="bi bi-download"></i>
+                  </a>
+                  <!-- Share icon (only if owner) -->
+                  ${file.status === 'owned' ? `
+                  <a href="#" class="text-decoration-none me-2 action-icon" data-action="share" data-file-id="${file.id}" data-bs-toggle="tooltip" title="Share">
+                    <i class="bi bi-share"></i>
+                  </a>
+                  ` : ''}
+                  <!-- Delete icon (only if owner) -->
+                  ${file.status === 'owned' ? `
+                  <a href="#" class="text-decoration-none action-icon" data-action="delete" data-file-id="${file.id}" data-bs-toggle="tooltip" title="Delete">
+                    <i class="bi bi-trash"></i>
+                  </a>
+                  ` : ''}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
       </div>
     </div>
-    `;
+  </div>
+</div>
+`;
 
     // Append the modal to the document body
     document.body.appendChild(modalContainer);
@@ -936,13 +937,42 @@ export function showGedcomFilesModal(files) {
     // Initialize tooltips
     var tooltipTriggerList = [].slice.call(modalContainer.querySelectorAll('[data-bs-toggle="tooltip"]'));
     tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-      new Tooltip(tooltipTriggerEl);
+        new Tooltip(tooltipTriggerEl);
+    });
+
+    // Add event delegation to handle icon clicks
+    const gedcomFilesTable = modalContainer.querySelector('#gedcomFilesTable');
+    gedcomFilesTable.addEventListener('click', function (e) {
+        e.preventDefault();
+
+        // Get the closest element with the 'action-icon' class
+        let target = e.target;
+        while (target && !target.classList.contains('action-icon')) {
+            target = target.parentElement;
+        }
+
+        if (target && target.classList.contains('action-icon')) {
+            const action = target.getAttribute('data-action');
+
+            if (action === 'download') {
+                const dataLink = target.getAttribute('data-link');
+                loadGedcomFile(dataLink);
+            } else if (action === 'share') {
+                const fileId = target.getAttribute('data-file-id');
+                shareFile(fileId);
+            } else if (action === 'delete') {
+                const fileId = target.getAttribute('data-file-id');
+                deleteFile(fileId);
+            }
+        }
+        return false;
     });
 
     // Initialize and show the modal
     var gedcomFilesModalElement = document.getElementById('gedcomFilesModal');
     var gedcomFilesModal = new Modal(gedcomFilesModalElement);
     gedcomFilesModal.show();
+
 }
 
 // Prevent the user from entering invalid quantities

@@ -284,7 +284,7 @@ function setupTabResizeListener() {
 // Function to initialize file loading event listeners
 const setupFileLoadingEventListeners = () => {
     // Demo file loading
-    Array.from(document.getElementsByClassName('sample')).forEach(function (element) {
+    Array.from(document.getElementsByClassName('remote-file')).forEach(function (element) {
         element.addEventListener('click', function (e) {
             loadGedcomFile(e.target.getAttribute('data-link'));
             return false;

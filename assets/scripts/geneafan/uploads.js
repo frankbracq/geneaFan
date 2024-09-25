@@ -210,6 +210,7 @@ async function saveGedcomFile(file, familyName, userInfo) {
           body: JSON.stringify({
             filename: newFileName,
             contentType: file.type,
+            operation: 'upload', // Specify the operation
           }),
         });
 
