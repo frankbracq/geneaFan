@@ -289,14 +289,12 @@ export async function fetchUserGedcomFiles(userId) {
           method: 'POST',
           headers: {
               'Content-Type': 'application/json',
-              // Ajoutez ici les en-têtes nécessaires pour l'authentification si requis
           },
           body: JSON.stringify({ userId })
       });
 
       if (!response.ok) {
           if (response.status === 404) {
-              // Aucun fichier trouvé pour cet utilisateur
               return [];
           } else {
               throw new Error('Erreur lors de la récupération des fichiers.');
@@ -305,12 +303,11 @@ export async function fetchUserGedcomFiles(userId) {
 
       const data = await response.json();
       const files = data.files.map(file => ({
-          id: file.filename,
-          name: file.filename,
+          id: file.id, 
+          name: file.name, 
           signedUrl: file.signedUrl,
           status: file.status // 'owned' ou 'authorized'
       }));
-      console.log('Fichiers GEDCOM récupérés :', files);
       return files;
   } catch (error) {
       console.error('Erreur lors de la récupération des fichiers GEDCOM :', error);

@@ -1,6 +1,6 @@
 import _, { set } from 'lodash';
 import svgPanZoom from "svg-pan-zoom";
-import {Modal, Offcanvas, Tooltip} from "bootstrap";
+import { Modal, Offcanvas, Tooltip, Collapse } from "bootstrap";
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { Loader } from "@googlemaps/js-api-loader";
 import { v4 as uuidv4 } from 'uuid';
@@ -871,7 +871,230 @@ $("#print").click(function () {
     return false;
 });
 
+// Function to display the GEDCOM files modal
+// Function to display the GEDCOM files modal
 export function showGedcomFilesModal(files) {
+    // Remove the existing modal if it exists
+    const existingModal = document.getElementById('gedcomFilesModal');
+    if (existingModal) {
+      existingModal.remove();
+      console.log('Existing modal removed.');
+    }
+  
+    // Log the files array for debugging
+    console.log('Files received:', files);
+  
+    // Create the modal content
+    const modalContainer = document.createElement('div');
+    modalContainer.innerHTML = `
+      <div class="modal fade" id="gedcomFilesModal" tabindex="-1" aria-labelledby="gedcomFilesModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="gedcomFilesModalLabel">My GEDCOM Files</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <!-- Files table -->
+              <table class="table" id="gedcomFilesTable">
+                <thead>
+                  <tr>
+                    <th scope="col">File Name</th>
+                    <th scope="col">Status</th>
+                    <th scope="col" class="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${files.map(file => {
+                    console.log(`Rendering file: ${file.id} with status: ${file.status}`);
+                    return `
+                      <tr>
+                        <td>${file.name}</td>
+                        <td>${file.status === 'owned' ? 'Owner' : 'Authorized'}</td>
+                        <td class="text-end">
+                          <!-- Download icon -->
+                          <a href="#" class="text-decoration-none me-2 action-icon" data-action="download" data-link="${file.signedUrl}" data-bs-toggle="tooltip" title="Download">
+                            <i class="bi bi-download"></i>
+                          </a>
+                          <!-- Share icon (only if owner) -->
+                          ${file.status === 'owned' ? `
+                          <a href="#" class="text-decoration-none me-2 action-icon" data-action="share" data-file-id="${file.id}" data-bs-toggle="tooltip" title="Share">
+                            <i class="bi bi-share"></i>
+                          </a>
+                          ` : ''}
+                          <!-- Delete icon (only if owner) -->
+                          ${file.status === 'owned' ? `
+                          <a href="#" class="text-decoration-none action-icon" data-action="delete" data-file-id="${file.id}" data-bs-toggle="tooltip" title="Delete">
+                            <i class="bi bi-trash"></i>
+                          </a>
+                          ` : ''}
+                        </td>
+                      </tr>
+                      <!-- Share Form Collapse -->
+                      ${file.status === 'owned' ? `
+                      <tr class="share-form-collapse" id="shareFormRow-${file.id}" style="display: none;">
+                        <td colspan="3">
+                          <div class="collapse" id="collapseShare-${file.id}">
+                            <div class="card card-body">
+                              <form id="shareForm-${file.id}">
+                                <div class="mb-3">
+                                  <label for="emails-${file.id}" class="form-label">Enter email addresses to share with:</label>
+                                  <input type="email" class="form-control" id="emails-${file.id}" name="emails" placeholder="e.g., user@example.com" required multiple>
+                                  <div class="form-text">Separate multiple emails with commas.</div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Share</button>
+                              </form>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                      ` : ''}
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  
+    // Add the modal to the document body
+    document.body.appendChild(modalContainer);
+    console.log('Modal container appended to body.');
+  
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(modalContainer.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+      new Tooltip(tooltipTriggerEl);
+      console.log('Tooltip initialized for:', tooltipTriggerEl);
+    });
+  
+    // Add event delegation to handle clicks on action icons
+    const gedcomFilesTableElement = modalContainer.querySelector('#gedcomFilesTable');
+    gedcomFilesTableElement.addEventListener('click', function (e) {
+      // Prevent default action
+      e.preventDefault();
+  
+      // Get the clicked element with the 'action-icon' class
+      let target = e.target;
+      while (target && !target.classList.contains('action-icon')) {
+        target = target.parentElement;
+      }
+  
+      if (target && target.classList.contains('action-icon')) {
+        const action = target.getAttribute('data-action');
+        const fileId = target.getAttribute('data-file-id');
+        console.log(`Action triggered: ${action} for file ID: ${fileId}`);
+  
+        if (action === 'download') {
+          const dataLink = target.getAttribute('data-link');
+          console.log(`Download link: ${dataLink}`);
+          loadGedcomFile(dataLink);
+        } else if (action === 'share') {
+          console.log(`Share file ID: ${fileId}`);
+          toggleShareForm(fileId);
+        } else if (action === 'delete') {
+          console.log(`Delete file ID: ${fileId}`);
+          deleteFile(fileId);
+        }
+      }
+      return false;
+    });
+  
+    // Function to toggle the share form display
+    function toggleShareForm(fileId) {
+      console.log(`Toggling share form for file ID: ${fileId}`);
+      const shareFormRow = document.getElementById(`shareFormRow-${fileId}`);
+      const collapseElement = document.getElementById(`collapseShare-${fileId}`);
+  
+      if (shareFormRow && collapseElement) {
+        // Initialize Collapse using the imported Collapse component
+        try {
+          const collapse = new Collapse(collapseElement, {
+            toggle: true
+          });
+          console.log(`Collapse initialized for file ID: ${fileId}`);
+        } catch (initError) {
+          console.error(`Failed to initialize Collapse for file ID: ${fileId}`, initError);
+        }
+      } else {
+        if (!shareFormRow) {
+          console.error(`Share form row not found for file ID: ${fileId}`);
+        }
+        if (!collapseElement) {
+          console.error(`Collapse element not found for file ID: ${fileId}`);
+        }
+      }
+    }
+  
+    // Add event listeners for share forms
+    files.forEach(file => {
+      if (file.status === 'owned') {
+        const shareForm = modalContainer.querySelector(`#shareForm-${file.id}`);
+        if (shareForm) {
+          shareForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const emailInput = shareForm.querySelector(`#emails-${file.id}`);
+            const emails = emailInput.value.split(',').map(email => email.trim()).filter(email => email);
+  
+            if (emails.length === 0) {
+              alert('Please enter at least one email address.');
+              console.log('No valid email addresses entered.');
+              return;
+            }
+  
+            console.log(`Emails to share with: ${emails.join(', ')}`);
+  
+            try {
+              // Verify and create users via Clerk
+              const verifiedUserIds = await verifyAndCreateUsers(emails);
+              console.log(`Verified user IDs: ${verifiedUserIds.join(', ')}`);
+  
+              if (verifiedUserIds.length === 0) {
+                alert('No valid users found to share the file with.');
+                console.log('No valid users to share the file with.');
+                return;
+              }
+  
+              // Grant access to each user
+              for (const userId of verifiedUserIds) {
+                console.log(`Granting access to user ID: ${userId}`);
+                const success = await grantAccessToFile(file.id, userId);
+                if (!success) {
+                  throw new Error(`Failed to grant access to user ID: ${userId}`);
+                }
+              }
+  
+              alert('File shared successfully!');
+              console.log('File shared successfully.');
+  
+              // Optionally: close the share form
+              toggleShareForm(file.id);
+              // Clear the input field
+              emailInput.value = '';
+              console.log('Share form closed and input cleared.');
+  
+            } catch (error) {
+              console.error('Error sharing file:', error);
+              alert('An error occurred while sharing the file.');
+            }
+          });
+          console.log(`Share form event listener added for file ID: ${file.id}`);
+        } else {
+          console.error(`Share form not found for file ID: ${file.id}`);
+        }
+      }
+    });
+  
+    // Initialize and show the modal
+    const gedcomFilesModalElement = document.getElementById('gedcomFilesModal');
+    const gedcomFilesModal = new Modal(gedcomFilesModalElement);
+    gedcomFilesModal.show();
+    console.log('GEDCOM files modal displayed.');
+  }
+
+export function showGedcomFilesModal1(files) {
     // Remove existing modal if it exists
     const existingModal = document.getElementById('gedcomFilesModal');
     if (existingModal) {
