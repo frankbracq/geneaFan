@@ -623,7 +623,7 @@ export function onSettingChange() {
         initializeAscendantTimeline();
 
         displayFan();
-        
+
         if (hasRootPerson) {
             rootPersonName = formatName(result.rootPersonName);
             filename = (
@@ -659,7 +659,7 @@ export function onSettingChange() {
         return false;
     }
 }
-  
+
 function handleTabsAndOverlay(shouldShowLoading) {
     const tabsToDisable = ["tab2", "tab3", "tab4"];
     tabsToDisable.forEach(tabId => {
@@ -682,23 +682,23 @@ function handleTabsAndOverlay(shouldShowLoading) {
 }
 
 function findYoungestIndividual(individuals) {
-  const individualsWithBirthDates = individuals.map((individual) => {
-    const birthDate = individual.birthDate;
-    let date;
-    if (birthDate.includes("/")) {
-      const [day, month, year] = birthDate.split("/").reverse();
-      date = new Date(year, month - 1, day || 1);
-    } else {
-      date = new Date(birthDate, 0, 1);
-    }
+    const individualsWithBirthDates = individuals.map((individual) => {
+        const birthDate = individual.birthDate;
+        let date;
+        if (birthDate.includes("/")) {
+            const [day, month, year] = birthDate.split("/").reverse();
+            date = new Date(year, month - 1, day || 1);
+        } else {
+            date = new Date(birthDate, 0, 1);
+        }
 
-    return {
-      id: individual.id,
-      birthDate: date,
-    };
-  });
+        return {
+            id: individual.id,
+            birthDate: date,
+        };
+    });
 
-  return _.maxBy(individualsWithBirthDates, "birthDate");
+    return _.maxBy(individualsWithBirthDates, "birthDate");
 }
 
 export async function onFileChange(data) {
@@ -748,9 +748,8 @@ export async function onFileChange(data) {
         individuals.forEach((individual) => {
             tomSelect.addOption({
                 value: individual.id,
-                text: `${individual.surname} ${individual.name} ${individual.id} ${
-                    individual.birthYear ? individual.birthYear : "?"
-                }-${individual.deathYear ? individual.deathYear : ""}`,
+                text: `${individual.surname} ${individual.name} ${individual.id} ${individual.birthYear ? individual.birthYear : "?"
+                    }-${individual.deathYear ? individual.deathYear : ""}`,
             });
         });
 
@@ -872,123 +871,393 @@ $("#print").click(function () {
 });
 
 // Function to display the GEDCOM files modal
-// Function to display the GEDCOM files modal
 export function showGedcomFilesModal(files) {
-    // Remove the existing modal if it exists
+    // Function to sanitize file IDs by replacing spaces with underscores
+    const sanitizeFileId = (fileId) => fileId.replace(/\s+/g, '_');
+  
+    // Remove existing modal if it exists
     const existingModal = document.getElementById('gedcomFilesModal');
     if (existingModal) {
       existingModal.remove();
       console.log('Existing modal removed.');
     }
   
-    // Log the files array for debugging
-    console.log('Files received:', files);
-  
-    // Create the modal content
-    const modalContainer = document.createElement('div');
-    modalContainer.innerHTML = `
-      <div class="modal fade" id="gedcomFilesModal" tabindex="-1" aria-labelledby="gedcomFilesModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="gedcomFilesModalLabel">My GEDCOM Files</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-              <!-- Files table -->
-              <table class="table" id="gedcomFilesTable">
-                <thead>
-                  <tr>
-                    <th scope="col">File Name</th>
-                    <th scope="col">Status</th>
-                    <th scope="col" class="text-end">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${files.map(file => {
-                    console.log(`Rendering file: ${file.id} with status: ${file.status}`);
-                    return `
-                      <tr>
-                        <td>${file.name}</td>
-                        <td>${file.status === 'owned' ? 'Owner' : 'Authorized'}</td>
-                        <td class="text-end">
-                          <!-- Download icon -->
-                          <a href="#" class="text-decoration-none me-2 action-icon" data-action="download" data-link="${file.signedUrl}" data-bs-toggle="tooltip" title="Download">
-                            <i class="bi bi-download"></i>
-                          </a>
-                          <!-- Share icon (only if owner) -->
-                          ${file.status === 'owned' ? `
-                          <a href="#" class="text-decoration-none me-2 action-icon" data-action="share" data-file-id="${file.id}" data-bs-toggle="tooltip" title="Share">
-                            <i class="bi bi-share"></i>
-                          </a>
-                          ` : ''}
-                          <!-- Delete icon (only if owner) -->
-                          ${file.status === 'owned' ? `
-                          <a href="#" class="text-decoration-none action-icon" data-action="delete" data-file-id="${file.id}" data-bs-toggle="tooltip" title="Delete">
-                            <i class="bi bi-trash"></i>
-                          </a>
-                          ` : ''}
-                        </td>
-                      </tr>
-                      <!-- Share Form Collapse -->
-                      ${file.status === 'owned' ? `
-                      <tr class="share-form-collapse" id="shareFormRow-${file.id}" style="display: none;">
-                        <td colspan="3">
-                          <div class="collapse" id="collapseShare-${file.id}">
-                            <div class="card card-body">
-                              <form id="shareForm-${file.id}">
-                                <div class="mb-3">
-                                  <label for="emails-${file.id}" class="form-label">Enter email addresses to share with:</label>
-                                  <input type="email" class="form-control" id="emails-${file.id}" name="emails" placeholder="e.g., user@example.com" required multiple>
-                                  <div class="form-text">Separate multiple emails with commas.</div>
-                                </div>
-                                <button type="submit" class="btn btn-primary">Share</button>
-                              </form>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                      ` : ''}
-                    `;
-                  }).join('')}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  
-    // Add the modal to the document body
-    document.body.appendChild(modalContainer);
-    console.log('Modal container appended to body.');
+    // Create the modal
+    const modalDiv = createModal(files);
+    document.body.appendChild(modalDiv);
+    console.log('Modal container added to the document body.');
   
     // Initialize tooltips
-    const tooltipTriggerList = [].slice.call(modalContainer.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-      new Tooltip(tooltipTriggerEl);
-      console.log('Tooltip initialized for:', tooltipTriggerEl);
-    });
+    initializeTooltips(modalDiv);
   
-    // Add event delegation to handle clicks on action icons
-    const gedcomFilesTableElement = modalContainer.querySelector('#gedcomFilesTable');
-    gedcomFilesTableElement.addEventListener('click', function (e) {
-      // Prevent default action
-      e.preventDefault();
+    // Initialize and display the modal
+    const gedcomFilesModalElement = document.getElementById('gedcomFilesModal');
+    initializeModal(gedcomFilesModalElement);
+    console.log('GEDCOM files modal displayed.');
   
-      // Get the clicked element with the 'action-icon' class
-      let target = e.target;
-      while (target && !target.classList.contains('action-icon')) {
-        target = target.parentElement;
+    // Handle event delegation for action icons
+    gedcomFilesModalElement.addEventListener('click', handleActionClick);
+  
+    // Email validation functions
+    function isValidEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    }
+  
+    function checkForDuplicateEmails(sanitizedFileId) {
+      const shareForm = document.getElementById(`shareForm-${sanitizedFileId}`);
+      if (!shareForm) return false;
+  
+      const emailInputs = shareForm.querySelectorAll('.email-input');
+      const emailValues = Array.from(emailInputs).map(input => input.value.trim().toLowerCase()).filter(email => email);
+  
+      const duplicates = emailValues.filter((email, index) => emailValues.indexOf(email) !== index);
+  
+      // Highlight duplicate inputs
+      emailInputs.forEach(input => {
+        if (duplicates.includes(input.value.trim().toLowerCase())) {
+          input.classList.add('is-invalid');
+          // Check if duplicate feedback already exists
+          if (!input.parentElement.querySelector('.invalid-feedback.duplicate-feedback')) {
+            const feedback = document.createElement('div');
+            feedback.classList.add('invalid-feedback', 'duplicate-feedback');
+            feedback.textContent = 'This email address is duplicated.';
+            input.parentElement.appendChild(feedback);
+          }
+        } else {
+          input.classList.remove('is-invalid');
+          // Remove duplicate feedback if it exists
+          const feedback = input.parentElement.querySelector('.invalid-feedback.duplicate-feedback');
+          if (feedback) {
+            feedback.remove();
+          }
+        }
+      });
+  
+      return duplicates.length === 0;
+    }
+  
+    // Spinner management functions
+    function showGlobalSpinner() {
+      const spinner = document.getElementById('loadingSpinner');
+      const content = document.getElementById('modalContent');
+      if (spinner && content) {
+        spinner.style.display = 'block';
+        content.style.opacity = '0.5'; // Optionally reduce the content opacity
       }
+    }
   
-      if (target && target.classList.contains('action-icon')) {
-        const action = target.getAttribute('data-action');
-        const fileId = target.getAttribute('data-file-id');
+    function hideGlobalSpinner() {
+      const spinner = document.getElementById('loadingSpinner');
+      const content = document.getElementById('modalContent');
+      if (spinner && content) {
+        spinner.style.display = 'none';
+        content.style.opacity = '1'; // Restore content opacity
+      }
+    }
+  
+    function showButtonSpinner(sanitizedFileId) {
+      const spinner = document.getElementById(`shareButtonSpinner-${sanitizedFileId}`);
+      if (spinner) {
+        spinner.style.display = 'inline-block';
+      }
+    }
+  
+    function hideButtonSpinner(sanitizedFileId) {
+      const spinner = document.getElementById(`shareButtonSpinner-${sanitizedFileId}`);
+      if (spinner) {
+        spinner.style.display = 'none';
+      }
+    }
+
+    // Toggle the share submit button based on form validity
+    function toggleSubmitButton(sanitizedFileId) {
+      const shareForm = document.getElementById(`shareForm-${sanitizedFileId}`);
+      const shareSubmitButton = document.getElementById(`shareSubmit-${sanitizedFileId}`);
+      const emailInputs = shareForm.querySelectorAll('.email-input');
+      const isAnyInputValid = Array.from(emailInputs).some(input => isValidEmail(input.value.trim()));
+      const isNoDuplicate = checkForDuplicateEmails(sanitizedFileId);
+  
+      if (isAnyInputValid && isNoDuplicate) {
+        shareSubmitButton.disabled = false;
+      } else {
+        shareSubmitButton.disabled = true;
+      }
+    }
+  
+    // DOM manipulation functions
+    function createModal(files) {
+      const fragment = document.createDocumentFragment();
+  
+      const modalDiv = document.createElement('div');
+      modalDiv.classList.add('modal', 'fade');
+      modalDiv.id = 'gedcomFilesModal';
+      modalDiv.setAttribute('tabindex', '-1');
+      modalDiv.setAttribute('aria-labelledby', 'gedcomFilesModalLabel');
+      modalDiv.setAttribute('aria-hidden', 'true');
+  
+      const modalDialog = document.createElement('div');
+      modalDialog.classList.add('modal-dialog', 'modal-lg');
+  
+      const modalContent = document.createElement('div');
+      modalContent.classList.add('modal-content');
+  
+      const modalHeader = document.createElement('div');
+      modalHeader.classList.add('modal-header');
+  
+      const modalTitle = document.createElement('h5');
+      modalTitle.classList.add('modal-title');
+      modalTitle.id = 'gedcomFilesModalLabel';
+      modalTitle.textContent = 'My GEDCOM Files';
+  
+      const closeButton = document.createElement('button');
+      closeButton.type = 'button';
+      closeButton.classList.add('btn-close');
+      closeButton.setAttribute('data-bs-dismiss', 'modal');
+      closeButton.setAttribute('aria-label', 'Close');
+  
+      modalHeader.appendChild(modalTitle);
+      modalHeader.appendChild(closeButton);
+  
+      const modalBody = document.createElement('div');
+      modalBody.classList.add('modal-body', 'position-relative');
+  
+      // Global spinner
+      const loadingSpinner = document.createElement('div');
+      loadingSpinner.id = 'loadingSpinner';
+      loadingSpinner.classList.add('position-absolute', 'top-50', 'start-50', 'translate-middle');
+      loadingSpinner.style.display = 'none';
+      loadingSpinner.style.zIndex = '1051';
+  
+      const spinner = document.createElement('div');
+      spinner.classList.add('spinner-border', 'text-primary');
+      spinner.setAttribute('role', 'status');
+  
+      const spinnerSpan = document.createElement('span');
+      spinnerSpan.classList.add('visually-hidden');
+      spinnerSpan.textContent = 'Loading...';
+  
+      spinner.appendChild(spinnerSpan);
+      loadingSpinner.appendChild(spinner);
+      modalBody.appendChild(loadingSpinner);
+  
+      const modalContentContainer = document.createElement('div');
+      modalContentContainer.id = 'modalContent';
+  
+      const table = document.createElement('table');
+      table.classList.add('table');
+      table.id = 'gedcomFilesTable';
+  
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+  
+      const thName = document.createElement('th');
+      thName.setAttribute('scope', 'col');
+      thName.textContent = 'File Name';
+  
+      const thStatus = document.createElement('th');
+      thStatus.setAttribute('scope', 'col');
+      thStatus.textContent = 'Status';
+  
+      const thActions = document.createElement('th');
+      thActions.setAttribute('scope', 'col');
+      thActions.classList.add('text-end');
+      thActions.textContent = 'Actions';
+  
+      headerRow.appendChild(thName);
+      headerRow.appendChild(thStatus);
+      headerRow.appendChild(thActions);
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+  
+      const tbody = document.createElement('tbody');
+  
+      files.forEach(file => {
+        const sanitizedFileId = sanitizeFileId(file.id);
+        const fileRow = document.createElement('tr');
+  
+        const tdName = document.createElement('td');
+        tdName.textContent = file.name;
+  
+        const tdStatus = document.createElement('td');
+        tdStatus.textContent = file.status === 'owned' ? 'Owner' : 'Authorized';
+  
+        const tdActions = document.createElement('td');
+        tdActions.classList.add('text-end');
+  
+        // Download icon
+        const downloadLink = document.createElement('a');
+        downloadLink.href = '#';
+        downloadLink.classList.add('text-decoration-none', 'me-2', 'action-icon');
+        downloadLink.setAttribute('data-action', 'download');
+        downloadLink.setAttribute('data-link', file.signedUrl);
+        downloadLink.setAttribute('data-bs-toggle', 'tooltip');
+        downloadLink.setAttribute('title', 'Download');
+  
+        const downloadIcon = document.createElement('i');
+        downloadIcon.classList.add('bi', 'bi-download');
+        downloadLink.appendChild(downloadIcon);
+        tdActions.appendChild(downloadLink);
+  
+        if (file.status === 'owned') {
+          // Share icon
+          const shareLink = document.createElement('a');
+          shareLink.href = '#';
+          shareLink.classList.add('text-decoration-none', 'me-2', 'action-icon');
+          shareLink.setAttribute('data-action', 'share');
+          shareLink.setAttribute('data-file-id', file.id);
+          shareLink.setAttribute('data-bs-toggle', 'tooltip');
+          shareLink.setAttribute('title', 'Share');
+  
+          const shareIcon = document.createElement('i');
+          shareIcon.classList.add('bi', 'bi-share');
+          shareLink.appendChild(shareIcon);
+          tdActions.appendChild(shareLink);
+  
+          // Delete icon
+          const deleteLink = document.createElement('a');
+          deleteLink.href = '#';
+          deleteLink.classList.add('text-decoration-none', 'action-icon');
+          deleteLink.setAttribute('data-action', 'delete');
+          deleteLink.setAttribute('data-file-id', file.id);
+          deleteLink.setAttribute('data-bs-toggle', 'tooltip');
+          deleteLink.setAttribute('title', 'Delete');
+  
+          const deleteIcon = document.createElement('i');
+          deleteIcon.classList.add('bi', 'bi-trash');
+          deleteLink.appendChild(deleteIcon);
+          tdActions.appendChild(deleteLink);
+        }
+  
+        fileRow.appendChild(tdName);
+        fileRow.appendChild(tdStatus);
+        fileRow.appendChild(tdActions);
+        tbody.appendChild(fileRow);
+  
+        // If the file is owned, add the share form row
+        if (file.status === 'owned') {
+          const shareFormRow = document.createElement('tr');
+          shareFormRow.classList.add('share-form-collapse');
+          shareFormRow.id = `shareFormRow-${sanitizedFileId}`;
+          shareFormRow.style.display = 'none';
+  
+          const shareFormTd = document.createElement('td');
+          shareFormTd.setAttribute('colspan', '3');
+  
+          const collapseDiv = document.createElement('div');
+          collapseDiv.classList.add('collapse');
+          collapseDiv.id = `collapseShare-${sanitizedFileId}`;
+  
+          const cardDiv = document.createElement('div');
+          cardDiv.classList.add('card', 'card-body');
+  
+          const shareForm = document.createElement('form');
+          shareForm.id = `shareForm-${sanitizedFileId}`;
+  
+          const formGroup = document.createElement('div');
+          formGroup.classList.add('mb-3');
+  
+          const label = document.createElement('label');
+          label.classList.add('form-label');
+          label.setAttribute('for', `emailTable-${sanitizedFileId}`);
+          label.textContent = 'Enter email addresses to share with:';
+  
+          const emailTable = document.createElement('table');
+          emailTable.classList.add('table', 'table-bordered');
+          emailTable.id = `emailTable-${sanitizedFileId}`;
+  
+          const emailTbody = document.createElement('tbody');
+          for (let i = 1; i <= 10; i++) {
+            const emailRow = document.createElement('tr');
+            const emailTd = document.createElement('td');
+  
+            const emailInput = document.createElement('input');
+            emailInput.type = 'email';
+            emailInput.classList.add('form-control', 'email-input');
+            emailInput.id = `email-${sanitizedFileId}-${i}`;
+            emailInput.name = 'emails';
+            emailInput.placeholder = 'e.g., user@example.com';
+            emailInput.required = true;
+  
+            // Add invalid feedback element
+            const invalidFeedback = document.createElement('div');
+            invalidFeedback.classList.add('invalid-feedback');
+            invalidFeedback.textContent = 'Please enter a valid email address.';
+  
+            emailTd.appendChild(emailInput);
+            emailTd.appendChild(invalidFeedback);
+            emailRow.appendChild(emailTd);
+            emailTbody.appendChild(emailRow);
+          }
+          emailTable.appendChild(emailTbody);
+          formGroup.appendChild(label);
+          formGroup.appendChild(emailTable);
+  
+          // Share button with inline spinner
+          const submitButton = document.createElement('button');
+          submitButton.type = 'submit';
+          submitButton.classList.add('btn', 'btn-primary');
+          submitButton.id = `shareSubmit-${sanitizedFileId}`;
+          submitButton.textContent = 'Share';
+  
+          const shareButtonSpinner = document.createElement('span');
+          shareButtonSpinner.classList.add('spinner-border', 'spinner-border-sm', 'ms-2');
+          shareButtonSpinner.setAttribute('role', 'status');
+          shareButtonSpinner.setAttribute('aria-hidden', 'true');
+          shareButtonSpinner.style.display = 'none';
+          shareButtonSpinner.id = `shareButtonSpinner-${sanitizedFileId}`;
+  
+          submitButton.appendChild(shareButtonSpinner);
+          formGroup.appendChild(submitButton);
+  
+          shareForm.appendChild(formGroup);
+          cardDiv.appendChild(shareForm);
+          collapseDiv.appendChild(cardDiv);
+          shareFormTd.appendChild(collapseDiv);
+          shareFormRow.appendChild(shareFormTd);
+          tbody.appendChild(shareFormRow);
+        }
+      }); // <-- Proper closure of the forEach loop
+  
+      table.appendChild(thead);
+      table.appendChild(tbody);
+      modalContentContainer.appendChild(table);
+  
+      modalBody.appendChild(modalContentContainer);
+  
+      modalContent.appendChild(modalHeader);
+      modalContent.appendChild(modalBody);
+      modalDialog.appendChild(modalContent);
+      modalDiv.appendChild(modalDialog);
+      fragment.appendChild(modalDiv);
+  
+      return modalDiv;
+    }
+  
+    function initializeTooltips(modalDiv) {
+      const tooltipTriggerList = modalDiv.querySelectorAll('[data-bs-toggle="tooltip"]');
+      tooltipTriggerList.forEach(tooltipTriggerEl => {
+        new Tooltip(tooltipTriggerEl);
+        console.log('Tooltip initialized for:', tooltipTriggerEl);
+      });
+    }
+  
+    function initializeModal(modalElement) {
+      const gedcomFilesModal = new Modal(modalElement);
+      gedcomFilesModal.show();
+    }
+  
+    // Function to handle action icon clicks
+    async function handleActionClick(e) {
+      const actionIcon = e.target.closest('.action-icon');
+      if (actionIcon) {
+        e.preventDefault();
+        const action = actionIcon.getAttribute('data-action');
+        const fileId = actionIcon.getAttribute('data-file-id');
         console.log(`Action triggered: ${action} for file ID: ${fileId}`);
   
         if (action === 'download') {
-          const dataLink = target.getAttribute('data-link');
+          const dataLink = actionIcon.getAttribute('data-link');
           console.log(`Download link: ${dataLink}`);
           loadGedcomFile(dataLink);
         } else if (action === 'share') {
@@ -999,204 +1268,178 @@ export function showGedcomFilesModal(files) {
           deleteFile(fileId);
         }
       }
-      return false;
-    });
+    }
   
-    // Function to toggle the share form display
+    // Function to toggle share form visibility
     function toggleShareForm(fileId) {
-      console.log(`Toggling share form for file ID: ${fileId}`);
-      const shareFormRow = document.getElementById(`shareFormRow-${fileId}`);
-      const collapseElement = document.getElementById(`collapseShare-${fileId}`);
+      const sanitizedFileId = sanitizeFileId(fileId);
+      const shareFormRow = document.getElementById(`shareFormRow-${sanitizedFileId}`);
+      const collapseElement = document.getElementById(`collapseShare-${sanitizedFileId}`);
   
       if (shareFormRow && collapseElement) {
-        // Initialize Collapse using the imported Collapse component
-        try {
-          const collapse = new Collapse(collapseElement, {
-            toggle: true
-          });
-          console.log(`Collapse initialized for file ID: ${fileId}`);
-        } catch (initError) {
-          console.error(`Failed to initialize Collapse for file ID: ${fileId}`, initError);
-        }
+        const collapseInstance = new Collapse(collapseElement, {
+          toggle: true
+        });
+        shareFormRow.style.display = shareFormRow.style.display === 'none' ? '' : 'none';
+        console.log(`Collapse toggled for file ID: ${fileId}`);
+  
+        // Initialize share form submission
+        initializeShareForm(sanitizedFileId);
       } else {
-        if (!shareFormRow) {
-          console.error(`Share form row not found for file ID: ${fileId}`);
-        }
-        if (!collapseElement) {
-          console.error(`Collapse element not found for file ID: ${fileId}`);
-        }
+        console.error(`Share form elements not found for file ID: ${fileId}`);
       }
     }
   
-    // Add event listeners for share forms
-    files.forEach(file => {
-      if (file.status === 'owned') {
-        const shareForm = modalContainer.querySelector(`#shareForm-${file.id}`);
-        if (shareForm) {
-          shareForm.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const emailInput = shareForm.querySelector(`#emails-${file.id}`);
-            const emails = emailInput.value.split(',').map(email => email.trim()).filter(email => email);
-  
-            if (emails.length === 0) {
-              alert('Please enter at least one email address.');
-              console.log('No valid email addresses entered.');
+    // Function to initialize share form submission
+    async function initializeShareForm(sanitizedFileId) {
+        const shareForm = document.getElementById(`shareForm-${sanitizedFileId}`);
+        if (!shareForm) {
+          console.error(`Share form not found for file ID: ${sanitizedFileId}`);
+          return;
+        }
+      
+        const emailInputs = shareForm.querySelectorAll('.email-input');
+        if (!emailInputs.length) {
+          console.error(`No email inputs found for form ID: shareForm-${sanitizedFileId}`);
+          return;
+        }
+      
+        const shareSubmitButton = document.getElementById(`shareSubmit-${sanitizedFileId}`);
+        const shareButtonSpinner = document.getElementById(`shareButtonSpinner-${sanitizedFileId}`);
+      
+        // Attach event listeners for email validation
+        emailInputs.forEach(input => {
+          input.addEventListener('input', handleEmailInput);
+          input.addEventListener('input', () => toggleSubmitButton(sanitizedFileId));
+        });
+      
+        // Initially check to enable/disable the submit button
+        toggleSubmitButton(sanitizedFileId);
+      
+        // Attach the share form submit handler
+        shareForm.addEventListener('submit', async function (e) {
+          e.preventDefault();
+      
+          // Perform validation checks
+          let isFormValid = true;
+      
+          // Validate each email field
+          emailInputs.forEach(input => {
+            const email = input.value.trim();
+            const isValid = isValidEmail(email);
+            if (!isValid) {
+              input.classList.add('is-invalid');
+              isFormValid = false;
+            } else {
+              input.classList.remove('is-invalid');
+              input.classList.add('is-valid');
+            }
+          });
+      
+          // Check for duplicates
+          if (!checkForDuplicateEmails(sanitizedFileId)) {
+            isFormValid = false;
+          }
+      
+          if (!isFormValid) {
+            alert('Please correct the errors in the form before submitting.');
+            const firstInvalid = shareForm.querySelector('.is-invalid');
+            if (firstInvalid) {
+              firstInvalid.focus();
+            }
+            return;
+          }
+      
+          const emails = Array.from(emailInputs)
+            .map(input => input.value.trim())
+            .filter(email => email);
+      
+          console.log(`Emails to share with: ${emails.join(', ')}`);
+      
+          try {
+            showGlobalSpinner(); // Show global spinner before starting the share operation
+            shareSubmitButton.disabled = true; // Disable the submit button to prevent multiple submissions
+            showButtonSpinner(sanitizedFileId); // Show the spinner on the submit button
+      
+            // Verify and create users via Clerk
+            const verifiedUserIds = await verifyAndCreateUsers(emails);
+            console.log(`Verified user IDs: ${verifiedUserIds.join(', ')}`);
+      
+            if (verifiedUserIds.length === 0) {
+              alert('No valid users found to share the file with.');
+              console.log('No valid users to share the file with.');
+              hideGlobalSpinner(); // Hide global spinner as the operation is complete
+              shareSubmitButton.disabled = false;
+              hideButtonSpinner(sanitizedFileId);
               return;
             }
-  
-            console.log(`Emails to share with: ${emails.join(', ')}`);
-  
-            try {
-              // Verify and create users via Clerk
-              const verifiedUserIds = await verifyAndCreateUsers(emails);
-              console.log(`Verified user IDs: ${verifiedUserIds.join(', ')}`);
-  
-              if (verifiedUserIds.length === 0) {
-                alert('No valid users found to share the file with.');
-                console.log('No valid users to share the file with.');
-                return;
+      
+            // Grant access to each user
+            for (const userId of verifiedUserIds) {
+              console.log(`Granting access to user ID: ${userId}`);
+              const success = await grantAccessToFile(sanitizedFileId, userId);
+              if (!success) {
+                throw new Error(`Failed to grant access to user ID: ${userId}`);
               }
-  
-              // Grant access to each user
-              for (const userId of verifiedUserIds) {
-                console.log(`Granting access to user ID: ${userId}`);
-                const success = await grantAccessToFile(file.id, userId);
-                if (!success) {
-                  throw new Error(`Failed to grant access to user ID: ${userId}`);
-                }
-              }
-  
-              alert('File shared successfully!');
-              console.log('File shared successfully.');
-  
-              // Optionally: close the share form
-              toggleShareForm(file.id);
-              // Clear the input field
-              emailInput.value = '';
-              console.log('Share form closed and input cleared.');
-  
-            } catch (error) {
-              console.error('Error sharing file:', error);
-              alert('An error occurred while sharing the file.');
             }
-          });
-          console.log(`Share form event listener added for file ID: ${file.id}`);
-        } else {
-          console.error(`Share form not found for file ID: ${file.id}`);
-        }
+      
+            alert('File shared successfully!');
+            console.log('File shared successfully.');
+      
+            // Optionally close the share form and reset fields
+            toggleShareForm(sanitizedFileId.replace(/_/g, ' ')); // Revert to original file ID with spaces
+            shareForm.reset();
+            console.log('Share form closed and fields reset.');
+      
+            hideGlobalSpinner(); // Hide the global spinner after operation completion
+            shareSubmitButton.disabled = false;
+            hideButtonSpinner(sanitizedFileId);
+      
+          } catch (error) {
+            hideGlobalSpinner(); // Hide the global spinner in case of error
+            console.error('Error sharing file:', error);
+            alert('An error occurred while sharing the file.');
+            shareSubmitButton.disabled = false;
+            hideButtonSpinner(sanitizedFileId);
+          }
+        });
+      
+        console.log(`Event listener added to share form for file ID: ${sanitizedFileId}`);
       }
-    });
   
-    // Initialize and show the modal
-    const gedcomFilesModalElement = document.getElementById('gedcomFilesModal');
-    const gedcomFilesModal = new Modal(gedcomFilesModalElement);
-    gedcomFilesModal.show();
-    console.log('GEDCOM files modal displayed.');
-  }
-
-export function showGedcomFilesModal1(files) {
-    // Remove existing modal if it exists
-    const existingModal = document.getElementById('gedcomFilesModal');
-    if (existingModal) {
-        existingModal.remove();
+    // Function to validate email format using regex
+    function isValidEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
     }
-
-    // Create the modal content
-    const modalContainer = document.createElement('div');
-    modalContainer.innerHTML = `
-<div class="modal fade" id="gedcomFilesModal" tabindex="-1" aria-labelledby="gedcomFilesModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="gedcomFilesModalLabel">My GEDCOM Files</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <!-- Files table -->
-        <table class="table" id="gedcomFilesTable">
-          <thead>
-            <tr>
-              <th scope="col">File Name</th>
-              <th scope="col">Status</th>
-              <th scope="col" class="text-end">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${files.map(file => `
-              <tr>
-                <td>${file.name}</td>
-                <td>${file.status === 'owned' ? 'Owner' : 'Authorized'}</td>
-                <td class="text-end">
-                  <!-- Download icon -->
-                  <a href="#" class="text-decoration-none me-2 action-icon" data-action="download" data-link="${file.signedUrl}" data-bs-toggle="tooltip" title="Download">
-                    <i class="bi bi-download"></i>
-                  </a>
-                  <!-- Share icon (only if owner) -->
-                  ${file.status === 'owned' ? `
-                  <a href="#" class="text-decoration-none me-2 action-icon" data-action="share" data-file-id="${file.id}" data-bs-toggle="tooltip" title="Share">
-                    <i class="bi bi-share"></i>
-                  </a>
-                  ` : ''}
-                  <!-- Delete icon (only if owner) -->
-                  ${file.status === 'owned' ? `
-                  <a href="#" class="text-decoration-none action-icon" data-action="delete" data-file-id="${file.id}" data-bs-toggle="tooltip" title="Delete">
-                    <i class="bi bi-trash"></i>
-                  </a>
-                  ` : ''}
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-`;
-
-    // Append the modal to the document body
-    document.body.appendChild(modalContainer);
-
-    // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(modalContainer.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-        new Tooltip(tooltipTriggerEl);
-    });
-
-    // Add event delegation to handle icon clicks
-    const gedcomFilesTable = modalContainer.querySelector('#gedcomFilesTable');
-    gedcomFilesTable.addEventListener('click', function (e) {
-        e.preventDefault();
-
-        // Get the closest element with the 'action-icon' class
-        let target = e.target;
-        while (target && !target.classList.contains('action-icon')) {
-            target = target.parentElement;
+  
+    // Function to handle real-time email validation
+    function handleEmailInput(event) {
+        const input = event.target;
+        const isValid = isValidEmail(input.value.trim());
+      
+        if (isValid) {
+          input.classList.remove('is-invalid');
+          input.classList.add('is-valid');
+          // Remove duplicate feedback if it exists
+          const duplicateFeedback = input.parentElement.querySelector('.invalid-feedback.duplicate-feedback');
+          if (duplicateFeedback) {
+            duplicateFeedback.remove();
+          }
+        } else {
+          input.classList.remove('is-valid');
+          input.classList.add('is-invalid');
         }
-
-        if (target && target.classList.contains('action-icon')) {
-            const action = target.getAttribute('data-action');
-
-            if (action === 'download') {
-                const dataLink = target.getAttribute('data-link');
-                loadGedcomFile(dataLink);
-            } else if (action === 'share') {
-                const fileId = target.getAttribute('data-file-id');
-                shareFile(fileId);
-            } else if (action === 'delete') {
-                const fileId = target.getAttribute('data-file-id');
-                deleteFile(fileId);
-            }
-        }
-        return false;
-    });
-
-    // Initialize and show the modal
-    var gedcomFilesModalElement = document.getElementById('gedcomFilesModal');
-    var gedcomFilesModal = new Modal(gedcomFilesModalElement);
-    gedcomFilesModal.show();
-
-}
+      
+        // Extraire l'ID de fichier de l'élément parent approprié
+        const sanitizedFileId = input.closest('.share-form-collapse').id.split('-')[1];
+        
+        // Vérifier la duplication et mettre à jour le bouton de soumission
+        checkForDuplicateEmails(sanitizedFileId);
+        toggleSubmitButton(sanitizedFileId);
+      }
+      
+  }
 
 // Prevent the user from entering invalid quantities
 document.querySelectorAll('input[type=number]').forEach(function (input) {

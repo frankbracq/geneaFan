@@ -151,31 +151,6 @@ export function updateIndividualTownsFromFamilyTowns(individualsCache) {
     });
 }
 
-export function displayAllPlacesFromDB() {
-    const dbRequest = indexedDB.open("PlacesDatabase", 1);
-
-    dbRequest.onsuccess = event => {
-        const db = event.target.result;
-        const transaction = db.transaction(["Places"], "readonly");
-        const store = transaction.objectStore("Places");
-        const cursorRequest = store.openCursor();
-
-        cursorRequest.onsuccess = event => {
-            const cursor = event.target.result;
-            if (cursor) {
-                // console.log(cursor.value); // Affiche chaque enregistrement dans la console
-                cursor.continue(); // Passe à l'enregistrement suivant
-            } else {
-                console.log("No more entries!");
-            }
-        };
-    };
-
-    dbRequest.onerror = event => {
-        console.error("Database error: ", event.target.errorCode);
-    };
-}
-
 export function downloadJSON(data, filename) {
     // Convertir data en une chaîne JSON
     let dataStr = JSON.stringify(data);
@@ -248,5 +223,22 @@ export function getActionWord(eventType, gender) {
         return baseWord + '(e)';
     }
 }
+
+/**
+ * Sanitize a file ID by replacing spaces with underscores.
+ *
+ * @param {string} fileId - The file ID to sanitize.
+ * @returns {string} The sanitized file ID.
+ */
+export function sanitizeFileId(fileId) {
+    if (typeof fileId !== 'string') {
+      console.error('File ID must be a string.');
+      return '';
+    }
+    return fileId.replace(/\s+/g, '_');
+  }
+  
+  
+
 
 
