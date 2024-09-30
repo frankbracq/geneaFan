@@ -44,7 +44,7 @@ import {
 import { googleMapManager } from './mapManager.js';
 import { initializeAscendantTimeline } from './ascendantTimeline.js';
 import { handleUserAuthentication } from './users.js';
-import { createModal, sanitizeFileId } from './gedcomModalUtils.js';
+import { createModal, lazyLoadShareForm, sanitizeFileId } from './gedcomModalUtils.js';
 
 let config;
 let rootPersonName;
@@ -876,35 +876,32 @@ $("#print").click(function () {
  * @param {Array} files - List of GEDCOM files to display.
  */
 export function showGedcomFilesModal(files) {
-    // Supprimer la modale existante si elle existe
+    // Remove existing modal if it exists
     const existingModal = document.getElementById('gedcomFilesModal');
     if (existingModal) {
         existingModal.remove();
         console.log('Existing modal removed.');
     }
 
-    // Créer la modale
+    // Create the modal
     const modalDiv = createModal(files, sanitizeFileId);
     document.body.appendChild(modalDiv);
-    // console.log('Modal container added to the document body.');
+    console.log('Modal container added to the document body.');
 
-    // Initialiser les tooltips
+    // Initialize tooltips
     initializeTooltips(modalDiv);
 
-    // Initialiser et afficher la modale
+    // Initialize and display the modal
     const gedcomFilesModalElement = document.getElementById('gedcomFilesModal');
     initializeModal(gedcomFilesModalElement);
     console.log('GEDCOM files modal displayed.');
 
-    // Gérer la délégation des événements pour les icônes d'action
+    // Handle event delegation for action icons
     gedcomFilesModalElement.addEventListener('click', handleActionClick);
 
-    // Initialiser les autres composants de la modale
-    initializeShareForms(files);
-
     /**
-     * Fonction pour initialiser les tooltips dans la modale.
-     * @param {HTMLElement} modalDiv - L'élément DOM de la modale.
+     * Function to initialize tooltips in the modal.
+     * @param {HTMLElement} modalDiv - The modal DOM element.
      */
     function initializeTooltips(modalDiv) {
         const tooltipTriggerList = modalDiv.querySelectorAll('[data-bs-toggle="tooltip"]');
@@ -915,22 +912,22 @@ export function showGedcomFilesModal(files) {
     }
 
     /**
- * Function to initialize and display the Bootstrap modal.
- * @param {HTMLElement} modalElement - The DOM element of the modal.
- */
+     * Function to initialize and display the Bootstrap modal.
+     * @param {HTMLElement} modalElement - The DOM element of the modal.
+     */
     function initializeModal(modalElement) {
         const gedcomFilesModal = new Modal(modalElement);
         gedcomFilesModal.show();
     }
 
     /**
- * Function to handle clicks on action icons.
- * @param {Event} e - The click event.
- */
+     * Function to handle clicks on action icons.
+     * @param {Event} e - The click event.
+     */
     async function handleActionClick(e) {
         const actionIcon = e.target.closest('.action-icon');
         if (actionIcon) {
-            e.preventDefault(); // Prevents the default behavior
+            e.preventDefault(); // Prevent default behavior
             console.log("Action click intercepted. Event prevented.");
 
             const action = actionIcon.getAttribute('data-action');
@@ -953,21 +950,41 @@ export function showGedcomFilesModal(files) {
     }
 
     /**
-     * Fonction pour initialiser les formulaires de partage pour chaque fichier possédé.
-     * @param {Array} files - Liste des fichiers GEDCOM.
-     */
-    function initializeShareForms(files) {
-        files.forEach(file => {
-            if (file.status === 'owned') {
-                const sanitizedFileId = sanitizeFileId(file.id);
-                initializeShareForm(sanitizedFileId);
-            }
-        });
+ * Function to toggle the visibility of the share form.
+ * @param {string} fileId - The ID of the file.
+ */
+function toggleShareForm(fileId) {
+    const sanitizedFileId = sanitizeFileId(fileId);
+    let shareFormRow = document.getElementById(`shareFormRow-${sanitizedFileId}`);
+    let collapseElement = document.getElementById(`collapseShare-${sanitizedFileId}`);
+
+    // If the share form does not exist, lazy load it
+    if (!shareFormRow || !collapseElement) {
+        console.log(`Share form for file ID ${fileId} not found. Lazy loading the share form.`);
+        lazyLoadShareForm(fileId, sanitizeFileId);
+
+        // After lazy loading, update the references
+        shareFormRow = document.getElementById(`shareFormRow-${sanitizedFileId}`);
+        collapseElement = document.getElementById(`collapseShare-${sanitizedFileId}`);
     }
 
+    if (shareFormRow && collapseElement) {
+        const collapseInstance = new Collapse(collapseElement, {
+            toggle: true
+        });
+        shareFormRow.style.display = shareFormRow.style.display === 'none' ? '' : 'none';
+        console.log(`Collapse toggled for file ID: ${fileId}`);
+
+        // Initialize the share form after it's made visible
+        initializeShareForm(sanitizedFileId);
+    } else {
+        console.error(`Share form elements not found for file ID: ${fileId} even after lazy loading.`);
+    }
+}
+
     /**
-     * Fonction pour initialiser le formulaire de partage d'un fichier spécifique.
-     * @param {string} sanitizedFileId - L'ID sanitisé du fichier.
+     * Function to initialize the share form of a specific file.
+     * @param {string} sanitizedFileId - The sanitized file ID.
      */
     async function initializeShareForm(sanitizedFileId) {
         const shareForm = document.getElementById(`shareForm-${sanitizedFileId}`);
@@ -985,23 +1002,23 @@ export function showGedcomFilesModal(files) {
         const shareSubmitButton = document.getElementById(`shareSubmit-${sanitizedFileId}`);
         const shareButtonSpinner = document.getElementById(`shareButtonSpinner-${sanitizedFileId}`);
 
-        // Attacher les écouteurs d'événements pour la validation des emails
+        // Attach event listeners for email validation
         emailInputs.forEach(input => {
             input.addEventListener('input', handleEmailInput);
             input.addEventListener('input', () => toggleSubmitButton(sanitizedFileId));
         });
 
-        // Initialement vérifier pour activer/désactiver le bouton de soumission
+        // Initially check to enable/disable submit button
         toggleSubmitButton(sanitizedFileId);
 
-        // Attacher le gestionnaire de soumission du formulaire
+        // Attach form submit handler
         shareForm.addEventListener('submit', async function (e) {
             e.preventDefault();
 
-            // Effectuer les vérifications de validation
+            // Perform validation checks
             let isFormValid = true;
 
-            // Valider chaque champ email
+            // Validate each email field
             emailInputs.forEach(input => {
                 const email = input.value.trim();
                 const isValid = isValidEmail(email);
@@ -1014,7 +1031,7 @@ export function showGedcomFilesModal(files) {
                 }
             });
 
-            // Vérifier les doublons
+            // Check for duplicates
             if (!checkForDuplicateEmails(sanitizedFileId)) {
                 isFormValid = false;
             }
@@ -1035,24 +1052,21 @@ export function showGedcomFilesModal(files) {
             console.log(`Emails to share with: ${emails.join(', ')}`);
 
             try {
-                showGlobalSpinner(); // Afficher le spinner global avant de commencer l'opération de partage
-                shareSubmitButton.disabled = true; // Désactiver le bouton de soumission pour éviter les soumissions multiples
-                showButtonSpinner(sanitizedFileId); // Afficher le spinner sur le bouton de soumission
+                showGlobalSpinner();
+                shareSubmitButton.disabled = true;
+                showButtonSpinner(sanitizedFileId);
 
-                // Vérifier et créer les utilisateurs via Clerk
                 const verifiedUserIds = await verifyAndCreateUsers(emails);
                 console.log(`Verified user IDs: ${verifiedUserIds.join(', ')}`);
 
                 if (verifiedUserIds.length === 0) {
                     alert('No valid users found to share the file with.');
-                    console.log('No valid users to share the file with.');
-                    hideGlobalSpinner(); // Masquer le spinner global car l'opération est terminée
+                    hideGlobalSpinner();
                     shareSubmitButton.disabled = false;
                     hideButtonSpinner(sanitizedFileId);
                     return;
                 }
 
-                // Accorder l'accès à chaque utilisateur
                 for (const userId of verifiedUserIds) {
                     console.log(`Granting access to user ID: ${userId}`);
                     const success = await grantAccessToFile(sanitizedFileId, userId);
@@ -1062,19 +1076,14 @@ export function showGedcomFilesModal(files) {
                 }
 
                 alert('File shared successfully!');
-                console.log('File shared successfully.');
-
-                // Optionnellement, fermer le formulaire de partage et réinitialiser les champs
-                toggleShareForm(sanitizedFileId.replace(/_/g, ' ')); // Revenir à l'ID de fichier original avec des espaces
+                toggleShareForm(sanitizedFileId.replace(/_/g, ' '));
                 shareForm.reset();
-                console.log('Share form closed and fields reset.');
-
-                hideGlobalSpinner(); // Masquer le spinner global après la complétion de l'opération
+                hideGlobalSpinner();
                 shareSubmitButton.disabled = false;
                 hideButtonSpinner(sanitizedFileId);
 
             } catch (error) {
-                hideGlobalSpinner(); // Masquer le spinner global en cas d'erreur
+                hideGlobalSpinner();
                 console.error('Error sharing file:', error);
                 alert('An error occurred while sharing the file.');
                 shareSubmitButton.disabled = false;
@@ -1086,9 +1095,9 @@ export function showGedcomFilesModal(files) {
     }
 
     /**
-     * Fonction pour valider le format de l'email en utilisant une expression régulière.
-     * @param {string} email - L'email à valider.
-     * @returns {boolean} - Retourne true si l'email est valide, sinon false.
+     * Function to validate email format using a regex.
+     * @param {string} email - The email to validate.
+     * @returns {boolean} - Returns true if the email is valid, otherwise false.
      */
     function isValidEmail(email) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1096,9 +1105,9 @@ export function showGedcomFilesModal(files) {
     }
 
     /**
-     * Fonction pour vérifier les emails dupliqués dans le formulaire de partage.
-     * @param {string} sanitizedFileId - L'ID sanitisé du fichier.
-     * @returns {boolean} - Retourne true si aucun doublon n'est trouvé, sinon false.
+     * Function to check for duplicate emails in the share form.
+     * @param {string} sanitizedFileId - The sanitized file ID.
+     * @returns {boolean} - Returns true if no duplicates are found, otherwise false.
      */
     function checkForDuplicateEmails(sanitizedFileId) {
         const shareForm = document.getElementById(`shareForm-${sanitizedFileId}`);
@@ -1111,11 +1120,9 @@ export function showGedcomFilesModal(files) {
 
         const duplicates = emailValues.filter((email, index) => emailValues.indexOf(email) !== index);
 
-        // Mettre en évidence les inputs dupliqués
         emailInputs.forEach(input => {
             if (duplicates.includes(input.value.trim().toLowerCase())) {
                 input.classList.add('is-invalid');
-                // Vérifier si le feedback de doublon existe déjà
                 if (!input.parentElement.querySelector('.invalid-feedback.duplicate-feedback')) {
                     const feedback = document.createElement('div');
                     feedback.classList.add('invalid-feedback', 'duplicate-feedback');
@@ -1124,7 +1131,6 @@ export function showGedcomFilesModal(files) {
                 }
             } else {
                 input.classList.remove('is-invalid');
-                // Supprimer le feedback de doublon s'il existe
                 const feedback = input.parentElement.querySelector('.invalid-feedback.duplicate-feedback');
                 if (feedback) {
                     feedback.remove();
@@ -1136,32 +1142,32 @@ export function showGedcomFilesModal(files) {
     }
 
     /**
-     * Fonction pour afficher le spinner global.
+     * Function to show the global spinner.
      */
     function showGlobalSpinner() {
         const spinner = document.getElementById('loadingSpinner');
         const content = document.getElementById('modalContent');
         if (spinner && content) {
             spinner.style.display = 'block';
-            content.style.opacity = '0.5'; // Optionnel : réduire l'opacité du contenu
+            content.style.opacity = '0.5';
         }
     }
 
     /**
-     * Fonction pour masquer le spinner global.
+     * Function to hide the global spinner.
      */
     function hideGlobalSpinner() {
         const spinner = document.getElementById('loadingSpinner');
         const content = document.getElementById('modalContent');
         if (spinner && content) {
             spinner.style.display = 'none';
-            content.style.opacity = '1'; // Restaurer l'opacité du contenu
+            content.style.opacity = '1';
         }
     }
 
     /**
-     * Fonction pour afficher le spinner sur le bouton de soumission.
-     * @param {string} sanitizedFileId - L'ID sanitisé du fichier.
+     * Function to show the spinner on the submit button.
+     * @param {string} sanitizedFileId - The sanitized file ID.
      */
     function showButtonSpinner(sanitizedFileId) {
         const spinner = document.getElementById(`shareButtonSpinner-${sanitizedFileId}`);
@@ -1171,8 +1177,8 @@ export function showGedcomFilesModal(files) {
     }
 
     /**
-     * Fonction pour masquer le spinner sur le bouton de soumission.
-     * @param {string} sanitizedFileId - L'ID sanitisé du fichier.
+     * Function to hide the spinner on the submit button.
+     * @param {string} sanitizedFileId - The sanitized file ID.
      */
     function hideButtonSpinner(sanitizedFileId) {
         const spinner = document.getElementById(`shareButtonSpinner-${sanitizedFileId}`);
@@ -1182,8 +1188,8 @@ export function showGedcomFilesModal(files) {
     }
 
     /**
-     * Fonction pour activer ou désactiver le bouton de soumission en fonction de la validité du formulaire.
-     * @param {string} sanitizedFileId - L'ID sanitisé du fichier.
+     * Function to enable or disable the submit button based on form validity.
+     * @param {string} sanitizedFileId - The sanitized file ID.
      */
     function toggleSubmitButton(sanitizedFileId) {
         const shareForm = document.getElementById(`shareForm-${sanitizedFileId}`);
@@ -1200,8 +1206,8 @@ export function showGedcomFilesModal(files) {
     }
 
     /**
-     * Fonction pour gérer la saisie des emails en temps réel.
-     * @param {Event} event - L'événement d'entrée.
+     * Function to handle real-time email input validation.
+     * @param {Event} event - The input event.
      */
     function handleEmailInput(event) {
         const input = event.target;
@@ -1210,7 +1216,6 @@ export function showGedcomFilesModal(files) {
         if (isValid) {
             input.classList.remove('is-invalid');
             input.classList.add('is-valid');
-            // Supprimer le feedback de doublon s'il existe
             const duplicateFeedback = input.parentElement.querySelector('.invalid-feedback.duplicate-feedback');
             if (duplicateFeedback) {
                 duplicateFeedback.remove();
@@ -1220,72 +1225,9 @@ export function showGedcomFilesModal(files) {
             input.classList.add('is-invalid');
         }
 
-        // Extraire l'ID de fichier de l'élément parent approprié
         const sanitizedFileId = input.closest('.share-form-collapse').id.split('-')[1];
-
-        // Vérifier la duplication et mettre à jour le bouton de soumission
         checkForDuplicateEmails(sanitizedFileId);
         toggleSubmitButton(sanitizedFileId);
-    }
-
-    /**
-     * Fonction pour basculer la visibilité du formulaire de partage.
-     * @param {string} fileId - L'ID du fichier.
-     */
-    function toggleShareForm(fileId) {
-        const sanitizedFileId = sanitizeFileId(fileId);
-        const shareFormRow = document.getElementById(`shareFormRow-${sanitizedFileId}`);
-        const collapseElement = document.getElementById(`collapseShare-${sanitizedFileId}`);
-
-        if (shareFormRow && collapseElement) {
-            const collapseInstance = new Collapse(collapseElement, {
-                toggle: true
-            });
-            shareFormRow.style.display = shareFormRow.style.display === 'none' ? '' : 'none';
-            console.log(`Collapse toggled for file ID: ${fileId}`);
-
-            // Initialiser la soumission du formulaire de partage
-            initializeShareForm(sanitizedFileId);
-        } else {
-            console.error(`Share form elements not found for file ID: ${fileId}`);
-        }
-    }
-
-    /**
-     * Fonction pour supprimer un fichier GEDCOM (à implémenter selon vos besoins).
-     * @param {string} fileId - L'ID du fichier à supprimer.
-     */
-    function deleteFile(fileId) {
-        // Implémentez la logique de suppression du fichier GEDCOM ici
-        console.log(`Deleting GEDCOM file with ID: ${fileId}`);
-        // Exemple :
-        alert(`File with ID ${fileId} has been deleted.`);
-        // Vous pouvez ajouter une requête API ici pour supprimer le fichier côté serveur
-    }
-
-    /**
-     * Fonction pour vérifier et créer des utilisateurs via Clerk (à implémenter selon vos besoins).
-     * @param {Array} emails - Liste des emails à vérifier et créer.
-     * @returns {Promise<Array>} - Liste des IDs d'utilisateurs vérifiés.
-     */
-    async function verifyAndCreateUsers(emails) {
-        // Implémentez la logique de vérification et de création des utilisateurs via Clerk ici
-        console.log(`Verifying and creating users for emails: ${emails.join(', ')}`);
-        // Exemple fictif :
-        return emails.map((email, index) => `user-${index + 1}`);
-    }
-
-    /**
-     * Fonction pour accorder l'accès à un fichier GEDCOM à un utilisateur spécifique (à implémenter).
-     * @param {string} sanitizedFileId - L'ID sanitisé du fichier.
-     * @param {string} userId - L'ID de l'utilisateur à qui accorder l'accès.
-     * @returns {Promise<boolean>} - Retourne true si l'accès a été accordé avec succès.
-     */
-    async function grantAccessToFile(sanitizedFileId, userId) {
-        // Implémentez la logique pour accorder l'accès à l'utilisateur ici
-        console.log(`Granting access to file ID: ${sanitizedFileId} for user ID: ${userId}`);
-        // Exemple fictif :
-        return true;
     }
 }
 
