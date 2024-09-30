@@ -338,7 +338,7 @@ function setupTabAndUIEventListeners() {
                     try {
                         // Fetch the list of files for the authenticated user
                         var files = await fetchUserGedcomFiles(userInfo.id);
-                        console.log('Files:', files);
+                        // console.log('Files:', files);
                         if (files.length === 0) {
                             window.alert('No files found for this user.');
                         } else {
