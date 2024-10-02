@@ -440,7 +440,7 @@ svg.tommy .node.female>rect {
   margin: 0;
 }
 
-// Error container
+// Gedcom Modal
 .error-container {
   margin-top: 10px;
 }
@@ -449,4 +449,22 @@ svg.tommy .node.female>rect {
   color: red;
   font-size: 0.9em;
   display: none; /* Sera modifié en 'block' lorsque des doublons sont détectés */
+}
+
+.confirmation-container {
+  margin-top: 20px;
+}
+
+.confirmation-container ul {
+  list-style-type: disc;
+  margin-left: 20px;
+}
+
+.confirmation-container button {
+  margin-top: 10px;
+}
+
+.alert {
+  padding: 10px;
+  margin-top: 20px;
 }

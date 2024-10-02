@@ -962,10 +962,6 @@ async function handleActionClick(e) {
      * Function to initialize the share form of a specific file.
      * @param {string} sanitizedFileId - The sanitized file ID.
      */
-    /**
- * Function to initialize the share form of a specific file.
- * @param {string} sanitizedFileId - The sanitized file ID.
- */
     async function initializeShareForm(sanitizedFileId) {
         const shareForm = document.getElementById(`shareForm-${sanitizedFileId}`);
         if (!shareForm) {
@@ -1052,7 +1048,119 @@ async function handleActionClick(e) {
                 fireImmediately: true // Execute the reaction immediately upon initialization
             }
         );
-    }
+
+        shareForm.addEventListener('submit', (event) => {
+            event.preventDefault(); // Empêche la soumission par défaut du formulaire
+        
+            // Récupérez les adresses email valides
+            const validEmails = shareFormStore.emails.filter(email => shareFormStore.isValidEmail(email.trim()));
+        
+            if (validEmails.length === 0) {
+              // Aucun email valide, affichez un message d'erreur (déjà géré par la validation)
+              return;
+            }
+        
+            // Cachez le formulaire de partage
+            shareForm.style.display = 'none';
+        
+            // Affichez le message de confirmation
+            showConfirmationMessage(sanitizedFileId, validEmails, shareForm);
+          });
+        }
+        
+        function showConfirmationMessage(sanitizedFileId, emails, shareForm) {
+            // Créez le conteneur pour le message de confirmation
+            const confirmationContainer = document.createElement('div');
+            confirmationContainer.id = `confirmationContainer-${sanitizedFileId}`;
+            confirmationContainer.className = 'confirmation-container';
+          
+            // Créez le message de confirmation
+            const message = document.createElement('p');
+            message.textContent = 'Confirmez-vous le partage du fichier avec les adresses suivantes :';
+          
+            // Créez la liste des adresses email
+            const emailList = document.createElement('ul');
+            emails.forEach(email => {
+              const listItem = document.createElement('li');
+              listItem.textContent = email;
+              emailList.appendChild(listItem);
+            });
+          
+            // Créez les boutons "Oui" et "Non"
+            const yesButton = document.createElement('button');
+            yesButton.className = 'btn btn-success me-2';
+            yesButton.textContent = 'Oui';
+          
+            const noButton = document.createElement('button');
+            noButton.className = 'btn btn-secondary';
+            noButton.textContent = 'Non';
+          
+            // Ajoutez les éléments au conteneur de confirmation
+            confirmationContainer.appendChild(message);
+            confirmationContainer.appendChild(emailList);
+            confirmationContainer.appendChild(yesButton);
+            confirmationContainer.appendChild(noButton);
+          
+            // Insérez le conteneur de confirmation après le formulaire de partage
+            shareForm.parentNode.appendChild(confirmationContainer);
+          
+            // Ajoutez des écouteurs d'événements aux boutons
+            yesButton.addEventListener('click', () => {
+              // Procédez au partage
+              proceedWithSharing(sanitizedFileId, emails);
+          
+              // Supprimez le conteneur de confirmation
+              confirmationContainer.remove();
+          
+              // Optionnel : affichez un message de succès
+              showSuccessMessage(sanitizedFileId);
+            });
+          
+            noButton.addEventListener('click', () => {
+              // Cachez le conteneur de confirmation
+              confirmationContainer.remove();
+          
+              // Réaffichez le formulaire de partage
+              shareForm.style.display = 'block';
+            });
+          }
+          
+        
+          function proceedWithSharing(sanitizedFileId, emails) {
+            // Implémentez ici la logique de partage
+            // Par exemple, envoyez une requête à votre serveur avec les emails et l'ID du fichier
+            console.log(`Partage du fichier ${sanitizedFileId} avec les emails :`, emails);
+          
+            // Vous pouvez utiliser fetch ou une autre méthode pour envoyer les données à votre serveur
+            /*
+            fetch('/share', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                fileId: sanitizedFileId,
+                emails: emails
+              })
+            })
+            .then(response => {
+              // Gérez la réponse du serveur
+            })
+            .catch(error => {
+              // Gérez les erreurs
+            });
+            */
+          }
+        
+          function showSuccessMessage(sanitizedFileId) {
+            const successMessage = document.createElement('div');
+            successMessage.className = 'alert alert-success mt-3';
+            successMessage.textContent = 'Le fichier a été partagé avec succès.';
+          
+            // Insérez le message de succès à l'endroit approprié
+            const shareFormContainer = document.getElementById(`shareForm-${sanitizedFileId}`).parentNode;
+            shareFormContainer.appendChild(successMessage);
+          }
       
       
     /**
