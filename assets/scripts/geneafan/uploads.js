@@ -1,7 +1,7 @@
 import { Modal } from 'bootstrap'; 
 import Uppy from '@uppy/core';
 import AwsS3 from '@uppy/aws-s3';
-import configStore from './store';
+import configStore from './configStore.js';
 import { onFileChange } from "./ui.js";
 import { handleUserAuthentication } from './users.js';
 

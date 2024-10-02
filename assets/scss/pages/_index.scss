@@ -440,4 +440,13 @@ svg.tommy .node.female>rect {
   margin: 0;
 }
 
+// Error container
+.error-container {
+  margin-top: 10px;
+}
 
+.duplicate-email-error {
+  color: red;
+  font-size: 0.9em;
+  display: none; /* Sera modifié en 'block' lorsque des doublons sont détectés */
+}

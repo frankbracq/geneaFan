@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import configStore from './store';
+import configStore from './configStore';
 
 // Fonctions pour initialiser et obtenir l'instance de tomSelect via configStore
 export const initializeTomSelect = () => {

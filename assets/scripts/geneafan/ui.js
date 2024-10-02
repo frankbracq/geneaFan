@@ -19,11 +19,13 @@ import {
     getIndividualsCache,
     clearAllStates
 } from "./state.js";
-import configStore from './store';
+import configStore from './configStore.js';
+import ShareFormStore from './shareFormStore.js';
 import {
     debounce,
     updateFamilyTownsViaProxy,
     updateIndividualTownsFromFamilyTowns,
+    isValidEmail,
 } from "./utils.js";
 import { toJson, getIndividualsList, getAllPlaces } from "./parse.js";
 import { draw } from "./fan.js";
@@ -44,7 +46,7 @@ import {
 import { googleMapManager } from './mapManager.js';
 import { initializeAscendantTimeline } from './ascendantTimeline.js';
 import { handleUserAuthentication } from './users.js';
-import { createModal, lazyLoadShareForm, sanitizeFileId } from './gedcomModalUtils.js';
+import { createModal, lazyLoadShareForm, toggleShareForm, sanitizeFileId } from './gedcomModalUtils.js';
 
 let config;
 let rootPersonName;
@@ -921,64 +923,38 @@ export function showGedcomFilesModal(files) {
     }
 
     /**
-     * Function to handle clicks on action icons.
-     * @param {Event} e - The click event.
-     */
-    async function handleActionClick(e) {
-        const actionIcon = e.target.closest('.action-icon');
-        if (actionIcon) {
-            e.preventDefault(); // Prevent default behavior
-            console.log("Action click intercepted. Event prevented.");
+ * Function to handle clicks on action icons.
+ * @param {Event} e - The click event.
+ */
+async function handleActionClick(e) {
+    const actionIcon = e.target.closest('.action-icon');
+    if (actionIcon) {
+        e.preventDefault(); // Prevent default behavior
+        console.log("Action click intercepted. Event prevented.");
 
-            const action = actionIcon.getAttribute('data-action');
-            const fileId = actionIcon.getAttribute('data-file-id');
-            const dataLink = actionIcon.getAttribute('data-link');
+        const action = actionIcon.getAttribute('data-action');
+        const fileId = actionIcon.getAttribute('data-file-id');
+        const dataLink = actionIcon.getAttribute('data-link');
 
-            console.log(`Action: ${action}, File ID: ${fileId}, Data Link: ${dataLink}`);
+        console.log(`Action: ${action}, File ID: ${fileId}, Data Link: ${dataLink}`);
 
+        try {
             if (action === 'download') {
                 console.log(`Calling loadGedcomFile with link: ${dataLink}`);
                 loadGedcomFile(dataLink);
             } else if (action === 'share') {
                 console.log(`Toggling share form for file ID: ${fileId}`);
-                toggleShareForm(fileId);
+                const sanitizedFileId = await toggleShareForm(fileId);
+                initializeShareForm(sanitizedFileId);
             } else if (action === 'delete') {
                 console.log(`Deleting file with ID: ${fileId}`);
                 deleteFile(fileId);
+            } else {
+                console.warn(`Unknown action: ${action}`);
             }
+        } catch (error) {
+            console.error(`Error handling action ${action} for file ID ${fileId}:`, error);
         }
-    }
-
-    /**
- * Function to toggle the visibility of the share form.
- * @param {string} fileId - The ID of the file.
- */
-function toggleShareForm(fileId) {
-    const sanitizedFileId = sanitizeFileId(fileId);
-    let shareFormRow = document.getElementById(`shareFormRow-${sanitizedFileId}`);
-    let collapseElement = document.getElementById(`collapseShare-${sanitizedFileId}`);
-
-    // If the share form does not exist, lazy load it
-    if (!shareFormRow || !collapseElement) {
-        console.log(`Share form for file ID ${fileId} not found. Lazy loading the share form.`);
-        lazyLoadShareForm(fileId, sanitizeFileId);
-
-        // After lazy loading, update the references
-        shareFormRow = document.getElementById(`shareFormRow-${sanitizedFileId}`);
-        collapseElement = document.getElementById(`collapseShare-${sanitizedFileId}`);
-    }
-
-    if (shareFormRow && collapseElement) {
-        const collapseInstance = new Collapse(collapseElement, {
-            toggle: true
-        });
-        shareFormRow.style.display = shareFormRow.style.display === 'none' ? '' : 'none';
-        console.log(`Collapse toggled for file ID: ${fileId}`);
-
-        // Initialize the share form after it's made visible
-        initializeShareForm(sanitizedFileId);
-    } else {
-        console.error(`Share form elements not found for file ID: ${fileId} even after lazy loading.`);
     }
 }
 
@@ -986,6 +962,10 @@ function toggleShareForm(fileId) {
      * Function to initialize the share form of a specific file.
      * @param {string} sanitizedFileId - The sanitized file ID.
      */
+    /**
+ * Function to initialize the share form of a specific file.
+ * @param {string} sanitizedFileId - The sanitized file ID.
+ */
     async function initializeShareForm(sanitizedFileId) {
         const shareForm = document.getElementById(`shareForm-${sanitizedFileId}`);
         if (!shareForm) {
@@ -993,154 +973,88 @@ function toggleShareForm(fileId) {
             return;
         }
 
-        const emailInputs = shareForm.querySelectorAll('.email-input');
-        if (!emailInputs.length) {
-            console.error(`No email inputs found for form ID: shareForm-${sanitizedFileId}`);
+        // Check if the form has already been initialized
+        if (shareForm.dataset.initialized) {
+            console.log(`The share form for file ID ${sanitizedFileId} is already initialized.`);
             return;
         }
 
-        const shareSubmitButton = document.getElementById(`shareSubmit-${sanitizedFileId}`);
-        const shareButtonSpinner = document.getElementById(`shareButtonSpinner-${sanitizedFileId}`);
+        // Mark the form as initialized
+        shareForm.dataset.initialized = 'true';
 
-        // Attach event listeners for email validation
-        emailInputs.forEach(input => {
-            input.addEventListener('input', handleEmailInput);
-            input.addEventListener('input', () => toggleSubmitButton(sanitizedFileId));
-        });
-
-        // Initially check to enable/disable submit button
-        toggleSubmitButton(sanitizedFileId);
-
-        // Attach form submit handler
-        shareForm.addEventListener('submit', async function (e) {
-            e.preventDefault();
-
-            // Perform validation checks
-            let isFormValid = true;
-
-            // Validate each email field
-            emailInputs.forEach(input => {
-                const email = input.value.trim();
-                const isValid = isValidEmail(email);
-                if (!isValid) {
-                    input.classList.add('is-invalid');
-                    isFormValid = false;
-                } else {
-                    input.classList.remove('is-invalid');
-                    input.classList.add('is-valid');
-                }
-            });
-
-            // Check for duplicates
-            if (!checkForDuplicateEmails(sanitizedFileId)) {
-                isFormValid = false;
-            }
-
-            if (!isFormValid) {
-                alert('Please correct the errors in the form before submitting.');
-                const firstInvalid = shareForm.querySelector('.is-invalid');
-                if (firstInvalid) {
-                    firstInvalid.focus();
-                }
-                return;
-            }
-
-            const emails = Array.from(emailInputs)
-                .map(input => input.value.trim())
-                .filter(email => email);
-
-            console.log(`Emails to share with: ${emails.join(', ')}`);
-
-            try {
-                showGlobalSpinner();
-                shareSubmitButton.disabled = true;
-                showButtonSpinner(sanitizedFileId);
-
-                const verifiedUserIds = await verifyAndCreateUsers(emails);
-                console.log(`Verified user IDs: ${verifiedUserIds.join(', ')}`);
-
-                if (verifiedUserIds.length === 0) {
-                    alert('No valid users found to share the file with.');
-                    hideGlobalSpinner();
-                    shareSubmitButton.disabled = false;
-                    hideButtonSpinner(sanitizedFileId);
-                    return;
-                }
-
-                for (const userId of verifiedUserIds) {
-                    console.log(`Granting access to user ID: ${userId}`);
-                    const success = await grantAccessToFile(sanitizedFileId, userId);
-                    if (!success) {
-                        throw new Error(`Failed to grant access to user ID: ${userId}`);
-                    }
-                }
-
-                alert('File shared successfully!');
-                toggleShareForm(sanitizedFileId.replace(/_/g, ' '));
-                shareForm.reset();
-                hideGlobalSpinner();
-                shareSubmitButton.disabled = false;
-                hideButtonSpinner(sanitizedFileId);
-
-            } catch (error) {
-                hideGlobalSpinner();
-                console.error('Error sharing file:', error);
-                alert('An error occurred while sharing the file.');
-                shareSubmitButton.disabled = false;
-                hideButtonSpinner(sanitizedFileId);
-            }
-        });
-
-        console.log(`Event listener added to share form for file ID: ${sanitizedFileId}`);
-    }
-
-    /**
-     * Function to validate email format using a regex.
-     * @param {string} email - The email to validate.
-     * @returns {boolean} - Returns true if the email is valid, otherwise false.
-     */
-    function isValidEmail(email) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    }
-
-    /**
-     * Function to check for duplicate emails in the share form.
-     * @param {string} sanitizedFileId - The sanitized file ID.
-     * @returns {boolean} - Returns true if no duplicates are found, otherwise false.
-     */
-    function checkForDuplicateEmails(sanitizedFileId) {
-        const shareForm = document.getElementById(`shareForm-${sanitizedFileId}`);
-        if (!shareForm) return false;
+        const shareFormStore = new ShareFormStore();
 
         const emailInputs = shareForm.querySelectorAll('.email-input');
-        const emailValues = Array.from(emailInputs)
-            .map(input => input.value.trim().toLowerCase())
-            .filter(email => email);
+        if (!emailInputs.length) {
+            console.error(`No email fields found for form ID: shareForm-${sanitizedFileId}`);
+            return;
+        }
 
-        const duplicates = emailValues.filter((email, index) => emailValues.indexOf(email) !== index);
+        emailInputs.forEach((input, index) => {
+            input.addEventListener('input', (event) => {
+                const email = event.target.value.trim();
+                const isValid = shareFormStore.isValidEmail(email) || email === '';
 
-        emailInputs.forEach(input => {
-            if (duplicates.includes(input.value.trim().toLowerCase())) {
-                input.classList.add('is-invalid');
-                if (!input.parentElement.querySelector('.invalid-feedback.duplicate-feedback')) {
-                    const feedback = document.createElement('div');
-                    feedback.classList.add('invalid-feedback', 'duplicate-feedback');
-                    feedback.textContent = 'This email address is duplicated.';
-                    input.parentElement.appendChild(feedback);
+                if (isValid) {
+                    input.classList.remove('is-invalid');
+                    if (email !== '') {
+                        input.classList.add('is-valid');
+                    } else {
+                        input.classList.remove('is-valid');
+                    }
+                } else {
+                    input.classList.add('is-invalid');
+                    input.classList.remove('is-valid');
                 }
-            } else {
-                input.classList.remove('is-invalid');
-                const feedback = input.parentElement.querySelector('.invalid-feedback.duplicate-feedback');
-                if (feedback) {
-                    feedback.remove();
-                }
-            }
+
+                // Update the value in the store
+                shareFormStore.setEmail(index, email);
+            });
         });
 
-        return duplicates.length === 0;
-    }
+        // Select the existing error container or create a new one if it doesn't exist
+        let errorContainer = shareForm.querySelector('.error-container');
+        if (!errorContainer) {
+            console.warn('Error container not found. Creating a new one.');
+            errorContainer = document.createElement('div');
+            errorContainer.className = 'error-container';
+            // Add the container to the appropriate place
+            const formGroup = shareForm.querySelector('.mb-3');
+            formGroup.appendChild(errorContainer);
+        }
 
+        // Create or select the error message element for the absence of valid emails
+        let noValidEmailError = errorContainer.querySelector('.no-valid-email-error');
+        if (!noValidEmailError) {
+            noValidEmailError = document.createElement('div');
+            noValidEmailError.className = 'no-valid-email-error text-danger';
+            noValidEmailError.style.display = 'none';
+            noValidEmailError.textContent = 'Please enter at least one valid email address.';
+            errorContainer.appendChild(noValidEmailError);
+        }
+
+        // MobX reaction to monitor email changes and update validation
+        reaction(
+            () => shareFormStore.isValid,
+            (isValid) => {
+                // Enable or disable the submit button based on form validity
+                const shareSubmitButton = document.getElementById(`shareSubmit-${sanitizedFileId}`);
+                shareSubmitButton.disabled = !isValid;
+
+                // Show or hide the error message if the form is not valid
+                if (!isValid) {
+                    noValidEmailError.style.display = 'block';
+                } else {
+                    noValidEmailError.style.display = 'none';
+                }
+            },
+            {
+                fireImmediately: true // Execute the reaction immediately upon initialization
+            }
+        );
+    }
+      
+      
     /**
      * Function to show the global spinner.
      */
@@ -1185,49 +1099,6 @@ function toggleShareForm(fileId) {
         if (spinner) {
             spinner.style.display = 'none';
         }
-    }
-
-    /**
-     * Function to enable or disable the submit button based on form validity.
-     * @param {string} sanitizedFileId - The sanitized file ID.
-     */
-    function toggleSubmitButton(sanitizedFileId) {
-        const shareForm = document.getElementById(`shareForm-${sanitizedFileId}`);
-        const shareSubmitButton = document.getElementById(`shareSubmit-${sanitizedFileId}`);
-        const emailInputs = shareForm.querySelectorAll('.email-input');
-        const isAnyInputValid = Array.from(emailInputs).some(input => isValidEmail(input.value.trim()));
-        const isNoDuplicate = checkForDuplicateEmails(sanitizedFileId);
-
-        if (isAnyInputValid && isNoDuplicate) {
-            shareSubmitButton.disabled = false;
-        } else {
-            shareSubmitButton.disabled = true;
-        }
-    }
-
-    /**
-     * Function to handle real-time email input validation.
-     * @param {Event} event - The input event.
-     */
-    function handleEmailInput(event) {
-        const input = event.target;
-        const isValid = isValidEmail(input.value.trim());
-
-        if (isValid) {
-            input.classList.remove('is-invalid');
-            input.classList.add('is-valid');
-            const duplicateFeedback = input.parentElement.querySelector('.invalid-feedback.duplicate-feedback');
-            if (duplicateFeedback) {
-                duplicateFeedback.remove();
-            }
-        } else {
-            input.classList.remove('is-valid');
-            input.classList.add('is-invalid');
-        }
-
-        const sanitizedFileId = input.closest('.share-form-collapse').id.split('-')[1];
-        checkForDuplicateEmails(sanitizedFileId);
-        toggleSubmitButton(sanitizedFileId);
     }
 }
 

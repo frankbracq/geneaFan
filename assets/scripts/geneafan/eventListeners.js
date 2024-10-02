@@ -5,7 +5,7 @@ import {Modal, Offcanvas, Tooltip} from 'bootstrap';
 import screenfull from 'screenfull';
 import {getFamilyTowns, getSvgPanZoomInstance, getTomSelectInstance} from './state.js';
 import {action} from 'mobx';
-import configStore from './store';
+import configStore from './configStore.js';
 import { handleUserAuthentication } from './users.js';
 
 // WeakMap to store event listener references

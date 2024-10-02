@@ -34,7 +34,7 @@ import {
     addAgeAtFirstChild,
     setFamilyTreeData,
 } from "./state.js";
-import configStore from './store';
+import configStore from './configStore.js';
 import { initializeFamilyTree } from './tree';
 import jsonpointer from 'jsonpointer';
 

@@ -52,6 +52,9 @@ class ConfigStore {
         makeAutoObservable(this);
     }
 
+    /**
+     * Initialize TomSelect with specific options.
+     */
     initializeTomSelect() {
         this.tomSelect = new TomSelect("#individual-select", {
             create: false,
@@ -72,47 +75,53 @@ class ConfigStore {
         this.tomSelect.addItem("", true);
     }
 
+    /**
+     * Set the value of TomSelect.
+     * @param {string} value - The value to set.
+     */
     setTomSelectValue(value) {
         if (this.tomSelect) {
             this.tomSelect.setValue(value);
         } else {
-            console.error("tomSelect instance is not available.");
+            console.error("TomSelect instance is not available.");
         }
     }
 
+    /**
+     * Update the configuration and manage history.
+     * @param {Object} newConfig - The new configuration to set.
+     */
     setConfig(newConfig) {
         const previousRoot = this.config.root;
         this.config = { ...this.config, ...newConfig };
 
-        // Enregistrer le changement de root dans l'historique seulement si config.root a changé
         if (newConfig.root !== previousRoot) {
             if (this.currentConfigIndex < this.configHistory.length - 1) {
                 this.configHistory = this.configHistory.slice(0, this.currentConfigIndex + 1);
             }
-            this.configHistory.push({ root: newConfig.root }); // Stocker seulement root
+            this.configHistory.push({ root: newConfig.root });
             this.currentConfigIndex++;
-
-            // console.log(`Config set. Current index: ${this.currentConfigIndex}, Root: ${this.config.root}`);
-            // console.log('Current configHistory:', this.configHistory);
         }
     }
 
+    /**
+     * Set the GEDCOM file name in the configuration.
+     * @param {string} fileName - The GEDCOM file name.
+     */
     setGedcomFileName(fileName) {
         this.config.gedcomFileName = fileName;
     }
 
+    /**
+     * Undo the last configuration change.
+     */
     undo() {
         if (this.currentConfigIndex > 0) {
             this.currentConfigIndex--;
             const previousRoot = this.configHistory[this.currentConfigIndex].root;
             this.config.root = previousRoot;
-
-            // console.log(`Undo action performed. Current index: ${this.currentConfigIndex}, Current root: ${this.config.root}`);
-
-            // Utilisation de setTomSelectValue pour mettre à jour tomSelect
             this.setTomSelectValue(previousRoot);
 
-            // Déclenchement de l'événement `change` pour simuler une interaction utilisateur
             const changeEvent = new Event("change", { bubbles: true });
             this.tomSelect.dropdown_content.dispatchEvent(changeEvent);
         } else {
@@ -120,18 +129,16 @@ class ConfigStore {
         }
     }
 
+    /**
+     * Redo the last undone configuration change.
+     */
     redo() {
         if (this.currentConfigIndex < this.configHistory.length - 1) {
             this.currentConfigIndex++;
             const nextRoot = this.configHistory[this.currentConfigIndex].root;
             this.config.root = nextRoot;
-
-            // console.log(`Redo action performed. Current index: ${this.currentConfigIndex}, Current root: ${this.config.root}`);
-
-            // Utilisation de setTomSelectValue pour mettre à jour tomSelect
             this.setTomSelectValue(nextRoot);
 
-            // Déclenchement de l'événement `change` pour simuler une interaction utilisateur
             const changeEvent = new Event("change", { bubbles: true });
             this.tomSelect.dropdown_content.dispatchEvent(changeEvent);
         } else {
@@ -139,12 +146,18 @@ class ConfigStore {
         }
     }
 
+    /**
+     * Reset the configuration history.
+     */
     resetConfigHistory() {
         this.configHistory = [];
         this.currentConfigIndex = -1;
-        // console.log("Config history has been reset.");
     }
 
+    /**
+     * Get the current configuration.
+     * @returns {Object} - The current configuration.
+     */
     get getConfig() {
         return this.config;
     }

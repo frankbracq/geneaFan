@@ -1,3 +1,5 @@
+import { Collapse } from "bootstrap";
+
 /**
  * Function to create an HTML element with attributes and classes.
  * @param {string} tag - The HTML tag to create (e.g., 'div', 'button').
@@ -159,91 +161,129 @@ export function createModal(files, sanitizeFileId) {
  * @param {String} fileId - The ID of the file for which the share form is needed.
  * @param {Function} sanitizeFileId - Function to sanitize file IDs.
  */
-export function lazyLoadShareForm(fileId, sanitizeFileId) {
-  const sanitizedFileId = sanitizeFileId(fileId);
-  const existingShareFormRow = document.getElementById(`shareFormRow-${sanitizedFileId}`);
-
-  if (existingShareFormRow) {
-    console.log(`Share form for file ID ${fileId} already exists.`);
-    return;
-  }
-
-  const tbody = document.querySelector('#gedcomFilesTable tbody');
-  if (!tbody) return;
-
-  // Find the corresponding file row to insert after
-  const fileRow = document.querySelector(`#gedcomFilesTable tr[data-file-id="${fileId}"]`);
-  if (!fileRow) {
-    console.error(`File row not found for file ID: ${fileId}`);
-    return;
-  }
-
-  // Create the share form row
-  const shareFormRow = createElement('tr', {
-    classes: ['share-form-collapse'],
-    attributes: { id: `shareFormRow-${sanitizedFileId}`, style: 'display: none;' }
-  });
-
-  const shareFormTd = createElement('td', { attributes: { colspan: '3' } });
-  const collapseDiv = createElement('div', { classes: ['collapse'], attributes: { id: `collapseShare-${sanitizedFileId}` } });
-  const cardDiv = createElement('div', { classes: ['card', 'card-body'] });
-  const shareForm = createElement('form', { attributes: { id: `shareForm-${sanitizedFileId}` } });
-  const formGroup = createElement('div', { classes: ['mb-3'] });
-
-  const label = createElement('label', {
-    classes: ['form-label'],
-    attributes: { for: `emailTable-${sanitizedFileId}` },
-    textContent: 'Enter email addresses to share with:'
-  });
-
-  const emailTable = createElement('table', { classes: ['table', 'table-bordered'], attributes: { id: `emailTable-${sanitizedFileId}` } });
-  const emailTbody = createElement('tbody');
-
-  for (let i = 1; i <= 10; i++) {
-    const emailRow = createElement('tr');
-    const emailTd = createElement('td');
-
-    const emailInput = createElement('input', {
-      classes: ['form-control', 'email-input'],
-      attributes: {
-        type: 'email',
-        id: `email-${sanitizedFileId}-${i}`,
-        name: 'emails',
-        placeholder: 'e.g., user@example.com',
-        required: true
-      }
+export async function lazyLoadShareForm(fileId, sanitizeFileId) {
+  return new Promise((resolve) => {
+    const sanitizedFileId = sanitizeFileId(fileId);
+    const existingShareFormRow = document.getElementById(`shareFormRow-${sanitizedFileId}`);
+  
+    if (existingShareFormRow) {
+      console.log(`Share form for file ID ${fileId} already exists.`);
+      return;
+    }
+  
+    const tbody = document.querySelector('#gedcomFilesTable tbody');
+    if (!tbody) return;
+  
+    // Find the corresponding file row to insert after
+    const fileRow = document.querySelector(`#gedcomFilesTable tr[data-file-id="${fileId}"]`);
+    if (!fileRow) {
+      console.error(`File row not found for file ID: ${fileId}`);
+      return;
+    }
+  
+    // Create the share form row
+    const shareFormRow = createElement('tr', {
+      classes: ['share-form-collapse'],
+      attributes: { id: `shareFormRow-${sanitizedFileId}`, style: 'display: none;' }
     });
+  
+    const shareFormTd = createElement('td', { attributes: { colspan: '3' } });
+    const collapseDiv = createElement('div', { classes: ['collapse'], attributes: { id: `collapseShare-${sanitizedFileId}` } });
+    const cardDiv = createElement('div', { classes: ['card', 'card-body'] });
+    const shareForm = createElement('form', { attributes: { id: `shareForm-${sanitizedFileId}` } });
+    const formGroup = createElement('div', { classes: ['mb-3'] });
+  
+    const label = createElement('label', {
+      classes: ['form-label'],
+      attributes: { for: `emailTable-${sanitizedFileId}` },
+      textContent: 'Enter email addresses to share with:'
+    });
+  
+    const emailTable = createElement('table', { classes: ['table', 'table-bordered'], attributes: { id: `emailTable-${sanitizedFileId}` } });
+    const emailTbody = createElement('tbody');
+  
+    for (let i = 1; i <= 10; i++) {
+      const emailRow = createElement('tr');
+      const emailTd = createElement('td');
+  
+      const emailInput = createElement('input', {
+        classes: ['form-control', 'email-input'],
+        attributes: {
+          type: 'email',
+          id: `email-${sanitizedFileId}-${i}`,
+          name: 'emails',
+          placeholder: 'e.g., user@example.com'
+        }
+      });
+  
+      const invalidFeedback = createElement('div', { classes: ['invalid-feedback'], textContent: 'Please enter a valid email address.' });
+  
+      emailTd.append(emailInput, invalidFeedback);
+      emailRow.appendChild(emailTd);
+      emailTbody.appendChild(emailRow);
+    }
+  
+    emailTable.appendChild(emailTbody);
+    formGroup.append(label, emailTable);
+  
+    const submitButton = createElement('button', {
+      classes: ['btn', 'btn-primary'],
+      attributes: { 
+        type: 'submit', 
+        id: `shareSubmit-${sanitizedFileId}`,
+        disabled: true // Le bouton est désactivé par défaut
+      },
+      textContent: 'Share'
+    });
+    
+    const shareButtonSpinner = createElement('span', {
+      classes: ['spinner-border', 'spinner-border-sm', 'ms-2'],
+      attributes: { role: 'status', 'aria-hidden': 'true', style: 'display: none;', id: `shareButtonSpinner-${sanitizedFileId}` }
+    });
+  
+    submitButton.appendChild(shareButtonSpinner);
+    formGroup.appendChild(submitButton);
+    const errorContainer = createElement('div', { classes: ['error-container'] });
+    formGroup.appendChild(errorContainer);
+    shareForm.appendChild(formGroup);
+    cardDiv.appendChild(shareForm);
+    collapseDiv.appendChild(cardDiv);
+    shareFormTd.appendChild(collapseDiv);
+    shareFormRow.appendChild(shareFormTd);
+  
+    // Insert the share form row just after the corresponding file row
+    tbody.insertBefore(shareFormRow, fileRow.nextSibling);
 
-    const invalidFeedback = createElement('div', { classes: ['invalid-feedback'], textContent: 'Please enter a valid email address.' });
+    // Résoudre la promesse après l'insertion dans le DOM
+    resolve();
+  });
+}
 
-    emailTd.append(emailInput, invalidFeedback);
-    emailRow.appendChild(emailTd);
-    emailTbody.appendChild(emailRow);
+export async function toggleShareForm(fileId) {
+  const sanitizedFileId = sanitizeFileId(fileId);
+  let shareFormRow = document.getElementById(`shareFormRow-${sanitizedFileId}`);
+  let collapseElement = document.getElementById(`collapseShare-${sanitizedFileId}`);
+
+  // Si le formulaire de partage n'existe pas, le charger paresseusement
+  if (!shareFormRow || !collapseElement) {
+    console.log(`Share form for file ID ${fileId} not found. Lazy loading the share form.`);
+    await lazyLoadShareForm(fileId, sanitizeFileId);
+
+    // Après le chargement, mettre à jour les références
+    shareFormRow = document.getElementById(`shareFormRow-${sanitizedFileId}`);
+    collapseElement = document.getElementById(`collapseShare-${sanitizedFileId}`);
   }
 
-  emailTable.appendChild(emailTbody);
-  formGroup.append(label, emailTable);
+  if (shareFormRow && collapseElement) {
+    const collapseInstance = new Collapse(collapseElement, {
+      toggle: true
+    });
+    shareFormRow.style.display = shareFormRow.style.display === 'none' ? '' : 'none';
+    console.log(`Collapse toggled for file ID: ${fileId}`);
 
-  const submitButton = createElement('button', {
-    classes: ['btn', 'btn-primary'],
-    attributes: { type: 'submit', id: `shareSubmit-${sanitizedFileId}` },
-    textContent: 'Share'
-  });
-
-  const shareButtonSpinner = createElement('span', {
-    classes: ['spinner-border', 'spinner-border-sm', 'ms-2'],
-    attributes: { role: 'status', 'aria-hidden': 'true', style: 'display: none;', id: `shareButtonSpinner-${sanitizedFileId}` }
-  });
-
-  submitButton.appendChild(shareButtonSpinner);
-  formGroup.appendChild(submitButton);
-
-  shareForm.appendChild(formGroup);
-  cardDiv.appendChild(shareForm);
-  collapseDiv.appendChild(cardDiv);
-  shareFormTd.appendChild(collapseDiv);
-  shareFormRow.appendChild(shareFormTd);
-
-  // Insert the share form row just after the corresponding file row
-  tbody.insertBefore(shareFormRow, fileRow.nextSibling);
+    return sanitizedFileId;
+  } else {
+    console.error(`Share form elements not found for file ID: ${fileId} even after lazy loading.`);
+    throw new Error(`Share form elements not found for file ID: ${fileId}`);
+  }
 }

@@ -238,7 +238,15 @@ export function sanitizeFileId(fileId) {
     return fileId.replace(/\s+/g, '_');
   }
   
-  
+ /**
+     * Function to validate email format using a regex.
+     * @param {string} email - The email to validate.
+     * @returns {boolean} - Returns true if the email is valid, otherwise false.
+     */
+ export function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+} 
 
 
 
