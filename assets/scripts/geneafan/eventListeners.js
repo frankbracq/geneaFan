@@ -343,7 +343,7 @@ function setupTabAndUIEventListeners() {
                             window.alert('No files found for this user.');
                         } else {
                             // Display the modal with the list of files
-                            showGedcomFilesModal(files);
+                            showGedcomFilesModal(files,userInfo);
                         }
                     } catch (error) {
                         console.error('Error retrieving files:', error);

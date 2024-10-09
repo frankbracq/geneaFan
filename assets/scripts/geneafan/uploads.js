@@ -256,7 +256,7 @@ async function saveGedcomFile(file, familyName, userInfo) {
       // console.log('Worker :', body);
     
       // After upload, store the file metadata in the Cloudflare Worker KV
-      const workerResponse = await fetch('https://user-file-access-worker.genealogie.workers.dev/upload', {
+      const workerResponse = await fetch('https://user-file-access.genealogie.app/upload', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -285,7 +285,7 @@ async function saveGedcomFile(file, familyName, userInfo) {
 // Function to fetch the list of Gedcom files for the current user
 export async function fetchUserGedcomFiles(userId) {
   try {
-      const response = await fetch('https://user-file-access-worker.genealogie.workers.dev/list-files', {
+      const response = await fetch('https://user-file-access.genealogie.app/list-files', {
           method: 'POST',
           headers: {
               'Content-Type': 'application/json',
