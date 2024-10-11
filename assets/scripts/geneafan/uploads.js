@@ -3,7 +3,7 @@ import Uppy from '@uppy/core';
 import AwsS3 from '@uppy/aws-s3';
 import configStore from './configStore.js';
 import { onFileChange } from "./ui.js";
-import { handleUserAuthentication } from './users.js';
+import authStore from './stores/authStore.js';
 
 /* Code to manage the upload of GEDCOM files */
 let isLoadingFile = false;
@@ -95,34 +95,36 @@ function showSaveFileModal(file) {
     saveFileModal.show();
 
     // Gestion du clic sur le bouton 'Non'
-    document.getElementById('saveFileNoBtn').addEventListener('click', function() {
-        // Fermeture et suppression de la modale
-        saveFileModal.hide();
-        saveFileModal.dispose();
-        saveFileModalElement.remove();
+  document.getElementById('saveFileNoBtn').addEventListener('click', function () {
+    // Fermeture et suppression de la modale
+    saveFileModal.hide();
+    saveFileModal.dispose();
+    saveFileModalElement.remove();
+    // Continuer avec l'application
+    readAndProcessGedcomFile(file);
+  });
+
+  // Gestion du clic sur le bouton 'Oui'
+  document.getElementById('saveFileYesBtn').addEventListener('click', function () {
+    // Fermeture et suppression de la modale
+    saveFileModal.hide();
+    saveFileModal.dispose();
+    saveFileModalElement.remove();
+
+    // Procéder à l'authentification de l'utilisateur en utilisant le store MobX
+    authStore.accessFeature(
+      async (userInfo) => {
+        // Cas où l'utilisateur est authentifié
+        showFamilyNameModal(file, userInfo);
+      },
+      () => {
+        // Cas où l'utilisateur n'est pas authentifié
+        window.alert('Vous devez être authentifié pour enregistrer le fichier.');
         // Continuer avec l'application
         readAndProcessGedcomFile(file);
-    });
-
-    // Gestion du clic sur le bouton 'Oui'
-    document.getElementById('saveFileYesBtn').addEventListener('click', function() {
-        // Fermeture et suppression de la modale
-        saveFileModal.hide();
-        saveFileModal.dispose();
-        saveFileModalElement.remove();
-        // Procéder à l'authentification de l'utilisateur
-        handleUserAuthentication(async (userInfo) => {
-            if (userInfo) {
-                // Afficher la prochaine modale pour demander le nom de la famille
-                showFamilyNameModal(file, userInfo);
-            } else {
-                // L'utilisateur n'est pas authentifié
-                window.alert('Vous devez être authentifié pour enregistrer le fichier.');
-                // Continuer avec l'application
-                readAndProcessGedcomFile(file);
-            }
-        });
-    });
+      }
+    );
+  });
 }
 
 function showFamilyNameModal(file, userInfo) {

@@ -1,4 +1,30 @@
-import { Clerk } from '@clerk/clerk-js'; // Import nommé correct
+// src/users.js
+
+/**
+ * Fonction pour accéder à une fonctionnalité protégée au sein de l'application.
+ * Elle vérifie si l'utilisateur est authentifié et, si oui, exécute le callback authentifié.
+ * Sinon, elle exécute le callback non authentifié.
+ *
+ * @param {Clerk} clerk - Instance de Clerk initialisée.
+ * @param {Function} onAuthenticated - Fonction à exécuter si l'utilisateur est authentifié.
+ * @param {Function} [onUnauthenticated] - Fonction à exécuter si l'utilisateur n'est pas authentifié.
+ */
+export function accessProtectedFeature(clerk, onAuthenticated, onUnauthenticated) {
+    handleUserAuthentication(clerk, (userInfo) => {
+        if (userInfo) {
+            console.log("Access granted to the protected feature.");
+            onAuthenticated(userInfo);
+        } else {
+            console.log("Access denied. User is not authenticated.");
+            if (typeof onUnauthenticated === 'function') {
+                onUnauthenticated();
+            } else {
+                // Par défaut, afficher le formulaire de connexion
+                showSignInForm(clerk);
+            }
+        }
+    });
+}
 
 /**
  * Fonction pour gérer l'authentification de l'utilisateur.
@@ -95,126 +121,15 @@ export function showSignInForm(clerk) {
 }
 
 /**
- * Fonction pour initialiser l'interface utilisateur en fonction de l'état d'authentification.
- * Elle met à jour le DOM pour afficher les informations de l'utilisateur ou les options de connexion en conséquence.
- *
- * @param {Clerk} clerk - Instance de Clerk initialisée.
- * @param {Object|null} userInfo - Informations sur l'utilisateur authentifié ou null.
- */
-export function initializeAuthUI(clerk, userInfo) {
-    const userControlsElement = document.getElementById('user-controls');
-
-    if (!userControlsElement) {
-        console.error("Element with ID 'user-controls' not found.");
-        return;
-    }
-
-    if (userInfo) {
-        // Si l'utilisateur est authentifié, affiche le bouton utilisateur de Clerk
-        userControlsElement.innerHTML = `
-            <div id="user-button"></div>
-        `;
-        const userButtonDiv = document.getElementById('user-button');
-        if (!userButtonDiv) {
-            console.error("Element with ID 'user-button' not found.");
-            return;
-        }
-        // Monte le bouton utilisateur de Clerk (par exemple, avatar avec un menu déroulant) dans le div
-        clerk.mountUserButton(userButtonDiv);
-    } else {
-        // Si l'utilisateur n'est pas authentifié, affiche un bouton "Se Connecter"
-        userControlsElement.innerHTML = `<button id="sign-in-button">Se Connecter</button>`;
-        const signInButton = document.getElementById('sign-in-button');
-
-        if (!signInButton) {
-            console.error("Element with ID 'sign-in-button' not found.");
-            return;
-        }
-
-        // Ajoute un écouteur d'événement au bouton "Se Connecter" pour afficher le formulaire de connexion lorsqu'il est cliqué
-        signInButton.addEventListener('click', () => {
-            showSignInForm(clerk);
-        });
-    }
-
-    // Cacher l'overlay maintenant que l'initialisation est terminée
-    const overlay = document.getElementById('overlay');
-    if (overlay) {
-        overlay.style.display = 'none';
-        console.log("Overlay hidden.");
-    } else {
-        console.error("Element with ID 'overlay' not found.");
-    }
-}
-
-/**
- * Fonction pour accéder à une fonctionnalité protégée au sein de l'application.
- * Elle vérifie si l'utilisateur est authentifié et, si oui, exécute la fonction callback fournie.
- * Si l'utilisateur n'est pas authentifié, elle affiche le formulaire de connexion.
- *
- * @param {Clerk} clerk - Instance de Clerk initialisée.
- * @param {Function} callback - La fonction à exécuter si l'utilisateur est authentifié.
- */
-export function accessProtectedFeature(clerk, callback) {
-    handleUserAuthentication(clerk, (userInfo) => {
-        if (userInfo) {
-            console.log("Access granted to the protected feature.");
-            // Exécute la fonction callback avec les informations de l'utilisateur
-            callback(userInfo);
-        } else {
-            // Si non authentifié, affiche le formulaire de connexion
-            showSignInForm(clerk);
-        }
-    });
-}
-
-/**
  * Fonction pour gérer la déconnexion de l'utilisateur.
- * Elle appelle la méthode signOut de Clerk et met à jour l'interface utilisateur après une déconnexion réussie.
  *
  * @param {Clerk} clerk - Instance de Clerk initialisée.
  */
-export function handleLogout(clerk) {
-    // Appelle la méthode signOut de Clerk pour déconnecter l'utilisateur
-    clerk.signOut().then(() => {
+export async function handleLogout(clerk) {
+    try {
+        await clerk.signOut();
         console.log("User has been signed out.");
-        // Met à jour l'interface utilisateur pour refléter l'état de déconnexion
-        updateUIOnLogout();
-    }).catch((error) => {
-        // Journalise toute erreur survenue pendant le processus de déconnexion
+    } catch (error) {
         console.error("Error during sign-out:", error);
-    });
-}
-
-/**
- * Fonction pour mettre à jour l'interface utilisateur après la déconnexion de l'utilisateur.
- * Elle efface les informations de l'utilisateur et affiche le bouton "Se Connecter".
- */
-export function updateUIOnLogout() {
-    const userControlsElement = document.getElementById('user-controls');
-
-    if (!userControlsElement) {
-        console.error("Element with ID 'user-controls' not found.");
-        return;
-    }
-
-    // Remplace le contenu des contrôles utilisateur par le bouton "Se Connecter"
-    userControlsElement.innerHTML = `<button id="sign-in-button">Se Connecter</button>`;
-    const signInButton = document.getElementById('sign-in-button');
-
-    if (!signInButton) {
-        console.error("Element with ID 'sign-in-button' not found.");
-        return;
-    }
-
-    // Ajoute un écouteur d'événement au bouton "Se Connecter" pour afficher le formulaire de connexion lorsqu'il est cliqué
-    signInButton.addEventListener('click', () => {
-        showSignInForm(clerk);
-    });
-
-    // Efface tout contenu dynamique, comme le formulaire de connexion, si affiché
-    const dynamicContentDiv = document.getElementById('dynamic-content');
-    if (dynamicContentDiv) {
-        dynamicContentDiv.innerHTML = '';
     }
 }

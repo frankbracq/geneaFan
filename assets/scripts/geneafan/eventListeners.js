@@ -376,41 +376,35 @@ function setupTabAndUIEventListeners() {
 }
 
 /**
- * Function to set up all event listeners.
- *
- * @param {Clerk} clerk - Instance de Clerk initialisée.
- */
-export const setupAllEventListeners = (clerk) => {
-    const initializeEventListeners = () => {
-        document.addEventListener('click', event => {
-            handleCityLinkClick(event);
-            closePopoverOnClickOutside(event);
-        });
+* Fonction pour configurer tous les écouteurs d'événements.
+*
+* @param {AuthStore} authStore - Instance du store MobX pour l'authentification.
+*/
+export const setupAllEventListeners = (authStore) => {
+   const initializeEventListeners = () => {
+       document.addEventListener('click', event => {
+           handleCityLinkClick(event);
+           closePopoverOnClickOutside(event);
+       });
 
-        setupParameterEventListeners();
-        setupTabAndUIEventListeners();
-        setupFileLoadingEventListeners();
-        setupUndoRedoEventListeners();
-        setTimeout(() => {
-            setupResponsiveTabs();
-            setupTabResizeListener();
-        }, 0);
+       setupParameterEventListeners();
+       setupTabAndUIEventListeners();
+       setupFileLoadingEventListeners();
+       setupUndoRedoEventListeners();
+       setTimeout(() => {
+           setupResponsiveTabs();
+           setupTabResizeListener();
+       }, 0);
 
-        // Appel de la fonction pour les fonctionnalités protégées avec Event Delegation
-        const menu = document.getElementById('menu');
-        if (menu) {
-            setupProtectedFeatureEventListeners(clerk, menu);
-        } else {
-            // Si aucun parent spécifique, attachez à document
-            setupProtectedFeatureEventListeners(clerk, document);
-        }
-    };
+       // Appel de la fonction pour les fonctionnalités protégées via le store MobX
+       setupProtectedFeatureEventListeners(authStore);
+   };
 
-    if (document.readyState === "loading") {
-        document.addEventListener('DOMContentLoaded', initializeEventListeners);
-    } else {
-        initializeEventListeners();
-    }
+   if (document.readyState === "loading") {
+       document.addEventListener('DOMContentLoaded', initializeEventListeners);
+   } else {
+       initializeEventListeners();
+   }
 }
 
 // Setup advanced modal

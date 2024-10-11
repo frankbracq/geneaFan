@@ -1,6 +1,8 @@
+// src/stores/authStore.js
+
 import { makeAutoObservable, runInAction } from 'mobx';
 import { Clerk } from '@clerk/clerk-js';
-import { accessProtectedFeature, handleUserAuthentication, showSignInForm } from './users.js';
+import { accessProtectedFeature, handleUserAuthentication, showSignInForm } from '../users.js'; // Ajustez le chemin si nécessaire
 
 class AuthStore {
     clerk = null;
@@ -11,7 +13,10 @@ class AuthStore {
         makeAutoObservable(this);
     }
 
-    // Initialiser Clerk
+    /**
+     * Initialise Clerk avec la clé publishable.
+     * @param {string} publishableKey - La clé publishable de Clerk.
+     */
     async initializeClerk(publishableKey) {
         this.clerk = new Clerk(publishableKey);
         try {
@@ -26,7 +31,9 @@ class AuthStore {
         }
     }
 
-    // Gérer l'authentification de l'utilisateur
+    /**
+     * Gère l'authentification de l'utilisateur en utilisant Clerk.
+     */
     handleAuthentication() {
         if (!this.clerk) return;
 
@@ -37,7 +44,11 @@ class AuthStore {
         });
     }
 
-    // Accéder à une fonctionnalité protégée
+    /**
+     * Accède à une fonctionnalité protégée en vérifiant l'authentification.
+     * @param {Function} onAuthenticated - Callback exécuté si l'utilisateur est authentifié.
+     * @param {Function} onUnauthenticated - Callback exécuté si l'utilisateur n'est pas authentifié.
+     */
     accessFeature(onAuthenticated, onUnauthenticated) {
         if (!this.clerk) {
             console.error("Clerk instance is not initialized.");
@@ -61,7 +72,9 @@ class AuthStore {
         );
     }
 
-    // Gérer la déconnexion
+    /**
+     * Gère la déconnexion de l'utilisateur.
+     */
     async logout() {
         if (!this.clerk) return;
 

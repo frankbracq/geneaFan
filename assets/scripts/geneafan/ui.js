@@ -1,11 +1,11 @@
-import { Clerk } from '@clerk/clerk-js';
+import authStore from './stores/authStore.js';
 import _, { set } from 'lodash';
 import svgPanZoom from "svg-pan-zoom";
 import { Modal, Offcanvas, Tooltip, Collapse } from "bootstrap";
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { Loader } from "@googlemaps/js-api-loader";
 import { v4 as uuidv4 } from 'uuid';
-import { reaction, action } from 'mobx';
+import { reaction, action, autorun } from 'mobx';
 import {
     setGedFileUploaded,
     getGedFileUploaded,
@@ -47,9 +47,7 @@ import {
 import { googleMapManager } from './mapManager.js';
 import { initializeAscendantTimeline } from './ascendantTimeline.js';
 import { 
-    handleUserAuthentication, 
-    initializeAuthUI, 
-    handleLogout 
+    showSignInForm
 } from './users.js';
 import { createModal, 
     lazyLoadShareForm, 
@@ -63,44 +61,74 @@ let rootPersonName;
 let previousDimensions = null;
 
 document.addEventListener("DOMContentLoaded", async function () {
-    console.log("DOMContentLoaded fired."); // Log de début
+    console.log("DOMContentLoaded fired.");
 
-    // Initialiser Clerk
     const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
     console.log('Clerk Publishable Key:', publishableKey);
 
-    // Crée une instance de Clerk avec la clé publishable
-    const clerk = new Clerk(publishableKey);
+    await authStore.initializeClerk(publishableKey);
 
-    // Charge Clerk
-    try {
-        await clerk.load();
-        console.log('Clerk loaded:', clerk.loaded);
-    } catch (error) {
-        console.error("Error loading Clerk:", error);
-    }
+    initPage();
 
-    // Initialiser l'interface utilisateur basée sur l'authentification
-    console.log("Calling handleUserAuthentication.");
-    await handleUserAuthentication(clerk, (userInfo) => initializeAuthUI(clerk, userInfo));
-    console.log("handleUserAuthentication called."); // Log après appel de handleUserAuthentication
+    setupAllEventListeners(authStore);
 
-    // Configurer tous les écouteurs d'événements avec Clerk
-    setupAllEventListeners(clerk);
+    autorun(() => {
+        const userInfo = authStore.userInfo;
+        const userControlsElement = document.getElementById('user-controls');
 
-    // Ajouter des écouteurs d'événements pour la déconnexion (si ce n'est pas déjà géré dans setupAllEventListeners)
+        if (!userControlsElement) {
+            console.error("Element with ID 'user-controls' not found.");
+            return;
+        }
+
+        if (userInfo) {
+            // Si l'utilisateur est authentifié, affiche le bouton utilisateur de Clerk
+            userControlsElement.innerHTML = `<div id="user-button"></div>`;
+            const userButtonDiv = document.getElementById('user-button');
+            if (!userButtonDiv) {
+                console.error("Element with ID 'user-button' not found.");
+                return;
+            }
+            authStore.clerk.mountUserButton(userButtonDiv);
+        } else {
+            // Si l'utilisateur n'est pas authentifié, affiche un bouton "Se Connecter"
+            userControlsElement.innerHTML = `<button id="sign-in-button">Se Connecter</button>`;
+            const signInButton = document.getElementById('sign-in-button');
+
+            if (!signInButton) {
+                console.error("Element with ID 'sign-in-button' not found.");
+                return;
+            }
+
+            signInButton.addEventListener('click', () => {
+                showSignInForm(authStore.clerk);
+            });
+        }
+
+        // Cacher l'overlay
+        const overlay = document.getElementById('overlay');
+        if (overlay) {
+            overlay.style.display = 'none';
+            console.log("Overlay hidden.");
+        } else {
+            console.error("Element with ID 'overlay' not found.");
+        }
+    });
+
+    // Gestion de la déconnexion
     const logoutButton = document.getElementById('logout-button');
     if (logoutButton) {
         logoutButton.addEventListener('click', () => {
             console.log("logoutButton clicked.");
-            handleLogout(clerk);
+            authStore.logout();
         });
     } else {
         console.warn("logout-button not found.");
     }
 
-    console.log("DOMContentLoaded event handler completed."); // Log à la fin
+    console.log("DOMContentLoaded event handler completed.");
 });
+
 
 /* BS offcanvas elements management */
 let offCanvasPersonDetailsInstance = null;
