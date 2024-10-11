@@ -9,24 +9,6 @@
     <meta name="author" content="Genealog.ie">
     <meta name="robots" content="noindex, follow">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <% if (clerkPublishableKey) { %>
-        <script
-            async
-            crossorigin="anonymous"
-            data-clerk-publishable-key="<%= clerkPublishableKey %>"
-            src="https://credible-turtle-56.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
-            type="text/javascript">
-        </script>
-    <% } %>
-    <!--
-    <script
-    async
-    crossorigin="anonymous"
-    data-clerk-publishable-key="pk_live_Y2xlcmsuZ2VuZWFsb2dpZS5hcHAk"
-    src="https://credible-turtle-56.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"
-    type="text/javascript">
-    </script>
-    -->
 </head>
 <body>
     <header>
@@ -101,7 +83,7 @@
                 
                         <!-- My GEDCOM Files -->
                         <li>
-                            <a class="dropdown-item" href="#" id="myGedcomFilesMenuItem">
+                            <a class="dropdown-item protected-feature" data-action="fetchGedcomFiles" href="#" id="myGedcomFilesMenuItem">
                                 Mes fichiers Gedcom enregistrés
                             </a>
                         </li>
@@ -129,7 +111,7 @@
                         <a class="dropdown-item" id="download-pdf-watermark" href="#">
                             <%= __('geneafan.file_type_list.pdf_watermark') %>
                         </a>
-                        <a class="dropdown-item" id="download-pdf" href="#">
+                        <a class="dropdown-item protected-feature" data-action="downloadPdf" id="download-pdf" href="#">
                             <%= __('geneafan.file_type_list.pdf') %>
                         </a>
                         <a class="dropdown-item" id="download-svg" href="#">
@@ -420,33 +402,6 @@
             return false;
         };
     </script>
-
-  <script>
-    window.addEventListener('load', async function () {
-        await Clerk.load();
-
-        const userControlsElement = document.getElementById('user-controls');
-
-        if (Clerk.user) {
-            userControlsElement.innerHTML = `
-                <div id="user-button"></div>
-            `;
-
-            const userButtonDiv = document.getElementById('user-button');
-            Clerk.mountUserButton(userButtonDiv);
-        } else {
-            userControlsElement.innerHTML = `<button id="sign-in-button">Se connecter</button>`;
-
-            const signInButton = document.getElementById('sign-in-button');
-
-            signInButton.addEventListener('click', () => {
-                Clerk.openSignIn({
-                    afterSignInUrl: window.location.href,
-                });
-            });
-        }
-    });
-</script>
   
 </body>
 

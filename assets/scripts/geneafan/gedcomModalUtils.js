@@ -92,60 +92,62 @@ export function createModal(files, sanitizeFileId) {
   const thead = createElement('thead');
   const headerRow = createElement('tr');
 
-  const thName = createElement('th', { attributes: { scope: 'col' }, textContent: 'File Name' });
-  const thStatus = createElement('th', { attributes: { scope: 'col' }, textContent: 'Status' });
-  const thActions = createElement('th', { classes: ['text-end'], attributes: { scope: 'col' }, textContent: 'Actions' });
+  const headers = ['File Name', 'Status', 'Actions'];
+  headers.forEach((headerText) => {
+    const th = createElement('th', { attributes: { scope: 'col' }, textContent: headerText });
+    if (headerText === 'Actions') th.classList.add('text-end');
+    headerRow.appendChild(th);
+  });
 
-  headerRow.append(thName, thStatus, thActions);
   thead.appendChild(headerRow);
   table.appendChild(thead);
 
   const tbody = createElement('tbody');
 
-  files.forEach(file => {
-    if (!file.id) {
-      console.error('Error: File ID is null or undefined for file:', file);
+  files.forEach(({ id, name, status, signedUrl }) => {
+    if (!id) {
+      console.error('Error: File ID is null or undefined for file:', { id, name, status });
       return;
     }
 
-    const sanitizedFileId = sanitizeFileId(file.id);
-    const fileRow = createElement('tr', {
-      attributes: { 'data-file-id': file.id } // Ajout de l'attribut data-file-id pour identifier la ligne du fichier
-    });
+    const sanitizedFileId = sanitizeFileId(id);
+    const fileRow = createElement('tr', { attributes: { 'data-file-id': id } });
 
-    const tdName = createElement('td', { textContent: file.name });
-    const tdStatus = createElement('td', { textContent: file.status === 'owned' ? 'Owner' : 'Authorized' });
+    const tdName = createElement('td', { textContent: name });
+    const tdStatus = createElement('td', { textContent: status === 'owned' ? 'Owner' : 'Authorized' });
     const tdActions = createElement('td', { classes: ['text-end'] });
 
-    const createActionLink = (action, iconClass, title, link) => {
+    const actions = [
+      { action: 'download', icon: 'bi-download', title: 'Download', link: signedUrl },
+      ...(status === 'owned' ? [
+        { action: 'share', icon: 'bi-share', title: 'Share' },
+        { action: 'delete', icon: 'bi-trash', title: 'Delete' }
+      ] : [])
+    ];
+
+    actions.forEach(({ action, icon, title, link }) => {
       const actionLink = createElement('a', {
         classes: ['text-decoration-none', 'me-2', 'action-icon'],
         attributes: {
           href: '#',
           'data-action': action,
-          'data-file-id': file.id,
+          'data-file-id': id,
           'data-bs-toggle': 'tooltip',
-          title: title
+          title: title,
+          ...(link ? { 'data-link': link } : {})
         }
       });
-      if (link) actionLink.setAttribute('data-link', link);
-      const actionIcon = createElement('i', { classes: ['bi', iconClass] });
+
+      const actionIcon = createElement('i', { classes: ['bi', icon] });
       actionLink.appendChild(actionIcon);
-      return actionLink;
-    };
-
-    tdActions.appendChild(createActionLink('download', 'bi-download', 'Download', file.signedUrl));
-
-    if (file.status === 'owned') {
-      tdActions.appendChild(createActionLink('share', 'bi-share', 'Share'));
-      tdActions.appendChild(createActionLink('delete', 'bi-trash', 'Delete'));
-    }
+      tdActions.appendChild(actionLink);
+    });
 
     fileRow.append(tdName, tdStatus, tdActions);
     tbody.appendChild(fileRow);
   });
 
-  table.append(tbody);
+  table.appendChild(tbody);
   modalContentContainer.appendChild(table);
   modalBody.appendChild(modalContentContainer);
   modalContent.append(modalHeader, modalBody);
@@ -155,6 +157,7 @@ export function createModal(files, sanitizeFileId) {
 
   return modalDiv;
 }
+
 
 /**
  * Lazy loads the share form when the share button is clicked.

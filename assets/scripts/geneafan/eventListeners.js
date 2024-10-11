@@ -1,3 +1,4 @@
+import { setupProtectedFeatureEventListeners } from './protectedFeatures.js'; 
 import {displayPersonDetailsUI, onSettingChange, showGedcomFilesModal} from './ui.js';
 import { loadGedcomFile, fetchUserGedcomFiles } from './uploads.js';
 import {googleMapManager} from './mapManager.js';
@@ -6,7 +7,6 @@ import screenfull from 'screenfull';
 import {getFamilyTowns, getSvgPanZoomInstance, getTomSelectInstance} from './state.js';
 import {action} from 'mobx';
 import configStore from './configStore.js';
-import { handleUserAuthentication } from './users.js';
 
 // WeakMap to store event listener references
 const eventListenersMap = new WeakMap();
@@ -326,35 +326,32 @@ function setupTabAndUIEventListeners() {
         });
     }
 
+    /*
     // Event listener for "Mes fichiers GEDCOM"
     document
         .getElementById("myGedcomFilesMenuItem")
         .addEventListener("click", function (e) {
             e.preventDefault();
 
-            // Call handleUserAuthentication to ensure the user is authenticated
-            handleUserAuthentication(async (userInfo) => {
-                if (userInfo) {
-                    try {
-                        // Fetch the list of files for the authenticated user
-                        var files = await fetchUserGedcomFiles(userInfo.id);
-                        // console.log('Files:', files);
-                        if (files.length === 0) {
-                            window.alert('No files found for this user.');
-                        } else {
-                            // Display the modal with the list of files
-                            showGedcomFilesModal(files,userInfo);
-                        }
-                    } catch (error) {
-                        console.error('Error retrieving files:', error);
-                        window.alert('An error occurred while retrieving your GEDCOM files.');
+            // Appelle accessProtectedFeature pour s'assurer que l'utilisateur est authentifié
+            accessProtectedFeature(clerk, async (userInfo) => {
+                try {
+                    // Récupère la liste des fichiers pour l'utilisateur authentifié
+                    const files = await fetchUserGedcomFiles(userInfo.id);
+                    // console.log('Files:', files);
+                    if (files.length === 0) {
+                        window.alert('Aucun fichier trouvé pour cet utilisateur.');
+                    } else {
+                        // Affiche la modal avec la liste des fichiers
+                        showGedcomFilesModal(files, userInfo);
                     }
-                } else {
-                    // The user is not authenticated
-                    window.alert('You need to be authenticated to access your GEDCOM files.');
+                } catch (error) {
+                    console.error('Erreur lors de la récupération des fichiers:', error);
+                    window.alert('Une erreur est survenue lors de la récupération de vos fichiers GEDCOM.');
                 }
             });
         });
+    */
 
     document
         .getElementById("fanParametersDisplay")
@@ -378,8 +375,12 @@ function setupTabAndUIEventListeners() {
     setupTooltips();
 }
 
-// Setup all event listeners
-export const setupAllEventListeners = () => {
+/**
+ * Function to set up all event listeners.
+ *
+ * @param {Clerk} clerk - Instance de Clerk initialisée.
+ */
+export const setupAllEventListeners = (clerk) => {
     const initializeEventListeners = () => {
         document.addEventListener('click', event => {
             handleCityLinkClick(event);
@@ -388,12 +389,21 @@ export const setupAllEventListeners = () => {
 
         setupParameterEventListeners();
         setupTabAndUIEventListeners();
-        setupFileLoadingEventListeners()
+        setupFileLoadingEventListeners();
         setupUndoRedoEventListeners();
         setTimeout(() => {
             setupResponsiveTabs();
             setupTabResizeListener();
-        })
+        }, 0);
+
+        // Appel de la fonction pour les fonctionnalités protégées avec Event Delegation
+        const menu = document.getElementById('menu');
+        if (menu) {
+            setupProtectedFeatureEventListeners(clerk, menu);
+        } else {
+            // Si aucun parent spécifique, attachez à document
+            setupProtectedFeatureEventListeners(clerk, document);
+        }
     };
 
     if (document.readyState === "loading") {

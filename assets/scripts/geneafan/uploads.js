@@ -101,7 +101,7 @@ function showSaveFileModal(file) {
         saveFileModal.dispose();
         saveFileModalElement.remove();
         // Continuer avec l'application
-        readAndProcessFile(file);
+        readAndProcessGedcomFile(file);
     });
 
     // Gestion du clic sur le bouton 'Oui'
@@ -119,7 +119,7 @@ function showSaveFileModal(file) {
                 // L'utilisateur n'est pas authentifié
                 window.alert('Vous devez être authentifié pour enregistrer le fichier.');
                 // Continuer avec l'application
-                readAndProcessFile(file);
+                readAndProcessGedcomFile(file);
             }
         });
     });
@@ -186,7 +186,7 @@ async function saveGedcomFile(file, familyName, userInfo) {
   const clerkId = userInfo.id;
   if (!clerkId) {
     alert('Impossible de récupérer votre identifiant utilisateur.');
-    readAndProcessFile(file);
+    readAndProcessGedcomFile(file);
     return;
   }
 
@@ -269,7 +269,7 @@ async function saveGedcomFile(file, familyName, userInfo) {
       }
     
       console.log('File metadata saved in Worker KV.');
-      readAndProcessFile(file); // Process the file after upload
+      readAndProcessGedcomFile(file); // Process the file after upload
     
     } else {
       console.error('File upload failed:', uploadResult.failed);
@@ -284,6 +284,7 @@ async function saveGedcomFile(file, familyName, userInfo) {
 
 // Function to fetch the list of Gedcom files for the current user
 export async function fetchUserGedcomFiles(userId) {
+  console.log('Fetching user Gedcom files for user:', userId);
   try {
       const response = await fetch('https://user-file-access.genealogie.app/list-files', {
           method: 'POST',
@@ -315,7 +316,8 @@ export async function fetchUserGedcomFiles(userId) {
   }
 }
 
-function readAndProcessFile(file) {
+function readAndProcessGedcomFile(file) {
+  console.log('Reading and processing file:', file);
     isLoadingFile = true;
     const reader = new FileReader();
 

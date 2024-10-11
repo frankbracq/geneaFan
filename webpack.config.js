@@ -1,4 +1,5 @@
 // webpack.config.js
+
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
@@ -6,31 +7,12 @@ const StringReplacePlugin = require("string-replace-webpack-plugin");
 const I18nPlugin = require('@zainulbr/i18n-webpack-plugin');
 const crypto = require("crypto");
 const webpack = require('webpack');
-const dotenv = require('dotenv');
+const crypto_orig_createHash = crypto.createHash;
+crypto.createHash = algorithm => crypto_orig_createHash(algorithm == "md4" ? "sha256" : algorithm);
 const TerserPlugin = require('terser-webpack-plugin');
 const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
-
-// 1. Définir isProduction en premier
+const Dotenv = require('dotenv-webpack'); // Importer dotenv-webpack
 const isProduction = process.env.NODE_ENV === 'production';
-
-// 2. Charger les variables d'environnement
-const envFile = isProduction ? './.env.production' : './.env.development';
-const env = dotenv.config({ path: envFile }).parsed;
-
-// Vérifier si les variables d'environnement ont été chargées
-if (!env) {
-    throw new Error(`Failed to load ${envFile}. Please ensure the file exists and contains the necessary variables.`);
-}
-
-// 3. Transformer les variables d'environnement pour DefinePlugin
-const envKeys = Object.keys(env).reduce((prev, next) => {
-    prev[`process.env.${next}`] = JSON.stringify(env[next]);
-    return prev;
-}, {});
-
-// 4. Modifier la création de hash pour crypto si nécessaire
-const crypto_orig_createHash = crypto.createHash;
-crypto.createHash = algorithm => crypto_orig_createHash(algorithm === "md4" ? "sha256" : algorithm);
 
 const babelConf = {
     loader: 'babel-loader',
@@ -49,24 +31,24 @@ const locale = {
 const defaultLocale = 'fr';
 
 function pageUrl(lang, pageRel) {
-    if (lang === defaultLocale) {
+    if(lang === defaultLocale) {
         return pageRel;
     } else {
-        return `${lang}/${pageRel}`;
+        return lang + '/' + pageRel;
     }
 }
 
 function langToLocale(lang) {
-    if (lang === 'fr')
+    if(lang === 'fr')
         return 'fr-FR'
-    else if (lang === 'en')
+    else if(lang === 'en')
         return 'en-US'
     else
         return null;
 }
 
 function urlGenerator(lang, page) {
-    return (`https://arbre.app/${pageUrl(lang, page)}`).replace(/\/$/, "");
+    return ('https://arbre.app/' + pageUrl(lang, page)).replace(/\/$/, "");
 }
 
 module.exports = Object.keys(locale).map(lang => {
@@ -78,8 +60,9 @@ module.exports = Object.keys(locale).map(lang => {
     };
 
     return {
-        mode: isProduction ? 'production' : 'development',
-        devtool: isProduction ? 'source-map' : 'inline-source-map',
+        // mode: 'development',
+        name: 'config',
+        devtool: 'source-map',
         entry: {
             home: './assets/geneafan.js',
             geneafan: './assets/geneafan.js',
@@ -135,8 +118,12 @@ module.exports = Object.keys(locale).map(lang => {
                 'process/browser': 'process/browser.js'
             }
         },
+        stats: {
+            children: true,
+        },
         module: {
             rules: [
+                // Vos règles existantes
                 {
                     enforce: 'pre',
                     test: /\.js$/,
@@ -184,8 +171,9 @@ module.exports = Object.keys(locale).map(lang => {
                         loader: "transform-loader?brfs"
                     }
                 },
-                { test: /src[/\\]assets/, loader: 'arraybuffer-loader' },
-                { test: /\.afm$/, loader: 'raw-loader' },
+                {test: /src[/\\]assets/, loader: 'arraybuffer-loader'},
+                {test: /\.afm$/, loader: 'raw-loader'},
+
                 {
                     test: /\.(html)$/,
                     loader: 'html-loader',
@@ -206,6 +194,7 @@ module.exports = Object.keys(locale).map(lang => {
                     ],
                     exclude: /node_modules/,
                 },
+
                 {
                     test: /\.(jpe?g|png|gif|svg)$/,
                     use: [
@@ -274,13 +263,14 @@ module.exports = Object.keys(locale).map(lang => {
             ],
         },
         plugins: [
+            // Charger les variables d'environnement
+            new Dotenv({
+                path: isProduction ? './.env.production' : './.env.development',
+                safe: false, // Si vous utilisez un fichier .env.example pour valider les variables
+            }),
             new HtmlWebpackPlugin({
                 template: './assets/html/index.ejs',
-                templateParameters: {
-                    ...globals,
-                    // Injecter la clé Clerk ici
-                    clerkPublishableKey: env.CLERK_PUBLISHABLE_KEY
-                },
+                templateParameters: globals,
                 filename: pageUrl(lang, 'index.html'),
                 chunks: ['geneafan', 'commons', 'i18n'],
                 hash: true,
@@ -295,9 +285,11 @@ module.exports = Object.keys(locale).map(lang => {
             new webpack.ProvidePlugin({
                 Buffer: ['buffer', 'Buffer'],
             }),
-            new webpack.DefinePlugin(envKeys),
+            new webpack.DefinePlugin({
+                'process.env': JSON.stringify(process.env), // Injecter les variables d'environnement
+            }),
             new StringReplacePlugin(),
-            new I18nPlugin(locale[lang], { nested: true }),
+            new I18nPlugin(locale[lang], {nested: true}),
             new webpack.ProvidePlugin({
                 process: 'process/browser',
             }),

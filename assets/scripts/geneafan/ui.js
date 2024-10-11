@@ -1,3 +1,4 @@
+import { Clerk } from '@clerk/clerk-js';
 import _, { set } from 'lodash';
 import svgPanZoom from "svg-pan-zoom";
 import { Modal, Offcanvas, Tooltip, Collapse } from "bootstrap";
@@ -45,17 +46,60 @@ import {
 } from "./eventListeners.js";
 import { googleMapManager } from './mapManager.js';
 import { initializeAscendantTimeline } from './ascendantTimeline.js';
-import { handleUserAuthentication } from './users.js';
-import { createModal, lazyLoadShareForm, toggleShareForm, sanitizeFileId } from './gedcomModalUtils.js';
+import { 
+    handleUserAuthentication, 
+    initializeAuthUI, 
+    handleLogout 
+} from './users.js';
+import { createModal, 
+    lazyLoadShareForm, 
+    toggleShareForm, 
+    sanitizeFileId } 
+    from './gedcomModalUtils.js';
 
 let config;
 let rootPersonName;
 
 let previousDimensions = null;
 
-document.addEventListener("DOMContentLoaded", function () {
-    setupAllEventListeners();
-    initPage();  // Map initialization is handled here
+document.addEventListener("DOMContentLoaded", async function () {
+    console.log("DOMContentLoaded fired."); // Log de début
+
+    // Initialiser Clerk
+    const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
+    console.log('Clerk Publishable Key:', publishableKey);
+
+    // Crée une instance de Clerk avec la clé publishable
+    const clerk = new Clerk(publishableKey);
+
+    // Charge Clerk
+    try {
+        await clerk.load();
+        console.log('Clerk loaded:', clerk.loaded);
+    } catch (error) {
+        console.error("Error loading Clerk:", error);
+    }
+
+    // Initialiser l'interface utilisateur basée sur l'authentification
+    console.log("Calling handleUserAuthentication.");
+    await handleUserAuthentication(clerk, (userInfo) => initializeAuthUI(clerk, userInfo));
+    console.log("handleUserAuthentication called."); // Log après appel de handleUserAuthentication
+
+    // Configurer tous les écouteurs d'événements avec Clerk
+    setupAllEventListeners(clerk);
+
+    // Ajouter des écouteurs d'événements pour la déconnexion (si ce n'est pas déjà géré dans setupAllEventListeners)
+    const logoutButton = document.getElementById('logout-button');
+    if (logoutButton) {
+        logoutButton.addEventListener('click', () => {
+            console.log("logoutButton clicked.");
+            handleLogout(clerk);
+        });
+    } else {
+        console.warn("logout-button not found.");
+    }
+
+    console.log("DOMContentLoaded event handler completed."); // Log à la fin
 });
 
 /* BS offcanvas elements management */
@@ -1338,6 +1382,7 @@ function setupOffcanvasMapTrigger() {
 }
 
 export function initPage() {
+    console.log("Initialisation de la page...");
     if (isReady) {
         document.getElementById('overlay').classList.add('overlay-hidden');
     }
