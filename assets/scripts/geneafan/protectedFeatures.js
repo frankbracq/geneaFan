@@ -1,4 +1,3 @@
-import { accessProtectedFeature } from './users.js'; 
 import { fetchUserGedcomFiles } from './uploads.js'; 
 import { handleUploadAndPost } from './downloads.js';
 import { showGedcomFilesModal } from './ui.js'

@@ -1,7 +1,7 @@
 import { setupProtectedFeatureEventListeners } from './protectedFeatures.js'; 
-import {displayPersonDetailsUI, onSettingChange, showGedcomFilesModal} from './ui.js';
-import { loadGedcomFile, fetchUserGedcomFiles } from './uploads.js';
-import {googleMapManager} from './mapManager.js';
+import { displayPersonDetailsUI, onSettingChange } from './ui.js';
+import { loadGedcomFile } from './uploads.js';
+import { googleMapManager } from './mapManager.js';
 import {Modal, Offcanvas, Tooltip} from 'bootstrap';
 import screenfull from 'screenfull';
 import {getFamilyTowns, getSvgPanZoomInstance, getTomSelectInstance} from './state.js';
@@ -325,33 +325,6 @@ function setupTabAndUIEventListeners() {
             }
         });
     }
-
-    /*
-    // Event listener for "Mes fichiers GEDCOM"
-    document
-        .getElementById("myGedcomFilesMenuItem")
-        .addEventListener("click", function (e) {
-            e.preventDefault();
-
-            // Appelle accessProtectedFeature pour s'assurer que l'utilisateur est authentifié
-            accessProtectedFeature(clerk, async (userInfo) => {
-                try {
-                    // Récupère la liste des fichiers pour l'utilisateur authentifié
-                    const files = await fetchUserGedcomFiles(userInfo.id);
-                    // console.log('Files:', files);
-                    if (files.length === 0) {
-                        window.alert('Aucun fichier trouvé pour cet utilisateur.');
-                    } else {
-                        // Affiche la modal avec la liste des fichiers
-                        showGedcomFilesModal(files, userInfo);
-                    }
-                } catch (error) {
-                    console.error('Erreur lors de la récupération des fichiers:', error);
-                    window.alert('Une erreur est survenue lors de la récupération de vos fichiers GEDCOM.');
-                }
-            });
-        });
-    */
 
     document
         .getElementById("fanParametersDisplay")

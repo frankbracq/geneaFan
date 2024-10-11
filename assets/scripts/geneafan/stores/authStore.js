@@ -84,9 +84,28 @@ class AuthStore {
                 this.userInfo = null;
             });
             console.log("User has been signed out.");
+            
+            // Actions supplémentaires après la déconnexion, si nécessaire
+            this.cleanupData();
+            this.redirectToHomePage();
         } catch (error) {
             console.error("Error during sign-out:", error);
         }
+    }
+
+    /**
+     * Nettoie les données spécifiques après la déconnexion.
+     */
+    cleanupData() {
+        // Implémentez la logique de nettoyage ici
+        console.log("Cleaning up user data...");
+    }
+
+    /**
+     * Redirige l'utilisateur vers la page d'accueil après la déconnexion.
+     */
+    redirectToHomePage() {
+        window.location.href = '/';
     }
 }
 

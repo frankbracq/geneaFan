@@ -1,11 +1,13 @@
+import { reaction, action, autorun } from 'mobx';
 import authStore from './stores/authStore.js';
+import configStore from './configStore.js';
+import ShareFormStore from './shareFormStore.js';
 import _, { set } from 'lodash';
 import svgPanZoom from "svg-pan-zoom";
-import { Modal, Offcanvas, Tooltip, Collapse } from "bootstrap";
+import { Modal, Offcanvas, Tooltip } from "bootstrap";
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { Loader } from "@googlemaps/js-api-loader";
 import { v4 as uuidv4 } from 'uuid';
-import { reaction, action, autorun } from 'mobx';
 import {
     setGedFileUploaded,
     getGedFileUploaded,
@@ -20,8 +22,6 @@ import {
     getIndividualsCache,
     clearAllStates
 } from "./state.js";
-import configStore from './configStore.js';
-import ShareFormStore from './shareFormStore.js';
 import {
     debounce,
     updateFamilyTownsViaProxy,
@@ -61,10 +61,8 @@ let rootPersonName;
 let previousDimensions = null;
 
 document.addEventListener("DOMContentLoaded", async function () {
-    console.log("DOMContentLoaded fired.");
 
     const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
-    console.log('Clerk Publishable Key:', publishableKey);
 
     await authStore.initializeClerk(publishableKey);
 
@@ -114,17 +112,6 @@ document.addEventListener("DOMContentLoaded", async function () {
             console.error("Element with ID 'overlay' not found.");
         }
     });
-
-    // Gestion de la déconnexion
-    const logoutButton = document.getElementById('logout-button');
-    if (logoutButton) {
-        logoutButton.addEventListener('click', () => {
-            console.log("logoutButton clicked.");
-            authStore.logout();
-        });
-    } else {
-        console.warn("logout-button not found.");
-    }
 
     console.log("DOMContentLoaded event handler completed.");
 });
