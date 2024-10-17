@@ -1328,7 +1328,15 @@ function getIndividualsList() {
     // Preparing data for FamilyTreeJS
     const familyTreeData = formatFamilyTreeData(individualsCache);
     setFamilyTreeData(familyTreeData);
-    initializeFamilyTree(); // Call the function to initialize FamilyTreeJS
+    // Dynamically import the module and call the function
+    import(/* webpackChunkName: "tree" */ './tree.js')
+        .then(module => {
+            const { initializeFamilyTree } = module;
+            initializeFamilyTree(); // Call the function to initialize FamilyTreeJS
+        })
+        .catch(error => {
+            console.error('Error loading the module:', error);
+        });
 
     setIndividualsCache(individualsCache);
 

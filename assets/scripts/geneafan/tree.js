@@ -15,6 +15,7 @@ let initializing = false;
 
 // Initialize the family tree with given data and configurations
 export function initializeFamilyTree() {
+    console.log('Initializing family tree...');
     initializing = true;
 
     const familyTreeData = getFamilyTreeData();

@@ -3,7 +3,7 @@ import { getAncestorMapCache, setAncestorMapCache, getGenealogyGraph, setCommonA
 
 // Create a map for quick ancestor lookup
 // This function is only called if the map is not already cached
-export function createAncestorMap(edges) {
+function createAncestorMap(edges) {
     const ancestorMap = new Map();
     edges.forEach(edge => {
         if (!ancestorMap.has(edge.target)) {
@@ -81,7 +81,7 @@ export function getOldestAncestorOf(individualId, prioritize = "both") {
 }
 
 // Function to find the closest common ancestor
-export function closestAncestor(graph, id1, id2) {
+function closestAncestor(graph, id1, id2) {
     let ancestorMap = getAncestorMapCache();
     if (ancestorMap.size === 0) {
         ancestorMap = createAncestorMap(graph.edges);
@@ -100,7 +100,7 @@ export function closestAncestor(graph, id1, id2) {
 }
 
 // Function to trace the shortest path using BFS
-export function shortestPath(graph, start, end) {
+function shortestPath(graph, start, end) {
     const adjacencyList = new Map();
     graph.edges.forEach(edge => {
         if (!adjacencyList.has(edge.source)) {

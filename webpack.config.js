@@ -1,5 +1,3 @@
-// webpack.config.js
-
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
@@ -7,11 +5,15 @@ const StringReplacePlugin = require("string-replace-webpack-plugin");
 const I18nPlugin = require('@zainulbr/i18n-webpack-plugin');
 const crypto = require("crypto");
 const webpack = require('webpack');
-const crypto_orig_createHash = crypto.createHash;
-crypto.createHash = algorithm => crypto_orig_createHash(algorithm == "md4" ? "sha256" : algorithm);
 const TerserPlugin = require('terser-webpack-plugin');
 const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
-const Dotenv = require('dotenv-webpack'); // Importer dotenv-webpack
+const Dotenv = require('dotenv-webpack');
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+
+const crypto_orig_createHash = crypto.createHash;
+crypto.createHash = algorithm => crypto_orig_createHash(algorithm === "md4" ? "sha256" : algorithm);
+
 const isProduction = process.env.NODE_ENV === 'production';
 
 const babelConf = {
@@ -19,7 +21,12 @@ const babelConf = {
     options: {
         presets: [
             ['@babel/preset-env', { targets: "defaults" }]
-        ]
+        ],
+        compact: false,
+        plugins: [
+            // Suppression des console.log en production
+            ...(isProduction ? ['transform-remove-console'] : []),
+        ],
     }
 };
 
@@ -31,24 +38,15 @@ const locale = {
 const defaultLocale = 'fr';
 
 function pageUrl(lang, pageRel) {
-    if(lang === defaultLocale) {
-        return pageRel;
-    } else {
-        return lang + '/' + pageRel;
-    }
+    return lang === defaultLocale ? pageRel : `${lang}/${pageRel}`;
 }
 
 function langToLocale(lang) {
-    if(lang === 'fr')
-        return 'fr-FR'
-    else if(lang === 'en')
-        return 'en-US'
-    else
-        return null;
+    return lang === 'fr' ? 'fr-FR' : lang === 'en' ? 'en-US' : null;
 }
 
 function urlGenerator(lang, page) {
-    return ('https://arbre.app/' + pageUrl(lang, page)).replace(/\/$/, "");
+    return `https://arbre.app/${pageUrl(lang, page)}`.replace(/\/$/, "");
 }
 
 module.exports = Object.keys(locale).map(lang => {
@@ -60,9 +58,8 @@ module.exports = Object.keys(locale).map(lang => {
     };
 
     return {
-        // mode: 'development',
         name: 'config',
-        devtool: 'source-map',
+        devtool: isProduction ? 'source-map' : 'eval-source-map', // Utiliser source-map en production
         entry: {
             home: './assets/geneafan.js',
             geneafan: './assets/geneafan.js',
@@ -73,30 +70,44 @@ module.exports = Object.keys(locale).map(lang => {
             globalObject: 'self'
         },
         stats: {
-            errorDetails: true
+            errorDetails: true,
+            children: true, // Fusion des deux propriétés stats
         },
         optimization: {
             splitChunks: {
+                chunks: 'all',
+                minSize: 20000,
+                maxSize: 200000,
                 cacheGroups: {
                     vendors: {
                         test: /[\\/]node_modules[\\/]/,
                         name: 'vendors',
-                        chunks: 'all'
+                        chunks: 'all',
+                        priority: -10,
+                        reuseExistingChunk: true,
                     },
                     commons: {
                         name: 'commons',
-                        chunks: 'all',
                         minChunks: 2,
-                        priority: 20,
+                        priority: 10,
                         reuseExistingChunk: true,
-                        enforce: true
-                    }
+                        enforce: true,
+                    },
+                    default: false, // Désactiver le groupe par défaut pour éviter les conflits
                 },
-                minSize: 10000,
-                maxSize: 0,
             },
-            minimize: true,
-            minimizer: [new TerserPlugin()],
+            minimize: isProduction,
+            minimizer: [
+                new TerserPlugin({
+                    terserOptions: {
+                        compress: {
+                            drop_console: isProduction,
+                        },
+                    },
+                    parallel: true, // Utiliser le parallélisme pour accélérer la minification
+                }),
+                new CssMinimizerPlugin(),
+            ],
         },
         performance: {
             hints: 'warning',
@@ -118,16 +129,12 @@ module.exports = Object.keys(locale).map(lang => {
                 'process/browser': 'process/browser.js'
             }
         },
-        stats: {
-            children: true,
-        },
         module: {
             rules: [
-                // Vos règles existantes
                 {
                     enforce: 'pre',
                     test: /\.js$/,
-                    exclude: /node_modules/,
+                    exclude: /node_modules\/(lodash|@clerk\/clerk-js|fontkit)/,
                     use: babelConf
                 },
                 {
@@ -143,12 +150,7 @@ module.exports = Object.keys(locale).map(lang => {
                 },
                 {
                     test: /\.js$/,
-                    use: {
-                        loader: 'babel-loader',
-                        options: {
-                            presets: ['@babel/preset-env'],
-                        },
-                    },
+                    use: babelConf, // Utiliser la configuration Babel modifiée
                 },
                 {
                     enforce: 'post',
@@ -173,7 +175,6 @@ module.exports = Object.keys(locale).map(lang => {
                 },
                 {test: /src[/\\]assets/, loader: 'arraybuffer-loader'},
                 {test: /\.afm$/, loader: 'raw-loader'},
-
                 {
                     test: /\.(html)$/,
                     loader: 'html-loader',
@@ -194,16 +195,13 @@ module.exports = Object.keys(locale).map(lang => {
                     ],
                     exclude: /node_modules/,
                 },
-
                 {
                     test: /\.(jpe?g|png|gif|svg)$/,
                     use: [
                         {
                             loader: 'file-loader',
                             options: {
-                                outputPath: (url, resourcePath, context) => {
-                                    return `images/${url}`;
-                                },
+                                outputPath: (url, resourcePath, context) => `images/${url}`,
                                 name: '[name].[ext]',
                             },
                         },
@@ -252,9 +250,7 @@ module.exports = Object.keys(locale).map(lang => {
                             replacements: [
                                 {
                                     pattern: /trimLeft\(\)/ig,
-                                    replacement: function (match, p1, offset, string) {
-                                        return 'trim()';
-                                    }
+                                    replacement: () => 'trim()'
                                 }
                             ]
                         })
@@ -263,10 +259,10 @@ module.exports = Object.keys(locale).map(lang => {
             ],
         },
         plugins: [
-            // Charger les variables d'environnement
+            new webpack.ProgressPlugin(), // Barre de progression
             new Dotenv({
                 path: isProduction ? './.env.production' : './.env.development',
-                safe: false, // Si vous utilisez un fichier .env.example pour valider les variables
+                safe: false,
             }),
             new HtmlWebpackPlugin({
                 template: './assets/html/index.ejs',
@@ -286,13 +282,14 @@ module.exports = Object.keys(locale).map(lang => {
                 Buffer: ['buffer', 'Buffer'],
             }),
             new webpack.DefinePlugin({
-                'process.env': JSON.stringify(process.env), // Injecter les variables d'environnement
+                'process.env': JSON.stringify(process.env),
             }),
             new StringReplacePlugin(),
             new I18nPlugin(locale[lang], {nested: true}),
             new webpack.ProvidePlugin({
                 process: 'process/browser',
             }),
+            new BundleAnalyzerPlugin(), // Assurez-vous qu'il n'est présent qu'une seule fois
         ]
     }
 });

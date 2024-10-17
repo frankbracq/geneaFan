@@ -46,13 +46,14 @@ import {
 } from "./listeners/eventListeners.js";
 import { googleMapManager } from './mapManager.js';
 import { initializeAscendantTimeline } from './ascendantTimeline.js';
-import { 
+import {
     showSignInForm
 } from './users.js';
-import { createModal, 
-    lazyLoadShareForm, 
-    toggleShareForm, 
-    sanitizeFileId } 
+import {
+    createModal,
+    toggleShareForm,
+    sanitizeFileId
+}
     from './gedcomModalUtils.js';
 
 let config;
@@ -945,7 +946,7 @@ $("#print").click(function () {
  * Function to display the GEDCOM files modal.
  * @param {Array} files - List of GEDCOM files to display.
  */
-export function showGedcomFilesModal(files,userInfo) {
+export function showGedcomFilesModal(files, userInfo) {
     console.log('Showing GEDCOM files modal:', userInfo);
     // Remove existing modal if it exists
     const existingModal = document.getElementById('gedcomFilesModal');
@@ -995,37 +996,37 @@ export function showGedcomFilesModal(files,userInfo) {
  * Function to handle clicks on action icons.
  * @param {Event} e - The click event.
  */
-async function handleActionClick(e) {
-    const actionIcon = e.target.closest('.action-icon');
-    if (actionIcon) {
-        e.preventDefault(); // Prevent default behavior
-        console.log("Action click intercepted. Event prevented.");
+    async function handleActionClick(e) {
+        const actionIcon = e.target.closest('.action-icon');
+        if (actionIcon) {
+            e.preventDefault(); // Prevent default behavior
+            console.log("Action click intercepted. Event prevented.");
 
-        const action = actionIcon.getAttribute('data-action');
-        const fileId = actionIcon.getAttribute('data-file-id');
-        const dataLink = actionIcon.getAttribute('data-link');
+            const action = actionIcon.getAttribute('data-action');
+            const fileId = actionIcon.getAttribute('data-file-id');
+            const dataLink = actionIcon.getAttribute('data-link');
 
-        console.log(`Action: ${action}, File ID: ${fileId}, Data Link: ${dataLink}`);
+            console.log(`Action: ${action}, File ID: ${fileId}, Data Link: ${dataLink}`);
 
-        try {
-            if (action === 'download') {
-                console.log(`Calling loadGedcomFile with link: ${dataLink}`);
-                loadGedcomFile(dataLink);
-            } else if (action === 'share') {
-                console.log(`Toggling share form for file ID: ${fileId}`);
-                const sanitizedFileId = await toggleShareForm(fileId);
-                initializeShareForm(sanitizedFileId);
-            } else if (action === 'delete') {
-                console.log(`Deleting file with ID: ${fileId}`);
-                deleteFile(fileId);
-            } else {
-                console.warn(`Unknown action: ${action}`);
+            try {
+                if (action === 'download') {
+                    console.log(`Calling loadGedcomFile with link: ${dataLink}`);
+                    loadGedcomFile(dataLink);
+                } else if (action === 'share') {
+                    console.log(`Toggling share form for file ID: ${fileId}`);
+                    const sanitizedFileId = await toggleShareForm(fileId);
+                    initializeShareForm(sanitizedFileId);
+                } else if (action === 'delete') {
+                    console.log(`Deleting file with ID: ${fileId}`);
+                    deleteFile(fileId);
+                } else {
+                    console.warn(`Unknown action: ${action}`);
+                }
+            } catch (error) {
+                console.error(`Error handling action ${action} for file ID ${fileId}:`, error);
             }
-        } catch (error) {
-            console.error(`Error handling action ${action} for file ID ${fileId}:`, error);
         }
     }
-}
 
     /**
      * Function to initialize the share form of a specific file.
@@ -1120,208 +1121,208 @@ async function handleActionClick(e) {
 
         shareForm.addEventListener('submit', (event) => {
             event.preventDefault(); // Empêche la soumission par défaut du formulaire
-        
+
             // Récupérez les adresses email valides
             const validEmails = shareFormStore.emails.filter(email => shareFormStore.isValidEmail(email.trim()));
-        
+
             if (validEmails.length === 0) {
-              // Aucun email valide, affichez un message d'erreur (déjà géré par la validation)
-              return;
+                // Aucun email valide, affichez un message d'erreur (déjà géré par la validation)
+                return;
             }
-        
+
             // Cachez le formulaire de partage
             shareForm.style.display = 'none';
-        
+
             // Affichez le message de confirmation
             showConfirmationMessage(sanitizedFileId, validEmails, shareForm, userInfo);
-          });
-        }
-        
-        function showConfirmationMessage(sanitizedFileId, emails, shareForm, userInfo) {
-            // Créez le conteneur pour le message de confirmation
-            const confirmationContainer = document.createElement('div');
-            confirmationContainer.id = `confirmationContainer-${sanitizedFileId}`;
-            confirmationContainer.className = 'confirmation-container';
-          
-            // Créez le message de confirmation
-            const message = document.createElement('p');
-            message.textContent = 'Confirmez-vous le partage du fichier avec les adresses suivantes :';
-          
-            // Créez la liste des adresses email
-            const emailList = document.createElement('ul');
-            emails.forEach(email => {
-              const listItem = document.createElement('li');
-              listItem.textContent = email;
-              emailList.appendChild(listItem);
-            });
-          
-            // Créez les boutons "Oui" et "Non"
-            const yesButton = document.createElement('button');
-            yesButton.className = 'btn btn-success me-2';
-            yesButton.textContent = 'Oui';
-          
-            const noButton = document.createElement('button');
-            noButton.className = 'btn btn-secondary';
-            noButton.textContent = 'Non';
-          
-            // Ajoutez les éléments au conteneur de confirmation
-            confirmationContainer.appendChild(message);
-            confirmationContainer.appendChild(emailList);
-            confirmationContainer.appendChild(yesButton);
-            confirmationContainer.appendChild(noButton);
-          
-            // Insérez le conteneur de confirmation après le formulaire de partage
-            shareForm.parentNode.appendChild(confirmationContainer);
-          
-            // **Ajoutez l'écouteur d'événements au conteneur de confirmation**
-            confirmationContainer.addEventListener('click', function(event) {
-              if (event.target.matches('.btn-success')) {
+        });
+    }
+
+    function showConfirmationMessage(sanitizedFileId, emails, shareForm, userInfo) {
+        // Créez le conteneur pour le message de confirmation
+        const confirmationContainer = document.createElement('div');
+        confirmationContainer.id = `confirmationContainer-${sanitizedFileId}`;
+        confirmationContainer.className = 'confirmation-container';
+
+        // Créez le message de confirmation
+        const message = document.createElement('p');
+        message.textContent = 'Confirmez-vous le partage du fichier avec les adresses suivantes :';
+
+        // Créez la liste des adresses email
+        const emailList = document.createElement('ul');
+        emails.forEach(email => {
+            const listItem = document.createElement('li');
+            listItem.textContent = email;
+            emailList.appendChild(listItem);
+        });
+
+        // Créez les boutons "Oui" et "Non"
+        const yesButton = document.createElement('button');
+        yesButton.className = 'btn btn-success me-2';
+        yesButton.textContent = 'Oui';
+
+        const noButton = document.createElement('button');
+        noButton.className = 'btn btn-secondary';
+        noButton.textContent = 'Non';
+
+        // Ajoutez les éléments au conteneur de confirmation
+        confirmationContainer.appendChild(message);
+        confirmationContainer.appendChild(emailList);
+        confirmationContainer.appendChild(yesButton);
+        confirmationContainer.appendChild(noButton);
+
+        // Insérez le conteneur de confirmation après le formulaire de partage
+        shareForm.parentNode.appendChild(confirmationContainer);
+
+        // **Ajoutez l'écouteur d'événements au conteneur de confirmation**
+        confirmationContainer.addEventListener('click', function (event) {
+            if (event.target.matches('.btn-success')) {
                 // Gérer le clic sur le bouton "Oui"
                 proceedWithSharing(sanitizedFileId, emails, userInfo);
-          
+
                 // Supprimer le conteneur de confirmation
                 confirmationContainer.remove();
-          
+
                 // Optionnel : Afficher un message de succès
                 showSuccessMessage(sanitizedFileId);
-              } else if (event.target.matches('.btn-secondary')) {
+            } else if (event.target.matches('.btn-secondary')) {
                 // Gérer le clic sur le bouton "Non"
                 confirmationContainer.remove();
                 // Réafficher le formulaire de partage
                 shareForm.style.display = 'block';
-              }
-            });
-          }
-        
-        
-          function proceedWithSharing1(sanitizedFileId, emails) {
-            // Cloudflare worker URL
-            const workerEndpoint = 'https://email-validator.genealogie.app';
-          
-            // Afficher le spinner pour indiquer le traitement en cours
-            console.log('Affichage du spinner pour le fichier ID:', sanitizedFileId);
-            showButtonSpinner(sanitizedFileId);
-          
-            // Préparer les données à envoyer
-            const data = {
-              emails: emails
-            };
-            console.log('Données préparées pour l\'envoi:', data);
-          
-            // Envoyer les données au Worker
-            fetch(workerEndpoint, {
-              method: 'POST',
-              headers: {
+            }
+        });
+    }
+
+
+    function proceedWithSharing1(sanitizedFileId, emails) {
+        // Cloudflare worker URL
+        const workerEndpoint = 'https://email-validator.genealogie.app';
+
+        // Afficher le spinner pour indiquer le traitement en cours
+        console.log('Affichage du spinner pour le fichier ID:', sanitizedFileId);
+        showButtonSpinner(sanitizedFileId);
+
+        // Préparer les données à envoyer
+        const data = {
+            emails: emails
+        };
+        console.log('Données préparées pour l\'envoi:', data);
+
+        // Envoyer les données au Worker
+        fetch(workerEndpoint, {
+            method: 'POST',
+            headers: {
                 'Content-Type': 'application/json'
-              },
-              body: JSON.stringify(data)
-            })
+            },
+            body: JSON.stringify(data)
+        })
             .then(response => {
-              // Vérifier si la réponse est correcte
-              console.log('Réponse brute du worker:', response);
-              if (!response.ok) {
-                throw new Error(`Erreur du serveur : ${response.status} ${response.statusText}`);
-              }
-              return response.json();
-            })
-            .then(result => {
-              console.log('Résultat du worker:', result);
-              // Cacher le spinner
-              hideButtonSpinner(sanitizedFileId);
-          
-              // Afficher le message de succès avec les résultats
-              showSuccessMessage(sanitizedFileId, result);
-            })
-            .catch(error => {
-              // Cacher le spinner
-              hideButtonSpinner(sanitizedFileId);
-          
-              // Afficher le message d'erreur
-              console.error('Erreur lors du partage:', error);
-              showErrorMessage(sanitizedFileId, error.message);
-            });
-          }
-
-
-          function proceedWithSharing(sanitizedFileId, emails, userInfo) {
-            console.log('Proceeding with sharing:', userInfo);
-            const workerEndpoint = 'https://file-sharing-orchestrator.genealogie.app';
-          
-            // Afficher le spinner pour indiquer le traitement en cours
-            showButtonSpinner(sanitizedFileId);
-          
-            // Préparer les données à envoyer
-            const data = {
-              fileId: sanitizedFileId,
-              emails: emails,
-              ownerUserId: userInfo.id,
-            };
-
-            console.log('Data to send:', data);
-          
-            // Envoyer les données au worker
-            fetch(workerEndpoint, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(data),
-            })
-              .then(response => {
+                // Vérifier si la réponse est correcte
+                console.log('Réponse brute du worker:', response);
                 if (!response.ok) {
-                  throw new Error(`Erreur du serveur : ${response.status} ${response.statusText}`);
+                    throw new Error(`Erreur du serveur : ${response.status} ${response.statusText}`);
                 }
                 return response.json();
-              })
-              .then(result => {
+            })
+            .then(result => {
+                console.log('Résultat du worker:', result);
+                // Cacher le spinner
+                hideButtonSpinner(sanitizedFileId);
+
+                // Afficher le message de succès avec les résultats
+                showSuccessMessage(sanitizedFileId, result);
+            })
+            .catch(error => {
+                // Cacher le spinner
+                hideButtonSpinner(sanitizedFileId);
+
+                // Afficher le message d'erreur
+                console.error('Erreur lors du partage:', error);
+                showErrorMessage(sanitizedFileId, error.message);
+            });
+    }
+
+
+    function proceedWithSharing(sanitizedFileId, emails, userInfo) {
+        console.log('Proceeding with sharing:', userInfo);
+        const workerEndpoint = 'https://file-sharing-orchestrator.genealogie.app';
+
+        // Afficher le spinner pour indiquer le traitement en cours
+        showButtonSpinner(sanitizedFileId);
+
+        // Préparer les données à envoyer
+        const data = {
+            fileId: sanitizedFileId,
+            emails: emails,
+            ownerUserId: userInfo.id,
+        };
+
+        console.log('Data to send:', data);
+
+        // Envoyer les données au worker
+        fetch(workerEndpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Erreur du serveur : ${response.status} ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(result => {
                 hideButtonSpinner(sanitizedFileId);
                 showSuccessMessage(sanitizedFileId, result);
-              })
-              .catch(error => {
+            })
+            .catch(error => {
                 hideButtonSpinner(sanitizedFileId);
                 showErrorMessage(sanitizedFileId, error.message);
                 console.error('Erreur lors du partage :', error);
-              });
-          }
-          
-          
-        
-          function showSuccessMessage(sanitizedFileId, result) {
-            const successMessage = document.createElement('div');
-            successMessage.className = 'alert alert-success mt-3';
-          
-            let messageText = 'Le fichier a été partagé avec succès avec les adresses suivantes :<ul>';
-            
-            if (result && result.results) {
-              result.results.forEach(item => {
-                messageText += `<li>${item.email} : ${item.result}</li>`;
-              });
-            } else {
-              messageText += '<li>Aucune adresse trouvée.</li>';
-            }
-            
-            messageText += '</ul>';
-          
-            successMessage.innerHTML = messageText;
-          
-            // Insérer le message de succès à l'endroit approprié
-            const shareFormContainer = document.getElementById(`shareForm-${sanitizedFileId}`).parentNode;
-            shareFormContainer.appendChild(successMessage);
-          }
+            });
+    }
 
-          function showErrorMessage(sanitizedFileId, errorMessage) {
-            const errorContainer = document.createElement('div');
-            errorContainer.className = 'alert alert-danger mt-3';
-            errorContainer.textContent = `Une erreur s'est produite : ${errorMessage}`;
-          
-            // Insérer le message d'erreur à l'endroit approprié
-            const shareFormContainer = document.getElementById(`shareForm-${sanitizedFileId}`).parentNode;
-            shareFormContainer.appendChild(errorContainer);
-          }
-          
-          
-      
-      
+
+
+    function showSuccessMessage(sanitizedFileId, result) {
+        const successMessage = document.createElement('div');
+        successMessage.className = 'alert alert-success mt-3';
+
+        let messageText = 'Le fichier a été partagé avec succès avec les adresses suivantes :<ul>';
+
+        if (result && result.results) {
+            result.results.forEach(item => {
+                messageText += `<li>${item.email} : ${item.result}</li>`;
+            });
+        } else {
+            messageText += '<li>Aucune adresse trouvée.</li>';
+        }
+
+        messageText += '</ul>';
+
+        successMessage.innerHTML = messageText;
+
+        // Insérer le message de succès à l'endroit approprié
+        const shareFormContainer = document.getElementById(`shareForm-${sanitizedFileId}`).parentNode;
+        shareFormContainer.appendChild(successMessage);
+    }
+
+    function showErrorMessage(sanitizedFileId, errorMessage) {
+        const errorContainer = document.createElement('div');
+        errorContainer.className = 'alert alert-danger mt-3';
+        errorContainer.textContent = `Une erreur s'est produite : ${errorMessage}`;
+
+        // Insérer le message d'erreur à l'endroit approprié
+        const shareFormContainer = document.getElementById(`shareForm-${sanitizedFileId}`).parentNode;
+        shareFormContainer.appendChild(errorContainer);
+    }
+
+
+
+
     /**
      * Function to show the global spinner.
      */
