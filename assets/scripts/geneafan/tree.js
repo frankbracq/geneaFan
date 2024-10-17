@@ -6,9 +6,9 @@ import {
     getCommonAncestryGraphData,
     getGenealogyGraph,
     getFamilyTreeData,
-} from './state';
+} from './stores/state';
 import { commonAncestryGraph, getOldestAncestorOf } from './ancestorUtils';
-import configStore from './configStore';
+import configStore from './stores/configStore';
 
 let family;
 let initializing = false;

@@ -1,10 +1,10 @@
 import { reaction, action, autorun } from 'mobx';
 import authStore from './stores/authStore.js';
-import configStore from './configStore.js';
-import ShareFormStore from './shareFormStore.js';
+import configStore from './stores/configStore.js';
+import ShareFormStore from './stores/shareFormStore.js';
 import _, { set } from 'lodash';
 import svgPanZoom from "svg-pan-zoom";
-import { Modal, Offcanvas, Tooltip } from "bootstrap";
+import { Modal, Offcanvas, Tooltip } from 'bootstrap';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import { Loader } from "@googlemaps/js-api-loader";
 import { v4 as uuidv4 } from 'uuid';
@@ -21,7 +21,7 @@ import {
     setIndividualsCache,
     getIndividualsCache,
     clearAllStates
-} from "./state.js";
+} from "./stores/state.js";
 import {
     debounce,
     updateFamilyTownsViaProxy,
@@ -43,7 +43,7 @@ import { loadGedcomFile } from './uploads.js';
 import {
     setupAllEventListeners,
     setupPersonLinkEventListener,
-} from "./eventListeners.js";
+} from "./listeners/eventListeners.js";
 import { googleMapManager } from './mapManager.js';
 import { initializeAscendantTimeline } from './ascendantTimeline.js';
 import { 
@@ -61,15 +61,22 @@ let rootPersonName;
 let previousDimensions = null;
 
 document.addEventListener("DOMContentLoaded", async function () {
+    console.log("DOMContentLoaded fired.");
 
+    // Récupérer le publishableKey depuis les variables d'environnement
     const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
+    console.log('Clerk Publishable Key:', publishableKey);
 
+    // Initialiser Clerk via le store MobX
     await authStore.initializeClerk(publishableKey);
 
+    // Appeler initPage après l'initialisation de Clerk
     initPage();
 
+    // Configurer tous les écouteurs d'événements avec Clerk via MobX
     setupAllEventListeners(authStore);
 
+    // Observer les changements d'utilisateur pour initialiser l'UI
     autorun(() => {
         const userInfo = authStore.userInfo;
         const userControlsElement = document.getElementById('user-controls');
@@ -90,7 +97,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             authStore.clerk.mountUserButton(userButtonDiv);
         } else {
             // Si l'utilisateur n'est pas authentifié, affiche un bouton "Se Connecter"
-            userControlsElement.innerHTML = `<button id="sign-in-button">Se Connecter</button>`;
+            userControlsElement.innerHTML = `<button id="sign-in-button" class="btn btn-primary">Se Connecter</button>`;
             const signInButton = document.getElementById('sign-in-button');
 
             if (!signInButton) {
@@ -113,6 +120,8 @@ document.addEventListener("DOMContentLoaded", async function () {
         }
     });
 
+    // Gestion de la déconnexion via UserButton de Clerk
+    // Aucun gestionnaire de bouton personnalisé ici
     console.log("DOMContentLoaded event handler completed.");
 });
 

@@ -1,7 +1,6 @@
 
 import { showGlobalSpinner, hideGlobalSpinner, showButtonSpinner, hideButtonSpinner } from './spinners.js';
 import { checkForDuplicateEmails, isValidEmail } from './formValidation.js';
-// import { verifyAndCreateUsers, grantAccessToFile } from './api.js';
 import { sanitizeFileId } from './utils.js';
 import { Collapse } from 'bootstrap';
 

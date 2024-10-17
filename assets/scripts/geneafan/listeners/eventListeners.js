@@ -1,12 +1,12 @@
 import { setupProtectedFeatureEventListeners } from './protectedFeatures.js'; 
-import { displayPersonDetailsUI, onSettingChange } from './ui.js';
-import { loadGedcomFile } from './uploads.js';
-import { googleMapManager } from './mapManager.js';
-import {Modal, Offcanvas, Tooltip} from 'bootstrap';
+import { displayPersonDetailsUI, onSettingChange } from '../ui.js';
+import { loadGedcomFile } from '../uploads.js';
+import { googleMapManager } from '../mapManager.js';
+import { Offcanvas, Tooltip } from 'bootstrap';
 import screenfull from 'screenfull';
-import {getFamilyTowns, getSvgPanZoomInstance, getTomSelectInstance} from './state.js';
+import {getFamilyTowns, getSvgPanZoomInstance, getTomSelectInstance} from '../stores/state.js';
 import {action} from 'mobx';
-import configStore from './configStore.js';
+import configStore from '../stores/configStore.js';
 
 // WeakMap to store event listener references
 const eventListenersMap = new WeakMap();

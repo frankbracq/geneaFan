@@ -1,6 +1,6 @@
-import { fetchUserGedcomFiles } from './uploads.js'; 
-import { handleUploadAndPost } from './downloads.js';
-import { showGedcomFilesModal } from './ui.js'
+import { fetchUserGedcomFiles } from '../uploads.js'; 
+import { handleUploadAndPost } from '../downloads.js';
+import { showGedcomFilesModal } from '../ui.js'
 
 /**
  * Fonction pour configurer les écouteurs d'événements pour les fonctionnalités protégées via le store MobX.

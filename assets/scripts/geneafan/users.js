@@ -1,5 +1,5 @@
-// src/users.js
 
+import { Modal } from "bootstrap";
 /**
  * Fonction pour accéder à une fonctionnalité protégée au sein de l'application.
  * Elle vérifie si l'utilisateur est authentifié et, si oui, exécute le callback authentifié.
@@ -100,24 +100,55 @@ export async function handleUserAuthentication(clerk, callback) {
 }
 
 /**
- * Fonction pour afficher le formulaire de connexion.
- * Elle insère un div dans le DOM et monte le formulaire de connexion de Clerk dedans.
+ * Fonction pour afficher le formulaire de connexion dans la modal Bootstrap.
  *
  * @param {Clerk} clerk - Instance de Clerk initialisée.
  */
 export function showSignInForm(clerk) {
-    console.log("Displaying the sign-in form.");
-    const dynamicContentDiv = document.getElementById('dynamic-content');
+    console.log("Affichage du formulaire de connexion dans la modal Bootstrap.");
 
-    if (!dynamicContentDiv) {
-        console.error("Element with ID 'dynamic-content' not found.");
+    // Monter le formulaire de connexion de Clerk dans le div avec id 'sign-in'
+    const signInDiv = document.getElementById('sign-in');
+    if (!signInDiv) {
+        console.error("Element with ID 'sign-in' not found.");
         return;
     }
 
-    // Insère un div où le formulaire de connexion sera monté
-    dynamicContentDiv.innerHTML = '<div id="sign-in"></div>';
-    // Monte le formulaire de connexion de Clerk dans le div nouvellement créé
-    clerk.mountSignIn(document.getElementById('sign-in'));
+    clerk.mountSignIn(signInDiv);
+
+    // Initialiser la modal Bootstrap
+    const signInModalElement = document.getElementById('signInModal');
+    if (!signInModalElement) {
+        console.error("Element with ID 'signInModal' not found.");
+        return;
+    }
+    const signInModal = new Modal(signInModalElement, {
+        backdrop: 'static', // Empêche la fermeture en cliquant en dehors
+        keyboard: false     // Empêche la fermeture avec la touche Échap
+    });
+
+    // Afficher la modal
+    signInModal.show();
+
+    // Utiliser une réaction MobX pour fermer et nettoyer la modal après connexion
+    const disposer = reaction(
+        () => clerk.session && clerk.session.userId, // Surveiller les changements de session utilisateur
+        (userId) => {
+            if (userId) {
+                // Si l'utilisateur est authentifié, cacher la modal
+                signInModal.hide();
+
+                // Nettoyer en supprimant le conteneur de la modal du DOM si nécessaire
+                disposer(); // Arrêter la réaction
+            }
+        }
+    );
+
+    // Ajouter un écouteur pour supprimer la modal du DOM lorsqu'elle est cachée
+    signInModalElement.addEventListener('hidden.bs.modal', () => {
+        // Optionnel : Vous pouvez nettoyer le contenu si nécessaire
+        // signInDiv.innerHTML = '';
+    });
 }
 
 /**

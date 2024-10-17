@@ -3,7 +3,7 @@ import PDFDocument from 'pdfkit'
 import blobStream from 'blob-stream';
 import { mmToPoints, mmToPixels } from './utils.js';
 import { Modal } from 'bootstrap';
-import configStore from './configStore.js';
+import configStore from './stores/configStore.js';
 
 const PAGE_WIDTH_IN_MM = 297; // Largeur en millimètres
 const PAGE_HEIGHT_IN_MM = 420; // Hauteur en millimètres

@@ -3,7 +3,7 @@ import tinycolor from "tinycolor2";
 import _ from "lodash";
 import { mmToPixels } from './utils.js';
 import { extractYear } from './dates.js';
-import configStore from './configStore.js';
+import configStore from './stores/configStore.js';
 import { buildHierarchy } from './parse.js';
 
 const weightFontFirst = 0.25,

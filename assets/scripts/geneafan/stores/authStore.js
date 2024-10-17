@@ -19,6 +19,7 @@ class AuthStore {
      */
     async initializeClerk(publishableKey) {
         this.clerk = new Clerk(publishableKey);
+        //this.clerk = new Clerk({ publishableKey });
         try {
             await this.clerk.load();
             runInAction(() => {
@@ -66,7 +67,8 @@ class AuthStore {
                 if (onUnauthenticated) {
                     onUnauthenticated();
                 } else {
-                    showSignInForm(this.clerk);
+                    // Afficher la modal de connexion via la fonction showSignInForm
+                    // Vous pouvez choisir d'intégrer showSignInForm directement ici si nécessaire
                 }
             }
         );

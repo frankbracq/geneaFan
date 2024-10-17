@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { getAncestorMapCache, setAncestorMapCache, getGenealogyGraph, setCommonAncestryGraphData } from './state';
+import { getAncestorMapCache, setAncestorMapCache, getGenealogyGraph, setCommonAncestryGraphData } from './stores/state';
 
 // Create a map for quick ancestor lookup
 // This function is only called if the map is not already cached

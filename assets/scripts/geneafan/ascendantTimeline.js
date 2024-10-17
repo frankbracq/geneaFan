@@ -1,4 +1,4 @@
-import { getAscendantEvents } from "./state.js";
+import { getAscendantEvents } from "./stores/state.js";
 import { groupEvents } from "./utils.js";
 import '../vendor/horizontalTimeline.js';
 import 'bootstrap-icons/font/bootstrap-icons.css';

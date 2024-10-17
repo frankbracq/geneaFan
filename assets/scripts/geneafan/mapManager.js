@@ -1,4 +1,4 @@
-import { getFamilyTowns, gmapStyle, gmapApiKey } from "./state.js";
+import { getFamilyTowns, gmapStyle, gmapApiKey } from "./stores/state.js";
 import { Loader } from "@googlemaps/js-api-loader";
 import { MarkerClusterer } from "@googlemaps/markerclusterer"; 
 
