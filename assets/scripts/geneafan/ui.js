@@ -1,5 +1,3 @@
-/*ll,lljlk
-*/
 import { reaction, action, autorun } from 'mobx';
 import authStore from './stores/authStore.js';
 import configStore from './stores/configStore.js';
