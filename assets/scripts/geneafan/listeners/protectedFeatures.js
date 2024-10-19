@@ -1,4 +1,4 @@
-import { fetchUserGedcomFiles } from '../uploads.js'; 
+import { fetchUserGedcomFiles } from '../gedcom/gedcomFileHandler.js'; 
 import { handleUploadAndPost } from '../downloads.js';
 import { showGedcomFilesModal } from '../ui.js'
 

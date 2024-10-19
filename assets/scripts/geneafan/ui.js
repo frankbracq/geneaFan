@@ -39,7 +39,7 @@ import {
     handleUploadAndPost,
     updateFilename,
 } from "./downloads.js";
-import { loadGedcomFile } from './uploads.js';
+import { loadGedcomFile } from './gedcom/gedcomFileHandler.js';
 import {
     setupAllEventListeners,
     setupPersonLinkEventListener,

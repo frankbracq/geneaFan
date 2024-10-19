@@ -19,15 +19,15 @@
   "homepage": "https://genealographie.fr",
   "main": "index.js",
   "scripts": {
-    "build:profile": "node --max-old-space-size=4096 --inspect-brk ./node_modules/.bin/webpack --mode production --profile",
-    "dev": "cross-env NODE_ENV=development webpack --mode development --stats true",
-    "dev:watch": "cross-env NODE_ENV=development webpack --mode development --watch",
-    "build": "cross-env NODE_ENV=production node --max-old-space-size=8000 ./node_modules/.bin/webpack --mode production --progress ",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=8000 webpack --mode production --progress",
+    "dev": "webpack serve --mode development --progress --stats verbose",
+    "dev:watch": "webpack --mode development --watch --progress",
+    "start": "webpack serve --mode development --open --progress",
+    "build:profile": "cross-env NODE_OPTIONS=--max-old-space-size=4096 node --inspect-brk node_modules/webpack/bin/webpack.js --mode production --profile",
     "prod": "npm run build",
-    "start": "cross-env NODE_ENV=development webpack server --mode development --open",
     "watch": "npm run dev:watch",
-    "lint": "eslint assets/scripts/*.js",
-    "clean": "rm -rf dist"
+    "lint": "eslint assets/scripts/**/*.js",
+    "clean": "rimraf dist"
   },
   "dependencies": {
     "@balkangraph/familytree.js": "^1.9.36",
@@ -96,6 +96,7 @@
     "process": "^0.11.10",
     "raw-loader": "^4.0.2",
     "resolve-url-loader": "^5.0.0",
+    "rimraf": "^6.0.1",
     "sass": "^1.75.0",
     "sass-loader": "^14.2.1",
     "stream-browserify": "^3.0.0",

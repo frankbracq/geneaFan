@@ -1,4 +1,5 @@
 
+import { reaction } from "mobx";
 import { Modal } from "bootstrap";
 /**
  * Fonction pour accéder à une fonctionnalité protégée au sein de l'application.

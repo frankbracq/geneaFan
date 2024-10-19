@@ -1,6 +1,6 @@
 import { setupProtectedFeatureEventListeners } from './protectedFeatures.js'; 
 import { displayPersonDetailsUI, onSettingChange } from '../ui.js';
-import { loadGedcomFile } from '../uploads.js';
+import { loadGedcomFile } from '../gedcom/gedcomFileHandler.js';
 import { googleMapManager } from '../mapManager.js';
 import { Offcanvas, Tooltip } from 'bootstrap';
 import screenfull from 'screenfull';
