@@ -183,6 +183,12 @@ div.file-button {
   justify-content: center;
 }
 
+#tab-header {
+  padding-left: 10px;
+  padding-right: 10px;
+  border-bottom: 1px solid #ccc; /* Filet léger */
+}
+
 // Responsive tab header
 .dropdown-content-modifiers {
   max-height: 600px !important;

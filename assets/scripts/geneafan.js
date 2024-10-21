@@ -1,5 +1,5 @@
 // JavaScript
-import './scripts/geneafan/main'
+import './scripts/geneafan/ui'
 
 // Styles
 import './scss/main.scss'
@@ -7,3 +7,4 @@ import './scss/main.scss'
 require.context('./other', true);
 require.context('./images/icons', true);
 require.context('./images', true); 
+

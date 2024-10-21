@@ -1,4 +1,4 @@
-import _, { first, get, set, sortedLastIndex } from "lodash";
+import _ from "lodash";
 import moment from "moment";
 import parseGedcom from "parse-gedcom";
 import {
@@ -7,8 +7,6 @@ import {
 } from "./geo.js";
 import {
     padTwoDigits,
-    getActionWord,
-    groupEvents,
 } from "./utils.js";
 import { extractYear, calculateAge, prefixedDate } from "./dates.js";
 import {
@@ -35,7 +33,6 @@ import {
     setFamilyTreeData,
 } from "./stores/state.js";
 import configStore from './stores/configStore.js';
-import { initializeFamilyTree } from './tree';
 import jsonpointer from 'jsonpointer';
 
 const EMPTY = "";

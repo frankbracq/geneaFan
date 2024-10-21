@@ -1,4 +1,7 @@
-import * as d3 from "d3";
+import { arc, line } from 'd3-shape';
+import { select } from 'd3-selection';
+import { hierarchy } from 'd3-hierarchy';
+import { xml } from 'd3-fetch';
 import tinycolor from "tinycolor2";
 import _ from "lodash";
 import { mmToPixels } from './utils.js';
@@ -80,13 +83,13 @@ function createBoxes(g, descendants, showMarriages) {
     const config = configStore.getConfig;
     const weightRadiusMarriage = showMarriages ? 0.27 : 0;
 
-    const individualBoxGenerator = d3.arc()
+    const individualBoxGenerator = arc()
         .startAngle(d => !isFirstLayer(d) ? d.x0 : 0)
         .endAngle(d => !isFirstLayer(d) ? d.x1 : 2 * Math.PI)
         .innerRadius(d => d.y0)
         .outerRadius(d => d.y1);
 
-    const marriageBoxGenerator = d3.arc()
+    const marriageBoxGenerator = arc()
         .startAngle(d => d.x0)
         .endAngle(d => d.x1)
         .innerRadius(d => d.y1)
@@ -157,7 +160,7 @@ function createTextElements(g, defs, descendants, showMarriages) {
 
     // Fonction auxiliaire pour générer une ligne simple
     function simpleLine(x0, y0, x1, y1) {
-        const generator = d3.line();
+        const generator = line();
         return generator([
             [x0, y0],
             [x1, y1]
@@ -244,7 +247,7 @@ function createTextElements(g, defs, descendants, showMarriages) {
         const start = d => minA(d) + -0.5 * rangeA(d) + marginAngleF(d),
             end = d => maxA(d) + 0.5 * rangeA(d) - marginAngleF(d);
 
-        const arcGenerator = fixArc(d3.arc()
+        const arcGenerator = fixArc(arc()
             .startAngle(d => invert(d) ? end(d) : start(d))
             .endAngle(d => invert(d) ? start(d) : end(d))
             .innerRadius(radiusF)
@@ -330,7 +333,7 @@ function createTextElements(g, defs, descendants, showMarriages) {
             const endAngle = isParentArc ? Math.PI / 2 : (isTextInverted ? min - 0.5 * range + marginAngle : max + 0.5 * range - marginAngle);
 
             // Utilisez startAngle et endAngle pour dessiner l'arc de mariage
-            const marriageArcGenerator = fixArc(d3.arc()
+            const marriageArcGenerator = fixArc(arc()
                 .startAngle(startAngle)
                 .endAngle(endAngle)
                 .innerRadius(r)
@@ -387,7 +390,7 @@ function createTextElements(g, defs, descendants, showMarriages) {
     function determineTextColor(d) {
         // Adjust the selection to use the group 'boxes'
         const boxSelector = `#boxes path.individual-boxes[data-id="${d.data.id}"]`;
-        const boxElement = d3.select(boxSelector).node();
+        const boxElement = select(boxSelector).node();
         
         if (!boxElement) {
             return 'black'; // Default to black if no box element is found
@@ -449,15 +452,15 @@ function createTextElements(g, defs, descendants, showMarriages) {
             const textPath = createTextElement(group, line, alignment, special);
             textPath.each(function (d) {
                 const textElem = this.parentNode;
-                const pathHref = d3.select(this).attr('href');
+                const pathHref = select(this).attr('href');
                 const pathElem = document.querySelector(pathHref);
 
                 if (!pathElem) {
                     return;
                 }
 
-                setTextContent(d3.select(this), line, d, special);
-                optimizeTextSize(d3.select(this), textElem, pathElem, line, d);
+                setTextContent(select(this), line, d, special);
+                optimizeTextSize(select(this), textElem, pathElem, line, d);
             });
         });
     };
@@ -537,7 +540,7 @@ function adjustFanVerticalPosition(svg, fanHeight, frameHeight, scale) {
     // Sélectionnez vos groupes 'boxes' et 'texts' et ajustez leur position verticale tout en conservant l'échelle
     function applyTransform(elementId) {
         svg.select(`g[id="${elementId}"]`).attr('transform', function () {
-            let match = /translate\(([^,]+), ([^\)]+)\)/.exec(d3.select(this).attr('transform'));
+            let match = /translate\(([^,]+), ([^\)]+)\)/.exec(select(this).attr('transform'));
             let translateX = match ? parseFloat(match[1]) : 0;
             let translateY = match ? parseFloat(match[2]) : 0;
     
@@ -695,7 +698,7 @@ export function drawFan() {
         }
     }
 
-    let rootNode = d3.hierarchy(data).each(calculateNodeProperties);
+    let rootNode = hierarchy(data).each(calculateNodeProperties);
     let descendants = rootNode.descendants();
 
     const fanSvg = document.getElementById("fan");
@@ -711,7 +714,7 @@ export function drawFan() {
 
     // Initialisation du SVG
     const [frameWidthInMm, frameHeightInMm] = config.frameDimensions.split('x').map(Number);
-    const svg = d3.select('svg#fan')
+    const svg = select('svg#fan')
         .attr('width', `${frameWidthInMm}mm`)
         .attr('height', `${frameHeightInMm}mm`)
         .style('overflow', 'visible')
@@ -752,9 +755,9 @@ export function drawEmptyFan() {
     }
 
     // Charger le fichier SVG à partir de l'URL
-    d3.xml("/dist/images/Fan_270_8GM.svg").then(data => {
+    xml("/dist/images/Fan_270_8GM.svg").then(data => {
         // Ajouter le contenu du fichier SVG à l'élément SVG existant
-        d3.select("#fan").node().append(data.documentElement);
+        select("#fan").node().append(data.documentElement);
     });
 }
 

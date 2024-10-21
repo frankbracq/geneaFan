@@ -223,20 +223,6 @@ export function getActionWord(eventType, gender) {
         return baseWord + '(e)';
     }
 }
-
-/**
- * Sanitize a file ID by replacing spaces with underscores.
- *
- * @param {string} fileId - The file ID to sanitize.
- * @returns {string} The sanitized file ID.
- */
-export function sanitizeFileId(fileId) {
-    if (typeof fileId !== 'string') {
-      console.error('File ID must be a string.');
-      return '';
-    }
-    return fileId.replace(/\s+/g, '_');
-  }
   
  /**
      * Function to validate email format using a regex.

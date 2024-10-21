@@ -1,6 +1,3 @@
-import SVGtoPDF from 'svg-to-pdfkit';
-import PDFDocument from 'pdfkit'
-import blobStream from 'blob-stream';
 import { mmToPoints, mmToPixels } from './utils.js';
 import { Modal } from 'bootstrap';
 import configStore from './stores/configStore.js';
@@ -54,22 +51,24 @@ function getFrameDimensions(frameDimensionsInMm) {
     return frameDimensionsInMm.split('x').map(Number);
 }
 
-export function generatePdf(config, watermark = true) {
+export async function generatePdf(watermark = true) {
+    // Dynamically import PDFKit and related libraries
+    const { default: PDFDocument } = await import('pdfkit');
+    const { default: SVGtoPDF } = await import('svg-to-pdfkit');
+    const { default: blobStream } = await import('blob-stream'); // Dynamic import of blob-stream
+
     return new Promise((resolve, reject) => {
-        // console.log('Starting generatePdf...');
-        // Frame dimensions
-        const frameDimensionsInMm = config.frameDimensions;
+        const frameDimensionsInMm = configStore.getConfig.frameDimensions;
         let frameWidthInMm, frameHeightInMm;
         [frameWidthInMm, frameHeightInMm] = getFrameDimensions(frameDimensionsInMm);
 
-        // Page dimensions
         const pageWidthInPoints = mmToPoints(PAGE_WIDTH_IN_MM);
         const pageHeightInPoints = mmToPoints(PAGE_HEIGHT_IN_MM);
 
         const layoutMap = {
             '331x287': 'landscape',
             '260x260': 'landscape',
-            '331x331': 'landscape'
+            '331x331': 'landscape',
         };
         const layout = layoutMap[frameDimensionsInMm];
 
@@ -79,67 +78,88 @@ export function generatePdf(config, watermark = true) {
                 top: 28,
                 bottom: 28,
                 left: 28,
-                right: 28
+                right: 28,
             },
-            layout : layout,
+            layout: layout,
             info: {
-                Title: filename, // Title of the document
-                Author: 'https://genealog.ie', // Name of the author
-                Subject: __('geneafan.genealogical_fan'), // Subject of the document
-                Keywords: 'généalogie;arbre;éventail;genealog.ie', // Keywords (no translation)
-            //CreationDate: 'DD/MM/YYYY', // Date created (added automatically by PDFKit)
-            //ModDate: 'DD/MM/YYYY' // Date last modified
-            }
+                Title: filename,
+                Author: 'https://genealog.ie',
+                Subject: __('geneafan.genealogical_fan'),
+                Keywords: 'généalogie;arbre;éventail;genealog.ie',
+            },
         });
-    
-        // Ajouter le filigrane
-        if (watermark) {
-            const watermarkText = 'Genealog.ie';
-            const fontSize = 100;
 
-            doc.fontSize(fontSize); // Définir la taille de la police
-
-            const textWidth = doc.widthOfString(watermarkText);
-
-            const isLandscape = doc.options.layout === 'landscape';
-            const textY = isLandscape ? pageWidthInPoints * 2 / 3 : pageHeightInPoints * 2 / 3;
-            const textX = isLandscape ? (pageHeightInPoints - textWidth) / 2 : (pageWidthInPoints - textWidth) / 2;
-
-            doc.fillColor('grey') // Définir la couleur du texte
-                .opacity(0.5) // Définir l'opacité
-                .text(watermarkText, textX, textY); // Ajouter le texte
-        }
-
+        // Use blob-stream to handle the PDF data
         const stream = doc.pipe(blobStream());
-        stream.on('finish', function() {
+
+        stream.on('finish', function () {
             const blob = stream.toBlob('application/pdf');
-            resolve(blob);
+            resolve(blob); // Resolve the promise with the generated blob
         });
 
-        stream.on('error', function(error) {
-            reject(error);
+        stream.on('error', function (error) {
+            reject(error); // Reject the promise if there's an error
         });
 
         const svgOptions = {
             width: mmToPoints(frameWidthInMm),
-            height: mmToPoints(frameHeightInMm)
+            height: mmToPoints(frameHeightInMm),
         };
 
         let x, y;
 
         if (pageWidthInPoints > pageHeightInPoints) {
-            // Paysage
             x = (pageWidthInPoints - svgOptions.width) / 2;
             y = (pageHeightInPoints - svgOptions.height) / 2;
         } else {
-            // Portrait
             x = (pageHeightInPoints - svgOptions.width) / 2;
             y = (pageWidthInPoints - svgOptions.height) / 2;
         }
 
+        // First, add the SVG content
         SVGtoPDF(doc, fanAsXml().trim(), x, y, svgOptions);
-        // console.log('About to end doc and resolve promise...');
-        doc.end();
+
+        // Add watermark if enabled, after the content
+        if (watermark) {
+            const watermarkText = 'Genealog.ie';
+            const fontSize = 100;
+
+            doc.fontSize(fontSize);
+
+            const textWidth = doc.widthOfString(watermarkText);
+            const isLandscape = doc.options.layout === 'landscape';
+            const textY = isLandscape
+                ? pageWidthInPoints * 2 / 3
+                : pageHeightInPoints * 2 / 3;
+            const textX = isLandscape
+                ? (pageHeightInPoints - textWidth) / 2
+                : (pageWidthInPoints - textWidth) / 2;
+
+            doc.fillColor('grey').opacity(0.5).text(watermarkText, textX, textY);
+        }
+
+        doc.end(); // Finalize the document
+    });
+}
+
+export function downloadPDF() {
+    generatePdf().then((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        
+        // Vérifiez si le nom de fichier contient déjà l'extension ".pdf"
+        const pdfFilename = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
+
+        a.href = url;
+        a.download = pdfFilename; // Utilisation du nom de fichier avec l'extension ".pdf"
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 0);
+    }).catch(error => {
+        console.error('Error generating PDF:', error);
     });
 }
 

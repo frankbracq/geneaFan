@@ -1,12 +1,13 @@
+import {getFamilyTowns, getSvgPanZoomInstance, getTomSelectInstance} from '../stores/state.js';
+import {action} from 'mobx';
+import configStore from '../stores/configStore.js';
 import { setupProtectedFeatureEventListeners } from './protectedFeatures.js'; 
+import { setupResponsiveTabs, setupTabResizeListener } from './responsiveTabs.js';
 import { displayPersonDetailsUI, onSettingChange } from '../ui.js';
 import { loadGedcomFile } from '../gedcom/gedcomFileHandler.js';
 import { googleMapManager } from '../mapManager.js';
 import { Offcanvas, Tooltip } from 'bootstrap';
 import screenfull from 'screenfull';
-import {getFamilyTowns, getSvgPanZoomInstance, getTomSelectInstance} from '../stores/state.js';
-import {action} from 'mobx';
-import configStore from '../stores/configStore.js';
 
 // WeakMap to store event listener references
 const eventListenersMap = new WeakMap();
@@ -207,78 +208,6 @@ function setupFullscreenToggle() {
 
     // Store reference in WeakMap
     eventListenersMap.set(fullscreenButton, fullscreenHandler);
-}
-
-const calculateItemWidth = (items) => items.reduce((acc, item) => acc + item.getBoundingClientRect().width, 0);
-
-function setupResponsiveTabs() {
-    const tabContainer = document.getElementById('tab-container');
-    const moreDrawer = document.getElementById('more-drawer');
-    const moreTabBtn = document.getElementById('more-tab-btn');
-    const innerContainer = tabContainer.children[0];
-    const innerTabsItems = [...tabContainer.querySelectorAll('li')]
-    const drawerTabsItems = [...moreDrawer.querySelectorAll('li')]
-    const totalWidth = calculateItemWidth(innerTabsItems);
-    const containerWidth = tabContainer.getBoundingClientRect().width;
-
-    if (totalWidth > containerWidth) {
-        while (calculateItemWidth(innerTabsItems) > tabContainer.getBoundingClientRect().width) {
-            const lastItem = innerTabsItems.pop()
-            moreDrawer.prepend(lastItem)
-            // innerContainer.removeChild(lastItem)
-        }
-
-        moreTabBtn.style.visibility = 'visible';
-        return
-    }
-
-    const distance = tabContainer.offsetWidth - innerContainer.offsetWidth;
-
-    if (drawerTabsItems.length) {
-        let firstElementWidth = drawerTabsItems[0].getBoundingClientRect().width;
-        let isNextStep = distance > firstElementWidth
-        if (!isNextStep) return;
-
-        while (isNextStep) {
-            const firstItem = drawerTabsItems.shift()
-            innerContainer.appendChild(firstItem)
-            // moreDrawer.removeChild(firstItem)
-            innerTabsItems.push(firstItem)
-            firstElementWidth = firstItem.getBoundingClientRect().width;
-            isNextStep = (tabContainer.offsetWidth - innerContainer.offsetWidth > firstElementWidth) && drawerTabsItems.length
-        }
-
-        if (!drawerTabsItems.length) {
-            moreTabBtn.style.visibility = 'hidden'
-            moreDrawer.style.visibility = 'hidden'
-        }
-    }
-}
-
-function clickOutsideListener(elements, callback) {
-    function handleClickOutside(event) {
-        event.stopPropagation()
-        if (!elements.some(element => element.contains(event.target))) callback();
-    }
-
-    document.addEventListener('click', handleClickOutside);
-
-    return () => {
-        document.removeEventListener('click', handleClickOutside);
-    };
-}
-
-function setupTabResizeListener() {
-    const moreTabBtn = document.getElementById('more-tab-btn');
-    const moreDrawer = document.getElementById('more-drawer');
-    clickOutsideListener([moreDrawer, moreTabBtn], () => {
-        moreDrawer.style.visibility = 'hidden'
-    })
-    moreTabBtn.addEventListener('click', () => {
-        const visibility = window.getComputedStyle(moreDrawer).visibility
-        moreDrawer.style.visibility = visibility === 'hidden' ? 'visible' : 'hidden'
-    });
-    window.addEventListener('resize', setupResponsiveTabs);
 }
 
 // Function to initialize file loading event listeners

@@ -1,1 +1,0 @@
-import 'svg-to-pdfkit'

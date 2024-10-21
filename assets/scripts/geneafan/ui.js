@@ -2,10 +2,9 @@ import { reaction, action, autorun } from 'mobx';
 import authStore from './stores/authStore.js';
 import configStore from './stores/configStore.js';
 import ShareFormStore from './stores/shareFormStore.js';
-import _, { set } from 'lodash';
+import _ from 'lodash';
 import svgPanZoom from "svg-pan-zoom";
 import { Modal, Offcanvas, Tooltip } from 'bootstrap';
-import 'bootstrap-icons/font/bootstrap-icons.css';
 import { Loader } from "@googlemaps/js-api-loader";
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -26,7 +25,6 @@ import {
     debounce,
     updateFamilyTownsViaProxy,
     updateIndividualTownsFromFamilyTowns,
-    isValidEmail,
 } from "./utils.js";
 import { toJson, getIndividualsList, getAllPlaces } from "./parse.js";
 import { draw } from "./fan.js";
@@ -35,7 +33,7 @@ import {
     downloadPNG,
     fanAsXml,
     generateFileName,
-    generatePdf,
+    downloadPDF,
     handleUploadAndPost,
     updateFilename,
 } from "./downloads.js";
@@ -45,7 +43,7 @@ import {
     setupPersonLinkEventListener,
 } from "./listeners/eventListeners.js";
 import { googleMapManager } from './mapManager.js';
-import { initializeAscendantTimeline } from './ascendantTimeline.js';
+import { initializeAscendantTimeline } from './timeline/ascendantTimeline.js';
 import {
     showSignInForm
 } from './users.js';
@@ -549,7 +547,7 @@ function createConfig(selectedValues, filename) {
 
     // Utilisation des variables pour les poids de génération et d'autres sélections dynamiques
     return {
-        root: $("#individual-select").val(),
+        root: document.querySelector("#individual-select").value,
         maxGenerations,
         angle: (2 * Math.PI * fanAngle) / 360.0,
         dates: {
@@ -881,7 +879,7 @@ document.getElementById('download-pdf').addEventListener('click', function (even
 });
 
 document.getElementById('download-pdf-watermark').addEventListener('click', function (event) {
-    generatePdf(
+    downloadPDF(
         config,
         function (blob) {
             downloadContent(blob, generateFileName("pdf"), "pdf");
@@ -913,7 +911,8 @@ document.getElementById('download-png-background').addEventListener('click', fun
     event.preventDefault(); // Prevent default link action
 });
 
-$("#print").click(function () {
+/*
+document.querySelector("#print").addEventListener("click", function () {
     function printPdf(url) {
         const iframe = document.createElement("iframe");
         iframe.className = "pdfIframe";
@@ -929,7 +928,7 @@ $("#print").click(function () {
                 } catch (e) {
                     // Fallback
                     console.log("Cannot print, downloading instead");
-                    $("#download-pdf").click();
+                    document.querySelector("#download-pdf").click();
                 }
                 URL.revokeObjectURL(url);
             }, 1);
@@ -937,10 +936,11 @@ $("#print").click(function () {
         iframe.src = url;
     }
 
-    $("#download-pdf").click(); // Workaround (chrome update)
+    document.querySelector("#download-pdf").click(); // Workaround (chrome update)
 
     return false;
 });
+*/
 
 /**
  * Function to display the GEDCOM files modal.
@@ -1194,56 +1194,6 @@ export function showGedcomFilesModal(files, userInfo) {
         });
     }
 
-
-    function proceedWithSharing1(sanitizedFileId, emails) {
-        // Cloudflare worker URL
-        const workerEndpoint = 'https://email-validator.genealogie.app';
-
-        // Afficher le spinner pour indiquer le traitement en cours
-        console.log('Affichage du spinner pour le fichier ID:', sanitizedFileId);
-        showButtonSpinner(sanitizedFileId);
-
-        // Préparer les données à envoyer
-        const data = {
-            emails: emails
-        };
-        console.log('Données préparées pour l\'envoi:', data);
-
-        // Envoyer les données au Worker
-        fetch(workerEndpoint, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        })
-            .then(response => {
-                // Vérifier si la réponse est correcte
-                console.log('Réponse brute du worker:', response);
-                if (!response.ok) {
-                    throw new Error(`Erreur du serveur : ${response.status} ${response.statusText}`);
-                }
-                return response.json();
-            })
-            .then(result => {
-                console.log('Résultat du worker:', result);
-                // Cacher le spinner
-                hideButtonSpinner(sanitizedFileId);
-
-                // Afficher le message de succès avec les résultats
-                showSuccessMessage(sanitizedFileId, result);
-            })
-            .catch(error => {
-                // Cacher le spinner
-                hideButtonSpinner(sanitizedFileId);
-
-                // Afficher le message d'erreur
-                console.error('Erreur lors du partage:', error);
-                showErrorMessage(sanitizedFileId, error.message);
-            });
-    }
-
-
     function proceedWithSharing(sanitizedFileId, emails, userInfo) {
         console.log('Proceeding with sharing:', userInfo);
         const workerEndpoint = 'https://file-sharing-orchestrator.genealogie.app';
@@ -1285,8 +1235,6 @@ export function showGedcomFilesModal(files, userInfo) {
             });
     }
 
-
-
     function showSuccessMessage(sanitizedFileId, result) {
         const successMessage = document.createElement('div');
         successMessage.className = 'alert alert-success mt-3';
@@ -1319,9 +1267,6 @@ export function showGedcomFilesModal(files, userInfo) {
         const shareFormContainer = document.getElementById(`shareForm-${sanitizedFileId}`).parentNode;
         shareFormContainer.appendChild(errorContainer);
     }
-
-
-
 
     /**
      * Function to show the global spinner.
