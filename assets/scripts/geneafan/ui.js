@@ -33,7 +33,7 @@ import {
     downloadPNG,
     fanAsXml,
     generateFileName,
-    downloadPDF,
+    downloadPDF, 
     handleUploadAndPost,
     updateFilename,
 } from "./downloads.js";
