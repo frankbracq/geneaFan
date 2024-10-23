@@ -1,5 +1,5 @@
 // JavaScript
-import './scripts/geneafan/main'
+import './scripts/geneafan/ui'
 
 // Styles
 import './scss/main.scss'

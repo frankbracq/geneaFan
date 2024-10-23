@@ -48,82 +48,80 @@ import {
     showSignInForm
 } from './users.js';
 import {
-    createModal,
+    createGedcomModal,
     toggleShareForm,
     sanitizeFileId
 }
-    from './gedcomModalUtils.js';
+    from './gedcom/gedcomModalUtils.js';
 
 let config;
 let rootPersonName;
 
 let previousDimensions = null;
 
+// Récupérer le publishableKey depuis les variables d'environnement
+const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
+console.log('Clerk Publishable Key:', publishableKey);
+
 document.addEventListener("DOMContentLoaded", async function () {
     console.log("DOMContentLoaded fired.");
 
-    // Récupérer le publishableKey depuis les variables d'environnement
-    const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
-    console.log('Clerk Publishable Key:', publishableKey);
-
-    // Initialiser Clerk via le store MobX
+    // Initialize Clerk via the MobX store
     await authStore.initializeClerk(publishableKey);
 
-    // Appeler initPage après l'initialisation de Clerk
+    // Call initPage after Clerk initialization
     initPage();
 
-    // Configurer tous les écouteurs d'événements avec Clerk via MobX
+    // Set up all event listeners with Clerk via MobX
     setupAllEventListeners(authStore);
 
-    // Observer les changements d'utilisateur pour initialiser l'UI
+    // Add event listener for the sign-in button
+    const signInButton = document.getElementById('sign-in-button');
+    if (signInButton) {
+        signInButton.addEventListener('click', () => {
+            showSignInForm(authStore.clerk);
+        });
+    }
+
+    // Autorun to toggle user controls
     autorun(() => {
         const userInfo = authStore.userInfo;
-        const userControlsElement = document.getElementById('user-controls');
 
-        if (!userControlsElement) {
-            console.error("Element with ID 'user-controls' not found.");
+        const signInButton = document.getElementById('sign-in-button');
+        const userButtonDiv = document.getElementById('user-button');
+
+        if (!signInButton || !userButtonDiv) {
+            console.error("User controls elements not found.");
             return;
         }
 
         if (userInfo) {
-            // Si l'utilisateur est authentifié, affiche le bouton utilisateur de Clerk
-            userControlsElement.innerHTML = `<div id="user-button"></div>`;
-            const userButtonDiv = document.getElementById('user-button');
-            if (!userButtonDiv) {
-                console.error("Element with ID 'user-button' not found.");
-                return;
+            // User is authenticated
+            signInButton.style.display = 'none';
+            userButtonDiv.style.display = 'block';
+
+            // Mount the Clerk UserButton if not already mounted
+            if (!userButtonDiv.hasChildNodes()) {
+                authStore.clerk.mountUserButton(userButtonDiv);
             }
-            authStore.clerk.mountUserButton(userButtonDiv);
         } else {
-            // Si l'utilisateur n'est pas authentifié, affiche un bouton "Se Connecter"
-            userControlsElement.innerHTML = `<button id="sign-in-button" class="btn btn-primary">Se Connecter</button>`;
-            const signInButton = document.getElementById('sign-in-button');
-
-            if (!signInButton) {
-                console.error("Element with ID 'sign-in-button' not found.");
-                return;
-            }
-
-            signInButton.addEventListener('click', () => {
-                showSignInForm(authStore.clerk);
-            });
-        }
-
-        // Cacher l'overlay
-        const overlay = document.getElementById('overlay');
-        if (overlay) {
-            overlay.style.display = 'none';
-            console.log("Overlay hidden.");
-        } else {
-            console.error("Element with ID 'overlay' not found.");
+            // User is not authenticated
+            userButtonDiv.style.display = 'none';
+            signInButton.style.display = 'block';
         }
     });
 
-    // Gestion de la déconnexion via UserButton de Clerk
-    // Aucun gestionnaire de bouton personnalisé ici
+    // Hide the overlay after initialization
+    const overlay = document.getElementById('overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
+        console.log("Overlay hidden.");
+    } else {
+        console.error("Element with ID 'overlay' not found.");
+    }
+
     console.log("DOMContentLoaded event handler completed.");
 });
-
 
 /* BS offcanvas elements management */
 let offCanvasPersonDetailsInstance = null;
@@ -956,7 +954,7 @@ export function showGedcomFilesModal(files, userInfo) {
     }
 
     // Create the modal
-    const modalDiv = createModal(files, sanitizeFileId);
+    const modalDiv = createGedcomModal(files, sanitizeFileId);
     document.body.appendChild(modalDiv);
     console.log('Modal container added to the document body.');
 

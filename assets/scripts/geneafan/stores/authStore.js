@@ -1,54 +1,47 @@
-// src/stores/authStore.js
+// authStore.js
 
 import { makeAutoObservable, runInAction } from 'mobx';
 import { Clerk } from '@clerk/clerk-js';
-import { accessProtectedFeature, handleUserAuthentication, showSignInForm } from '../users.js'; // Ajustez le chemin si nécessaire
+import { showSignInForm } from '../users.js';
 
 class AuthStore {
     clerk = null;
     userInfo = null;
     isClerkLoaded = false;
+    authenticationListener = null;
 
     constructor() {
         makeAutoObservable(this);
     }
 
     /**
-     * Initialise Clerk avec la clé publishable.
-     * @param {string} publishableKey - La clé publishable de Clerk.
+     * Initializes Clerk with the publishable key.
+     * @param {string} publishableKey - The publishable key from Clerk.
      */
     async initializeClerk(publishableKey) {
         this.clerk = new Clerk(publishableKey);
-        //this.clerk = new Clerk({ publishableKey });
         try {
             await this.clerk.load();
             runInAction(() => {
                 this.isClerkLoaded = true;
                 console.log('Clerk loaded:', this.clerk.loaded);
+
+                // Check if the user is already authenticated
+                if (this.clerk.user) {
+                    console.log('User is already authenticated at startup.');
+                    const userInfo = this.clerk.user;
+                    this.userInfo = userInfo;
+                }
             });
-            this.handleAuthentication();
         } catch (error) {
             console.error("Error loading Clerk:", error);
         }
     }
 
     /**
-     * Gère l'authentification de l'utilisateur en utilisant Clerk.
-     */
-    handleAuthentication() {
-        if (!this.clerk) return;
-
-        handleUserAuthentication(this.clerk, (userInfo) => {
-            runInAction(() => {
-                this.userInfo = userInfo;
-            });
-        });
-    }
-
-    /**
-     * Accède à une fonctionnalité protégée en vérifiant l'authentification.
-     * @param {Function} onAuthenticated - Callback exécuté si l'utilisateur est authentifié.
-     * @param {Function} onUnauthenticated - Callback exécuté si l'utilisateur n'est pas authentifié.
+     * Accesses a protected feature by checking authentication.
+     * @param {Function} onAuthenticated - Callback executed if the user is authenticated.
+     * @param {Function} onUnauthenticated - Callback executed if the user is not authenticated.
      */
     accessFeature(onAuthenticated, onUnauthenticated) {
         if (!this.clerk) {
@@ -56,38 +49,68 @@ class AuthStore {
             return;
         }
 
-        accessProtectedFeature(this.clerk, 
-            (userInfo) => {
+        if (this.userInfo) {
+            console.log('User is already authenticated in the store.');
+            onAuthenticated(this.userInfo);
+            return;
+        }
+
+        if (this.clerk.user) {
+            console.log('Clerk already has an authenticated user.');
+            const userInfo = this.clerk.user;
+            runInAction(() => {
+                this.userInfo = userInfo;
+            });
+            onAuthenticated(userInfo);
+            return;
+        }
+
+        // Pass onUnauthenticated to showSignInForm
+        showSignInForm(this.clerk, onUnauthenticated);
+
+        // Prevent multiple listeners
+        if (this.authenticationListener) {
+            this.clerk.removeListener(this.authenticationListener);
+            this.authenticationListener = null;
+        }
+
+        // Add listener for authentication changes
+        this.authenticationListener = this.clerk.addListener(({ session }) => {
+            if (session) {
+                console.log('User has logged in:', this.clerk.user);
+                const userInfo = this.clerk.user;
                 runInAction(() => {
                     this.userInfo = userInfo;
                 });
                 onAuthenticated(userInfo);
-            }, 
-            () => {
-                if (onUnauthenticated) {
-                    onUnauthenticated();
-                } else {
-                    // Afficher la modal de connexion via la fonction showSignInForm
-                    // Vous pouvez choisir d'intégrer showSignInForm directement ici si nécessaire
-                }
+
+                // Remove listener after use
+                this.clerk.removeListener(this.authenticationListener);
+                this.authenticationListener = null;
             }
-        );
+        });
     }
 
-    /**
-     * Gère la déconnexion de l'utilisateur.
-     */
     async logout() {
         if (!this.clerk) return;
 
         try {
             await this.clerk.signOut();
+
+            // Remove authentication listener if it exists
+            if (this.authenticationListener) {
+                this.clerk.removeListener(this.authenticationListener);
+                this.authenticationListener = null;
+                console.log("Authentication listener has been removed.");
+            }
+
             runInAction(() => {
                 this.userInfo = null;
             });
+
             console.log("User has been signed out.");
-            
-            // Actions supplémentaires après la déconnexion, si nécessaire
+
+            // Additional actions after logout, if necessary
             this.cleanupData();
             this.redirectToHomePage();
         } catch (error) {
@@ -95,17 +118,11 @@ class AuthStore {
         }
     }
 
-    /**
-     * Nettoie les données spécifiques après la déconnexion.
-     */
     cleanupData() {
-        // Implémentez la logique de nettoyage ici
+        // Implement your cleanup logic here
         console.log("Cleaning up user data...");
     }
 
-    /**
-     * Redirige l'utilisateur vers la page d'accueil après la déconnexion.
-     */
     redirectToHomePage() {
         window.location.href = '/';
     }

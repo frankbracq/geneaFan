@@ -23,6 +23,7 @@ export function setupProtectedFeatureEventListeners(authStore) {
             authStore.accessFeature(
                 async (userInfo) => {
                     // Cas où l'utilisateur est authentifié
+                    console.log('Utilisateur authentifié:', userInfo.id);  
                     switch (action) {
                         case 'fetchGedcomFiles':
                             try {

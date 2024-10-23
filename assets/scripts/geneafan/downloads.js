@@ -125,6 +125,7 @@ export async function generatePdf(watermark = true) {
             const fontSize = 100;
 
             doc.fontSize(fontSize);
+            doc.font('Helvetica');
 
             const textWidth = doc.widthOfString(watermarkText);
             const isLandscape = doc.options.layout === 'landscape';
