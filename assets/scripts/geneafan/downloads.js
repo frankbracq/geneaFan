@@ -1,3 +1,4 @@
+import '../vendor/pdfkitFontRegister.js';
 import { mmToPoints, mmToPixels } from './utils.js';
 import { Modal } from 'bootstrap';
 import configStore from './stores/configStore.js';
@@ -124,6 +125,7 @@ export async function generatePdf(watermark = true) {
             const watermarkText = 'Genealog.ie';
             const fontSize = 100;
 
+            doc.font('Helvetica');
             doc.fontSize(fontSize);
             doc.font('Helvetica');
 

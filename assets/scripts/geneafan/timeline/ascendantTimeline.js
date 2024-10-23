@@ -94,7 +94,7 @@ export async function initializeAscendantTimeline() {
 
     // Generate the timeline HTML content
     const timelineHTML = generateTimelineEvents(groupedEvents);
-    // console.log("Generated timeline HTML:", timelineHTML);
+    console.log("Generated timeline HTML:", timelineHTML);
 
     // Insert the generated timeline HTML into the DOM
     const ascendantsTimelineDiv = document.getElementById("ascendantTimeline");
