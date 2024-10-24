@@ -63,6 +63,10 @@ let previousDimensions = null;
 const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
 console.log('Clerk Publishable Key:', publishableKey);
 
+window.addEventListener('beforeunload', function (e) {
+    console.log('La page est sur le point de se recharger ou de se fermer.');
+});
+
 document.addEventListener("DOMContentLoaded", async function () {
     console.log("DOMContentLoaded fired.");
 

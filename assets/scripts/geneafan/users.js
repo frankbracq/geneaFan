@@ -1,15 +1,11 @@
-
-import { reaction } from "mobx";
-import { Modal } from "bootstrap";
-
 /**
- * Fonction pour accéder à une fonctionnalité protégée au sein de l'application.
- * Elle vérifie si l'utilisateur est authentifié et, si oui, exécute le callback authentifié.
- * Sinon, elle exécute le callback non authentifié.
+ * Function to access a protected feature within the application.
+ * It checks if the user is authenticated and, if so, executes the authenticated callback.
+ * Otherwise, it executes the unauthenticated callback.
  *
- * @param {Clerk} clerk - Instance de Clerk initialisée.
- * @param {Function} onAuthenticated - Fonction à exécuter si l'utilisateur est authentifié.
- * @param {Function} [onUnauthenticated] - Fonction à exécuter si l'utilisateur n'est pas authentifié.
+ * @param {Clerk} clerk - Initialized Clerk instance.
+ * @param {Function} onAuthenticated - Function to execute if the user is authenticated.
+ * @param {Function} [onUnauthenticated] - Function to execute if the user is not authenticated.
  */
 export function accessProtectedFeature(clerk, onAuthenticated, onUnauthenticated) {
     handleUserAuthentication(clerk, (userInfo) => {
@@ -21,7 +17,7 @@ export function accessProtectedFeature(clerk, onAuthenticated, onUnauthenticated
             if (typeof onUnauthenticated === 'function') {
                 onUnauthenticated();
             } else {
-                // Par défaut, afficher le formulaire de connexion
+                // By default, display the sign-in form
                 showSignInForm(clerk);
             }
         }
@@ -29,12 +25,12 @@ export function accessProtectedFeature(clerk, onAuthenticated, onUnauthenticated
 }
 
 /**
- * Fonction pour gérer l'authentification de l'utilisateur.
- * Elle vérifie si Clerk est prêt, récupère l'utilisateur actuel et exécute la callback avec les informations utilisateur.
+ * Function to handle user authentication.
+ * It checks if Clerk is ready, retrieves the current user, and executes the callback with user information.
  *
- * @param {Clerk} clerk - Instance de Clerk initialisée.
- * @param {Function} callback - Fonction à exécuter avec les informations de l'utilisateur ou null.
- * @returns {Function} - Fonction de nettoyage pour retirer l'écouteur d'authentification.
+ * @param {Clerk} clerk - Initialized Clerk instance.
+ * @param {Function} callback - Function to execute with user information or null.
+ * @returns {Function} - Cleanup function to remove the authentication listener.
  */
 let authenticationListener = null;
 
@@ -99,60 +95,51 @@ export async function handleUserAuthentication(clerk, callback) {
 }
 
 /**
- * Function to display the sign-in form in a Bootstrap modal.
+ * Function to display the sign-in form
  *
- * @param {Clerk} clerk - Initialized instance of Clerk.
+ * @param {Clerk} clerk - Initialized Clerk instance.
  * @param {Function} [onUnauthenticated] - Callback to execute if the user closes the modal without authenticating.
  */
 export function showSignInForm(clerk, onUnauthenticated) {
-    console.log("Displaying the sign-in form in the Bootstrap modal.");
+    console.log("Displaying the sign-in form with clerk.openSignIn().");
 
-    // Mount the Clerk sign-in form in the div with id 'sign-in'
-    const signInDiv = document.getElementById('sign-in');
-    if (!signInDiv) {
-        console.error("Element with ID 'sign-in' not found.");
-        return;
-    }
+    // Variable to store the unsubscribe function
+    let unsubscribe;
 
-    clerk.mountSignIn(signInDiv);
-
-    // Initialize the Bootstrap modal
-    const signInModalElement = document.getElementById('signInModal');
-    if (!signInModalElement) {
-        console.error("Element with ID 'signInModal' not found.");
-        return;
-    }
-    const signInModal = new Modal(signInModalElement, {
-        backdrop: 'static', // Prevent closing by clicking outside
-        keyboard: false     // Prevent closing with the Escape key
-    });
-
-    // Display the modal
-    signInModal.show();
-
-    // Add an event listener for when the modal is hidden
-    signInModalElement.addEventListener('hidden.bs.modal', () => {
-        console.log("Sign-in modal has been closed.");
-
-        // Check if the user is authenticated
+    // Function to handle the overlay close event (function declaration)
+    function handleOverlayClose() {
+        console.log("The sign-in component has been closed.");
         if (!clerk.user && typeof onUnauthenticated === 'function') {
+            console.log("The user is not authenticated. Executing onUnauthenticated.");
             onUnauthenticated();
+        } else {
+            console.log("The user is authenticated.");
         }
+        // Remove the listener by calling unsubscribe()
+        if (unsubscribe) {
+            unsubscribe();
+        }
+    }
 
-        // Optionally, clean up the sign-in form
-        clerk.unmountSignIn(signInDiv);
+    // Assign the unsubscribe function
+    unsubscribe = clerk.addListener(({ openSignIn }) => {
+        if (!openSignIn) {
+            handleOverlayClose();
+        }
     });
 
-    // Optionally, add a listener for when the modal is fully shown
-    signInModalElement.addEventListener('shown.bs.modal', () => {
-        console.log("Sign-in modal is now fully shown.");
+    // Open the sign-in overlay
+    clerk.openSignIn({
+        routing: 'virtual',
+        afterSignInUrl: null,
+        // redirectUrl: null,
     });
 }
 
 /**
- * Fonction pour gérer la déconnexion de l'utilisateur.
+ * Function to handle user logout.
  *
- * @param {Clerk} clerk - Instance de Clerk initialisée.
+ * @param {Clerk} clerk - Initialized Clerk instance.
  */
 export async function handleLogout(clerk) {
     try {

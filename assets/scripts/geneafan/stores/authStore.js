@@ -123,9 +123,9 @@ class AuthStore {
         console.log("Cleaning up user data...");
     }
 
-    redirectToHomePage() {
-        window.location.href = '/';
-    }
+    // redirectToHomePage() {
+    //    window.location.href = '/';
+    // }
 }
 
 const authStore = new AuthStore();

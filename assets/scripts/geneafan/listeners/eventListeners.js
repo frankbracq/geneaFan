@@ -66,8 +66,8 @@ const updateConfig = action(newConfig => {
     configStore.setConfig(newConfig);
 });
 
-// Setup parameter event listeners
-export function setupParameterEventListeners() {
+// Setup fan parameter event listeners
+export function setupFanParameterEventListeners() {
     document.querySelectorAll('.parameter').forEach(item => {
         item.addEventListener('change', onSettingChange);
     });
@@ -278,37 +278,58 @@ function setupTabAndUIEventListeners() {
 }
 
 /**
-* Fonction pour configurer tous les écouteurs d'événements.
-*
-* @param {AuthStore} authStore - Instance du store MobX pour l'authentification.
-*/
+ * Function to set up all event listeners.
+ *
+ * @param {AuthStore} authStore - Instance of the MobX store for authentication.
+ */
+let eventListenersInitialized = false;
+
 export const setupAllEventListeners = (authStore) => {
-   const initializeEventListeners = () => {
-       document.addEventListener('click', event => {
-           handleCityLinkClick(event);
-           closePopoverOnClickOutside(event);
-       });
+    // Check if event listeners have already been initialized
+    if (eventListenersInitialized) {
+        return;
+    }
+    
+    // Mark event listeners as initialized
+    eventListenersInitialized = true;
 
-       setupParameterEventListeners();
-       setupTabAndUIEventListeners();
-       setupFileLoadingEventListeners();
-       setupUndoRedoEventListeners();
-       setTimeout(() => {
-           setupResponsiveTabs();
-           setupTabResizeListener();
-       }, 0);
+    // Function to initialize all event listeners
+    const initializeEventListeners = () => {
+        // Add a click event listener to the document
+        document.addEventListener('click', event => {
+            handleCityLinkClick(event); // Handle city link clicks
+            closePopoverOnClickOutside(event); // Close popovers when clicking outside
+        });
 
-       // Appel de la fonction pour les fonctionnalités protégées via le store MobX
-       setupProtectedFeatureEventListeners(authStore);
-   };
+        // Set up event listeners for fan parameters
+        setupFanParameterEventListeners();
+        // Set up event listeners for tabs and UI elements
+        setupTabAndUIEventListeners();
+        // Set up event listeners for file loading
+        setupFileLoadingEventListeners();
+        // Set up event listeners for undo and redo actions
+        setupUndoRedoEventListeners();
+        // Set up responsive tabs and tab resize listener after a short delay
+        setTimeout(() => {
+            setupResponsiveTabs();
+            setupTabResizeListener();
+        }, 0);
 
-   if (document.readyState === "loading") {
-       document.addEventListener('DOMContentLoaded', initializeEventListeners);
-   } else {
-       initializeEventListeners();
-   }
+        // Call the function to set up event listeners for protected features using the MobX store
+        setupProtectedFeatureEventListeners(authStore);
+    };
+
+    // Check if the document is still loading
+    if (document.readyState === "loading") {
+        // If the document is loading, set up event listeners after the DOM content is loaded
+        document.addEventListener('DOMContentLoaded', initializeEventListeners);
+    } else {
+        // If the document is already loaded, initialize event listeners immediately
+        initializeEventListeners();
+    }
 }
 
+/*
 // Setup advanced modal
 export function setupAdvancedModal(modalPath) {
     $('#advanced-parameters').click(function() {
@@ -316,4 +337,4 @@ export function setupAdvancedModal(modalPath) {
             $(this).modal('show');
         });
     });
-}
+}*/  
