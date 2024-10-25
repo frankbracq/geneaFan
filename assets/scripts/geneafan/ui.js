@@ -1,4 +1,4 @@
-import { reaction, action, autorun } from 'mobx';
+import { reaction, autorun } from './stores/mobx-config';
 import authStore from './stores/authStore.js';
 import configStore from './stores/configStore.js';
 import ShareFormStore from './stores/shareFormStore.js';
