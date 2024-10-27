@@ -1,4 +1,4 @@
-import { reaction, autorun } from './stores/mobx-config';
+import { reaction, autorun, runInAction } from './stores/mobx-config';
 import authStore from './stores/authStore.js';
 import configStore from './stores/configStore.js';
 import ShareFormStore from './stores/shareFormStore.js';
@@ -45,9 +45,6 @@ import {
 import { googleMapManager } from './mapManager.js';
 import { initializeAscendantTimeline } from './timeline/ascendantTimeline.js';
 import {
-    showSignInForm
-} from './users.js';
-import {
     createGedcomModal,
     toggleShareForm,
     sanitizeFileId
@@ -71,51 +68,57 @@ document.addEventListener("DOMContentLoaded", async function () {
     console.log("DOMContentLoaded fired.");
 
     // Initialize Clerk via the MobX store
-    await authStore.initializeClerk(publishableKey);
+    const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
+    console.log('Clerk Publishable Key:', publishableKey);
+    
+    try {
+        await authStore.initializeClerk(publishableKey);
+        
+        initPage();
+        setupAllEventListeners(authStore);
 
-    // Call initPage after Clerk initialization
-    initPage();
+        // Add event listener for the sign-in button
+        const signInButton = document.getElementById('sign-in-button');
+        if (signInButton) {
+            signInButton.addEventListener('click', () => {
+                authStore.accessFeature(
+                    () => {}, // success callback vide car l'UI sera mise à jour via MobX
+                    () => console.log('Sign-in cancelled or failed')
+                );
+            });
+        }
 
-    // Set up all event listeners with Clerk via MobX
-    setupAllEventListeners(authStore);
+        // Autorun pour la gestion de l'UI d'authentification
+        autorun(() => {
+            const userInfo = authStore.userInfo;
+            const signInButton = document.getElementById('sign-in-button');
+            const userButtonDiv = document.getElementById('user-button');
 
-    // Add event listener for the sign-in button
-    const signInButton = document.getElementById('sign-in-button');
-    if (signInButton) {
-        signInButton.addEventListener('click', () => {
-            showSignInForm(authStore.clerk);
+            if (!signInButton || !userButtonDiv) {
+                console.error("User controls elements not found.");
+                return;
+            }
+
+            if (userInfo) {
+                signInButton.style.display = 'none';
+                userButtonDiv.style.display = 'block';
+
+                if (!userButtonDiv.hasChildNodes() && authStore.clerk) {
+                    authStore.clerk.mountUserButton(userButtonDiv);
+                }
+            } else {
+                userButtonDiv.style.display = 'none';
+                signInButton.style.display = 'block';
+                
+                while (userButtonDiv.firstChild) {
+                    userButtonDiv.removeChild(userButtonDiv.firstChild);
+                }
+            }
         });
+    } catch (error) {
+        console.error("Error initializing Clerk:", error);
     }
 
-    // Autorun to toggle user controls
-    autorun(() => {
-        const userInfo = authStore.userInfo;
-
-        const signInButton = document.getElementById('sign-in-button');
-        const userButtonDiv = document.getElementById('user-button');
-
-        if (!signInButton || !userButtonDiv) {
-            console.error("User controls elements not found.");
-            return;
-        }
-
-        if (userInfo) {
-            // User is authenticated
-            signInButton.style.display = 'none';
-            userButtonDiv.style.display = 'block';
-
-            // Mount the Clerk UserButton if not already mounted
-            if (!userButtonDiv.hasChildNodes()) {
-                authStore.clerk.mountUserButton(userButtonDiv);
-            }
-        } else {
-            // User is not authenticated
-            userButtonDiv.style.display = 'none';
-            signInButton.style.display = 'block';
-        }
-    });
-
-    // Hide the overlay after initialization
     const overlay = document.getElementById('overlay');
     if (overlay) {
         overlay.style.display = 'none';
@@ -123,8 +126,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     } else {
         console.error("Element with ID 'overlay' not found.");
     }
-
-    console.log("DOMContentLoaded event handler completed.");
 });
 
 /* BS offcanvas elements management */
@@ -630,9 +631,11 @@ export function displayFan() {
 }
 
 // MobX action to update the configuration after a parameter change
-const updateConfig = action((newConfig) => {
-    configStore.setConfig(newConfig);
-});
+const updateConfig = (newConfig) => {
+    runInAction(() => {
+        configStore.setConfig(newConfig);
+    });
+};
 
 // Function to check if the fan container is visible
 const isFanContainerVisible = () => {
@@ -844,17 +847,21 @@ export async function onFileChange(data) {
             el.disabled = false;
         });
 
-        configStore.setConfig({ root: rootId });
+        runInAction(() => {
+            configStore.setConfig({ root: rootId });
+        });
 
         // Recherchez l'individu correspondant et mettez à jour config.rootPersonName
         const rootPerson = individuals.find((individual) => individual.id === rootId);
         if (rootPerson) {
-            configStore.setConfig({
-                ...configStore.getConfig, // Utilisation correcte du getter
-                rootPersonName: {
-                    name: rootPerson.name,
-                    surname: rootPerson.surname,
-                },
+            runInAction(() => {
+                configStore.setConfig({
+                    ...configStore.getConfig,
+                    rootPersonName: {
+                        name: rootPerson.name,
+                        surname: rootPerson.surname,
+                    },
+                });
             });
         }
     } catch (error) {
@@ -867,17 +874,18 @@ export async function onFileChange(data) {
 
 // Download buttons
 document.getElementById('download-pdf').addEventListener('click', function (event) {
-    event.preventDefault(); // Prevent default link action
+    event.preventDefault();
 
-    // Utiliser la fonction handleUserAuthentication
-    handleUserAuthentication(async (userInfo) => {
-        if (userInfo) {  // Vérifier si les informations de l'utilisateur sont disponibles
-            const userEmail = userInfo.email; // Récupère l'email de l'utilisateur
-            await handleUploadAndPost(rootPersonName, userEmail); // Appel de la fonction avec l'email de l'utilisateur
-        } else {
-            console.error("Erreur lors de la connexion de l'utilisateur.");
-        }
-    });
+    authStore.accessFeature(
+        async (userInfo) => {
+            if (userInfo?.email) {
+                await handleUploadAndPost(rootPersonName, userInfo.email);
+            } else {
+                console.error("User email not available");
+            }
+        },
+        () => console.log("Authentication required for PDF download")
+    );
 });
 
 document.getElementById('download-pdf-watermark').addEventListener('click', function (event) {
@@ -949,7 +957,13 @@ document.querySelector("#print").addEventListener("click", function () {
  * @param {Array} files - List of GEDCOM files to display.
  */
 export function showGedcomFilesModal(files, userInfo) {
+    if (!userInfo) {
+        console.error("User info required to show GEDCOM files modal");
+        return;
+    }
+
     console.log('Showing GEDCOM files modal:', userInfo);
+    
     // Remove existing modal if it exists
     const existingModal = document.getElementById('gedcomFilesModal');
     if (existingModal) {

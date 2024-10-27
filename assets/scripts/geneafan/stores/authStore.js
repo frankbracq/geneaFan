@@ -16,7 +16,19 @@ class AuthStore {
         
         this.clerk = new Clerk(publishableKey);
         try {
-            await this.clerk.load();
+            await this.clerk.load({
+                // Ajouter la configuration globale de Clerk
+                navigate: (to) => false, // Empêcher la navigation automatique
+                appearanceBrowser: {
+                    baseTheme: undefined,
+                    variables: {},
+                    elements: {
+                        formButtonPrimary: 'cursor-pointer',
+                        card: 'rounded-lg shadow-md'
+                    }
+                }
+            });
+            
             runInAction(() => {
                 this.isClerkLoaded = true;
                 
@@ -44,14 +56,16 @@ class AuthStore {
 
     setupAuthListener() {
         if (this.authenticationListener) {
-            this.clerk.removeListener(this.authenticationListener);
+            this.clerk.removeEventListener(this.authenticationListener);
         }
 
-        this.authenticationListener = this.clerk.addListener(({ user }) => {
+        this.authenticationListener = (event) => {
             runInAction(() => {
-                this.userInfo = this.transformUserInfo(user);
+                this.userInfo = event.user ? this.transformUserInfo(event.user) : null;
             });
-        });
+        };
+
+        this.clerk.addListener(this.authenticationListener);
     }
 
     accessFeature(onAuthenticated, onUnauthenticated) {
@@ -74,34 +88,58 @@ class AuthStore {
             return;
         }
 
+        let signInListener;
+        let closeListener;
+
+        const cleanup = () => {
+            if (signInListener) {
+                this.clerk.removeEventListener(signInListener);
+            }
+            if (closeListener) {
+                this.clerk.removeEventListener(closeListener);
+            }
+        };
+
+        signInListener = ({ user, session }) => {
+            if (user && session) {
+                const userInfo = this.transformUserInfo(user);
+                runInAction(() => {
+                    this.userInfo = userInfo;
+                });
+                onAuthenticated(userInfo);
+                cleanup();
+            }
+        };
+
+        closeListener = ({ status }) => {
+            if (status === 'closed' && !this.clerk.user && typeof onUnauthenticated === 'function') {
+                onUnauthenticated();
+                cleanup();
+            }
+        };
+
+        this.clerk.addListener(signInListener);
+        this.clerk.addListener(closeListener);
+
         this.clerk.openSignIn({
             routing: 'virtual',
-            afterSignInUrl: null,
-            redirectUrl: null,
+            afterSignInUrl: window.location.href,
+            redirectUrl: window.location.href,
             appearance: {
                 elements: {
                     formButtonPrimary: 'cursor-pointer',
                     card: 'rounded-lg shadow-md'
                 }
-            }
+            },
+            signUpUrl: null,
+            afterSignUpUrl: null,
+            signInUrl: null,
+            catchCallbackError: true,
+            redirectUrlComplete: window.location.href,
+            handleMagicLinkVerification: true,
+            memorizeLastUsed: true,
+            preventRedirect: true
         });
-
-        const authListener = ({ user, session }) => {
-            if (user && session) {
-                onAuthenticated(this.transformUserInfo(user));
-                this.clerk.removeListener(authListener);
-            }
-        };
-
-        const closeListener = ({ openSignIn }) => {
-            if (!openSignIn && !this.clerk.user && typeof onUnauthenticated === 'function') {
-                onUnauthenticated();
-                this.clerk.removeListener(closeListener);
-            }
-        };
-
-        this.clerk.addListener(authListener);
-        this.clerk.addListener(closeListener);
     }
 
     async logout() {
@@ -111,7 +149,7 @@ class AuthStore {
             await this.clerk.signOut();
             
             if (this.authenticationListener) {
-                this.clerk.removeListener(this.authenticationListener);
+                this.clerk.removeEventListener(this.authenticationListener);
                 this.authenticationListener = null;
             }
 
