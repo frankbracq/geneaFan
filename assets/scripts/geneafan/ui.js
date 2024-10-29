@@ -33,7 +33,7 @@ import {
     downloadPNG,
     fanAsXml,
     generateFileName,
-    downloadPDF, 
+    downloadPDF,
     handleUploadAndPost,
     updateFilename,
 } from "./downloads.js";
@@ -107,6 +107,10 @@ document.addEventListener("DOMContentLoaded", async function () {
             // Mount the Clerk UserButton if not already mounted
             if (!userButtonDiv.hasChildNodes()) {
                 authStore.clerk.mountUserButton(userButtonDiv);
+                authStore.clerk.navigate = () => {
+                    signInButton.style.display = 'block';
+                    userButtonDiv.style.display = 'none';
+                }
             }
         } else {
             // User is not authenticated
@@ -657,7 +661,7 @@ reaction(
 );
 
 /**
- * Handles changes in settings by updating the configuration, 
+ * Handles changes in settings by updating the configuration,
  * redrawing the fan chart, and managing the SVG instance.
  */
 export function onSettingChange() {
