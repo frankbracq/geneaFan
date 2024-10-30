@@ -1,7 +1,7 @@
 import { fetchUserGedcomFiles } from '../gedcom/gedcomFileHandler.js'; 
 import { handleUploadAndPost } from '../downloads.js';
 import { showGedcomFilesModal } from '../ui.js';
-import authStore from '../stores/authStore.js';  // Nouvel import à la place de users.js
+import authStore from '../stores/core/AuthStore.js';  // Nouvel import à la place de users.js
 
 /**
  * Function to set up event listeners for protected features via the MobX store.

@@ -3,7 +3,7 @@ import Uppy from '@uppy/core';
 import AwsS3 from '@uppy/aws-s3';
 import configStore from '../stores/configStore.js';
 import { onFileChange } from "../ui.js";
-import authStore from '../stores/authStore.js';
+import authStore from '../stores/core/AuthStore.js';
 
 let isLoadingFile = false;
 let gedcomFileName = "";
