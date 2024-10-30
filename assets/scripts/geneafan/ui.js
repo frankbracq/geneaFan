@@ -1,26 +1,24 @@
-import { reaction, action, autorun } from 'mobx';
-import authStore from './stores/authStore.js';
-import configStore from './stores/configStore.js';
-import ShareFormStore from './stores/shareFormStore.js';
+// MobX imports
+import { reaction, autorun, runInAction } from './stores/core/mobx-config';
+
+// Store imports
+import {
+    viewStore,
+    dataStore,
+    fanConfigStore,
+    configurationStore,
+    authStore,
+    shareFormStore
+} from "./stores/core";
+
+// Third-party imports
 import _ from 'lodash';
 import svgPanZoom from "svg-pan-zoom";
 import { Modal, Offcanvas, Tooltip } from 'bootstrap';
 import { Loader } from "@googlemaps/js-api-loader";
 import { v4 as uuidv4 } from 'uuid';
-import {
-    setGedFileUploaded,
-    getGedFileUploaded,
-    setFamilyTowns,
-    setSvgPanZoomInstance,
-    getSvgPanZoomInstance,
-    gmapApiKey,
-    getTomSelectInstance,
-    initializeTomSelect,
-    setSourceData,
-    setIndividualsCache,
-    getIndividualsCache,
-    clearAllStates
-} from "./stores/state.js";
+
+// Local imports
 import {
     debounce,
     updateFamilyTownsViaProxy,
@@ -45,14 +43,12 @@ import {
 import { googleMapManager } from './mapManager.js';
 import { initializeAscendantTimeline } from './timeline/ascendantTimeline.js';
 import {
-    showSignInForm
-} from './users.js';
-import {
     createGedcomModal,
     toggleShareForm,
     sanitizeFileId
 }
     from './gedcom/gedcomModalUtils.js';
+
 
 let config;
 let rootPersonName;
@@ -71,51 +67,57 @@ document.addEventListener("DOMContentLoaded", async function () {
     console.log("DOMContentLoaded fired.");
 
     // Initialize Clerk via the MobX store
-    await authStore.initializeClerk(publishableKey);
+    const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
+    console.log('Clerk Publishable Key:', publishableKey);
+    
+    try {
+        await authStore.initializeClerk(publishableKey);
+        
+        initPage();
+        setupAllEventListeners(authStore);
 
-    // Call initPage after Clerk initialization
-    initPage();
+        // Add event listener for the sign-in button
+        const signInButton = document.getElementById('sign-in-button');
+        if (signInButton) {
+            signInButton.addEventListener('click', () => {
+                authStore.accessFeature(
+                    () => {}, // success callback vide car l'UI sera mise à jour via MobX
+                    () => console.log('Sign-in cancelled or failed')
+                );
+            });
+        }
 
-    // Set up all event listeners with Clerk via MobX
-    setupAllEventListeners(authStore);
+        // Autorun pour la gestion de l'UI d'authentification
+        autorun(() => {
+            const userInfo = authStore.userInfo;
+            const signInButton = document.getElementById('sign-in-button');
+            const userButtonDiv = document.getElementById('user-button');
 
-    // Add event listener for the sign-in button
-    const signInButton = document.getElementById('sign-in-button');
-    if (signInButton) {
-        signInButton.addEventListener('click', () => {
-            showSignInForm(authStore.clerk);
+            if (!signInButton || !userButtonDiv) {
+                console.error("User controls elements not found.");
+                return;
+            }
+
+            if (userInfo) {
+                signInButton.style.display = 'none';
+                userButtonDiv.style.display = 'block';
+
+                if (!userButtonDiv.hasChildNodes() && authStore.clerk) {
+                    authStore.clerk.mountUserButton(userButtonDiv);
+                }
+            } else {
+                userButtonDiv.style.display = 'none';
+                signInButton.style.display = 'block';
+                
+                while (userButtonDiv.firstChild) {
+                    userButtonDiv.removeChild(userButtonDiv.firstChild);
+                }
+            }
         });
+    } catch (error) {
+        console.error("Error initializing Clerk:", error);
     }
 
-    // Autorun to toggle user controls
-    autorun(() => {
-        const userInfo = authStore.userInfo;
-
-        const signInButton = document.getElementById('sign-in-button');
-        const userButtonDiv = document.getElementById('user-button');
-
-        if (!signInButton || !userButtonDiv) {
-            console.error("User controls elements not found.");
-            return;
-        }
-
-        if (userInfo) {
-            // User is authenticated
-            signInButton.style.display = 'none';
-            userButtonDiv.style.display = 'block';
-
-            // Mount the Clerk UserButton if not already mounted
-            if (!userButtonDiv.hasChildNodes()) {
-                authStore.clerk.mountUserButton(userButtonDiv);
-            }
-        } else {
-            // User is not authenticated
-            userButtonDiv.style.display = 'none';
-            signInButton.style.display = 'block';
-        }
-    });
-
-    // Hide the overlay after initialization
     const overlay = document.getElementById('overlay');
     if (overlay) {
         overlay.style.display = 'none';
@@ -123,8 +125,6 @@ document.addEventListener("DOMContentLoaded", async function () {
     } else {
         console.error("Element with ID 'overlay' not found.");
     }
-
-    console.log("DOMContentLoaded event handler completed.");
 });
 
 /* BS offcanvas elements management */
@@ -357,41 +357,45 @@ async function resetUI() {
     const fanParametersDisplayElement = document.getElementById("fanParametersDisplay");
     const treeParametersDisplayElement = document.getElementById("treeParametersDisplay");
     const fullscreenButtonElement = document.getElementById("fullscreenButton");
-
+ 
     [...parametersElements, individualSelectElement].forEach((element) => {
         if (element) {
             element.removeEventListener('change', onSettingChange);
         }
     });
-
+ 
     if (individualSelectElement) {
         individualSelectElement.innerHTML = "";
     }
-
-    let tomSelect = getTomSelectInstance();
+ 
+    // Utiliser viewStore pour TomSelect
+    let tomSelect = viewStore.tomSelectInstance;
     if (tomSelect) {
         tomSelect.clearOptions();
         tomSelect.clear();
     }
-
-    const svgPanZoomInstance = getSvgPanZoomInstance();
+ 
+    // Utiliser viewStore pour SVG Pan Zoom
+    const svgPanZoomInstance = viewStore.svgPanZoomInstance;
     if (svgPanZoomInstance) {
         try {
             svgPanZoomInstance.destroy();
         } catch (error) {
             console.error("Erreur lors de la destruction de svgPanZoom:", error);
         }
-        setSvgPanZoomInstance(null);
+        viewStore.setSvgPanZoomInstance(null);
     }
-
+ 
     const fanSvg = document.getElementById("fan");
     if (fanSvg) {
         fanSvg.innerHTML = "";
     }
-    await setFamilyTowns({});
-
+ 
+    // Utiliser dataStore
+    await dataStore.setFamilyTowns({});
+ 
     googleMapManager.clearMap();
-
+ 
     [
         downloadMenuElement,
         fanParametersDisplayElement,
@@ -400,15 +404,16 @@ async function resetUI() {
     ].forEach(el => {
         if (el) el.disabled = true;
     });
-
+ 
     [...parametersElements, individualSelectElement].forEach((element) => {
         if (element) {
             element.addEventListener('change', onSettingChange);
         }
     });
-
-    configStore.resetConfigHistory();
-}
+ 
+    // Utiliser fanConfigStore
+    fanConfigStore.resetConfigHistory();
+ }
 
 let shouldShowInitialMessage = true;
 let filename = "";
@@ -418,25 +423,25 @@ let filename = "";
 const selectDates = document.querySelector("#select-dates") || { value: "1" }; // 0 = yyyy / 1 = ddmmyyyy
 const selectPlaces = document.querySelector("#select-places") || { value: "1" }; // Default number
 const selectContemporary = document.querySelector(
-    "#select-hidden-generations"
+   "#select-hidden-generations"
 ) || { value: "0" }; // Default number
 const selectNameOrder = document.querySelector("#select-name-order") || {
-    value: "0",
+   value: "0",
 }; // Default number
 const selectNameDisplay = document.querySelector("#select-name-display") || {
-    value: "1",
+   value: "1",
 }; // Default number
 const substituteEvents = document.querySelector("#substitute-events") || {
-    checked: false,
+   checked: false,
 }; // Default boolean
 const showChronology = document.querySelector("#show-chronology") || {
-    checked: false,
+   checked: false,
 }; // Default boolean
 const title = document.querySelector("#title") || { value: "" }; // Default string
-const titleSize = document.querySelector("#title-size") || { value: "100" }; // Default number, assuming 100 as 1.00 after division
+const titleSize = document.querySelector("#title-size") || { value: "100" }; // Default number
 const titleMargin = document.querySelector("#title-margin") || { value: "25" }; // Default number
 const showInvalidDates = document.querySelector("#show-invalid-dates") || {
-    checked: false,
+   checked: false,
 }; // Default boolean
 const defaultWeightGenValues = {
     "#weightg1": "100",
@@ -625,14 +630,17 @@ export function displayFan() {
         console.error("L'élément SVG '#fan' n'a pas été trouvé dans le DOM.");
     }
 
-    setSvgPanZoomInstance(instance);
+    // Remplacer setSvgPanZoomInstance par viewStore
+    viewStore.setSvgPanZoomInstance(instance);
     return instance;
 }
 
 // MobX action to update the configuration after a parameter change
-const updateConfig = action((newConfig) => {
-    configStore.setConfig(newConfig);
-});
+const updateConfig = (newConfig) => {
+    runInAction(() => {
+        fanConfigStore.setConfig(newConfig);
+    });
+};
 
 // Function to check if the fan container is visible
 const isFanContainerVisible = () => {
@@ -642,7 +650,7 @@ const isFanContainerVisible = () => {
 
 // MobX reaction to monitor changes in config.root
 reaction(
-    () => configStore.config.root,
+    () => fanConfigStore.config.root,
     (root) => {
         if (!isFanContainerVisible()) {
             console.warn(
@@ -657,9 +665,9 @@ reaction(
 );
 
 /**
- * Handles changes in settings by updating the configuration, 
- * redrawing the fan chart, and managing the SVG instance.
- */
+* Handles changes in settings by updating the configuration, 
+* redrawing the fan chart, and managing the SVG instance.
+*/
 export function onSettingChange() {
     try {
         const selectedValues = getSelectedValues();
@@ -668,34 +676,34 @@ export function onSettingChange() {
             selectedValues.maxGenerations,
             selectedValues.showMarriages
         );
-
+ 
         let config = createConfig(selectedValues);
-        updateConfig(config); // Use MobX action
-
+        updateConfig(config);
+ 
         const hasRootPerson = config.root !== undefined && config.root !== null && config.root !== "";
-
+ 
         let svgElement = document.querySelector('#fan');
-        let svgPanZoomInstance = getSvgPanZoomInstance();
-
+        let svgPanZoomInstance = viewStore.svgPanZoomInstance;  // Utiliser viewStore
+ 
         if (svgElement && svgPanZoomInstance) {
             console.log("SVG and svgPanZoomInstance exist, destroying the instance.");
             svgPanZoomInstance.destroy();
-            setSvgPanZoomInstance(null);
+            viewStore.setSvgPanZoomInstance(null);  // Utiliser viewStore
         } else if (!svgElement) {
             console.warn("SVG not found in the DOM, cannot destroy svgPanZoomInstance.");
         }
-
+ 
         let result;
         result = draw();
-
+ 
         if (!result) {
             console.error("Drawing the fan failed.");
             return false;
         }
         initializeAscendantTimeline();
-
+ 
         displayFan();
-
+ 
         if (hasRootPerson) {
             rootPersonName = formatName(result.rootPersonName);
             filename = (
@@ -703,55 +711,32 @@ export function onSettingChange() {
                 formatName(result.rootPersonName) +
                 " créé sur genealog.ie"
             ).replace(/[|&;$%@"<>()+,]/g, "");
-
+ 
             config.filename = filename;
-            updateConfig(config); // Use MobX action
+            updateConfig(config);
             updateFilename(config.filename);
         } else {
             filename = __("Éventail vide créé sur genealog.ie").replace(/[|&;$%@"<>()+,]/g, "");
             config.filename = filename;
-            updateConfig(config); // Use MobX action
+            updateConfig(config);
             updateFilename(config.filename);
         }
-
+ 
         shouldShowInitialMessage = false;
         document.getElementById('initial-group').style.display = 'none';
         document.getElementById("loading").style.display = "none";
         document.getElementById("overlay").classList.add("overlay-hidden");
-
+ 
         if (dimensions !== previousDimensions) {
             previousDimensions = dimensions;
         }
-
-        // resizeSvg();
-
+ 
         return true;
     } catch (error) {
         console.error("Error in onSettingChange:", error);
         return false;
     }
-}
-
-function handleTabsAndOverlay(shouldShowLoading) {
-    const tabsToDisable = ["tab2", "tab3", "tab4"];
-    tabsToDisable.forEach(tabId => {
-        const tabLink = document.querySelector(`a[href="#${tabId}"]`);
-        if (tabLink) {
-            tabLink.classList.toggle('disabled', shouldShowLoading);
-            tabLink.setAttribute('aria-disabled', shouldShowLoading ? 'true' : 'false');
-            tabLink.setAttribute('tabindex', shouldShowLoading ? '-1' : '0');
-        }
-    });
-
-    if (shouldShowLoading) {
-        document.getElementById('overlay').classList.remove('overlay-hidden');
-        document.getElementById("loading").style.display = "block";
-        document.querySelector('a[href="#tab1"]').click(); // Force l'affichage de tab1
-    } else {
-        document.getElementById("loading").style.display = "none";
-        document.getElementById("overlay").classList.add("overlay-hidden");
-    }
-}
+ }
 
 function findYoungestIndividual(individuals) {
     const individualsWithBirthDates = individuals.map((individual) => {
@@ -774,26 +759,26 @@ function findYoungestIndividual(individuals) {
 }
 
 export async function onFileChange(data) {
-    handleTabsAndOverlay(true); // Activer le chargement et désactiver les onglets
+    handleTabsAndOverlay(true);
 
-    clearAllStates();
+    rootStore.cleanup(); // Remplace clearAllStates()
 
-    if (getGedFileUploaded()) {
+    if (dataStore.gedFileUploaded) {
         resetUI();
     }
-    setGedFileUploaded(true);
+    dataStore.setGedFileUploaded(true);
 
     try {
-        await setFamilyTowns({});
+        await dataStore.setFamilyTowns({});
 
         let json = toJson(data);
         let result = await getAllPlaces(json);
-        setSourceData(result.json);
+        dataStore.setSourceData(result.json);
 
         try {
             await updateFamilyTownsViaProxy();
-            updateIndividualTownsFromFamilyTowns(getIndividualsCache());
-            setIndividualsCache(getIndividualsCache());
+            updateIndividualTownsFromFamilyTowns(dataStore.individualsCache);
+            dataStore.setIndividualsCache(dataStore.individualsCache);
         } catch (error) {
             console.error("Error updating geolocation:", error);
         }
@@ -801,16 +786,29 @@ export async function onFileChange(data) {
         googleMapManager.loadMarkersData();
 
         const selectElement = document.getElementById("individual-select");
-        selectElement.innerHTML = ""; // Efface tout contenu résiduel
+        selectElement.innerHTML = ""; 
         const placeholderOption = new Option("", "", true, true);
         placeholderOption.disabled = true;
         selectElement.appendChild(placeholderOption);
 
-        // Utilisation de configStore pour gérer tomSelect
-        let tomSelect = getTomSelectInstance();
+        // TomSelect handling using viewStore
+        let tomSelect = viewStore.tomSelectInstance;
         if (!tomSelect) {
-            initializeTomSelect();
-            tomSelect = getTomSelectInstance();
+            viewStore.setTomSelectInstance(new TomSelect("#individual-select", {
+                create: false,
+                sortField: {
+                    field: "text",
+                    direction: "asc"
+                },
+                dropdownParent: "body",
+                placeholder: __("geneafan.choose_root_placeholder"),
+                allowClear: true,
+                maxItems: 1,
+                closeAfterSelect: true,
+                dropdownContentClass: 'ts-dropdown-content dropdown-content-modifiers',
+                plugins: ['dropdown_input', 'clear_button']
+            }));
+            tomSelect = viewStore.tomSelectInstance;
         }
 
         tomSelect.clearOptions();
@@ -820,19 +818,19 @@ export async function onFileChange(data) {
         individuals.forEach((individual) => {
             tomSelect.addOption({
                 value: individual.id,
-                text: `${individual.surname} ${individual.name} ${individual.id} ${individual.birthYear ? individual.birthYear : "?"
-                    }-${individual.deathYear ? individual.deathYear : ""}`,
+                text: `${individual.surname} ${individual.name} ${individual.id} ${individual.birthYear ? individual.birthYear : "?"}-${individual.deathYear ? individual.deathYear : ""}`
             });
         });
 
         let rootId;
-        const gedcomFileName = configStore.getConfig.gedcomFileName;
+        const gedcomFileName = fanConfigStore.getConfig.gedcomFileName;
         rootId = (gedcomFileName === "demo.ged") ? "@I111@" : findYoungestIndividual(individuals)?.id;
-        configStore.setTomSelectValue(rootId);
+        tomSelect.setValue(rootId);
 
         const event = new Event("change", { bubbles: true });
         tomSelect.dropdown_content.dispatchEvent(event);
 
+        // Enable UI elements
         [
             ...document.querySelectorAll(".parameter"),
             document.getElementById("individual-select"),
@@ -844,55 +842,56 @@ export async function onFileChange(data) {
             el.disabled = false;
         });
 
-        configStore.setConfig({ root: rootId });
+        fanConfigStore.setConfig({ root: rootId });
 
-        // Recherchez l'individu correspondant et mettez à jour config.rootPersonName
+        // Update root person name in config
         const rootPerson = individuals.find((individual) => individual.id === rootId);
         if (rootPerson) {
-            configStore.setConfig({
-                ...configStore.getConfig, // Utilisation correcte du getter
+            fanConfigStore.setConfig({
+                ...fanConfigStore.getConfig,
                 rootPersonName: {
                     name: rootPerson.name,
                     surname: rootPerson.surname,
-                },
+                }
             });
         }
     } catch (error) {
         console.error("General Error:", error);
     } finally {
-        handleTabsAndOverlay(false); // Désactiver le chargement et activer les onglets
+        handleTabsAndOverlay(false);
         setupPersonLinkEventListener();
     }
 }
 
 // Download buttons
 document.getElementById('download-pdf').addEventListener('click', function (event) {
-    event.preventDefault(); // Prevent default link action
-
-    // Utiliser la fonction handleUserAuthentication
-    handleUserAuthentication(async (userInfo) => {
-        if (userInfo) {  // Vérifier si les informations de l'utilisateur sont disponibles
-            const userEmail = userInfo.email; // Récupère l'email de l'utilisateur
-            await handleUploadAndPost(rootPersonName, userEmail); // Appel de la fonction avec l'email de l'utilisateur
-        } else {
-            console.error("Erreur lors de la connexion de l'utilisateur.");
-        }
-    });
-});
-
-document.getElementById('download-pdf-watermark').addEventListener('click', function (event) {
+    event.preventDefault();
+ 
+    authStore.accessFeature(
+        async (userInfo) => {
+            if (userInfo?.email) {
+                await handleUploadAndPost(rootPersonName, userInfo.email);
+            } else {
+                console.error("User email not available");
+            }
+        },
+        () => console.log("Authentication required for PDF download")
+    );
+ });
+ 
+ document.getElementById('download-pdf-watermark').addEventListener('click', function (event) {
     downloadPDF(
-        config,
+        fanConfigStore.getConfig,  // Utiliser fanConfigStore au lieu de config
         function (blob) {
             downloadContent(blob, generateFileName("pdf"), "pdf");
         },
         true
     );
-
-    event.preventDefault(); // Prevent default link action
-});
-
-document.getElementById('download-svg').addEventListener('click', function (event) {
+ 
+    event.preventDefault();
+ });
+ 
+ document.getElementById('download-svg').addEventListener('click', function (event) {
     let elements = document.querySelectorAll("#boxes *");
     elements.forEach(function (element) {
         element.style.stroke = "rgb(0, 0, 255)";
@@ -900,18 +899,18 @@ document.getElementById('download-svg').addEventListener('click', function (even
         element.setAttribute("stroke-width", "0.01");
     });
     downloadContent(fanAsXml(), generateFileName("svg"), "svg");
-    event.preventDefault(); // Prevent default link action
-});
-
-document.getElementById('download-png-transparency').addEventListener('click', function (event) {
-    downloadPNG(config, true);
-    event.preventDefault(); // Prevent default link action
-});
-
-document.getElementById('download-png-background').addEventListener('click', function (event) {
-    downloadPNG(config, false);
-    event.preventDefault(); // Prevent default link action
-});
+    event.preventDefault();
+ });
+ 
+ document.getElementById('download-png-transparency').addEventListener('click', function (event) {
+    downloadPNG(fanConfigStore.getConfig, true);  // Utiliser fanConfigStore
+    event.preventDefault();
+ });
+ 
+ document.getElementById('download-png-background').addEventListener('click', function (event) {
+    downloadPNG(fanConfigStore.getConfig, false);  // Utiliser fanConfigStore
+    event.preventDefault();
+ });
 
 /*
 document.querySelector("#print").addEventListener("click", function () {
@@ -945,31 +944,37 @@ document.querySelector("#print").addEventListener("click", function () {
 */
 
 /**
- * Function to display the GEDCOM files modal.
- * @param {Array} files - List of GEDCOM files to display.
- */
+* Function to display the GEDCOM files modal.
+* @param {Array} files - List of GEDCOM files to display.
+*/
 export function showGedcomFilesModal(files, userInfo) {
+    if (!userInfo) {
+        console.error("User info required to show GEDCOM files modal");
+        return;
+    }
+ 
     console.log('Showing GEDCOM files modal:', userInfo);
+    
     // Remove existing modal if it exists
     const existingModal = document.getElementById('gedcomFilesModal');
     if (existingModal) {
         existingModal.remove();
         console.log('Existing modal removed.');
     }
-
+ 
     // Create the modal
     const modalDiv = createGedcomModal(files, sanitizeFileId);
     document.body.appendChild(modalDiv);
     console.log('Modal container added to the document body.');
-
+ 
     // Initialize tooltips
     initializeTooltips(modalDiv);
-
+ 
     // Initialize and display the modal
     const gedcomFilesModalElement = document.getElementById('gedcomFilesModal');
     initializeModal(gedcomFilesModalElement);
     console.log('GEDCOM files modal displayed.');
-
+ 
     // Handle event delegation for action icons
     gedcomFilesModalElement.addEventListener('click', handleActionClick);
 
@@ -1031,54 +1036,55 @@ export function showGedcomFilesModal(files, userInfo) {
     }
 
     /**
-     * Function to initialize the share form of a specific file.
-     * @param {string} sanitizedFileId - The sanitized file ID.
-     */
-    async function initializeShareForm(sanitizedFileId) {
-        const shareForm = document.getElementById(`shareForm-${sanitizedFileId}`);
-        if (!shareForm) {
-            console.error(`Share form not found for file ID: ${sanitizedFileId}`);
-            return;
-        }
+    * Function to initialize the share form of a specific file.
+    * @param {string} sanitizedFileId - The sanitized file ID.
+    */
+   async function initializeShareForm(sanitizedFileId) {
+    const shareForm = document.getElementById(`shareForm-${sanitizedFileId}`);
+    if (!shareForm) {
+        console.error(`Share form not found for file ID: ${sanitizedFileId}`);
+        return;
+    }
 
-        // Check if the form has already been initialized
-        if (shareForm.dataset.initialized) {
-            console.log(`The share form for file ID ${sanitizedFileId} is already initialized.`);
-            return;
-        }
+    // Check if the form has already been initialized
+    if (shareForm.dataset.initialized) {
+        console.log(`The share form for file ID ${sanitizedFileId} is already initialized.`);
+        return;
+    }
 
-        // Mark the form as initialized
-        shareForm.dataset.initialized = 'true';
+    // Mark the form as initialized
+    shareForm.dataset.initialized = 'true';
 
-        const shareFormStore = new ShareFormStore();
+    // Reset the share form store pour cette nouvelle instance
+    shareFormStore.reset();
 
-        const emailInputs = shareForm.querySelectorAll('.email-input');
-        if (!emailInputs.length) {
-            console.error(`No email fields found for form ID: shareForm-${sanitizedFileId}`);
-            return;
-        }
+    const emailInputs = shareForm.querySelectorAll('.email-input');
+    if (!emailInputs.length) {
+        console.error(`No email fields found for form ID: shareForm-${sanitizedFileId}`);
+        return;
+    }
 
-        emailInputs.forEach((input, index) => {
-            input.addEventListener('input', (event) => {
-                const email = event.target.value.trim();
-                const isValid = shareFormStore.isValidEmail(email) || email === '';
+    emailInputs.forEach((input, index) => {
+        input.addEventListener('input', (event) => {
+            const email = event.target.value.trim();
+            const isValid = shareFormStore.isValidEmail(email) || email === '';
 
-                if (isValid) {
-                    input.classList.remove('is-invalid');
-                    if (email !== '') {
-                        input.classList.add('is-valid');
-                    } else {
-                        input.classList.remove('is-valid');
-                    }
+            if (isValid) {
+                input.classList.remove('is-invalid');
+                if (email !== '') {
+                    input.classList.add('is-valid');
                 } else {
-                    input.classList.add('is-invalid');
                     input.classList.remove('is-valid');
                 }
+            } else {
+                input.classList.add('is-invalid');
+                input.classList.remove('is-valid');
+            }
 
-                // Update the value in the store
-                shareFormStore.setEmail(index, email);
-            });
+            // Update the value in the store
+            shareFormStore.setEmail(index, email);
         });
+    });
 
         // Select the existing error container or create a new one if it doesn't exist
         let errorContainer = shareForm.querySelector('.error-container');
@@ -1326,84 +1332,83 @@ document.querySelectorAll('input[type=number]').forEach(function (input) {
         if (val < min) input.value = min;
         if (val > max) input.value = max;
     });
-});
-
-function adjustMapHeight() {
+ });
+ 
+ function adjustMapHeight() {
     const offCanvas = document.getElementById("individualMap");
     const offCanvasHeader = document.querySelector(
         "#individualMap .offcanvas-header"
     );
     const mapId = document.getElementById("mapid");
-
+ 
     if (offCanvas && offCanvasHeader && mapId) {
         const offCanvasHeight = offCanvas.clientHeight;
         const headerHeight = offCanvasHeader.clientHeight;
         const mapHeight = offCanvasHeight - headerHeight;
-        mapId.style.height = `${mapHeight}px`; // Ajuster la hauteur de la carte
+        mapId.style.height = `${mapHeight}px`;
     }
-}
-
-function setupOffcanvasMapTrigger() {
-    var offcanvasElement = document.getElementById("individualMap"); // ID de l'élément offcanvas
+ }
+ 
+ function setupOffcanvasMapTrigger() {
+    var offcanvasElement = document.getElementById("individualMap");
     if (offcanvasElement) {
         offcanvasElement.addEventListener("shown.bs.offcanvas", function () {
             googleMapManager.initMapIfNeeded();
-            adjustMapHeight(); // Ajuster la hauteur après l'initialisation de la carte
+            adjustMapHeight();
         });
     }
-}
-
-export function initPage() {
+ }
+ 
+ export function initPage() {
     console.log("Initialisation de la page...");
     if (isReady) {
         document.getElementById('overlay').classList.add('overlay-hidden');
     }
-
+ 
     let userId = localStorage.getItem('userId');
     if (!userId) {
         userId = generateUniqueId();
         localStorage.setItem('userId', userId);
     }
-
+ 
     // Load Google Maps
     const loader = new Loader({
-        apiKey: gmapApiKey,
+        apiKey: configurationStore.getApiKey('gmap'), // Utiliser configurationStore
         version: "weekly",
         libraries: []
     });
-
+ 
     loader
         .load()
         .then(() => {
             if (!googleMapManager.map) {
                 googleMapManager.initMapIfNeeded();
             }
-            setupOffcanvasMapTrigger(); // Configuration de déclencheur pour offcanvas si nécessaire
+            setupOffcanvasMapTrigger();
         })
         .catch((e) => {
             console.error("Error loading Google Maps", e);
         });
-
+ 
     handleUrlParameters();
-}
-
-function handleUrlParameters() {
+ }
+ 
+ function handleUrlParameters() {
     var urlParams = new URLSearchParams(window.location.search);
     var contexte = urlParams.get("contexte");
-
+ 
     if (contexte === "demo") {
         document.querySelector("#download-svg").style.display = "none";
         document.querySelector("#download-png-transparency").style.display = "none";
         document.querySelector("#download-png-background").style.display = "none";
-        // document.querySelector("#advanced-parameters").style.display = "none";
         document.querySelector("#show-missing").closest(".col").style.display = "none";
     }
-}
-
-function generateUniqueId() {
+ }
+ 
+ function generateUniqueId() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();
     } else {
         return uuidv4();
     }
-}
+ }
