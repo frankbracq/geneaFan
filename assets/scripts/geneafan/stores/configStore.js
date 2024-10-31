@@ -1,4 +1,4 @@
-import { makeAutoObservable } from "mobx";
+import { makeAutoObservable } from './mobx-config';
 import TomSelect from 'tom-select';
 import 'tom-select/dist/css/tom-select.css';
 

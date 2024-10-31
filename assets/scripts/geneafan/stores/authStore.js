@@ -1,6 +1,6 @@
 // authStore.js
 
-import { makeAutoObservable, runInAction } from 'mobx';
+import { makeAutoObservable, runInAction } from './mobx-config';
 import { Clerk } from '@clerk/clerk-js';
 import { showSignInForm } from '../users.js';
 
