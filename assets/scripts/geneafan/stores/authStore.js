@@ -20,6 +20,7 @@ class AuthStore {
      */
     async initializeClerk(publishableKey) {
         this.clerk = new Clerk(publishableKey);
+        this.clerk.navigate = () => {}
         try {
             await this.clerk.load();
             runInAction(() => {

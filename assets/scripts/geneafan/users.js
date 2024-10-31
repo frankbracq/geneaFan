@@ -1,3 +1,5 @@
+import authStore from "./stores/authStore";
+
 /**
  * Function to access a protected feature within the application.
  * It checks if the user is authenticated and, if so, executes the authenticated callback.
@@ -107,7 +109,7 @@ export function showSignInForm(clerk, onUnauthenticated) {
     let unsubscribe;
 
     // Function to handle the overlay close event (function declaration)
-    function handleOverlayClose() {
+    function handleOverlayClose(event) {
         console.log("The sign-in component has been closed.");
         if (!clerk.user && typeof onUnauthenticated === 'function') {
             console.log("The user is not authenticated. Executing onUnauthenticated.");
@@ -122,18 +124,36 @@ export function showSignInForm(clerk, onUnauthenticated) {
     }
 
     // Assign the unsubscribe function
-    unsubscribe = clerk.addListener(({ openSignIn }) => {
+    unsubscribe = clerk.addListener(({ openSignIn, ...arg }) => {
         if (!openSignIn) {
             handleOverlayClose();
         }
     });
 
-    // Open the sign-in overlay
-    clerk.openSignIn({
-        routing: 'virtual',
-        afterSignInUrl: null,
-        // redirectUrl: null,
-    });
+    // We need to override the `clerk.navigate` for skip refresh with `/` path,
+    // routing: 'virtual' doesn't work in plain JS implementation, because
+    // `virtual` need for sending path to react-route (for example) and react-router skip
+    // re-render, if this re-render unnecessary
+    clerk.navigate = () => {
+        const signInButton = document.getElementById('sign-in-button');
+        const userButtonDiv = document.getElementById('user-button');
+
+        signInButton.style.display = 'none';
+        userButtonDiv.style.display = 'block';
+
+        // Mount the Clerk UserButton if not already mounted
+        if (!userButtonDiv.hasChildNodes()) {
+            clerk.mountUserButton(userButtonDiv);
+
+            clerk.navigate = () => {
+                onUnauthenticated?.()
+                signInButton.style.display = 'block';
+                userButtonDiv.style.display = 'none';
+            }
+        }
+    }
+
+    clerk.openSignIn();
 }
 
 /**
