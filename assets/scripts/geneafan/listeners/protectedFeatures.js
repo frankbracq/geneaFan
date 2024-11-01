@@ -1,13 +1,14 @@
 import { fetchUserGedcomFiles } from '../gedcom/gedcomFileHandler.js'; 
 import { handleUploadAndPost } from '../downloads.js';
 import { showGedcomFilesModal } from '../ui.js'
+import authStore from '../stores/authStore.js'; // Centralized import of the authentication store
 
 /**
  * Function to set up event listeners for protected features via the MobX store.
  *
- * @param {AuthStore} authStore - Instance of the MobX store for authentication.
+ * @param {AuthStore} authStoreInstance - Instance of the MobX store for authentication.
  */
-export function setupProtectedFeatureEventListeners(authStore) {
+export function setupProtectedFeatureEventListeners(authStoreInstance) {
     console.log("Setting up protected feature event listeners.");
 
     // Select all elements with the class 'protected-feature'
@@ -20,7 +21,7 @@ export function setupProtectedFeatureEventListeners(authStore) {
             console.log(`Protected feature "${action}" clicked.`);
 
             // Use accessFeature via the MobX store to handle authentication
-            authStore.accessFeature(
+            authStoreInstance.accessFeature(
                 async (userInfo) => {
                     // Case where the user is authenticated
                     console.log('User authenticated:', userInfo.id);  
@@ -53,8 +54,7 @@ export function setupProtectedFeatureEventListeners(authStore) {
                 }, 
                 () => {
                     // Case where the user is not authenticated
-                    // You can add specific actions if necessary
-                    // By default, the sign-in form is already displayed via accessFeature
+                    // Actions handled by AuthStore
                 }
             );
         });

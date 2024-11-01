@@ -2,7 +2,6 @@
 
 import { makeAutoObservable, runInAction } from './mobx-config';
 import { Clerk } from '@clerk/clerk-js';
-import { showSignInForm } from '../users.js';
 
 class AuthStore {
     clerk = null;
@@ -12,6 +11,8 @@ class AuthStore {
 
     constructor() {
         makeAutoObservable(this);
+        // Initialize authentication listener
+        this.authenticationListener = null;
     }
 
     /**
@@ -67,11 +68,11 @@ class AuthStore {
         }
 
         // Pass onUnauthenticated to showSignInForm
-        showSignInForm(this.clerk, onUnauthenticated);
+        this.showSignInForm(this.clerk, onUnauthenticated);
 
         // Prevent multiple listeners
         if (this.authenticationListener) {
-            this.clerk.removeListener(this.authenticationListener);
+            this.authenticationListener();
             this.authenticationListener = null;
         }
 
@@ -86,10 +87,141 @@ class AuthStore {
                 onAuthenticated(userInfo);
 
                 // Remove listener after use
-                this.clerk.removeListener(this.authenticationListener);
+                this.authenticationListener();
                 this.authenticationListener = null;
             }
         });
+    }
+
+    /**
+     * Handles user authentication.
+     * @param {Clerk} clerk - Initialized Clerk instance.
+     * @param {Function} callback - Function to execute with user information or null.
+     */
+    async handleUserAuthentication(clerk, callback) {
+        // Moved from users.js
+        console.log("Handling user authentication.");
+        try {
+            if (!clerk.loaded) {
+                console.log("Clerk not loaded. Attempting to load Clerk...");
+                await clerk.load();
+                console.log("Clerk loaded successfully.");
+            } else {
+                console.log("Clerk is already loaded.");
+            }
+
+            const user = clerk.user;
+
+            if (user) {
+                console.log("User is authenticated:", user);
+                const userInfo = {
+                    id: user.id,
+                    email: user.primaryEmailAddress?.emailAddress,
+                    fullName: user.fullName,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    profileImageUrl: user.profileImageUrl,
+                };
+                callback(userInfo);
+            } else {
+                console.log("No user is authenticated.");
+                callback(null);
+            }
+
+            // Prevent multiple listeners
+            if (this.authenticationListener) {
+                this.authenticationListener();
+                this.authenticationListener = null;
+            }
+
+            // Add listener for authentication changes
+            this.authenticationListener = clerk.addListener(({ session }) => {
+                const currentUser = clerk.user;
+                if (currentUser) {
+                    console.log("User has logged in:", currentUser);
+                    const userInfo = {
+                        id: currentUser.id,
+                        email: currentUser.primaryEmailAddress?.emailAddress,
+                        fullName: currentUser.fullName,
+                        firstName: currentUser.firstName,
+                        lastName: currentUser.lastName,
+                        profileImageUrl: currentUser.profileImageUrl,
+                    };
+                    callback(userInfo);
+                } else {
+                    console.log("User has logged out.");
+                    callback(null);
+                }
+            });
+        } catch (error) {
+            console.error("Error in handleUserAuthentication:", error);
+            callback(null);
+        }
+    }
+
+    /**
+     * Displays the sign-in form.
+     * @param {Clerk} clerk - Initialized Clerk instance.
+     * @param {Function} [onUnauthenticated] - Callback if the user closes the modal without authenticating.
+     */
+    showSignInForm(clerk, onUnauthenticated) {
+        // Moved from users.js
+        console.log("Displaying the sign-in form with clerk.openSignIn().");
+
+        let unsubscribe;
+
+        const handleOverlayClose = (event) => {
+            console.log("The sign-in component has been closed.");
+            if (!clerk.user && typeof onUnauthenticated === 'function') {
+                console.log("The user is not authenticated. Executing onUnauthenticated.");
+                onUnauthenticated();
+            } else {
+                console.log("The user is authenticated.");
+            }
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
+
+        unsubscribe = clerk.addListener(({ openSignIn, ...arg }) => {
+            if (!openSignIn) {
+                handleOverlayClose();
+            }
+        });
+
+        clerk.navigate = () => {
+            const signInButton = document.getElementById('sign-in-button');
+            const userButtonDiv = document.getElementById('user-button');
+
+            signInButton.style.display = 'none';
+            userButtonDiv.style.display = 'block';
+
+            if (!userButtonDiv.hasChildNodes()) {
+                clerk.mountUserButton(userButtonDiv);
+
+                clerk.navigate = () => {
+                    onUnauthenticated?.();
+                    signInButton.style.display = 'block';
+                    userButtonDiv.style.display = 'none';
+                };
+            }
+        };
+
+        clerk.openSignIn();
+    }
+
+    /**
+     * Handles user logout.
+     * @param {Clerk} clerk - Initialized Clerk instance.
+     */
+    async handleLogout(clerk) {
+        // Moved from users.js
+        try {
+            await clerk.signOut();
+            console.log("User has been signed out.");
+        } catch (error) {
+            console.error("Error during sign-out:", error);
+        }
     }
 
     async logout() {
@@ -100,7 +232,7 @@ class AuthStore {
 
             // Remove authentication listener if it exists
             if (this.authenticationListener) {
-                this.clerk.removeListener(this.authenticationListener);
+                this.authenticationListener();
                 this.authenticationListener = null;
                 console.log("Authentication listener has been removed.");
             }
@@ -127,6 +259,30 @@ class AuthStore {
     // redirectToHomePage() {
     //    window.location.href = '/';
     // }
+
+    /**
+     * Function to access a protected feature within the application.
+     * It checks if the user is authenticated and, if so, executes the authenticated callback.
+     * Otherwise, it executes the unauthenticated callback.
+     *
+     * @param {Function} onAuthenticated - Function to execute if the user is authenticated.
+     * @param {Function} [onUnauthenticated] - Function to execute if the user is not authenticated.
+     */
+    accessProtectedFeature(onAuthenticated, onUnauthenticated) {
+        if (!this.userInfo) {
+            console.log("Access denied. User is not authenticated.");
+            if (typeof onUnauthenticated === 'function') {
+                onUnauthenticated();
+            } else {
+                // By default, display the sign-in form
+                this.showSignInForm(this.clerk);
+            }
+            return;
+        }
+
+        console.log("Access granted to the protected feature.");
+        onAuthenticated(this.userInfo);
+    }
 }
 
 const authStore = new AuthStore();

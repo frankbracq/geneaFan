@@ -8,6 +8,7 @@ import { loadGedcomFile } from '../gedcom/gedcomFileHandler.js';
 import { googleMapManager } from '../mapManager.js';
 import { Offcanvas, Tooltip } from 'bootstrap';
 import screenfull from 'screenfull';
+import authStore from '../stores/authStore.js'; // Ensure the correct relative path
 
 // WeakMap to store event listener references
 const eventListenersMap = new WeakMap();
@@ -337,4 +338,4 @@ export function setupAdvancedModal(modalPath) {
             $(this).modal('show');
         });
     });
-}*/  
+}*/

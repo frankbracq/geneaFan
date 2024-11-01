@@ -45,9 +45,6 @@ import {
 import { googleMapManager } from './mapManager.js';
 import { initializeAscendantTimeline } from './timeline/ascendantTimeline.js';
 import {
-    showSignInForm
-} from './users.js';
-import {
     createGedcomModal,
     toggleShareForm,
     sanitizeFileId
@@ -83,7 +80,7 @@ document.addEventListener("DOMContentLoaded", async function () {
     const signInButton = document.getElementById('sign-in-button');
     if (signInButton) {
         signInButton.addEventListener('click', () => {
-            showSignInForm(authStore.clerk);
+            authStore.showSignInForm(authStore.clerk);
         });
     }
 
@@ -873,11 +870,11 @@ export async function onFileChange(data) {
 document.getElementById('download-pdf').addEventListener('click', function (event) {
     event.preventDefault(); // Prevent default link action
 
-    // Utiliser la fonction handleUserAuthentication
-    handleUserAuthentication(async (userInfo) => {
-        if (userInfo) {  // Vérifier si les informations de l'utilisateur sont disponibles
-            const userEmail = userInfo.email; // Récupère l'email de l'utilisateur
-            await handleUploadAndPost(rootPersonName, userEmail); // Appel de la fonction avec l'email de l'utilisateur
+    // Use the handleUserAuthentication function from authStore
+    authStore.handleUserAuthentication(authStore.clerk, async (userInfo) => {
+        if (userInfo) {  // Check if user information is available
+            const userEmail = userInfo.email; // Get the user's email
+            await handleUploadAndPost(rootPersonName, userEmail); // Call the function with the user's email
         } else {
             console.error("Erreur lors de la connexion de l'utilisateur.");
         }
