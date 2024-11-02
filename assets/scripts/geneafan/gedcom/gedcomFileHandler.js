@@ -9,6 +9,125 @@ import authStore from '../stores/authStore.js';
 let isLoadingFile = false;
 let gedcomFileName = "";
 
+let currentModal = null;
+
+const MODAL_STEPS = {
+    SAVE_REQUEST: {
+        title: 'Enregistrer le fichier',
+        content: `
+            <div class="modal-body">
+                Voulez-vous enregistrer votre fichier pour un usage ultérieur ?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-action="no">Non</button>
+                <button type="button" class="btn btn-primary" data-action="yes">Oui</button>
+            </div>
+        `
+    },
+    FAMILY_NAME: {
+        title: 'Nom de la famille',
+        content: `
+            <form id="familyNameForm">
+                <div class="modal-body">
+                    À quelle famille correspond votre fichier Gedcom ?
+                    <input type="text" class="form-control" id="familyNameInput" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        `
+    },
+    UPLOAD_SUCCESS: {
+        title: 'Téléchargement terminé',
+        content: `
+            <div class="modal-body">
+                Votre fichier a été enregistré avec succès !
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-action="close">Fermer</button>
+            </div>
+        `
+    },
+    UPLOADING: {
+        title: 'Téléchargement en cours',
+        content: `
+            <div class="modal-body">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Chargement...</span>
+                    </div>
+                    <p class="mt-2">Téléchargement de votre fichier en cours...</p>
+                </div>
+            </div>
+        `
+    }
+};
+
+function showModal(step, handlers = {}) {
+    if (!currentModal) {
+        const modalContent = document.createElement('div');
+        modalContent.innerHTML = `
+        <div class="modal fade" id="gedcomModal" tabindex="-1" aria-labelledby="gedcomModalLabel" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div id="modalStepContent"></div>
+                </div>
+            </div>
+        </div>
+        `;
+        document.body.appendChild(modalContent);
+        
+        const modalElement = document.getElementById('gedcomModal');
+        currentModal = new Modal(modalElement, {
+            backdrop: 'static',
+            keyboard: false
+        });
+    }
+
+    const modalElement = document.getElementById('gedcomModal');
+    const stepConfig = MODAL_STEPS[step];
+    
+    modalElement.querySelector('.modal-title').textContent = stepConfig.title;
+    modalElement.querySelector('#modalStepContent').innerHTML = stepConfig.content;
+
+    // Détacher les anciens gestionnaires d'événements
+    const oldContent = modalElement.querySelector('#modalStepContent');
+    const newContent = oldContent.cloneNode(true);
+    oldContent.parentNode.replaceChild(newContent, oldContent);
+
+    // Attach handlers
+    Object.entries(handlers).forEach(([selector, handler]) => {
+        const element = modalElement.querySelector(selector);
+        if (element) {
+            if (selector === 'form') {
+                element.onsubmit = (e) => {
+                    e.preventDefault();
+                    handler(e);
+                };
+            } else {
+                element.onclick = handler;
+            }
+        }
+    });
+
+    if (!currentModal.isShown) {
+        currentModal.show();
+    }
+}
+
+function closeModal() {
+    if (currentModal) {
+        currentModal.hide();
+        document.getElementById('gedcomModal').remove();
+        currentModal = null;
+    }
+}
+
 export function loadGedcomFile(input) {
     console.log("Chargement du fichier:", input);
     if (isLoadingFile) {
@@ -59,126 +178,38 @@ export function loadGedcomFile(input) {
 }
 
 function showSaveFileModal(file) {
-    // Création du contenu de la modale
-    const modalContent = document.createElement('div');
-    modalContent.innerHTML = `
-    <div class="modal fade" id="saveFileModal" tabindex="-1" aria-labelledby="saveFileModalLabel" aria-hidden="true">
-      <div class="modal-dialog" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Enregistrer le fichier</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-          </div>
-          <div class="modal-body">
-            Voulez-vous enregistrer votre fichier pour un usage ultérieur ?
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" id="saveFileNoBtn">Non</button>
-            <button type="button" class="btn btn-primary" id="saveFileYesBtn">Oui</button>
-          </div>
-        </div>
-      </div>
-    </div>
-    `;
-
-    // Ajout de la modale au corps du document
-    document.body.appendChild(modalContent);
-
-    // Initialisation de la modale
-    const saveFileModalElement = document.getElementById('saveFileModal');
-    const saveFileModal = new Modal(saveFileModalElement, {
-        backdrop: 'static',
-        keyboard: false
+    showModal('SAVE_REQUEST', {
+        '[data-action="no"]': () => {
+            closeModal();
+            readAndProcessGedcomFile(file);
+        },
+        '[data-action="yes"]': () => {
+            authStore.accessFeature(
+                (userInfo) => {
+                    // Ne pas fermer la modale, juste changer son contenu
+                    showFamilyNameModal(file, userInfo);
+                },
+                () => {
+                    window.alert('Vous devez être authentifié pour enregistrer le fichier.');
+                    closeModal();
+                    readAndProcessGedcomFile(file);
+                }
+            );
+        }
     });
-
-    // Affichage de la modale
-    saveFileModal.show();
-
-    // Gestion du clic sur le bouton 'Non'
-  document.getElementById('saveFileNoBtn').addEventListener('click', function () {
-    // Fermeture et suppression de la modale
-    saveFileModal.hide();
-    saveFileModal.dispose();
-    saveFileModalElement.remove();
-    // Continuer avec l'application
-    readAndProcessGedcomFile(file);
-  });
-
-  // Gestion du clic sur le bouton 'Oui'
-  document.getElementById('saveFileYesBtn').addEventListener('click', function () {
-    // Fermeture et suppression de la modale
-    saveFileModal.hide();
-    saveFileModal.dispose();
-    saveFileModalElement.remove();
-
-    // Procéder à l'authentification de l'utilisateur en utilisant le store MobX
-    authStore.accessFeature(
-      async (userInfo) => {
-        // Cas où l'utilisateur est authentifié
-        showFamilyNameModal(file, userInfo);
-      },
-      () => {
-        // Cas où l'utilisateur n'est pas authentifié
-        window.alert('Vous devez être authentifié pour enregistrer le fichier.');
-        // Continuer avec l'application
-        readAndProcessGedcomFile(file);
-      }
-    );
-  });
 }
 
 function showFamilyNameModal(file, userInfo) {
-    // Création du contenu de la modale
-    const modalContent = document.createElement('div');
-    modalContent.innerHTML = `
-    <div class="modal fade" id="familyNameModal" tabindex="-1" aria-labelledby="familyNameModalLabel" aria-hidden="true">
-      <div class="modal-dialog" role="document">
-        <form id="familyNameForm">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title">Nom de la famille</h5>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-            </div>
-            <div class="modal-body">
-              À quelle famille correspond votre fichier Gedcom ?
-              <input type="text" class="form-control" id="familyNameInput" required>
-            </div>
-            <div class="modal-footer">
-              <button type="submit" class="btn btn-primary">Enregistrer</button>
-            </div>
-          </div>
-        </form>
-      </div>
-    </div>
-    `;
-
-    // Ajout de la modale au corps du document
-    document.body.appendChild(modalContent);
-
-    // Initialisation de la modale
-    const familyNameModalElement = document.getElementById('familyNameModal');
-    const familyNameModal = new Modal(familyNameModalElement, {
-        backdrop: 'static',
-        keyboard: false
-    });
-
-    // Affichage de la modale
-    familyNameModal.show();
-
-    // Gestion de la soumission du formulaire
-    document.getElementById('familyNameForm').addEventListener('submit', function(event) {
-        event.preventDefault();
-        const familyName = document.getElementById('familyNameInput').value.trim();
-        if (familyName) {
-            // Fermeture et suppression de la modale
-            familyNameModal.hide();
-            familyNameModal.dispose();
-            familyNameModalElement.remove();
-            // Procéder au renommage et à l'upload du fichier
-            saveGedcomFile(file, familyName, userInfo);
-        } else {
-            // Afficher un message d'erreur
-            alert('Veuillez entrer le nom de la famille.');
+    showModal('FAMILY_NAME', {
+        'form': (event) => {
+            const familyName = document.getElementById('familyNameInput').value.trim();
+            if (familyName) {
+                // Afficher l'état "uploading" avant de commencer l'upload
+                showModal('UPLOADING');
+                saveGedcomFile(file, familyName, userInfo);
+            } else {
+                alert('Veuillez entrer le nom de la famille.');
+            }
         }
     });
 }
@@ -188,6 +219,7 @@ async function saveGedcomFile(file, familyName, userInfo) {
   const clerkId = userInfo.id;
   if (!clerkId) {
     alert('Impossible de récupérer votre identifiant utilisateur.');
+    closeModal();
     readAndProcessGedcomFile(file);
     return;
   }
@@ -271,16 +303,23 @@ async function saveGedcomFile(file, familyName, userInfo) {
       }
     
       console.log('File metadata saved in Worker KV.');
-      readAndProcessGedcomFile(file); // Process the file after upload
+      showModal('UPLOAD_SUCCESS', {
+        '[data-action="close"]': () => {
+            closeModal();
+            readAndProcessGedcomFile(file);
+        }
+    });
     
     } else {
       console.error('File upload failed:', uploadResult.failed);
       alert('Error during file upload.');
+      closeModal();
     }
     
     } catch (error) {
     console.error('Error during file saving:', error);
     alert('Error during file upload.');
+    closeModal();
   }
 }
 
