@@ -39,13 +39,6 @@ import {
 
 // GEDCOM handling
 import { loadGedcomFile } from './gedcom/gedcomFileHandler.js';
-import {
-    setupAllEventListeners,
-} from "./listeners/eventListeners.js";
-
-// Map and Timeline features
-import { googleMapManager } from './mapManager.js';
-import { initializeAscendantTimeline } from './timeline/ascendantTimeline.js';
 
 // GEDCOM modal utilities
 import {
@@ -53,6 +46,15 @@ import {
     toggleShareForm,
     sanitizeFileId
 } from './gedcom/gedcomModalUtils.js';
+
+// Event listeners
+import {
+    setupAllEventListeners,
+} from "./listeners/eventListeners.js";
+
+// Map and Timeline features
+import { googleMapManager } from './mapManager.js';
+import { initializeAscendantTimeline } from './timeline/ascendantTimeline.js';
 
 let config;
 let rootPersonName;
@@ -783,37 +785,6 @@ document.getElementById('download-png-background').addEventListener('click', fun
     downloadPNG(config, false);
     event.preventDefault(); // Prevent default link action
 });
-
-/*
-document.querySelector("#print").addEventListener("click", function () {
-    function printPdf(url) {
-        const iframe = document.createElement("iframe");
-        iframe.className = "pdfIframe";
-        document.body.appendChild(iframe);
-        iframe.style.position = "absolute";
-        iframe.style.left = "-10000px";
-        iframe.style.top = "-10000px";
-        iframe.onload = function () {
-            setTimeout(function () {
-                iframe.focus();
-                try {
-                    iframe.contentWindow.print();
-                } catch (e) {
-                    // Fallback
-                    console.log("Cannot print, downloading instead");
-                    document.querySelector("#download-pdf").click();
-                }
-                URL.revokeObjectURL(url);
-            }, 1);
-        };
-        iframe.src = url;
-    }
-
-    document.querySelector("#download-pdf").click(); // Workaround (chrome update)
-
-    return false;
-});
-*/
 
 /**
  * Function to display the GEDCOM files modal.
