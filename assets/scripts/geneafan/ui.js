@@ -1,32 +1,31 @@
+// MobX state management
 import { reaction, action, autorun } from 'mobx';
 import authStore from './stores/authStore.js';
 import configStore from './stores/configStore.js';
 import ShareFormStore from './stores/shareFormStore.js';
-import _ from 'lodash';
-import svgPanZoom from "svg-pan-zoom";
-import { Modal, Offcanvas, Tooltip } from 'bootstrap';
-import { Loader } from "@googlemaps/js-api-loader";
-import { v4 as uuidv4 } from 'uuid';
+
+// Utility libraries
+import _ from 'lodash';                 // Utility functions
+import { v4 as uuidv4 } from 'uuid';    // UUID generation
+
+// UI Libraries & Components
+import svgPanZoom from "svg-pan-zoom";  // SVG pan and zoom functionality
+import { Modal, Offcanvas, Tooltip } from 'bootstrap';  // Bootstrap components
+
+// Google Maps
+import { Loader } from "@googlemaps/js-api-loader";  // Google Maps loader
+
+// Application state and utilities
 import {
-    setGedFileUploaded,
-    getGedFileUploaded,
     setFamilyTowns,
     setSvgPanZoomInstance,
     getSvgPanZoomInstance,
     gmapApiKey,
     getTomSelectInstance,
-    initializeTomSelect,
-    setSourceData,
-    setIndividualsCache,
-    getIndividualsCache,
-    clearAllStates
 } from "./stores/state.js";
-import {
-    debounce,
-    updateFamilyTownsViaProxy,
-    updateIndividualTownsFromFamilyTowns,
-} from "./utils.js";
-import { toJson, getIndividualsList, getAllPlaces } from "./parse.js";
+import { debounce } from "./utils.js";
+
+// Core functionality
 import { draw } from "./fan.js";
 import {
     downloadContent,
@@ -37,19 +36,23 @@ import {
     handleUploadAndPost,
     updateFilename,
 } from "./downloads.js";
+
+// GEDCOM handling
 import { loadGedcomFile } from './gedcom/gedcomFileHandler.js';
 import {
     setupAllEventListeners,
-    setupPersonLinkEventListener,
 } from "./listeners/eventListeners.js";
+
+// Map and Timeline features
 import { googleMapManager } from './mapManager.js';
 import { initializeAscendantTimeline } from './timeline/ascendantTimeline.js';
+
+// GEDCOM modal utilities
 import {
     createGedcomModal,
     toggleShareForm,
     sanitizeFileId
-}
-    from './gedcom/gedcomModalUtils.js';
+} from './gedcom/gedcomModalUtils.js';
 
 let config;
 let rootPersonName;
@@ -351,7 +354,7 @@ function resizeSvg() {
     resize();
 }
 
-async function resetUI() {
+export async function resetUI() {
     const parametersElements = document.querySelectorAll(".parameter");
     const individualSelectElement = document.getElementById("individual-select");
     const downloadMenuElement = document.getElementById("download-menu");
@@ -730,139 +733,6 @@ export function onSettingChange() {
     } catch (error) {
         console.error("Error in onSettingChange:", error);
         return false;
-    }
-}
-
-function handleTabsAndOverlay(shouldShowLoading) {
-    const tabsToDisable = ["tab2", "tab3", "tab4"];
-    tabsToDisable.forEach(tabId => {
-        const tabLink = document.querySelector(`a[href="#${tabId}"]`);
-        if (tabLink) {
-            tabLink.classList.toggle('disabled', shouldShowLoading);
-            tabLink.setAttribute('aria-disabled', shouldShowLoading ? 'true' : 'false');
-            tabLink.setAttribute('tabindex', shouldShowLoading ? '-1' : '0');
-        }
-    });
-
-    if (shouldShowLoading) {
-        document.getElementById('overlay').classList.remove('overlay-hidden');
-        document.getElementById("loading").style.display = "block";
-        document.querySelector('a[href="#tab1"]').click(); // Force l'affichage de tab1
-    } else {
-        document.getElementById("loading").style.display = "none";
-        document.getElementById("overlay").classList.add("overlay-hidden");
-    }
-}
-
-function findYoungestIndividual(individuals) {
-    const individualsWithBirthDates = individuals.map((individual) => {
-        const birthDate = individual.birthDate;
-        let date;
-        if (birthDate.includes("/")) {
-            const [day, month, year] = birthDate.split("/").reverse();
-            date = new Date(year, month - 1, day || 1);
-        } else {
-            date = new Date(birthDate, 0, 1);
-        }
-
-        return {
-            id: individual.id,
-            birthDate: date,
-        };
-    });
-
-    return _.maxBy(individualsWithBirthDates, "birthDate");
-}
-
-export async function onFileChange(data) {
-    handleTabsAndOverlay(true); // Activer le chargement et désactiver les onglets
-
-    clearAllStates();
-
-    if (getGedFileUploaded()) {
-        resetUI();
-    }
-    setGedFileUploaded(true);
-
-    try {
-        await setFamilyTowns({});
-
-        let json = toJson(data);
-        let result = await getAllPlaces(json);
-        setSourceData(result.json);
-
-        try {
-            await updateFamilyTownsViaProxy();
-            updateIndividualTownsFromFamilyTowns(getIndividualsCache());
-            setIndividualsCache(getIndividualsCache());
-        } catch (error) {
-            console.error("Error updating geolocation:", error);
-        }
-
-        googleMapManager.loadMarkersData();
-
-        const selectElement = document.getElementById("individual-select");
-        selectElement.innerHTML = ""; // Efface tout contenu résiduel
-        const placeholderOption = new Option("", "", true, true);
-        placeholderOption.disabled = true;
-        selectElement.appendChild(placeholderOption);
-
-        // Utilisation de configStore pour gérer tomSelect
-        let tomSelect = getTomSelectInstance();
-        if (!tomSelect) {
-            initializeTomSelect();
-            tomSelect = getTomSelectInstance();
-        }
-
-        tomSelect.clearOptions();
-
-        result = getIndividualsList(result.json);
-        let individuals = result.individualsList;
-        individuals.forEach((individual) => {
-            tomSelect.addOption({
-                value: individual.id,
-                text: `${individual.surname} ${individual.name} ${individual.id} ${individual.birthYear ? individual.birthYear : "?"
-                    }-${individual.deathYear ? individual.deathYear : ""}`,
-            });
-        });
-
-        let rootId;
-        const gedcomFileName = configStore.getConfig.gedcomFileName;
-        rootId = (gedcomFileName === "demo.ged") ? "@I111@" : findYoungestIndividual(individuals)?.id;
-        configStore.setTomSelectValue(rootId);
-
-        const event = new Event("change", { bubbles: true });
-        tomSelect.dropdown_content.dispatchEvent(event);
-
-        [
-            ...document.querySelectorAll(".parameter"),
-            document.getElementById("individual-select"),
-            document.getElementById("download-menu"),
-            document.getElementById("fanParametersDisplay"),
-            document.getElementById("treeParametersDisplay"),
-            document.getElementById("fullscreenButton"),
-        ].forEach((el) => {
-            el.disabled = false;
-        });
-
-        configStore.setConfig({ root: rootId });
-
-        // Recherchez l'individu correspondant et mettez à jour config.rootPersonName
-        const rootPerson = individuals.find((individual) => individual.id === rootId);
-        if (rootPerson) {
-            configStore.setConfig({
-                ...configStore.getConfig, // Utilisation correcte du getter
-                rootPersonName: {
-                    name: rootPerson.name,
-                    surname: rootPerson.surname,
-                },
-            });
-        }
-    } catch (error) {
-        console.error("General Error:", error);
-    } finally {
-        handleTabsAndOverlay(false); // Désactiver le chargement et activer les onglets
-        setupPersonLinkEventListener();
     }
 }
 

@@ -1,9 +1,27 @@
 import { Modal } from 'bootstrap'; 
+import _ from 'lodash';
 import Uppy from '@uppy/core';
 import AwsS3 from '@uppy/aws-s3';
 import configStore from '../stores/configStore.js';
-import { onFileChange } from "../ui.js";
 import authStore from '../stores/authStore.js';
+import { 
+    clearAllStates, 
+    setGedFileUploaded,
+    getGedFileUploaded,
+    setFamilyTowns,
+    setSourceData,
+    setIndividualsCache,
+    getIndividualsCache,
+} from "../stores/state.js";
+import { 
+  updateFamilyTownsViaProxy, 
+  updateIndividualTownsFromFamilyTowns, 
+} from "../utils.js";
+import { toJson, getAllPlaces, getIndividualsList } from "../parse.js";
+import { getTomSelectInstance, initializeTomSelect } from "../stores/state.js";
+import { setupPersonLinkEventListener } from "../listeners/eventListeners.js";
+import { googleMapManager } from '../mapManager.js';
+import { resetUI } from '../ui.js';
 
 /* Code to manage the upload of GEDCOM files */
 let isLoadingFile = false;
@@ -372,3 +390,139 @@ function readAndProcessGedcomFile(file) {
 
     reader.readAsArrayBuffer(file);
 }
+
+function findYoungestIndividual(individuals) {
+  const individualsWithBirthDates = individuals.map((individual) => {
+      const birthDate = individual.birthDate;
+      let date;
+      if (birthDate.includes("/")) {
+          const [day, month, year] = birthDate.split("/").reverse();
+          date = new Date(year, month - 1, day || 1);
+      } else {
+          date = new Date(birthDate, 0, 1);
+      }
+
+      return {
+          id: individual.id,
+          birthDate: date,
+      };
+  });
+
+  return _.maxBy(individualsWithBirthDates, "birthDate");
+}
+
+async function onFileChange(data) {
+    handleTabsAndOverlay(true); // Activer le chargement et désactiver les onglets
+
+    clearAllStates();
+
+    if (getGedFileUploaded()) {
+        resetUI();
+    }
+    setGedFileUploaded(true);
+
+    try {
+        await setFamilyTowns({});
+
+        let json = toJson(data);
+        let result = await getAllPlaces(json);
+        setSourceData(result.json);
+
+        try {
+            await updateFamilyTownsViaProxy();
+            updateIndividualTownsFromFamilyTowns(getIndividualsCache());
+            setIndividualsCache(getIndividualsCache());
+        } catch (error) {
+            console.error("Error updating geolocation:", error);
+        }
+
+        googleMapManager.loadMarkersData();
+
+        const selectElement = document.getElementById("individual-select");
+        selectElement.innerHTML = ""; // Efface tout contenu résiduel
+        const placeholderOption = new Option("", "", true, true);
+        placeholderOption.disabled = true;
+        selectElement.appendChild(placeholderOption);
+
+        // Utilisation de configStore pour gérer tomSelect
+        let tomSelect = getTomSelectInstance();
+        if (!tomSelect) {
+            initializeTomSelect();
+            tomSelect = getTomSelectInstance();
+        }
+
+        tomSelect.clearOptions();
+
+        result = getIndividualsList(result.json);
+        let individuals = result.individualsList;
+        individuals.forEach((individual) => {
+            tomSelect.addOption({
+                value: individual.id,
+                text: `${individual.surname} ${individual.name} ${individual.id} ${
+                    individual.birthYear ? individual.birthYear : "?"
+                }-${individual.deathYear ? individual.deathYear : ""}`,
+            });
+        });
+
+        let rootId;
+        const gedcomFileName = configStore.getConfig.gedcomFileName;
+        rootId = (gedcomFileName === "demo.ged") ? "@I111@" : findYoungestIndividual(individuals)?.id;
+        configStore.setTomSelectValue(rootId);
+
+        const event = new Event("change", { bubbles: true });
+        tomSelect.dropdown_content.dispatchEvent(event);
+
+        [
+            ...document.querySelectorAll(".parameter"),
+            document.getElementById("individual-select"),
+            document.getElementById("download-menu"),
+            document.getElementById("fanParametersDisplay"),
+            document.getElementById("treeParametersDisplay"),
+            document.getElementById("fullscreenButton"),
+        ].forEach((el) => {
+            el.disabled = false;
+        });
+
+        configStore.setConfig({ root: rootId });
+
+        // Recherchez l'individu correspondant et mettez à jour config.rootPersonName
+        const rootPerson = individuals.find((individual) => individual.id === rootId);
+        if (rootPerson) {
+            configStore.setConfig({
+                ...configStore.getConfig,
+                rootPersonName: {
+                    name: rootPerson.name,
+                    surname: rootPerson.surname,
+                },
+            });
+        }
+    } catch (error) {
+        console.error("General Error:", error);
+    } finally {
+        handleTabsAndOverlay(false); // Désactiver le chargement et activer les onglets
+        setupPersonLinkEventListener();
+    }
+}
+
+function handleTabsAndOverlay(shouldShowLoading) {
+    const tabsToDisable = ["tab2", "tab3", "tab4"];
+    tabsToDisable.forEach(tabId => {
+        const tabLink = document.querySelector(`a[href="#${tabId}"]`);
+        if (tabLink) {
+            tabLink.classList.toggle('disabled', shouldShowLoading);
+            tabLink.setAttribute('aria-disabled', shouldShowLoading ? 'true' : 'false');
+            tabLink.setAttribute('tabindex', shouldShowLoading ? '-1' : '0');
+        }
+    });
+
+    if (shouldShowLoading) {
+        document.getElementById('overlay').classList.remove('overlay-hidden');
+        document.querySelector('a[href="#tab1"]').click(); // Force l'affichage de tab1
+        document.getElementById("loading").style.display = "block";
+    } else {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("overlay").classList.add("overlay-hidden");
+    }
+}
+
+export { onFileChange }; // Add this export
