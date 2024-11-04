@@ -1,13 +1,21 @@
-import { makeAutoObservable } from './mobx-config';
+import { makeAutoObservable, action } from './mobx-config';
 import TomSelect from 'tom-select';
 import 'tom-select/dist/css/tom-select.css';
 
 class ConfigStore {
     config = {
+        // Paramètres interactifs de l'éventail (UI)
+        fanAngle: 270,              // 270° ou 360°
+        maxGenerations: 8,          // 7 ou 8 générations
+        showMarriages: true,        // affichage des mariages (oui/non)
+        invertTextArc: true,        // orientation dynamique du texte (oui/non)
+        coloringOption: "none",     // none/departement/individual
+        showMissing: true,          // affichage des cases vides (oui/non)
+
+        // Paramètres statiques nécessaires au rendu
         root: null,
         rootPersonName: "",
-        maxGenerations: 8,
-        angle: Math.PI,
+        angle: Math.PI,             // calculé à partir de fanAngle
         dates: {
             showYearsOnly: true,
             showInvalidDates: false,
@@ -16,12 +24,9 @@ class ConfigStore {
             showPlaces: true,
             showReducedPlaces: true,
         },
-        showMarriages: true,
-        showMissing: true,
         givenThenFamilyName: true,
         showFirstNameOnly: false,
         substituteEvents: false,
-        invertTextArc: false,
         isTimeVisualisationEnabled: false,
         title: "",
         titleSize: 1.0,
@@ -40,8 +45,16 @@ class ConfigStore {
         frameDimensions: undefined,
         computeChildrenCount: false,
         filename: "",
-        coloringOption: "childrencount",
         gedcomFileName: "",
+    };
+
+    fanParameters = {
+        fanAngle: 270,
+        maxGenerations: 8,
+        showMarriages: true,
+        invertTextArc: true,
+        coloringOption: "none",
+        showMissing: true
     };
 
     configHistory = [];
@@ -49,8 +62,91 @@ class ConfigStore {
     tomSelect = null;
 
     constructor() {
-        makeAutoObservable(this);
+        makeAutoObservable(this, {
+            setFanParameters: action,
+            updateFanParameter: action,
+        });
     }
+
+    // Action pour mettre à jour uniquement les paramètres interactifs de l'éventail
+    setFanParameters = (({
+        fanAngle,
+        maxGenerations,
+        showMarriages,
+        invertTextArc,
+        coloringOption,
+        showMissing  // Ajout du paramètre manquant
+    }) => {
+        // Mise à jour des paramètres UI de l'éventail
+        this.config.fanAngle = fanAngle;
+        this.config.maxGenerations = maxGenerations;
+        this.config.showMarriages = showMarriages;
+        this.config.invertTextArc = invertTextArc;
+        this.config.coloringOption = coloringOption;
+        this.config.showMissing = showMissing;  // Mise à jour de showMissing
+
+        // Calcul des valeurs dérivées
+        this.config.angle = (2 * Math.PI * fanAngle) / 360.0;
+        this.config.computeChildrenCount = coloringOption === "childrencount";
+    });
+
+    // Nouvelle méthode pour mettre à jour un seul paramètre
+    updateFanParameter(paramName, value) {
+        this.fanParameters[paramName] = value;
+        // Mettre également à jour dans la config principale
+        this.config[paramName] = value;
+    }
+
+    // Méthode pour mettre à jour la configuration de mise en page
+    setLayoutConfig = action(({ fanAngle, maxGenerations, showMarriages, showMissing }) => {
+        this.config.fanAngle = fanAngle;
+        this.config.maxGenerations = maxGenerations;
+        this.config.showMarriages = showMarriages;
+        this.config.showMissing = showMissing;
+        this.config.angle = (2 * Math.PI * fanAngle) / 360.0;
+    });
+
+    // Méthode pour mettre à jour la configuration d'affichage
+    setDisplayConfig = action(({
+        showPlaces,
+        showReducedPlaces,
+        showYearsOnly,
+        givenThenFamilyName,
+        showFirstNameOnly,
+        substituteEvents,
+        invertTextArc,
+        isTimeVisualisationEnabled
+    }) => {
+        this.config.places.showPlaces = showPlaces;
+        this.config.places.showReducedPlaces = showReducedPlaces;
+        this.config.dates.showYearsOnly = showYearsOnly;
+        this.config.givenThenFamilyName = givenThenFamilyName;
+        this.config.showFirstNameOnly = showFirstNameOnly;
+        this.config.substituteEvents = substituteEvents;
+        this.config.invertTextArc = invertTextArc;
+        this.config.isTimeVisualisationEnabled = isTimeVisualisationEnabled;
+    });
+
+    // Méthode pour mettre à jour la configuration du titre
+    setTitleConfig = action(({ title, titleSize, titleMargin }) => {
+        this.config.title = title;
+        this.config.titleSize = titleSize;
+        this.config.titleMargin = titleMargin;
+    });
+
+    // Méthode pour mettre à jour la coloration
+    setColoring = action((coloring) => {
+        this.config.coloringOption = coloring;
+        this.config.computeChildrenCount = coloring === "childrencount";
+    });
+
+    // Méthode pour mettre à jour les dimensions
+    setDimensions = action((dimensions) => {
+        if (dimensions) {
+            this.config.fanDimensions = dimensions.fanDimensionsInMm;
+            this.config.frameDimensions = dimensions.frameDimensionsInMm;
+        }
+    });
 
     /**
      * Initialize TomSelect with specific options.

@@ -23,7 +23,7 @@ import { setupPersonLinkEventListener } from "../listeners/eventListeners.js";
 import { googleMapManager } from '../mapManager.js';
 import { resetUI } from '../ui.js';
 
-/* Code to manage the upload of GEDCOM files */
+/* Code to manage the upload of GEDCOM files to Cloudflare R2*/
 let isLoadingFile = false;
 let gedcomFileName = "";
 

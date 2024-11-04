@@ -420,46 +420,6 @@ let shouldShowInitialMessage = true;
 let filename = "";
 
 
-// Initialization of selections for static elements at the beginning of the script
-const selectDates = document.querySelector("#select-dates") || { value: "1" }; // 0 = yyyy / 1 = ddmmyyyy
-const selectPlaces = document.querySelector("#select-places") || { value: "1" }; // Default number
-const selectContemporary = document.querySelector(
-    "#select-hidden-generations"
-) || { value: "0" }; // Default number
-const selectNameOrder = document.querySelector("#select-name-order") || {
-    value: "0",
-}; // Default number
-const selectNameDisplay = document.querySelector("#select-name-display") || {
-    value: "1",
-}; // Default number
-const substituteEvents = document.querySelector("#substitute-events") || {
-    checked: false,
-}; // Default boolean
-const showChronology = document.querySelector("#show-chronology") || {
-    checked: false,
-}; // Default boolean
-const title = document.querySelector("#title") || { value: "" }; // Default string
-const titleSize = document.querySelector("#title-size") || { value: "100" }; // Default number, assuming 100 as 1.00 after division
-const titleMargin = document.querySelector("#title-margin") || { value: "25" }; // Default number
-const showInvalidDates = document.querySelector("#show-invalid-dates") || {
-    checked: false,
-}; // Default boolean
-const defaultWeightGenValues = {
-    "#weightg1": "100",
-    "#weightg2": "100",
-    "#weightg3": "170",
-    "#weightg4": "140",
-};
-const weightGenerations = Object.keys(defaultWeightGenValues).map(
-    (id) => document.querySelector(id) || { value: defaultWeightGenValues[id] }
-);
-const strokeWeight = document.querySelector("#stroke-weight") || {
-    value: "20",
-}; // Default number
-const hiddenGenerationsCount = document.querySelector(
-    "#hidden-generations-count"
-) || { value: "1" }; // Default number
-
 // Function to get the value of a radio button
 let getRadioButtonValue = (name, parseJson = false) => {
     let value = document.querySelector(`input[name="${name}"]:checked`).value;
@@ -478,23 +438,25 @@ let maxGenerations = () => getRadioButtonValue("max-generations");
 let fanColoring = () => getRadioButtonValue("fanColor");
 
 function getSelectedValues() {
+    const config = configStore.config;
+    
     return {
-        selectedDates: parseIntegerValue(selectDates.value),
-        selectedPlaces: parseIntegerValue(selectPlaces.value),
-        selectedContemporary: parseIntegerValue(selectContemporary.value),
+        selectedDates: config.dateFormat,
+        selectedPlaces: config.placesDisplay,
+        selectedContemporary: config.hiddenGenerations,
         coloring: fanColoring(),
         fanAngle: parseIntegerValue(fanAngle()),
         maxGenerations: parseIntegerValue(maxGenerations()),
         showMarriages: showMarriages(),
         showMissing: showMissing(),
-        givenThenFamilyName: parseIntegerValue(selectNameOrder.value) === 0,
-        showFirstNameOnly: parseIntegerValue(selectNameDisplay.value) === 1,
-        substituteEvents: substituteEvents.checked,
+        givenThenFamilyName: config.nameOrder === 0,
+        showFirstNameOnly: config.nameDisplay === 1,
+        substituteEvents: config.substituteEvents,
         invertTextArc: invertTextArc(),
-        isTimeVisualisationEnabled: showChronology.checked,
-        title: title.value.trim(),
-        titleSize: parseIntegerValue(titleSize.value) / 100.0,
-        titleMargin: parseIntegerValue(titleMargin.value) / 100.0,
+        isTimeVisualisationEnabled: config.showChronology,
+        title: config.title.trim(),
+        titleSize: config.titleSize / 100.0,
+        titleMargin: config.titleMargin / 100.0,
     };
 }
 
@@ -532,11 +494,10 @@ function createConfig(selectedValues, filename) {
         fanAngle,
         selectedDates,
         selectedPlaces,
-        selectedContemporary,
         coloring,
         maxGenerations,
         showMarriages,
-        showMissing,
+        showMissing, 
         givenThenFamilyName,
         showFirstNameOnly,
         substituteEvents,
@@ -547,50 +508,51 @@ function createConfig(selectedValues, filename) {
         titleMargin,
     } = selectedValues;
 
-    const dimensions = calculateDimensions(
+    const dimensions = calculateDimensions(fanAngle, maxGenerations, showMarriages);
+
+    // Mettre à jour le store avec les nouvelles valeurs
+    configStore.setLayoutConfig({
         fanAngle,
         maxGenerations,
-        showMarriages
-    ); // TODO à vérifier
-
-    // Utilisation des variables pour les poids de génération et d'autres sélections dynamiques
-    return {
-        root: document.querySelector("#individual-select").value,
-        maxGenerations,
-        angle: (2 * Math.PI * fanAngle) / 360.0,
-        dates: {
-            showYearsOnly: selectedDates === 0,
-            showInvalidDates,
-        },
-        places: {
-            showPlaces: selectedPlaces !== 2,
-            showReducedPlaces: selectedPlaces === 1,
-        },
         showMarriages,
-        showMissing,
+        showMissing  // Ajout du paramètre manquant
+    });
+
+    configStore.setDisplayConfig({
+        showPlaces: selectedPlaces !== 2,
+        showReducedPlaces: selectedPlaces === 1,
+        showYearsOnly: selectedDates === 0,
         givenThenFamilyName,
         showFirstNameOnly,
         substituteEvents,
         invertTextArc,
-        isTimeVisualisationEnabled,
+        isTimeVisualisationEnabled
+    });
+
+    configStore.setTitleConfig({
         title,
         titleSize: titleSize / 100.0,
-        titleMargin: titleMargin / 100.0,
-        weights: {
-            generations: weightGenerations.map((e) => parseInt(e.value, 10) / 100.0),
-            strokes: parseInt(strokeWeight.value, 10) / 1000.0,
-        },
-        contemporary: {
-            showEvents: selectedContemporary === 0,
-            showNames: selectedContemporary < 2,
-            trulyAll: selectedContemporary === 3,
-            generations: parseInt(hiddenGenerationsCount.value, 10),
-        },
-        fanDimensions: dimensions.fanDimensionsInMm,
-        frameDimensions: dimensions.frameDimensionsInMm,
-        computeChildrenCount: coloring === "childrencount",
-        filename: filename,
+        titleMargin: titleMargin / 100.0
+    });
+
+    configStore.setColoring(coloring);
+    configStore.setDimensions(dimensions);
+
+    // Mettre à jour les paramètres de l'éventail dans le store
+    configStore.setFanParameters({
+        fanAngle,
+        maxGenerations,
+        showMarriages,
+        invertTextArc,
         coloringOption: coloring,
+        showMissing  // Ajout du paramètre manquant
+    });
+
+    // Retourner la configuration complète depuis le store
+    return {
+        ...configStore.config,
+        root: document.querySelector("#individual-select").value,
+        filename
     };
 }
 
