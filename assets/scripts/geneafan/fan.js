@@ -565,10 +565,22 @@ export function drawFan() {
         return null;
     }
     
-    const [fanWidthInMm, fanHeightInMm] = config.fanDimensions.split('x').map(Number);
-    const radius = mmToPixels(Math.round((fanWidthInMm / 2)));
+    // const [fanWidthInMm, fanHeightInMm] = config.fanDimensions.split('x').map(Number);
+    // const radius = mmToPixels(Math.round((fanWidthInMm / 2)));
     // console.log("config.frameDimensions: ", config.frameDimensions);
 
+    if (!config.fanDimensions) {
+        console.error("Fan dimensions are undefined");
+        return null;
+    }
+    
+    const [fanWidthInMm, fanHeightInMm] = config.fanDimensions.split('x').map(Number);
+    if (!fanWidthInMm || !fanHeightInMm) {
+        console.error("Invalid fan dimensions:", config.fanDimensions);
+        return null;
+    }
+
+    const radius = mmToPixels(Math.round((fanWidthInMm / 2)));
     const showMarriages = config.showMarriages;
 
     const weightRadiusFirst = config.weights.generations[0],
@@ -713,7 +725,17 @@ export function drawFan() {
     const realHeight = height + titleBlock; // Keep for future use
 
     // Initialisation du SVG
+    if (!config.frameDimensions) {
+        console.error("Frame dimensions are undefined");
+        return null;
+    }
+
     const [frameWidthInMm, frameHeightInMm] = config.frameDimensions.split('x').map(Number);
+    if (!frameWidthInMm || !frameHeightInMm) {
+        console.error("Invalid frame dimensions:", config.frameDimensions);
+        return null;
+    }
+    
     const svg = select('svg#fan')
         .attr('width', `${frameWidthInMm}mm`)
         .attr('height', `${frameHeightInMm}mm`)

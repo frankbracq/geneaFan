@@ -1,5 +1,5 @@
 // MobX state management
-import { reaction, action, autorun } from 'mobx';
+import { reaction, action, autorun } from './stores/mobx-config';
 import authStore from './stores/authStore.js';
 import configStore from './stores/configStore.js';
 import ShareFormStore from './stores/shareFormStore.js';
@@ -26,7 +26,6 @@ import {
 import { debounce } from "./utils.js";
 
 // Core functionality
-import { draw } from "./fan.js";
 import {
     downloadContent,
     downloadPNG,
@@ -34,7 +33,6 @@ import {
     generateFileName,
     downloadPDF,
     handleUploadAndPost,
-    updateFilename,
 } from "./downloads.js";
 
 // GEDCOM handling
@@ -54,12 +52,10 @@ import {
 
 // Map and Timeline features
 import { googleMapManager } from './mapManager.js';
-import { initializeAscendantTimeline } from './timeline/ascendantTimeline.js';
 
 let config;
 let rootPersonName;
 
-let previousDimensions = null;
 
 // Récupérer le publishableKey depuis les variables d'environnement
 const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
@@ -366,7 +362,7 @@ export async function resetUI() {
 
     [...parametersElements, individualSelectElement].forEach((element) => {
         if (element) {
-            element.removeEventListener('change', onSettingChange);
+            element.removeEventListener('change', configStore.handleSettingChange);
         }
     });
 
@@ -409,7 +405,7 @@ export async function resetUI() {
 
     [...parametersElements, individualSelectElement].forEach((element) => {
         if (element) {
-            element.addEventListener('change', onSettingChange);
+            element.addEventListener('change', configStore.handleSettingChange);
         }
     });
 
@@ -418,149 +414,6 @@ export async function resetUI() {
 
 let shouldShowInitialMessage = true;
 let filename = "";
-
-
-// Function to get the value of a radio button
-let getRadioButtonValue = (name, parseJson = false) => {
-    let value = document.querySelector(`input[name="${name}"]:checked`).value;
-    return parseJson ? JSON.parse(value) : value;
-}
-
-// Function to parse integer values
-let parseIntegerValue = (value) => parseInt(value, 10);
-
-// Initialization of selections via UI
-let invertTextArc = () => getRadioButtonValue("invert-text-arc", true);
-let showMarriages = () => getRadioButtonValue("showMarriages", true);
-let showMissing = () => getRadioButtonValue("showMissing", true);
-let fanAngle = () => getRadioButtonValue("fanAngle");
-let maxGenerations = () => getRadioButtonValue("max-generations");
-let fanColoring = () => getRadioButtonValue("fanColor");
-
-function getSelectedValues() {
-    const config = configStore.config;
-    
-    return {
-        selectedDates: config.dateFormat,
-        selectedPlaces: config.placesDisplay,
-        selectedContemporary: config.hiddenGenerations,
-        coloring: fanColoring(),
-        fanAngle: parseIntegerValue(fanAngle()),
-        maxGenerations: parseIntegerValue(maxGenerations()),
-        showMarriages: showMarriages(),
-        showMissing: showMissing(),
-        givenThenFamilyName: config.nameOrder === 0,
-        showFirstNameOnly: config.nameDisplay === 1,
-        substituteEvents: config.substituteEvents,
-        invertTextArc: invertTextArc(),
-        isTimeVisualisationEnabled: config.showChronology,
-        title: config.title.trim(),
-        titleSize: config.titleSize / 100.0,
-        titleMargin: config.titleMargin / 100.0,
-    };
-}
-
-function calculateDimensions(fanAngle, maxGenerations, showMarriages) {
-    const dimensionsMap = {
-        270: {
-            8: { fanDimensionsInMm: "301x257", frameDimensionsInMm: "331x287" }, // same dimensions with or without marriages
-            7: {
-                true: { fanDimensionsInMm: "301x257", frameDimensionsInMm: "331x287" },
-                false: { fanDimensionsInMm: "245x245", frameDimensionsInMm: "260x260" },
-            },
-        },
-        360: {
-            8: { fanDimensionsInMm: "297x297", frameDimensionsInMm: "331x331" },
-            7: {
-                true: { fanDimensionsInMm: "297x297", frameDimensionsInMm: "331x331" },
-                false: { fanDimensionsInMm: "245x245", frameDimensionsInMm: "260x260" },
-            },
-        },
-    };
-
-    const defaultDimensions = { fanDimensionsInMm: undefined, frameDimensionsInMm: undefined };
-    const angleDimensions = dimensionsMap[fanAngle];
-    if (!angleDimensions) return defaultDimensions;
-
-    const generationDimensions = angleDimensions[maxGenerations];
-    if (!generationDimensions) return defaultDimensions;
-
-    const dimensions = generationDimensions[showMarriages] || generationDimensions;
-    return dimensions || defaultDimensions;
-}
-
-function createConfig(selectedValues, filename) {
-    const {
-        fanAngle,
-        selectedDates,
-        selectedPlaces,
-        coloring,
-        maxGenerations,
-        showMarriages,
-        showMissing, 
-        givenThenFamilyName,
-        showFirstNameOnly,
-        substituteEvents,
-        invertTextArc,
-        isTimeVisualisationEnabled,
-        title,
-        titleSize,
-        titleMargin,
-    } = selectedValues;
-
-    const dimensions = calculateDimensions(fanAngle, maxGenerations, showMarriages);
-
-    // Mettre à jour le store avec les nouvelles valeurs
-    configStore.setLayoutConfig({
-        fanAngle,
-        maxGenerations,
-        showMarriages,
-        showMissing  // Ajout du paramètre manquant
-    });
-
-    configStore.setDisplayConfig({
-        showPlaces: selectedPlaces !== 2,
-        showReducedPlaces: selectedPlaces === 1,
-        showYearsOnly: selectedDates === 0,
-        givenThenFamilyName,
-        showFirstNameOnly,
-        substituteEvents,
-        invertTextArc,
-        isTimeVisualisationEnabled
-    });
-
-    configStore.setTitleConfig({
-        title,
-        titleSize: titleSize / 100.0,
-        titleMargin: titleMargin / 100.0
-    });
-
-    configStore.setColoring(coloring);
-    configStore.setDimensions(dimensions);
-
-    // Mettre à jour les paramètres de l'éventail dans le store
-    configStore.setFanParameters({
-        fanAngle,
-        maxGenerations,
-        showMarriages,
-        invertTextArc,
-        coloringOption: coloring,
-        showMissing  // Ajout du paramètre manquant
-    });
-
-    // Retourner la configuration complète depuis le store
-    return {
-        ...configStore.config,
-        root: document.querySelector("#individual-select").value,
-        filename
-    };
-}
-
-function formatName(rootPersonName) {
-    let firstName = rootPersonName?.name?.split(" ")[0] || "";
-    let surname = rootPersonName?.surname || "";
-    return `${firstName} ${surname}`.trim();
-}
 
 export function displayFan() {
     const instance = svgPanZoom("#fan", {
@@ -618,87 +471,11 @@ reaction(
             );
             return null;
         }
-        // Call onSettingChange only if fanContainer is visible
-        console.log("Root changed. Reaction calling onSettingChange with root =", root);
-        onSettingChange();
+        // Appeler handleSettingChange du store au lieu de onSettingChange
+        console.log("Root changed. Reaction calling handleSettingChange with root =", root);
+        configStore.handleSettingChange();
     }
 );
-
-/**
- * Handles changes in settings by updating the configuration,
- * redrawing the fan chart, and managing the SVG instance.
- */
-export function onSettingChange() {
-    try {
-        const selectedValues = getSelectedValues();
-        const dimensions = calculateDimensions(
-            selectedValues.fanAngle,
-            selectedValues.maxGenerations,
-            selectedValues.showMarriages
-        );
-
-        let config = createConfig(selectedValues);
-        updateConfig(config); // Use MobX action
-
-        const hasRootPerson = config.root !== undefined && config.root !== null && config.root !== "";
-
-        let svgElement = document.querySelector('#fan');
-        let svgPanZoomInstance = getSvgPanZoomInstance();
-
-        if (svgElement && svgPanZoomInstance) {
-            console.log("SVG and svgPanZoomInstance exist, destroying the instance.");
-            svgPanZoomInstance.destroy();
-            setSvgPanZoomInstance(null);
-        } else if (!svgElement) {
-            console.warn("SVG not found in the DOM, cannot destroy svgPanZoomInstance.");
-        }
-
-        let result;
-        result = draw();
-
-        if (!result) {
-            console.error("Drawing the fan failed.");
-            return false;
-        }
-        initializeAscendantTimeline();
-
-        displayFan();
-
-        if (hasRootPerson) {
-            rootPersonName = formatName(result.rootPersonName);
-            filename = (
-                __("Éventail généalogique de ") +
-                formatName(result.rootPersonName) +
-                " créé sur genealog.ie"
-            ).replace(/[|&;$%@"<>()+,]/g, "");
-
-            config.filename = filename;
-            updateConfig(config); // Use MobX action
-            updateFilename(config.filename);
-        } else {
-            filename = __("Éventail vide créé sur genealog.ie").replace(/[|&;$%@"<>()+,]/g, "");
-            config.filename = filename;
-            updateConfig(config); // Use MobX action
-            updateFilename(config.filename);
-        }
-
-        shouldShowInitialMessage = false;
-        document.getElementById('initial-group').style.display = 'none';
-        document.getElementById("loading").style.display = "none";
-        document.getElementById("overlay").classList.add("overlay-hidden");
-
-        if (dimensions !== previousDimensions) {
-            previousDimensions = dimensions;
-        }
-
-        // resizeSvg();
-
-        return true;
-    } catch (error) {
-        console.error("Error in onSettingChange:", error);
-        return false;
-    }
-}
 
 // Download buttons
 document.getElementById('download-pdf').addEventListener('click', function (event) {

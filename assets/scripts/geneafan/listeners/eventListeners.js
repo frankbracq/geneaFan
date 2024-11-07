@@ -1,14 +1,12 @@
 import {getFamilyTowns, getSvgPanZoomInstance, getTomSelectInstance} from '../stores/state.js';
-import {action} from 'mobx';
 import configStore from '../stores/configStore.js';
 import { setupProtectedFeatureEventListeners } from './protectedFeatures.js'; 
 import { setupResponsiveTabs, setupTabResizeListener } from './responsiveTabs.js';
-import { displayPersonDetailsUI, onSettingChange } from '../ui.js';
+import { displayPersonDetailsUI } from '../ui.js';
 import { loadGedcomFile } from '../gedcom/gedcomFileHandler.js';
 import { googleMapManager } from '../mapManager.js';
 import { Offcanvas, Tooltip } from 'bootstrap';
 import screenfull from 'screenfull';
-import authStore from '../stores/authStore.js'; // Ensure the correct relative path
 
 // WeakMap to store event listener references
 const eventListenersMap = new WeakMap();
@@ -62,22 +60,65 @@ function closePopoverOnClickOutside(event) {
     }
 }
 
-// Update configuration action
-const updateConfig = action(newConfig => {
-    configStore.setConfig(newConfig);
-});
-
 // Setup fan parameter event listeners
 export function setupFanParameterEventListeners() {
     document.querySelectorAll('.parameter').forEach(item => {
-        item.addEventListener('change', onSettingChange);
+        // Supprimer l'ancien écouteur d'événements s'il existe
+        const oldHandler = item._changeHandler;
+        if (oldHandler) {
+            item.removeEventListener('change', oldHandler);
+        }
+
+        // Créer un nouveau gestionnaire d'événements
+        const handleParameterChange = (event) => {
+            const input = event.target;
+            console.log('Input type:', input.type);
+            console.log('Input name:', input.name);
+            console.log('Raw value:', input.value);
+
+            // Convertir les valeurs "true"/"false" en booléens pour certains paramètres
+            let value;
+            const booleanParameters = ['showMarriages', 'invert-text-arc', 'showMissing'];
+            
+            if (booleanParameters.includes(input.name)) {
+                value = input.value === 'true';
+            } else if (input.type === 'number' || ['fanAngle', 'max-generations'].includes(input.name)) {
+                value = parseInt(input.value, 10);
+            } else {
+                value = input.value;
+            }
+
+            // Mapping des noms de paramètres pour correspondre à ceux du store
+            const parameterMapping = {
+                'showMarriages': 'showMarriages',
+                'invert-text-arc': 'invertTextArc',
+                'showMissing': 'showMissing',
+                'fanAngle': 'fanAngle',
+                'max-generations': 'maxGenerations',
+                'fanColor': 'coloringOption'
+            };
+
+            const storeParamName = parameterMapping[input.name];
+            if (!storeParamName) {
+                console.warn('Unknown parameter:', input.name);
+                return;
+            }
+
+            console.log(`Updating ${storeParamName} with value:`, value, `(type: ${typeof value})`);
+            configStore.updateFanParameter(storeParamName, value);
+        };
+
+        // Sauvegarder la référence du gestionnaire et ajouter l'écouteur
+        item._changeHandler = handleParameterChange;
+        item.addEventListener('change', handleParameterChange);
     });
 
+    // Gérer le sélecteur d'individu
     const individualSelect = document.getElementById('individual-select');
     if (individualSelect) {
         individualSelect.addEventListener('change', () => {
             const selectedRoot = individualSelect.value;
-            updateConfig({ root: selectedRoot });
+            configStore.setConfig({ root: selectedRoot });
         });
     }
 }
@@ -240,7 +281,7 @@ function setupTabAndUIEventListeners() {
     const tabFan = document.querySelector('[href="#tab1"]');
     if (tabFan) {
         tabFan.addEventListener("shown.bs.tab", () => {
-            onSettingChange();
+            configStore.handleSettingChange();
         });
     }
 
