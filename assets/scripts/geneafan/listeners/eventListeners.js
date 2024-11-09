@@ -1,5 +1,6 @@
-import { getFamilyTowns, getSvgPanZoomInstance } from "../stores/state.js";
+import { getFamilyTowns } from "../stores/state.js";
 import configStore from "../stores/fanConfigStore.js";
+import svgPanZoomStore from '../stores/svgPanZoomStore';
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
 import {
     setupResponsiveTabs,
@@ -25,9 +26,18 @@ export function setupTooltips() {
 }
 
 // Listener for custom 'showPersonDetails' event
-document.addEventListener("showPersonDetails", (event) => {
+const showPersonDetailsHandler = (event) => {
     displayPersonDetailsUI(event.detail);
-});
+};
+
+// Ajouter une fonction pour configurer et nettoyer
+export function setupPersonDetailsListener() {
+    document.addEventListener("showPersonDetails", showPersonDetailsHandler);
+    
+    return () => {
+        document.removeEventListener("showPersonDetails", showPersonDetailsHandler);
+    };
+}
 
 // Handle city link clicks with delegation
 function handleCityLinkClick(event) {
@@ -69,14 +79,14 @@ function closePopoverOnClickOutside(event) {
 
 // Setup fan parameter event listeners
 export function setupFanParameterEventListeners() {
+    const cleanupFunctions = [];
+
     document.querySelectorAll(".parameter").forEach((item) => {
-        // Supprimer l'ancien écouteur d'événements s'il existe
         const oldHandler = item._changeHandler;
         if (oldHandler) {
             item.removeEventListener("change", oldHandler);
         }
 
-        // Créer un nouveau gestionnaire d'événements
         const handleParameterChange = (event) => {
             const input = event.target;
             console.log("Input type:", input.type);
@@ -129,16 +139,28 @@ export function setupFanParameterEventListeners() {
         // Sauvegarder la référence du gestionnaire et ajouter l'écouteur
         item._changeHandler = handleParameterChange;
         item.addEventListener("change", handleParameterChange);
+        
+        cleanupFunctions.push(() => {
+            item.removeEventListener("change", handleParameterChange);
+            delete item._changeHandler;
+        });
     });
 
     // Gérer le sélecteur d'individu
     const individualSelect = document.getElementById("individual-select");
     if (individualSelect) {
-        individualSelect.addEventListener("change", () => {
+        const changeHandler = () => {
             const selectedRoot = individualSelect.value;
             configStore.setConfig({ root: selectedRoot });
+        };
+        
+        individualSelect.addEventListener("change", changeHandler);
+        cleanupFunctions.push(() => {
+            individualSelect.removeEventListener("change", changeHandler);
         });
     }
+
+    return () => cleanupFunctions.forEach(cleanup => cleanup());
 }
 
 // Setup person link event listener with delegation
@@ -146,56 +168,109 @@ export function setupPersonLinkEventListener() {
     const tomSelect = configStore.tomSelect;
     if (!tomSelect) {
         console.error("tomSelect is undefined");
-        return;
+        return () => {}; // Retourner une fonction de nettoyage vide en cas d'erreur
     }
 
-    document.addEventListener("click", (event) => {
-        if (event.target.matches(".person-link")) {
-            event.preventDefault();
-            const personId = event.target.getAttribute("data-person-id");
+    // Créer le gestionnaire d'événements
+    const handlePersonLinkClick = (event) => {
+        const personLink = event.target.closest(".person-link"); // Utiliser closest pour une meilleure délégation
+        if (!personLink) return;
+        
+        event.preventDefault();
+        const personId = personLink.getAttribute("data-person-id");
+        
+        // Vérifier si tomSelect est toujours disponible
+        if (!tomSelect || !tomSelect.dropdown_content) {
+            console.error("tomSelect or its dropdown is no longer available");
+            return;
+        }
+
+        // Mettre à jour la valeur sélectionnée
+        try {
             tomSelect.setValue(personId);
             const changeEvent = new Event("change", { bubbles: true });
             tomSelect.dropdown_content.dispatchEvent(changeEvent);
-
-            const individualMapContainer = document.getElementById(
-                "individualMapContainer"
-            );
-            const personDetails = document.getElementById("personDetails");
-            if (individualMapContainer?.classList.contains("show")) {
-                Offcanvas.getInstance(individualMapContainer).hide();
-            }
-            if (personDetails?.classList.contains("show")) {
-                Offcanvas.getInstance(personDetails).hide();
-            }
+        } catch (error) {
+            console.error("Error updating tomSelect value:", error);
         }
-    });
+
+        // Gérer les instances Offcanvas
+        try {
+            const individualMapContainer = document.getElementById("individualMapContainer");
+            const personDetails = document.getElementById("personDetails");
+
+            // Récupérer et cacher les instances Offcanvas si elles existent
+            const mapOffcanvas = individualMapContainer && Offcanvas.getInstance(individualMapContainer);
+            const detailsOffcanvas = personDetails && Offcanvas.getInstance(personDetails);
+
+            if (mapOffcanvas && individualMapContainer.classList.contains("show")) {
+                mapOffcanvas.hide();
+            }
+
+            if (detailsOffcanvas && personDetails.classList.contains("show")) {
+                detailsOffcanvas.hide();
+            }
+        } catch (error) {
+            console.error("Error handling Offcanvas instances:", error);
+        }
+    };
+
+    // Ajouter l'écouteur d'événements avec délégation au niveau du document
+    document.addEventListener("click", handlePersonLinkClick);
+
+    // Retourner une fonction de nettoyage
+    return () => {
+        // Supprimer l'écouteur d'événements
+        document.removeEventListener("click", handlePersonLinkClick);
+        
+        // Nettoyer les références si nécessaire
+        if (tomSelect) {
+            // Éviter les fuites de mémoire potentielles
+            // Note : Ne pas détruire tomSelect ici car il peut être utilisé ailleurs
+            // La gestion du cycle de vie de tomSelect devrait être faite au niveau du store
+        }
+    };
 }
 
 // Update UI after undo/redo actions
 function updateUIAfterUndoRedo() {
     const root = configStore.getConfig.root;
     if (root) {
-        const tomSelect = getTomSelectInstance();
+        const tomSelect = configStore.tomSelect; // Utiliser directement tomSelect du store
         if (tomSelect) {
-            tomSelect.setValue(root);
-            const changeEvent = new Event("change", { bubbles: true });
-            tomSelect.dropdown_content.dispatchEvent(changeEvent);
+            try {
+                tomSelect.setValue(root);
+                const changeEvent = new Event("change", { bubbles: true });
+                tomSelect.dropdown_content.dispatchEvent(changeEvent);
+            } catch (error) {
+                console.error("Error updating tomSelect during undo/redo:", error);
+            }
         } else {
-            console.error("tomSelect is undefined");
+            console.error("tomSelect is not available in configStore");
         }
     }
 }
 
 // Setup undo/redo event listeners
 function setupUndoRedoEventListeners() {
+    const undoButton = document.getElementById("undoButton");
+    const redoButton = document.getElementById("redoButton");
+    
+    if (!undoButton || !redoButton) {
+        console.error("Undo/Redo buttons not found");
+        return () => {}; // Retourner une fonction de nettoyage vide
+    }
+
     const undoHandler = () => {
         configStore.undo();
         updateUIAfterUndoRedo();
     };
+    
     const redoHandler = () => {
         configStore.redo();
         updateUIAfterUndoRedo();
     };
+    
     const keydownHandler = (event) => {
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
             event.preventDefault();
@@ -207,20 +282,34 @@ function setupUndoRedoEventListeners() {
         }
     };
 
-    document.getElementById("undoButton").addEventListener("click", undoHandler);
-    document.getElementById("redoButton").addEventListener("click", redoHandler);
+    // Ajouter les event listeners
+    undoButton.addEventListener("click", undoHandler);
+    redoButton.addEventListener("click", redoHandler);
     document.addEventListener("keydown", keydownHandler);
 
     // Store references in WeakMap
-    eventListenersMap.set(document.getElementById("undoButton"), undoHandler);
-    eventListenersMap.set(document.getElementById("redoButton"), redoHandler);
+    eventListenersMap.set(undoButton, undoHandler);
+    eventListenersMap.set(redoButton, redoHandler);
     eventListenersMap.set(document, keydownHandler);
+
+    // Retourner une fonction de nettoyage
+    return () => {
+        undoButton.removeEventListener("click", undoHandler);
+        redoButton.removeEventListener("click", redoHandler);
+        document.removeEventListener("keydown", keydownHandler);
+        
+        // Nettoyer les références dans la WeakMap
+        eventListenersMap.delete(undoButton);
+        eventListenersMap.delete(redoButton);
+        eventListenersMap.delete(document);
+    };
 }
 
 // Setup fullscreen toggle
 function setupFullscreenToggle() {
     const fullscreenButton = document.getElementById("fullscreenButton");
     const fanContainer = document.getElementById("fanContainer");
+    const fan = document.getElementById("fan");
 
     const fullscreenHandler = () => {
         if (screenfull.isEnabled) {
@@ -232,113 +321,178 @@ function setupFullscreenToggle() {
 
     if (screenfull.isEnabled) {
         screenfull.on("change", () => {
-            const panZoomInstance = getSvgPanZoomInstance();
-            panZoomInstance.updateBBox();
-            panZoomInstance.fit();
-            panZoomInstance.center();
+            const isFullscreen = screenfull.isFullscreen;
+            
+            // Mettre à jour l'état du plein écran dans le store
+            svgPanZoomStore.setFullscreen(isFullscreen);
+            
+            // Mettre à jour la vue
+            svgPanZoomStore.updateViewport();
 
-            const fan = document.getElementById("fan");
+            // Configurer les événements de souris pour le mode plein écran
+            if (fan) {
+                const handleMouseDown = () => svgPanZoomStore.setGrabbing(true);
+                const handleMouseUp = () => svgPanZoomStore.setGrabbing(false);
 
-            if (screenfull.isFullscreen) {
-                panZoomInstance.disableDblClickZoom(false);
-
-                const mousedownHandler = () => {
-                    fan.style.cursor = "grabbing";
-                };
-                const mouseupHandler = () => {
-                    fan.style.cursor = "grab";
-                };
-
-                fan.addEventListener("mousedown", mousedownHandler);
-                fan.addEventListener("mouseup", mouseupHandler);
-
-                // Store references in WeakMap
-                eventListenersMap.set(fan, { mousedownHandler, mouseupHandler });
-            } else {
-                panZoomInstance.enableDblClickZoom(true);
-                panZoomInstance.reset();
-                fan.style.cursor = "default";
-
-                const handlers = eventListenersMap.get(fan);
-                if (handlers) {
-                    fan.removeEventListener("mousedown", handlers.mousedownHandler);
-                    fan.removeEventListener("mouseup", handlers.mouseupHandler);
+                if (isFullscreen) {
+                    fan.addEventListener("mousedown", handleMouseDown);
+                    fan.addEventListener("mouseup", handleMouseUp);
+                    // Stocker les références des handlers pour le nettoyage
+                    fan._mouseHandlers = { handleMouseDown, handleMouseUp };
+                } else {
+                    // Nettoyer les événements lors de la sortie du plein écran
+                    const handlers = fan._mouseHandlers;
+                    if (handlers) {
+                        fan.removeEventListener("mousedown", handlers.handleMouseDown);
+                        fan.removeEventListener("mouseup", handlers.handleMouseUp);
+                        delete fan._mouseHandlers;
+                    }
                 }
             }
         });
     }
 
-    // Store reference in WeakMap
-    eventListenersMap.set(fullscreenButton, fullscreenHandler);
+    // Nettoyer les événements lors du démontage
+    return () => {
+        if (screenfull.isEnabled) {
+            screenfull.off("change");
+        }
+        fullscreenButton.removeEventListener("click", fullscreenHandler);
+        
+        // Nettoyer les événements de souris si nécessaire
+        if (fan && fan._mouseHandlers) {
+            const handlers = fan._mouseHandlers;
+            fan.removeEventListener("mousedown", handlers.handleMouseDown);
+            fan.removeEventListener("mouseup", handlers.handleMouseUp);
+            delete fan._mouseHandlers;
+        }
+    };
 }
 
 // Function to initialize file loading event listeners
 const setupFileLoadingEventListeners = () => {
-    // Demo file loading
-    Array.from(document.getElementsByClassName("remote-file")).forEach(function (
-        element
-    ) {
-        element.addEventListener("click", function (e) {
+    const cleanupFunctions = [];
+    
+    // Gestionnaire des fichiers de démo
+    const remoteFileElements = document.getElementsByClassName("remote-file");
+    Array.from(remoteFileElements).forEach(element => {
+        const clickHandler = function(e) {
             loadGedcomFile(e.target.getAttribute("data-link"));
             return false;
+        };
+        
+        element.addEventListener("click", clickHandler);
+        cleanupFunctions.push(() => {
+            element.removeEventListener("click", clickHandler);
         });
     });
 
-    // User file loading
-    document.getElementById("file").addEventListener("change", function (e) {
-        loadGedcomFile(e.target.files);
-    });
+    // Gestionnaire du chargement de fichier utilisateur
+    const fileInput = document.getElementById("file");
+    if (fileInput) {
+        const changeHandler = function(e) {
+            loadGedcomFile(e.target.files);
+        };
+        
+        fileInput.addEventListener("change", changeHandler);
+        cleanupFunctions.push(() => {
+            fileInput.removeEventListener("change", changeHandler);
+        });
+    }
+
+    return () => cleanupFunctions.forEach(cleanup => cleanup());
 };
 
 // Setup tab and UI event listeners
 function setupTabAndUIEventListeners() {
-    document.querySelectorAll(".dropdown-menu a").forEach((element) => {
-        element.addEventListener("click", function () {
+    const cleanupFunctions = [];
+
+    // Gestionnaire des éléments du dropdown
+    const dropdownElements = document.querySelectorAll(".dropdown-menu a");
+    dropdownElements.forEach((element) => {
+        const clickHandler = function() {
             const dropdownButton = this.closest(".dropdown");
             dropdownButton.classList.remove("show");
             dropdownButton.querySelector(".dropdown-menu").classList.remove("show");
+        };
+
+        element.addEventListener("click", clickHandler);
+        cleanupFunctions.push(() => {
+            element.removeEventListener("click", clickHandler);
         });
     });
 
+    // Gestionnaire de l'onglet Fan
     const tabFan = document.querySelector('[href="#tab1"]');
     if (tabFan) {
-        tabFan.addEventListener("shown.bs.tab", () => {
+        const tabFanHandler = () => {
             configStore.handleSettingChange();
+        };
+        
+        tabFan.addEventListener("shown.bs.tab", tabFanHandler);
+        cleanupFunctions.push(() => {
+            tabFan.removeEventListener("shown.bs.tab", tabFanHandler);
         });
     }
 
+    // Gestionnaire de l'onglet Family Map
     const tabFamilyMap = document.querySelector('[href="#tab2"]');
     if (tabFamilyMap) {
-        tabFamilyMap.addEventListener("show.bs.tab", () => {
+        const tabFamilyMapHandler = () => {
             if (googleMapManager.map) {
                 googleMapManager.moveMapToContainer("tab2");
                 googleMapManager.activateMapMarkers();
                 google.maps.event.trigger(googleMapManager.map, "resize");
                 googleMapManager.map.setCenter({ lat: 46.2276, lng: 2.2137 });
             }
+        };
+
+        tabFamilyMap.addEventListener("show.bs.tab", tabFamilyMapHandler);
+        cleanupFunctions.push(() => {
+            tabFamilyMap.removeEventListener("show.bs.tab", tabFamilyMapHandler);
         });
     }
 
-    document
-        .getElementById("fanParametersDisplay")
-        .addEventListener("click", () => {
+    // Gestionnaire des paramètres Fan
+    const fanParametersDisplay = document.getElementById("fanParametersDisplay");
+    if (fanParametersDisplay) {
+        const fanParametersHandler = () => {
             const fanParametersOffcanvas = new Offcanvas(
                 document.getElementById("fanParameters")
             );
             fanParametersOffcanvas.show();
-        });
+        };
 
-    document
-        .getElementById("treeParametersDisplay")
-        .addEventListener("click", () => {
+        fanParametersDisplay.addEventListener("click", fanParametersHandler);
+        cleanupFunctions.push(() => {
+            fanParametersDisplay.removeEventListener("click", fanParametersHandler);
+        });
+    }
+
+    // Gestionnaire des paramètres Tree
+    const treeParametersDisplay = document.getElementById("treeParametersDisplay");
+    if (treeParametersDisplay) {
+        const treeParametersHandler = () => {
             const treeParametersOffcanvas = new Offcanvas(
                 document.getElementById("treeParameters")
             );
             treeParametersOffcanvas.show();
-        });
+        };
 
-    setupFullscreenToggle();
-    setupTooltips();
+        treeParametersDisplay.addEventListener("click", treeParametersHandler);
+        cleanupFunctions.push(() => {
+            treeParametersDisplay.removeEventListener("click", treeParametersHandler);
+        });
+    }
+
+    // Setup du fullscreen et des tooltips
+    const fullscreenCleanup = setupFullscreenToggle();
+    if (fullscreenCleanup) cleanupFunctions.push(fullscreenCleanup);
+
+    const tooltipsCleanup = setupTooltips();
+    if (tooltipsCleanup) cleanupFunctions.push(tooltipsCleanup);
+
+    return () => cleanupFunctions.forEach(cleanup => cleanup());
 }
 
 /**
@@ -349,56 +503,104 @@ function setupTabAndUIEventListeners() {
 let eventListenersInitialized = false;
 
 export const setupAllEventListeners = (authStore) => {
-    // Check if event listeners have already been initialized
     if (eventListenersInitialized) {
         return;
     }
-
-    // Mark event listeners as initialized
     eventListenersInitialized = true;
 
-    // Function to initialize all event listeners
+    const cleanupFunctions = [];
+
     const initializeEventListeners = () => {
-        // Add a click event listener to the document
-        document.addEventListener("click", (event) => {
-            handleCityLinkClick(event); // Handle city link clicks
-            closePopoverOnClickOutside(event); // Close popovers when clicking outside
-        });
-
-        // Set up event listeners for fan parameters
-        setupFanParameterEventListeners();
-        // Set up event listeners for tabs and UI elements
-        setupTabAndUIEventListeners();
-        // Set up event listeners for file loading
-        setupFileLoadingEventListeners();
-        // Set up event listeners for undo and redo actions
-        setupUndoRedoEventListeners();
-        // Set up responsive tabs and tab resize listener after a short delay
-        setTimeout(() => {
-            setupResponsiveTabs();
-            setupTabResizeListener();
-        }, 0);
-
-        // Call the function to set up event listeners for protected features using the MobX store
-        setupProtectedFeatureEventListeners(authStore);
+        try {
+            // Document click handler
+            const documentClickHandler = (event) => {
+                handleCityLinkClick(event);
+                closePopoverOnClickOutside(event);
+            };
+            document.addEventListener("click", documentClickHandler);
+            cleanupFunctions.push(() => {
+                document.removeEventListener("click", documentClickHandler);
+            });
+    
+            // Setup des listeners principaux avec leurs fonctions de nettoyage
+            const fanParametersCleanup = setupFanParameterEventListeners();
+            if (fanParametersCleanup) cleanupFunctions.push(fanParametersCleanup);
+    
+            const personLinkCleanup = setupPersonLinkEventListener();
+            if (personLinkCleanup) cleanupFunctions.push(personLinkCleanup);
+    
+            const fullscreenCleanup = setupFullscreenToggle();
+            if (fullscreenCleanup) cleanupFunctions.push(fullscreenCleanup);
+    
+            const personDetailsCleanup = setupPersonDetailsListener();
+            if (personDetailsCleanup) cleanupFunctions.push(personDetailsCleanup);
+    
+            const fileLoadingCleanup = setupFileLoadingEventListeners();
+            if (fileLoadingCleanup) cleanupFunctions.push(fileLoadingCleanup);
+    
+            // Setup undo/redo avec sa fonction de nettoyage
+            const undoRedoCleanup = setupUndoRedoEventListeners();
+            if (undoRedoCleanup) cleanupFunctions.push(undoRedoCleanup);
+    
+            // Setup des onglets et de l'interface utilisateur
+            const tabAndUICleanup = setupTabAndUIEventListeners();
+            if (tabAndUICleanup) cleanupFunctions.push(tabAndUICleanup);
+    
+            // Setup des tabs responsives
+            const responsiveTabsCleanup = setupResponsiveTabs();
+            if (responsiveTabsCleanup) cleanupFunctions.push(responsiveTabsCleanup);
+    
+            const tabResizeCleanup = setupTabResizeListener();
+            if (tabResizeCleanup) cleanupFunctions.push(tabResizeCleanup);
+    
+            // Setup des fonctionnalités protégées
+            const protectedFeaturesCleanup = setupProtectedFeatureEventListeners(authStore);
+            if (protectedFeaturesCleanup) cleanupFunctions.push(protectedFeaturesCleanup);
+    
+            console.log('Tous les event listeners ont été initialisés avec succès');
+        } catch (error) {
+            console.error('Erreur lors de l\'initialisation des event listeners:', error);
+            // Nettoyer les listeners déjà configurés en cas d'erreur
+            cleanupFunctions.forEach(cleanup => {
+                if (typeof cleanup === 'function') {
+                    try {
+                        cleanup();
+                    } catch (cleanupError) {
+                        console.error('Erreur lors du nettoyage:', cleanupError);
+                    }
+                }
+            });
+            throw error; // Propager l'erreur pour la gestion en amont
+        }
     };
 
-    // Check if the document is still loading
+    // Gestion du chargement du document
     if (document.readyState === "loading") {
-        // If the document is loading, set up event listeners after the DOM content is loaded
-        document.addEventListener("DOMContentLoaded", initializeEventListeners);
+        const loadHandler = () => {
+            initializeEventListeners();
+            document.removeEventListener("DOMContentLoaded", loadHandler);
+        };
+        document.addEventListener("DOMContentLoaded", loadHandler);
+        cleanupFunctions.push(() => {
+            document.removeEventListener("DOMContentLoaded", loadHandler);
+        });
     } else {
-        // If the document is already loaded, initialize event listeners immediately
         initializeEventListeners();
     }
+
+    // Retourner une fonction de nettoyage globale
+    return () => {
+        eventListenersInitialized = false;
+        cleanupFunctions.forEach(cleanup => {
+            if (typeof cleanup === 'function') {
+                try {
+                    cleanup();
+                } catch (error) {
+                    console.error('Error during cleanup:', error);
+                }
+            }
+        });
+    };
 };
 
-/*
-// Setup advanced modal
-export function setupAdvancedModal(modalPath) {
-    $('#advanced-parameters').click(function() {
-        $('#advancedModal').load(modalPath, function() {
-            $(this).modal('show');
-        });
-    });
-}*/
+

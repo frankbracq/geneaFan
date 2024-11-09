@@ -3,13 +3,13 @@ import { reaction, action, autorun } from './stores/mobx-config';
 import authStore from './stores/authStore.js';
 import configStore from './stores/fanConfigStore.js';
 import ShareFormStore from './stores/shareFormStore.js';
+import svgPanZoomStore from './stores/svgPanZoomStore';
 
 // Utility libraries
 import _ from 'lodash';                 // Utility functions
 import { v4 as uuidv4 } from 'uuid';    // UUID generation
 
 // UI Libraries & Components
-import svgPanZoom from "svg-pan-zoom";  // SVG pan and zoom functionality
 import { Modal, Offcanvas, Tooltip } from 'bootstrap';  // Bootstrap components
 
 // Google Maps
@@ -329,8 +329,6 @@ function resizeSvg() {
     const fanContainer = document.getElementById('fanContainer');
     const svgElement = document.getElementById('fan');
 
-    const panZoomInstance = getSvgPanZoomInstance();
-
     const resize = () => {
         const containerWidth = fanContainer.clientWidth;
         const containerHeight = fanContainer.clientHeight;
@@ -338,17 +336,21 @@ function resizeSvg() {
         svgElement.setAttribute('width', containerWidth);
         svgElement.setAttribute('height', containerHeight);
 
-        panZoomInstance.resize();
-        panZoomInstance.fit();
-        panZoomInstance.center();
+        svgPanZoomStore.resize();
     };
 
     const debouncedResize = debounce(resize, 100);
-
+    
+    // Ajouter l'event listener
     window.addEventListener('resize', debouncedResize);
-
+    
     // Redimensionnement initial
     resize();
+
+    // Retourner une fonction de nettoyage
+    return () => {
+        window.removeEventListener('resize', debouncedResize);
+    };
 }
 
 export async function resetUI() {
@@ -375,14 +377,12 @@ export async function resetUI() {
         tomSelect.clear();
     }
 
-    const svgPanZoomInstance = getSvgPanZoomInstance();
-    if (svgPanZoomInstance) {
+    if (svgPanZoomStore.isInitialized) {
         try {
-            svgPanZoomInstance.destroy();
+            svgPanZoomStore.destroy();
         } catch (error) {
             console.error("Erreur lors de la destruction de svgPanZoom:", error);
         }
-        setSvgPanZoomInstance(null);
     }
 
     const fanSvg = document.getElementById("fan");
@@ -415,37 +415,7 @@ let shouldShowInitialMessage = true;
 let filename = "";
 
 export function displayFan() {
-    const instance = svgPanZoom("#fan", {
-        zoomEnabled: true,
-        controlIconsEnabled: true,
-        fit: true,
-        center: true,
-    });
-
-    var mapElement = document.querySelector("#fan");
-    if (mapElement) {
-        mapElement.addEventListener(
-            "dblclick",
-            function (event) {
-                event.stopImmediatePropagation();
-            },
-            true
-        );
-
-        mapElement.addEventListener(
-            "wheel",
-            function (event) {
-                if (event.ctrlKey) {
-                    event.preventDefault();
-                }
-            },
-            { passive: false }
-        );
-    } else {
-        console.error("L'élément SVG '#fan' n'a pas été trouvé dans le DOM.");
-    }
-
-    setSvgPanZoomInstance(instance);
+    const instance = svgPanZoomStore.initialize('#fan');
     return instance;
 }
 

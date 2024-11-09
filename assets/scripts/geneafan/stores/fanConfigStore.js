@@ -1,4 +1,5 @@
 import { makeAutoObservable, action, reaction, runInAction, computed, comparer } from './mobx-config.js';
+import svgPanZoomStore from './svgPanZoomStore';
 import TomSelect from 'tom-select';
 import 'tom-select/dist/css/tom-select.css';
 import { draw } from "../fan.js";
@@ -208,11 +209,9 @@ class ConfigStore {
 
             console.log('Starting fan drawing process');
             let svgElement = document.querySelector('#fan');
-            let svgPanZoomInstance = getSvgPanZoomInstance();
-            if (svgElement && svgPanZoomInstance) {
-                svgPanZoomInstance.destroy();
-                setSvgPanZoomInstance(null);
-            }
+    if (svgElement && svgPanZoomStore.isInitialized) {
+        svgPanZoomStore.destroy();
+    }
 
             const drawResult = draw();
             if (!drawResult) {
