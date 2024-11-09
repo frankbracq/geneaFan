@@ -1,14 +1,4 @@
 import _ from 'lodash';
-import configStore from './configStore';
-
-// Fonctions pour initialiser et obtenir l'instance de tomSelect via configStore
-export const initializeTomSelect = () => {
-    configStore.initializeTomSelect();
-};
-
-export const getTomSelectInstance = () => {
-    return configStore.tomSelect;
-};
 
 /**
  * Clear all relevant states when a new file is loaded.

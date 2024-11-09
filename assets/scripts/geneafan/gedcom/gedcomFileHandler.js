@@ -1,11 +1,11 @@
-import { Modal } from 'bootstrap'; 
+import { Modal } from 'bootstrap';
 import _ from 'lodash';
 import Uppy from '@uppy/core';
 import AwsS3 from '@uppy/aws-s3';
-import configStore from '../stores/configStore.js';
+import configStore from '../stores/fanConfigStore.js';
 import authStore from '../stores/authStore.js';
-import { 
-    clearAllStates, 
+import {
+    clearAllStates,
     setGedFileUploaded,
     getGedFileUploaded,
     setFamilyTowns,
@@ -13,12 +13,11 @@ import {
     setIndividualsCache,
     getIndividualsCache,
 } from "../stores/state.js";
-import { 
-  updateFamilyTownsViaProxy, 
-  updateIndividualTownsFromFamilyTowns, 
+import {
+    updateFamilyTownsViaProxy,
+    updateIndividualTownsFromFamilyTowns,
 } from "../utils.js";
 import { toJson, getAllPlaces, getIndividualsList } from "../parse.js";
-import { getTomSelectInstance, initializeTomSelect } from "../stores/state.js";
 import { setupPersonLinkEventListener } from "../listeners/eventListeners.js";
 import { googleMapManager } from '../mapManager.js';
 import { resetUI } from '../ui.js';
@@ -99,7 +98,7 @@ function showModal(step, handlers = {}) {
         </div>
         `;
         document.body.appendChild(modalContent);
-        
+
         const modalElement = document.getElementById('gedcomModal');
         currentModal = new Modal(modalElement, {
             backdrop: 'static',
@@ -109,7 +108,7 @@ function showModal(step, handlers = {}) {
 
     const modalElement = document.getElementById('gedcomModal');
     const stepConfig = MODAL_STEPS[step];
-    
+
     modalElement.querySelector('.modal-title').textContent = stepConfig.title;
     modalElement.querySelector('#modalStepContent').innerHTML = stepConfig.content;
 
@@ -234,149 +233,149 @@ function showFamilyNameModal(file, userInfo) {
 
 // Function to save the Gedcom file in the R2 gedcom-files bucket
 async function saveGedcomFile(file, familyName, userInfo) {
-  const clerkId = userInfo.id;
-  if (!clerkId) {
-    alert('Impossible de récupérer votre identifiant utilisateur.');
-    closeModal();
-    readAndProcessGedcomFile(file);
-    return;
-  }
+    const clerkId = userInfo.id;
+    if (!clerkId) {
+        alert('Impossible de récupérer votre identifiant utilisateur.');
+        closeModal();
+        readAndProcessGedcomFile(file);
+        return;
+    }
 
-  const newFileName = `${clerkId}_fam_${familyName}.ged`;
-  console.log('New file name:', newFileName);
+    const newFileName = `${clerkId}_fam_${familyName}.ged`;
+    console.log('New file name:', newFileName);
 
-  try {
-    // Initialize Uppy for file upload with a signed URL
-    const uppy = new Uppy({
-      autoProceed: true,
-    });
-
-    uppy.use(AwsS3, {
-      async getUploadParameters(file) {
-        // Fetch signed URL from Vercel API
-        const response = await fetch('https://generate-signed-url.vercel.app/api/generate-signed-url', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            filename: newFileName,
-            contentType: file.type,
-            operation: 'upload', // Specify the operation
-          }),
+    try {
+        // Initialize Uppy for file upload with a signed URL
+        const uppy = new Uppy({
+            autoProceed: true,
         });
 
-        if (!response.ok) {
-          throw new Error('Error fetching the signed URL.');
-        }
+        uppy.use(AwsS3, {
+            async getUploadParameters(file) {
+                // Fetch signed URL from Vercel API
+                const response = await fetch('https://generate-signed-url.vercel.app/api/generate-signed-url', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        filename: newFileName,
+                        contentType: file.type,
+                        operation: 'upload', // Specify the operation
+                    }),
+                });
 
-        const data = await response.json();
-        console.log('Signed URL received:', data.url);
+                if (!response.ok) {
+                    throw new Error('Error fetching the signed URL.');
+                }
 
-        // Return signed URL for upload
-        return {
-          method: 'PUT',
-          url: data.url, // Signed URL obtained from Vercel
-          headers: {
-            'Content-Type': file.type,
-          },
-        };
-      },
-    });
+                const data = await response.json();
+                console.log('Signed URL received:', data.url);
 
-    // Add file to Uppy
-    uppy.addFile({
-      name: newFileName,
-      type: file.type,
-      data: file, // Blob/File to upload
-    });
+                // Return signed URL for upload
+                return {
+                    method: 'PUT',
+                    url: data.url, // Signed URL obtained from Vercel
+                    headers: {
+                        'Content-Type': file.type,
+                    },
+                };
+            },
+        });
 
-    // Wait for the upload to complete
-    const uploadResult = await uppy.upload();
-    console.log('Upload completed:', uploadResult);
+        // Add file to Uppy
+        uppy.addFile({
+            name: newFileName,
+            type: file.type,
+            data: file, // Blob/File to upload
+        });
 
-    if (uploadResult.failed.length === 0) {
-      console.log('File successfully uploaded.');
-    
-      // Prepare the body for the fetch request
-      const body = JSON.stringify({
-        filename: newFileName,
-        userId: clerkId
-      });
-    
-      // Log the body before making the fetch request
-      // console.log('Worker :', body);
-    
-      // After upload, store the file metadata in the Cloudflare Worker KV
-      const workerResponse = await fetch('https://user-file-access.genealogie.app/upload', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: body
-      });
-    
-      if (!workerResponse.ok) {
-        throw new Error('Error saving file metadata to Worker KV.');
-      }
-    
-      console.log('File metadata saved in Worker KV.');
-      showModal('UPLOAD_SUCCESS', {
-        '[data-action="close"]': () => {
+        // Wait for the upload to complete
+        const uploadResult = await uppy.upload();
+        console.log('Upload completed:', uploadResult);
+
+        if (uploadResult.failed.length === 0) {
+            console.log('File successfully uploaded.');
+
+            // Prepare the body for the fetch request
+            const body = JSON.stringify({
+                filename: newFileName,
+                userId: clerkId
+            });
+
+            // Log the body before making the fetch request
+            // console.log('Worker :', body);
+
+            // After upload, store the file metadata in the Cloudflare Worker KV
+            const workerResponse = await fetch('https://user-file-access.genealogie.app/upload', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: body
+            });
+
+            if (!workerResponse.ok) {
+                throw new Error('Error saving file metadata to Worker KV.');
+            }
+
+            console.log('File metadata saved in Worker KV.');
+            showModal('UPLOAD_SUCCESS', {
+                '[data-action="close"]': () => {
+                    closeModal();
+                    readAndProcessGedcomFile(file);
+                }
+            });
+
+        } else {
+            console.error('File upload failed:', uploadResult.failed);
+            alert('Error during file upload.');
             closeModal();
-            readAndProcessGedcomFile(file);
         }
-    });
-    
-    } else {
-      console.error('File upload failed:', uploadResult.failed);
-      alert('Error during file upload.');
-      closeModal();
-    }
-    
+
     } catch (error) {
-    console.error('Error during file saving:', error);
-    alert('Error during file upload.');
-    closeModal();
-  }
+        console.error('Error during file saving:', error);
+        alert('Error during file upload.');
+        closeModal();
+    }
 }
 
 // Function to fetch the list of Gedcom files for the current user
 export async function fetchUserGedcomFiles(userId) {
-  console.log('Fetching user Gedcom files for user:', userId);
-  try {
-      const response = await fetch('https://user-file-access.genealogie.app/list-files', {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId })
-      });
+    console.log('Fetching user Gedcom files for user:', userId);
+    try {
+        const response = await fetch('https://user-file-access.genealogie.app/list-files', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId })
+        });
 
-      if (!response.ok) {
-          if (response.status === 404) {
-              return [];
-          } else {
-              throw new Error('Erreur lors de la récupération des fichiers.');
-          }
-      }
+        if (!response.ok) {
+            if (response.status === 404) {
+                return [];
+            } else {
+                throw new Error('Erreur lors de la récupération des fichiers.');
+            }
+        }
 
-      const data = await response.json();
-      const files = data.files.map(file => ({
-          id: file.id, 
-          name: file.name, 
-          signedUrl: file.signedUrl,
-          status: file.status // 'owned' ou 'authorized'
-      }));
-      return files;
-  } catch (error) {
-      console.error('Erreur lors de la récupération des fichiers GEDCOM :', error);
-      return [];
-  }
+        const data = await response.json();
+        const files = data.files.map(file => ({
+            id: file.id,
+            name: file.name,
+            signedUrl: file.signedUrl,
+            status: file.status // 'owned' ou 'authorized'
+        }));
+        return files;
+    } catch (error) {
+        console.error('Erreur lors de la récupération des fichiers GEDCOM :', error);
+        return [];
+    }
 }
 
 function readAndProcessGedcomFile(file) {
-  console.log('Reading and processing file:', file);
+    console.log('Reading and processing file:', file);
     isLoadingFile = true;
     const reader = new FileReader();
 
@@ -392,23 +391,23 @@ function readAndProcessGedcomFile(file) {
 }
 
 function findYoungestIndividual(individuals) {
-  const individualsWithBirthDates = individuals.map((individual) => {
-      const birthDate = individual.birthDate;
-      let date;
-      if (birthDate.includes("/")) {
-          const [day, month, year] = birthDate.split("/").reverse();
-          date = new Date(year, month - 1, day || 1);
-      } else {
-          date = new Date(birthDate, 0, 1);
-      }
+    const individualsWithBirthDates = individuals.map((individual) => {
+        const birthDate = individual.birthDate;
+        let date;
+        if (birthDate.includes("/")) {
+            const [day, month, year] = birthDate.split("/").reverse();
+            date = new Date(year, month - 1, day || 1);
+        } else {
+            date = new Date(birthDate, 0, 1);
+        }
 
-      return {
-          id: individual.id,
-          birthDate: date,
-      };
-  });
+        return {
+            id: individual.id,
+            birthDate: date,
+        };
+    });
 
-  return _.maxBy(individualsWithBirthDates, "birthDate");
+    return _.maxBy(individualsWithBirthDates, "birthDate");
 }
 
 async function onFileChange(data) {
@@ -444,10 +443,10 @@ async function onFileChange(data) {
         placeholderOption.disabled = true;
         selectElement.appendChild(placeholderOption);
 
-        let tomSelect = getTomSelectInstance();
+        let tomSelect = configStore.tomSelect;
         if (!tomSelect) {
-            initializeTomSelect();
-            tomSelect = getTomSelectInstance();
+            configStore.initializeTomSelect();
+            tomSelect = configStore.tomSelect;
         }
 
         tomSelect.clearOptions();
@@ -457,9 +456,8 @@ async function onFileChange(data) {
         individuals.forEach((individual) => {
             tomSelect.addOption({
                 value: individual.id,
-                text: `${individual.surname} ${individual.name} ${individual.id} ${
-                    individual.birthYear ? individual.birthYear : "?"
-                }-${individual.deathYear ? individual.deathYear : ""}`,
+                text: `${individual.surname} ${individual.name} ${individual.id} ${individual.birthYear ? individual.birthYear : "?"
+                    }-${individual.deathYear ? individual.deathYear : ""}`,
             });
         });
 
@@ -470,7 +468,7 @@ async function onFileChange(data) {
         configStore.batchUpdate(() => {
             configStore.setTomSelectValue(rootId);
             configStore.setConfig({ root: rootId });
-            
+
             const rootPerson = individuals.find((individual) => individual.id === rootId);
             if (rootPerson) {
                 configStore.setConfig({

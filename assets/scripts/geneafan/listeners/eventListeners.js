@@ -1,32 +1,37 @@
-import {getFamilyTowns, getSvgPanZoomInstance, getTomSelectInstance} from '../stores/state.js';
-import configStore from '../stores/configStore.js';
-import { setupProtectedFeatureEventListeners } from './protectedFeatures.js'; 
-import { setupResponsiveTabs, setupTabResizeListener } from './responsiveTabs.js';
-import { displayPersonDetailsUI } from '../ui.js';
-import { loadGedcomFile } from '../gedcom/gedcomFileHandler.js';
-import { googleMapManager } from '../mapManager.js';
-import { Offcanvas, Tooltip } from 'bootstrap';
-import screenfull from 'screenfull';
+import { getFamilyTowns, getSvgPanZoomInstance } from "../stores/state.js";
+import configStore from "../stores/fanConfigStore.js";
+import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
+import {
+    setupResponsiveTabs,
+    setupTabResizeListener,
+} from "./responsiveTabs.js";
+import { displayPersonDetailsUI } from "../ui.js";
+import { loadGedcomFile } from "../gedcom/gedcomFileHandler.js";
+import { googleMapManager } from "../mapManager.js";
+import { Offcanvas, Tooltip } from "bootstrap";
+import screenfull from "screenfull";
 
 // WeakMap to store event listener references
 const eventListenersMap = new WeakMap();
 
 // Setup tooltips with HTML support
 export function setupTooltips() {
-    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-    tooltipTriggerList.forEach(tooltipTriggerEl => {
+    const tooltipTriggerList = document.querySelectorAll(
+        '[data-bs-toggle="tooltip"]'
+    );
+    tooltipTriggerList.forEach((tooltipTriggerEl) => {
         new Tooltip(tooltipTriggerEl, { html: true });
     });
 }
 
 // Listener for custom 'showPersonDetails' event
-document.addEventListener('showPersonDetails', event => {
+document.addEventListener("showPersonDetails", (event) => {
     displayPersonDetailsUI(event.detail);
 });
 
 // Handle city link clicks with delegation
 function handleCityLinkClick(event) {
-    if (event.target.classList.contains('city-link')) {
+    if (event.target.classList.contains("city-link")) {
         const townKey = event.target.dataset.townKey;
         const townDetails = getFamilyTowns()[townKey];
         const latitude = parseFloat(townDetails.latitude);
@@ -35,11 +40,13 @@ function handleCityLinkClick(event) {
         if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
             const marker = googleMapManager.markers[townKey];
             if (marker) {
-                googleMapManager.map.setCenter(new google.maps.LatLng(latitude, longitude));
+                googleMapManager.map.setCenter(
+                    new google.maps.LatLng(latitude, longitude)
+                );
                 googleMapManager.map.setZoom(10);
                 if (!marker.infowindow) {
                     marker.infowindow = new google.maps.InfoWindow({
-                        content: marker.getTitle()
+                        content: marker.getTitle(),
                     });
                 }
                 marker.infowindow.open(googleMapManager.map, marker);
@@ -54,35 +61,42 @@ function handleCityLinkClick(event) {
 
 // Close popover on outside click
 function closePopoverOnClickOutside(event) {
-    const popover = document.getElementById('customPopover');
+    const popover = document.getElementById("customPopover");
     if (popover && !popover.contains(event.target)) {
-        popover.style.display = 'none';
+        popover.style.display = "none";
     }
 }
 
 // Setup fan parameter event listeners
 export function setupFanParameterEventListeners() {
-    document.querySelectorAll('.parameter').forEach(item => {
+    document.querySelectorAll(".parameter").forEach((item) => {
         // Supprimer l'ancien écouteur d'événements s'il existe
         const oldHandler = item._changeHandler;
         if (oldHandler) {
-            item.removeEventListener('change', oldHandler);
+            item.removeEventListener("change", oldHandler);
         }
 
         // Créer un nouveau gestionnaire d'événements
         const handleParameterChange = (event) => {
             const input = event.target;
-            console.log('Input type:', input.type);
-            console.log('Input name:', input.name);
-            console.log('Raw value:', input.value);
+            console.log("Input type:", input.type);
+            console.log("Input name:", input.name);
+            console.log("Raw value:", input.value);
 
             // Convertir les valeurs "true"/"false" en booléens pour certains paramètres
             let value;
-            const booleanParameters = ['showMarriages', 'invert-text-arc', 'showMissing'];
-            
+            const booleanParameters = [
+                "showMarriages",
+                "invert-text-arc",
+                "showMissing",
+            ];
+
             if (booleanParameters.includes(input.name)) {
-                value = input.value === 'true';
-            } else if (input.type === 'number' || ['fanAngle', 'max-generations'].includes(input.name)) {
+                value = input.value === "true";
+            } else if (
+                input.type === "number" ||
+                ["fanAngle", "max-generations"].includes(input.name)
+            ) {
                 value = parseInt(input.value, 10);
             } else {
                 value = input.value;
@@ -90,33 +104,37 @@ export function setupFanParameterEventListeners() {
 
             // Mapping des noms de paramètres pour correspondre à ceux du store
             const parameterMapping = {
-                'showMarriages': 'showMarriages',
-                'invert-text-arc': 'invertTextArc',
-                'showMissing': 'showMissing',
-                'fanAngle': 'fanAngle',
-                'max-generations': 'maxGenerations',
-                'fanColor': 'coloringOption'
+                showMarriages: "showMarriages",
+                "invert-text-arc": "invertTextArc",
+                showMissing: "showMissing",
+                fanAngle: "fanAngle",
+                "max-generations": "maxGenerations",
+                fanColor: "coloringOption",
             };
 
             const storeParamName = parameterMapping[input.name];
             if (!storeParamName) {
-                console.warn('Unknown parameter:', input.name);
+                console.warn("Unknown parameter:", input.name);
                 return;
             }
 
-            console.log(`Updating ${storeParamName} with value:`, value, `(type: ${typeof value})`);
+            console.log(
+                `Updating ${storeParamName} with value:`,
+                value,
+                `(type: ${typeof value})`
+            );
             configStore.updateFanParameter(storeParamName, value);
         };
 
         // Sauvegarder la référence du gestionnaire et ajouter l'écouteur
         item._changeHandler = handleParameterChange;
-        item.addEventListener('change', handleParameterChange);
+        item.addEventListener("change", handleParameterChange);
     });
 
     // Gérer le sélecteur d'individu
-    const individualSelect = document.getElementById('individual-select');
+    const individualSelect = document.getElementById("individual-select");
     if (individualSelect) {
-        individualSelect.addEventListener('change', () => {
+        individualSelect.addEventListener("change", () => {
             const selectedRoot = individualSelect.value;
             configStore.setConfig({ root: selectedRoot });
         });
@@ -125,26 +143,28 @@ export function setupFanParameterEventListeners() {
 
 // Setup person link event listener with delegation
 export function setupPersonLinkEventListener() {
-    const tomSelect = getTomSelectInstance();
+    const tomSelect = configStore.tomSelect;
     if (!tomSelect) {
-        console.error('tomSelect is undefined');
+        console.error("tomSelect is undefined");
         return;
     }
 
-    document.addEventListener('click', event => {
-        if (event.target.matches('.person-link')) {
+    document.addEventListener("click", (event) => {
+        if (event.target.matches(".person-link")) {
             event.preventDefault();
-            const personId = event.target.getAttribute('data-person-id');
+            const personId = event.target.getAttribute("data-person-id");
             tomSelect.setValue(personId);
-            const changeEvent = new Event('change', { bubbles: true });
+            const changeEvent = new Event("change", { bubbles: true });
             tomSelect.dropdown_content.dispatchEvent(changeEvent);
 
-            const individualMapContainer = document.getElementById('individualMapContainer');
-            const personDetails = document.getElementById('personDetails');
-            if (individualMapContainer?.classList.contains('show')) {
+            const individualMapContainer = document.getElementById(
+                "individualMapContainer"
+            );
+            const personDetails = document.getElementById("personDetails");
+            if (individualMapContainer?.classList.contains("show")) {
                 Offcanvas.getInstance(individualMapContainer).hide();
             }
-            if (personDetails?.classList.contains('show')) {
+            if (personDetails?.classList.contains("show")) {
                 Offcanvas.getInstance(personDetails).hide();
             }
         }
@@ -158,10 +178,10 @@ function updateUIAfterUndoRedo() {
         const tomSelect = getTomSelectInstance();
         if (tomSelect) {
             tomSelect.setValue(root);
-            const changeEvent = new Event('change', { bubbles: true });
+            const changeEvent = new Event("change", { bubbles: true });
             tomSelect.dropdown_content.dispatchEvent(changeEvent);
         } else {
-            console.error('tomSelect is undefined');
+            console.error("tomSelect is undefined");
         }
     }
 }
@@ -176,31 +196,31 @@ function setupUndoRedoEventListeners() {
         configStore.redo();
         updateUIAfterUndoRedo();
     };
-    const keydownHandler = event => {
-        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+    const keydownHandler = (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
             event.preventDefault();
             undoHandler();
         }
-        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "y") {
             event.preventDefault();
             redoHandler();
         }
     };
 
-    document.getElementById('undoButton').addEventListener('click', undoHandler);
-    document.getElementById('redoButton').addEventListener('click', redoHandler);
-    document.addEventListener('keydown', keydownHandler);
+    document.getElementById("undoButton").addEventListener("click", undoHandler);
+    document.getElementById("redoButton").addEventListener("click", redoHandler);
+    document.addEventListener("keydown", keydownHandler);
 
     // Store references in WeakMap
-    eventListenersMap.set(document.getElementById('undoButton'), undoHandler);
-    eventListenersMap.set(document.getElementById('redoButton'), redoHandler);
+    eventListenersMap.set(document.getElementById("undoButton"), undoHandler);
+    eventListenersMap.set(document.getElementById("redoButton"), redoHandler);
     eventListenersMap.set(document, keydownHandler);
 }
 
 // Setup fullscreen toggle
 function setupFullscreenToggle() {
-    const fullscreenButton = document.getElementById('fullscreenButton');
-    const fanContainer = document.getElementById('fanContainer');
+    const fullscreenButton = document.getElementById("fullscreenButton");
+    const fanContainer = document.getElementById("fanContainer");
 
     const fullscreenHandler = () => {
         if (screenfull.isEnabled) {
@@ -208,41 +228,41 @@ function setupFullscreenToggle() {
         }
     };
 
-    fullscreenButton.addEventListener('click', fullscreenHandler);
+    fullscreenButton.addEventListener("click", fullscreenHandler);
 
     if (screenfull.isEnabled) {
-        screenfull.on('change', () => {
+        screenfull.on("change", () => {
             const panZoomInstance = getSvgPanZoomInstance();
             panZoomInstance.updateBBox();
             panZoomInstance.fit();
             panZoomInstance.center();
 
-            const fan = document.getElementById('fan');
+            const fan = document.getElementById("fan");
 
             if (screenfull.isFullscreen) {
                 panZoomInstance.disableDblClickZoom(false);
 
                 const mousedownHandler = () => {
-                    fan.style.cursor = 'grabbing';
+                    fan.style.cursor = "grabbing";
                 };
                 const mouseupHandler = () => {
-                    fan.style.cursor = 'grab';
+                    fan.style.cursor = "grab";
                 };
 
-                fan.addEventListener('mousedown', mousedownHandler);
-                fan.addEventListener('mouseup', mouseupHandler);
+                fan.addEventListener("mousedown", mousedownHandler);
+                fan.addEventListener("mouseup", mouseupHandler);
 
                 // Store references in WeakMap
                 eventListenersMap.set(fan, { mousedownHandler, mouseupHandler });
             } else {
                 panZoomInstance.enableDblClickZoom(true);
                 panZoomInstance.reset();
-                fan.style.cursor = 'default';
+                fan.style.cursor = "default";
 
                 const handlers = eventListenersMap.get(fan);
                 if (handlers) {
-                    fan.removeEventListener('mousedown', handlers.mousedownHandler);
-                    fan.removeEventListener('mouseup', handlers.mouseupHandler);
+                    fan.removeEventListener("mousedown", handlers.mousedownHandler);
+                    fan.removeEventListener("mouseup", handlers.mouseupHandler);
                 }
             }
         });
@@ -255,15 +275,17 @@ function setupFullscreenToggle() {
 // Function to initialize file loading event listeners
 const setupFileLoadingEventListeners = () => {
     // Demo file loading
-    Array.from(document.getElementsByClassName('remote-file')).forEach(function (element) {
-        element.addEventListener('click', function (e) {
-            loadGedcomFile(e.target.getAttribute('data-link'));
+    Array.from(document.getElementsByClassName("remote-file")).forEach(function (
+        element
+    ) {
+        element.addEventListener("click", function (e) {
+            loadGedcomFile(e.target.getAttribute("data-link"));
             return false;
         });
     });
 
     // User file loading
-    document.getElementById('file').addEventListener('change', function (e) {
+    document.getElementById("file").addEventListener("change", function (e) {
         loadGedcomFile(e.target.files);
     });
 };
@@ -331,14 +353,14 @@ export const setupAllEventListeners = (authStore) => {
     if (eventListenersInitialized) {
         return;
     }
-    
+
     // Mark event listeners as initialized
     eventListenersInitialized = true;
 
     // Function to initialize all event listeners
     const initializeEventListeners = () => {
         // Add a click event listener to the document
-        document.addEventListener('click', event => {
+        document.addEventListener("click", (event) => {
             handleCityLinkClick(event); // Handle city link clicks
             closePopoverOnClickOutside(event); // Close popovers when clicking outside
         });
@@ -364,12 +386,12 @@ export const setupAllEventListeners = (authStore) => {
     // Check if the document is still loading
     if (document.readyState === "loading") {
         // If the document is loading, set up event listeners after the DOM content is loaded
-        document.addEventListener('DOMContentLoaded', initializeEventListeners);
+        document.addEventListener("DOMContentLoaded", initializeEventListeners);
     } else {
         // If the document is already loaded, initialize event listeners immediately
         initializeEventListeners();
     }
-}
+};
 
 /*
 // Setup advanced modal

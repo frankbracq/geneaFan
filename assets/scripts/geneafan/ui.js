@@ -1,7 +1,7 @@
 // MobX state management
 import { reaction, action, autorun } from './stores/mobx-config';
 import authStore from './stores/authStore.js';
-import configStore from './stores/configStore.js';
+import configStore from './stores/fanConfigStore.js';
 import ShareFormStore from './stores/shareFormStore.js';
 
 // Utility libraries
@@ -21,7 +21,6 @@ import {
     setSvgPanZoomInstance,
     getSvgPanZoomInstance,
     gmapApiKey,
-    getTomSelectInstance,
 } from "./stores/state.js";
 import { debounce } from "./utils.js";
 
@@ -370,7 +369,7 @@ export async function resetUI() {
         individualSelectElement.innerHTML = "";
     }
 
-    let tomSelect = getTomSelectInstance();
+    let tomSelect = configStore.tomSelect;
     if (tomSelect) {
         tomSelect.clearOptions();
         tomSelect.clear();

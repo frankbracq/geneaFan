@@ -1,7 +1,7 @@
 import '../vendor/pdfkitFontRegister.js';
 import { mmToPoints, mmToPixels } from './utils.js';
 import { Modal } from 'bootstrap';
-import configStore from './stores/configStore.js';
+import configStore from './stores/fanConfigStore.js';
 
 const PAGE_WIDTH_IN_MM = 297; // Largeur en millimètres
 const PAGE_HEIGHT_IN_MM = 420; // Hauteur en millimètres

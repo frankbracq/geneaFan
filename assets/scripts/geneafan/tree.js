@@ -8,7 +8,7 @@ import {
     getFamilyTreeData,
 } from './stores/state';
 import { commonAncestryGraph, getOldestAncestorOf } from './ancestorUtils';
-import configStore from './stores/configStore';
+import configStore from './stores/fanConfigStore';
 
 let family;
 let initializing = false;

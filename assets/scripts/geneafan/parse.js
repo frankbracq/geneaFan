@@ -32,7 +32,7 @@ import {
     addAgeAtFirstChild,
     setFamilyTreeData,
 } from "./stores/state.js";
-import configStore from './stores/configStore.js';
+import configStore from './stores/fanConfigStore.js';
 import jsonpointer from 'jsonpointer';
 
 const EMPTY = "";

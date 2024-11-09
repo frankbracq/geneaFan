@@ -1,4 +1,4 @@
-import { makeAutoObservable, action, reaction, runInAction, computed, comparer } from './mobx-config';
+import { makeAutoObservable, action, reaction, runInAction, computed, comparer } from './mobx-config.js';
 import TomSelect from 'tom-select';
 import 'tom-select/dist/css/tom-select.css';
 import { draw } from "../fan.js";
