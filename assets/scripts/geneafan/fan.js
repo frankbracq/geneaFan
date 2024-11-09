@@ -554,20 +554,17 @@ function adjustFanVerticalPosition(svg, fanHeight, frameHeight, scale) {
 }
 
 export function drawFan() {
+    console.log('drawFan');
     console.time('drawFan');
     const config = configStore.getConfig;
-    const data = buildHierarchy();
-    // setHierarchy(data);
+    const angle = configStore.angle; // Récupérer l'angle via le getter
+    const data = buildHierarchy(); // setHierarchy(data);
         
     if (data == null) {
         console.log("Data is null for drawFan. Exiting.");
         window.alert(__('geneafan.cannot_read_this_file'));
         return null;
     }
-    
-    // const [fanWidthInMm, fanHeightInMm] = config.fanDimensions.split('x').map(Number);
-    // const radius = mmToPixels(Math.round((fanWidthInMm / 2)));
-    // console.log("config.frameDimensions: ", config.frameDimensions);
 
     if (!config.fanDimensions) {
         console.error("Fan dimensions are undefined");
@@ -674,6 +671,7 @@ export function drawFan() {
     } else {
         applyNormalWeights(data);
     }
+
     function computeTotalWeight(tree, generation) {
         if (!tree) return 0; 
 
@@ -694,7 +692,7 @@ export function drawFan() {
 
     // Calculate polar coordinates
     function calculateNodeProperties(node) {
-        const space = 2 * Math.PI - config.angle;
+        const space = 2 * Math.PI - angle; // Utiliser angle au lieu de config.angle
         if (node.parent == null) {
             node.x0 = Math.PI - space / 2;
             node.x1 = -Math.PI + space / 2;
@@ -719,7 +717,8 @@ export function drawFan() {
     }
     
     const width = 2 * radius,
-        height = radius + Math.max(radius * Math.cos(Math.PI - config.angle / 2), radius * weightRadiusFirst / totalWeight);
+        height = radius + Math.max(radius * Math.cos(Math.PI - angle / 2), radius * weightRadiusFirst / totalWeight); // Utiliser angle ici aussi
+
     const hasTitle = config.title.length > 0;
     const titleBlock = hasTitle ? titleSize + titleSpace : 0;
     const realHeight = height + titleBlock; // Keep for future use

@@ -450,32 +450,11 @@ export function displayFan() {
     return instance;
 }
 
-// MobX action to update the configuration after a parameter change
-const updateConfig = action((newConfig) => {
-    configStore.setConfig(newConfig);
-});
-
 // Function to check if the fan container is visible
 const isFanContainerVisible = () => {
     const fanContainer = document.getElementById("fanContainer");
     return fanContainer && fanContainer.offsetParent !== null;
 };
-
-// MobX reaction to monitor changes in config.root
-reaction(
-    () => configStore.config.root,
-    (root) => {
-        if (!isFanContainerVisible()) {
-            console.warn(
-                "The fan container is not visible. Skipping svgPanZoom initialization."
-            );
-            return null;
-        }
-        // Appeler handleSettingChange du store au lieu de onSettingChange
-        console.log("Root changed. Reaction calling handleSettingChange with root =", root);
-        configStore.handleSettingChange();
-    }
-);
 
 // Download buttons
 document.getElementById('download-pdf').addEventListener('click', function (event) {

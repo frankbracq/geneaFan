@@ -1,6 +1,6 @@
 import FamilyTree from '@balkangraph/familytree.js';
 import _ from 'lodash';
-import { reaction } from 'mobx';
+import { reaction } from './stores/mobx-config';
 import {
     getIndividualsCache,
     getCommonAncestryGraphData,

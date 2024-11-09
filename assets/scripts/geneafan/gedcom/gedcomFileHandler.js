@@ -412,7 +412,7 @@ function findYoungestIndividual(individuals) {
 }
 
 async function onFileChange(data) {
-    handleTabsAndOverlay(true); // Activer le chargement et désactiver les onglets
+    handleTabsAndOverlay(true);  // Active le chargement et désactive les onglets
 
     clearAllStates();
 
@@ -439,12 +439,11 @@ async function onFileChange(data) {
         googleMapManager.loadMarkersData();
 
         const selectElement = document.getElementById("individual-select");
-        selectElement.innerHTML = ""; // Efface tout contenu résiduel
+        selectElement.innerHTML = "";  // Efface tout contenu résiduel
         const placeholderOption = new Option("", "", true, true);
         placeholderOption.disabled = true;
         selectElement.appendChild(placeholderOption);
 
-        // Utilisation de configStore pour gérer tomSelect
         let tomSelect = getTomSelectInstance();
         if (!tomSelect) {
             initializeTomSelect();
@@ -467,10 +466,22 @@ async function onFileChange(data) {
         let rootId;
         const gedcomFileName = configStore.getConfig.gedcomFileName;
         rootId = (gedcomFileName === "demo.ged") ? "@I111@" : findYoungestIndividual(individuals)?.id;
-        configStore.setTomSelectValue(rootId);
-
-        const event = new Event("change", { bubbles: true });
-        tomSelect.dropdown_content.dispatchEvent(event);
+        // Utiliser batchUpdate pour regrouper toutes les modifications de configStore
+        configStore.batchUpdate(() => {
+            configStore.setTomSelectValue(rootId);
+            configStore.setConfig({ root: rootId });
+            
+            const rootPerson = individuals.find((individual) => individual.id === rootId);
+            if (rootPerson) {
+                configStore.setConfig({
+                    ...configStore.getConfig,
+                    rootPersonName: {
+                        name: rootPerson.name,
+                        surname: rootPerson.surname,
+                    },
+                });
+            }
+        });
 
         [
             ...document.querySelectorAll(".parameter"),
@@ -483,23 +494,10 @@ async function onFileChange(data) {
             el.disabled = false;
         });
 
-        configStore.setConfig({ root: rootId });
-
-        // Recherchez l'individu correspondant et mettez à jour config.rootPersonName
-        const rootPerson = individuals.find((individual) => individual.id === rootId);
-        if (rootPerson) {
-            configStore.setConfig({
-                ...configStore.getConfig,
-                rootPersonName: {
-                    name: rootPerson.name,
-                    surname: rootPerson.surname,
-                },
-            });
-        }
     } catch (error) {
         console.error("General Error:", error);
     } finally {
-        handleTabsAndOverlay(false); // Désactiver le chargement et activer les onglets
+        handleTabsAndOverlay(false);  // Désactive le chargement et active les onglets
         setupPersonLinkEventListener();
     }
 }
