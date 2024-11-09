@@ -255,19 +255,6 @@ export const setFamilyTowns = newFamilyTowns => new Promise(resolve => {
     resolve();
 });
 
-// SVG Pan Zoom instance state
-export let svgPanZoomInstance = null;
-/**
- * Get the current SVG Pan Zoom instance.
- * @returns {Object} The current SVG Pan Zoom instance.
- */
-export const getSvgPanZoomInstance = () => svgPanZoomInstance;
-/**
- * Set new SVG Pan Zoom instance.
- * @param {Object} newInstance - The new SVG Pan Zoom instance to be set.
- */
-export const setSvgPanZoomInstance = newInstance => svgPanZoomInstance = newInstance;
-
 // Statistics state
 let statistics = {
     totalIndividuals: 0,

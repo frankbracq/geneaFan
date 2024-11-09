@@ -3,7 +3,7 @@ import { reaction, action, autorun } from './stores/mobx-config';
 import authStore from './stores/authStore.js';
 import configStore from './stores/fanConfigStore.js';
 import ShareFormStore from './stores/shareFormStore.js';
-import svgPanZoomStore from './stores/svgPanZoomStore';
+import svgPanZoomStore from './stores/svgPanZoomStore.js';
 
 // Utility libraries
 import _ from 'lodash';                 // Utility functions
@@ -18,8 +18,7 @@ import { Loader } from "@googlemaps/js-api-loader";  // Google Maps loader
 // Application state and utilities
 import {
     setFamilyTowns,
-    setSvgPanZoomInstance,
-    getSvgPanZoomInstance,
+
     gmapApiKey,
 } from "./stores/state.js";
 import { debounce } from "./utils.js";
@@ -323,34 +322,6 @@ function ordinalSuffixOf(i) {
         return "er";
     }
     return "ème";
-}
-
-function resizeSvg() {
-    const fanContainer = document.getElementById('fanContainer');
-    const svgElement = document.getElementById('fan');
-
-    const resize = () => {
-        const containerWidth = fanContainer.clientWidth;
-        const containerHeight = fanContainer.clientHeight;
-
-        svgElement.setAttribute('width', containerWidth);
-        svgElement.setAttribute('height', containerHeight);
-
-        svgPanZoomStore.resize();
-    };
-
-    const debouncedResize = debounce(resize, 100);
-    
-    // Ajouter l'event listener
-    window.addEventListener('resize', debouncedResize);
-    
-    // Redimensionnement initial
-    resize();
-
-    // Retourner une fonction de nettoyage
-    return () => {
-        window.removeEventListener('resize', debouncedResize);
-    };
 }
 
 export async function resetUI() {

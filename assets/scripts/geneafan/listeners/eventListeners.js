@@ -1,6 +1,6 @@
 import { getFamilyTowns } from "../stores/state.js";
 import configStore from "../stores/fanConfigStore.js";
-import svgPanZoomStore from '../stores/svgPanZoomStore';
+import svgPanZoomStore from '../stores/svgPanZoomStore.js';
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
 import {
     setupResponsiveTabs,

@@ -1,10 +1,9 @@
 import { makeAutoObservable, action, reaction, runInAction, computed, comparer } from './mobx-config.js';
-import svgPanZoomStore from './svgPanZoomStore';
+import svgPanZoomStore from './svgPanZoomStore.js';
 import TomSelect from 'tom-select';
 import 'tom-select/dist/css/tom-select.css';
 import { draw } from "../fan.js";
 import { displayFan } from "../ui.js";
-import { getSvgPanZoomInstance, setSvgPanZoomInstance } from "./state.js";
 import { initializeAscendantTimeline } from '../timeline/ascendantTimeline.js';
 import { updateFilename } from "../downloads.js";
 
