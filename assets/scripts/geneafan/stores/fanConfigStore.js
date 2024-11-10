@@ -96,11 +96,11 @@ class ConfigStore {
             redo: action,
             resetConfigHistory: action,
             queueSettingChange: action,
-            
+
             // Computed values
             angle: computed,
             dimensions: computed,
-            
+
             // Non-observables
             _queueTimeout: false,
             _updateQueued: false,
@@ -122,10 +122,10 @@ class ConfigStore {
             }),
             (params, previousParams) => {
                 if (this._batchUpdating) return;
-        
+
                 runInAction(() => {
                     let hasChanges = false;
-        
+
                     // Si n'importe quel paramètre a changé, on doit redessiner
                     if (params.fanAngle !== previousParams?.fanAngle ||
                         params.maxGenerations !== previousParams?.maxGenerations ||
@@ -136,16 +136,16 @@ class ConfigStore {
                         params.root !== previousParams?.root) {
                         hasChanges = true;
                     }
-        
+
                     // Mises à jour spécifiques si nécessaire
                     if (params.fanAngle !== previousParams?.fanAngle) {
                         this.config.titleMargin = params.fanAngle === 360 ? 0.35 : 0.25;
                     }
-        
+
                     if (params.coloringOption !== previousParams?.coloringOption) {
                         this.config.computeChildrenCount = params.coloringOption === "childrencount";
                     }
-        
+
                     // Vérification des changements de dimensions
                     if (params.fanAngle !== previousParams?.fanAngle ||
                         params.maxGenerations !== previousParams?.maxGenerations ||
@@ -155,7 +155,7 @@ class ConfigStore {
                             this.setDimensions(dimensions);
                         }
                     }
-        
+
                     if (hasChanges) {
                         this.queueSettingChange();
                     }
@@ -170,12 +170,12 @@ class ConfigStore {
 
     queueSettingChange = action(() => {
         console.log('queueSettingChange called');
-        
+
         // Annuler le timeout existant pour le remplacer par un nouveau
         if (this._queueTimeout) {
             clearTimeout(this._queueTimeout);
         }
-        
+
         // Toujours programmer une nouvelle mise à jour
         this._queueTimeout = setTimeout(() => {
             if (this._queueTimeout) {  // Vérifier que le timeout n'a pas été annulé
@@ -208,9 +208,9 @@ class ConfigStore {
 
             console.log('Starting fan drawing process');
             let svgElement = document.querySelector('#fan');
-    if (svgElement && svgPanZoomStore.isInitialized) {
-        svgPanZoomStore.destroy();
-    }
+            if (svgElement && svgPanZoomStore.isInitialized) {
+                svgPanZoomStore.destroy();
+            }
 
             const drawResult = draw();
             if (!drawResult) {
@@ -234,8 +234,8 @@ class ConfigStore {
 
             if (this.config.root && drawResult.rootPersonName) {
                 const rootPersonName = this.formatName(drawResult.rootPersonName);
-                const filename = (__("Éventail généalogique de ") + 
-                    rootPersonName + 
+                const filename = (__("Éventail généalogique de ") +
+                    rootPersonName +
                     " créé sur genealog.ie"
                 ).replace(/[|&;$%@"<>()+,]/g, "");
 
@@ -257,7 +257,7 @@ class ConfigStore {
 
     batchUpdate = action((updates) => {
         if (this._batchUpdating) return;
-        
+
         this._batchUpdating = true;
         try {
             updates();
@@ -269,7 +269,7 @@ class ConfigStore {
 
     setConfig = action((params) => {
         const previousRoot = this.config.root;
-        
+
         runInAction(() => {
             Object.assign(this.config, params);
 

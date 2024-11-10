@@ -1,5 +1,5 @@
 // MobX state management
-import { reaction, action, autorun } from './stores/mobx-config';
+import { reaction, autorun } from './stores/mobx-config';
 import authStore from './stores/authStore.js';
 import configStore from './stores/fanConfigStore.js';
 import ShareFormStore from './stores/shareFormStore.js';
@@ -18,10 +18,8 @@ import { Loader } from "@googlemaps/js-api-loader";  // Google Maps loader
 // Application state and utilities
 import {
     setFamilyTowns,
-
     gmapApiKey,
 } from "./stores/state.js";
-import { debounce } from "./utils.js";
 
 // Core functionality
 import {

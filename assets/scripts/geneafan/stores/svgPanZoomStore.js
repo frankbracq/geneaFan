@@ -50,12 +50,14 @@ class SvgPanZoomStore {
 
     debouncedWindowResize = () => {
         if (this.resizeTimeout) {
-            clearTimeout(this.resizeTimeout);
+            cancelAnimationFrame(this.resizeTimeout);
         }
-        this.resizeTimeout = setTimeout(() => {
+        // Double RAF pour assurer la synchronisation avec le prochain frame
+        this.resizeTimeout = requestAnimationFrame(() => {
             requestAnimationFrame(this.handleWindowResize);
-        }, 60);
+        });
     };
+
 
     initialize = (selector = '#fan', options = {}) => {
         try {

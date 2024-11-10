@@ -1,5 +1,3 @@
-// authStore.js
-
 import { makeAutoObservable, runInAction } from './mobx-config';
 import { Clerk } from '@clerk/clerk-js';
 
