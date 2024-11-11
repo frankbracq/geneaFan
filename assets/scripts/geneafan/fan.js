@@ -8,6 +8,7 @@ import { mmToPixels } from './utils.js';
 import { extractYear } from './dates.js';
 import configStore from './stores/fanConfigStore.js';
 import { buildHierarchy } from './parse.js';
+import { SVGPathData } from 'svg-pathdata';
 
 const weightFontFirst = 0.25,
     weightFontOther = 0.22,
@@ -134,15 +135,105 @@ function createBoxes(g, descendants, showMarriages) {
             .attr('style', '-inkscape-stroke:hairline')
             .attr('stroke-width', '0.01')
             .attr('fill', d => getBoxColor(d, coloringOption))
-            .attr('class', 'individual-boxes')
+            .attr('class', nodeId)
             .attr('data-id', d => d.data.id);
     }
 
+    // Générer les boîtes normalement
     generateAndStyleBoxes('individual-boxes', ignored => true, individualBoxGenerator, coloringOption);
 
     if (showMarriages) {
         generateAndStyleBoxes('marriage-boxes', d => d.children, marriageBoxGenerator, coloringOption);
     }
+
+    function cleanupDuplicateLines() {
+        const EPSILON = 0.0001;
+        const lines = new Map();
+
+        function normalizeCoord(coord) {
+            return Math.round(coord * 10000) / 10000;
+        }
+
+        function isLine(commands) {
+            // Vérifier si le chemin est une ligne simple (M + L)
+            if (commands.length !== 2) return false;
+            return (
+                commands[0].type === SVGPathData.MOVE_TO &&
+                commands[1].type === SVGPathData.LINE_TO
+            );
+        }
+
+        function getLineKey(pathElement) {
+            try {
+                const pathData = new SVGPathData(pathElement.getAttribute('d'));
+                const commands = pathData.commands;
+
+                // Ignorer les chemins qui ne sont pas des lignes simples
+                if (!isLine(commands)) return null;
+
+                // Extraire les points de début et de fin
+                const points = [
+                    [normalizeCoord(commands[0].x), normalizeCoord(commands[0].y)],
+                    [normalizeCoord(commands[1].x), normalizeCoord(commands[1].y)]
+                ];
+
+                // Trier les points pour avoir une clé cohérente quelle que soit la direction
+                points.sort((a, b) => {
+                    if (Math.abs(a[0] - b[0]) < EPSILON) {
+                        return a[1] - b[1];
+                    }
+                    return a[0] - b[0];
+                });
+
+                return points.flat().join(',');
+
+            } catch (error) {
+                console.warn('Invalid path data:', pathElement.getAttribute('d'));
+                return null;
+            }
+        }
+
+        function shouldKeepExistingLine(existingPath, newPath) {
+            const existingWidth = parseFloat(existingPath.getAttribute('stroke-width') || '0.01');
+            const newWidth = parseFloat(newPath.getAttribute('stroke-width') || '0.01');
+
+            if (Math.abs(existingWidth - newWidth) < EPSILON) {
+                // Si les largeurs sont égales, préserver la structure d'origine
+                return true;
+            }
+            
+            // Garder la ligne avec la plus petite épaisseur
+            return existingWidth <= newWidth;
+        }
+
+        // Collecter toutes les lignes
+        g.selectAll('path').each(function() {
+            const path = this;
+            const key = getLineKey(path);
+            
+            if (!key) return; // Ignorer les chemins qui ne sont pas des lignes simples
+
+            if (!lines.has(key)) {
+                lines.set(key, path);
+            } else {
+                const existingPath = lines.get(key);
+                if (!shouldKeepExistingLine(existingPath, path)) {
+                    // Remplacer l'ancienne ligne par la nouvelle
+                    existingPath.remove();
+                    lines.set(key, path);
+                } else {
+                    // Supprimer la nouvelle ligne
+                    path.remove();
+                }
+            }
+        });
+
+        // Log des statistiques de nettoyage
+        console.log(`Clean-up stats: ${lines.size} unique lines kept`);
+    }
+
+    // Nettoyer les lignes en double après la génération
+    cleanupDuplicateLines();
 }
 
 function createTextElements(g, defs, descendants, showMarriages) {

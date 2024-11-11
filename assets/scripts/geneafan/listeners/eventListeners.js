@@ -1,6 +1,7 @@
 import { getFamilyTowns } from "../stores/state.js";
 import configStore from "../stores/fanConfigStore.js";
 import svgPanZoomStore from '../stores/svgPanZoomStore.js';
+import threeDPreviewStore from '../stores/threeDPreviewStore.js';
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
 import {
     setupResponsiveTabs,
@@ -33,7 +34,7 @@ const showPersonDetailsHandler = (event) => {
 // Ajouter une fonction pour configurer et nettoyer
 export function setupPersonDetailsListener() {
     document.addEventListener("showPersonDetails", showPersonDetailsHandler);
-    
+
     return () => {
         document.removeEventListener("showPersonDetails", showPersonDetailsHandler);
     };
@@ -139,7 +140,7 @@ export function setupFanParameterEventListeners() {
         // Sauvegarder la référence du gestionnaire et ajouter l'écouteur
         item._changeHandler = handleParameterChange;
         item.addEventListener("change", handleParameterChange);
-        
+
         cleanupFunctions.push(() => {
             item.removeEventListener("change", handleParameterChange);
             delete item._changeHandler;
@@ -153,7 +154,7 @@ export function setupFanParameterEventListeners() {
             const selectedRoot = individualSelect.value;
             configStore.setConfig({ root: selectedRoot });
         };
-        
+
         individualSelect.addEventListener("change", changeHandler);
         cleanupFunctions.push(() => {
             individualSelect.removeEventListener("change", changeHandler);
@@ -168,17 +169,17 @@ export function setupPersonLinkEventListener() {
     const tomSelect = configStore.tomSelect;
     if (!tomSelect) {
         console.error("tomSelect is undefined");
-        return () => {}; // Retourner une fonction de nettoyage vide en cas d'erreur
+        return () => { }; // Retourner une fonction de nettoyage vide en cas d'erreur
     }
 
     // Créer le gestionnaire d'événements
     const handlePersonLinkClick = (event) => {
         const personLink = event.target.closest(".person-link"); // Utiliser closest pour une meilleure délégation
         if (!personLink) return;
-        
+
         event.preventDefault();
         const personId = personLink.getAttribute("data-person-id");
-        
+
         // Vérifier si tomSelect est toujours disponible
         if (!tomSelect || !tomSelect.dropdown_content) {
             console.error("tomSelect or its dropdown is no longer available");
@@ -222,7 +223,7 @@ export function setupPersonLinkEventListener() {
     return () => {
         // Supprimer l'écouteur d'événements
         document.removeEventListener("click", handlePersonLinkClick);
-        
+
         // Nettoyer les références si nécessaire
         if (tomSelect) {
             // Éviter les fuites de mémoire potentielles
@@ -255,22 +256,22 @@ function updateUIAfterUndoRedo() {
 function setupUndoRedoEventListeners() {
     const undoButton = document.getElementById("undoButton");
     const redoButton = document.getElementById("redoButton");
-    
+
     if (!undoButton || !redoButton) {
         console.error("Undo/Redo buttons not found");
-        return () => {}; // Retourner une fonction de nettoyage vide
+        return () => { }; // Retourner une fonction de nettoyage vide
     }
 
     const undoHandler = () => {
         configStore.undo();
         updateUIAfterUndoRedo();
     };
-    
+
     const redoHandler = () => {
         configStore.redo();
         updateUIAfterUndoRedo();
     };
-    
+
     const keydownHandler = (event) => {
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
             event.preventDefault();
@@ -297,7 +298,7 @@ function setupUndoRedoEventListeners() {
         undoButton.removeEventListener("click", undoHandler);
         redoButton.removeEventListener("click", redoHandler);
         document.removeEventListener("keydown", keydownHandler);
-        
+
         // Nettoyer les références dans la WeakMap
         eventListenersMap.delete(undoButton);
         eventListenersMap.delete(redoButton);
@@ -322,10 +323,10 @@ function setupFullscreenToggle() {
     if (screenfull.isEnabled) {
         screenfull.on("change", () => {
             const isFullscreen = screenfull.isFullscreen;
-            
+
             // Mettre à jour l'état du plein écran dans le store
             svgPanZoomStore.setFullscreen(isFullscreen);
-            
+
             // Mettre à jour la vue
             svgPanZoomStore.updateViewport();
 
@@ -358,7 +359,7 @@ function setupFullscreenToggle() {
             screenfull.off("change");
         }
         fullscreenButton.removeEventListener("click", fullscreenHandler);
-        
+
         // Nettoyer les événements de souris si nécessaire
         if (fan && fan._mouseHandlers) {
             const handlers = fan._mouseHandlers;
@@ -372,15 +373,15 @@ function setupFullscreenToggle() {
 // Function to initialize file loading event listeners
 const setupFileLoadingEventListeners = () => {
     const cleanupFunctions = [];
-    
+
     // Gestionnaire des fichiers de démo
     const remoteFileElements = document.getElementsByClassName("remote-file");
     Array.from(remoteFileElements).forEach(element => {
-        const clickHandler = function(e) {
+        const clickHandler = function (e) {
             loadGedcomFile(e.target.getAttribute("data-link"));
             return false;
         };
-        
+
         element.addEventListener("click", clickHandler);
         cleanupFunctions.push(() => {
             element.removeEventListener("click", clickHandler);
@@ -390,10 +391,10 @@ const setupFileLoadingEventListeners = () => {
     // Gestionnaire du chargement de fichier utilisateur
     const fileInput = document.getElementById("file");
     if (fileInput) {
-        const changeHandler = function(e) {
+        const changeHandler = function (e) {
             loadGedcomFile(e.target.files);
         };
-        
+
         fileInput.addEventListener("change", changeHandler);
         cleanupFunctions.push(() => {
             fileInput.removeEventListener("change", changeHandler);
@@ -410,7 +411,7 @@ function setupTabAndUIEventListeners() {
     // Gestionnaire des éléments du dropdown
     const dropdownElements = document.querySelectorAll(".dropdown-menu a");
     dropdownElements.forEach((element) => {
-        const clickHandler = function() {
+        const clickHandler = function () {
             const dropdownButton = this.closest(".dropdown");
             dropdownButton.classList.remove("show");
             dropdownButton.querySelector(".dropdown-menu").classList.remove("show");
@@ -428,7 +429,7 @@ function setupTabAndUIEventListeners() {
         const tabFanHandler = () => {
             configStore.handleSettingChange();
         };
-        
+
         tabFan.addEventListener("shown.bs.tab", tabFanHandler);
         cleanupFunctions.push(() => {
             tabFan.removeEventListener("shown.bs.tab", tabFanHandler);
@@ -521,42 +522,50 @@ export const setupAllEventListeners = (authStore) => {
             cleanupFunctions.push(() => {
                 document.removeEventListener("click", documentClickHandler);
             });
-    
+
+            // Gestion du bouton de prévisualisation 3D
+            const toggleViewButton = document.getElementById('toggleView');
+            if (toggleViewButton) {
+                toggleViewButton.addEventListener('click', () => {
+                    threeDPreviewStore.toggleView();
+                });
+            }
+
             // Setup des listeners principaux avec leurs fonctions de nettoyage
             const fanParametersCleanup = setupFanParameterEventListeners();
             if (fanParametersCleanup) cleanupFunctions.push(fanParametersCleanup);
-    
+
             const personLinkCleanup = setupPersonLinkEventListener();
             if (personLinkCleanup) cleanupFunctions.push(personLinkCleanup);
-    
+
             const fullscreenCleanup = setupFullscreenToggle();
             if (fullscreenCleanup) cleanupFunctions.push(fullscreenCleanup);
-    
+
             const personDetailsCleanup = setupPersonDetailsListener();
             if (personDetailsCleanup) cleanupFunctions.push(personDetailsCleanup);
-    
+
             const fileLoadingCleanup = setupFileLoadingEventListeners();
             if (fileLoadingCleanup) cleanupFunctions.push(fileLoadingCleanup);
-    
+
             // Setup undo/redo avec sa fonction de nettoyage
             const undoRedoCleanup = setupUndoRedoEventListeners();
             if (undoRedoCleanup) cleanupFunctions.push(undoRedoCleanup);
-    
+
             // Setup des onglets et de l'interface utilisateur
             const tabAndUICleanup = setupTabAndUIEventListeners();
             if (tabAndUICleanup) cleanupFunctions.push(tabAndUICleanup);
-    
+
             // Setup des tabs responsives
             const responsiveTabsCleanup = setupResponsiveTabs();
             if (responsiveTabsCleanup) cleanupFunctions.push(responsiveTabsCleanup);
-    
+
             const tabResizeCleanup = setupTabResizeListener();
             if (tabResizeCleanup) cleanupFunctions.push(tabResizeCleanup);
-    
+
             // Setup des fonctionnalités protégées
             const protectedFeaturesCleanup = setupProtectedFeatureEventListeners(authStore);
             if (protectedFeaturesCleanup) cleanupFunctions.push(protectedFeaturesCleanup);
-    
+
             console.log('Tous les event listeners ont été initialisés avec succès');
         } catch (error) {
             console.error('Erreur lors de l\'initialisation des event listeners:', error);

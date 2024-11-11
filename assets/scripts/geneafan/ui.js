@@ -4,6 +4,7 @@ import authStore from './stores/authStore.js';
 import configStore from './stores/fanConfigStore.js';
 import ShareFormStore from './stores/shareFormStore.js';
 import svgPanZoomStore from './stores/svgPanZoomStore.js';
+import threeDPreviewStore from './stores/threeDPreviewStore';
 
 // Utility libraries
 import _ from 'lodash';                 // Utility functions
@@ -366,7 +367,8 @@ export async function resetUI() {
         downloadMenuElement,
         fanParametersDisplayElement,
         treeParametersDisplayElement,
-        fullscreenButtonElement
+        fullscreenButtonElement,
+        document.getElementById('toggleView') // 3D preview button
     ].forEach(el => {
         if (el) el.disabled = true;
     });
