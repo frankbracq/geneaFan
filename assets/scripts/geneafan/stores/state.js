@@ -8,7 +8,6 @@ export const clearAllStates = () => {
     clearFamilyTreeData();
     clearGenealogyGraph();
     clearAncestorMap();
-    clearAscendantEvents();
     clearFamilyEvents();
     clearStatistics();
     setIndividualsCache(new Map());  
@@ -180,28 +179,6 @@ export const setHierarchy = newHierarchy => hierarchyState = newHierarchy;
  * @returns {Array} The current hierarchy state.
  */
 export const getHierarchy = () => hierarchyState;
-
-// Ascendants events state
-let ascendantEvents = [];
-/**
- * Clear all ascendant events.
- */
-export const clearAscendantEvents = () => ascendantEvents = [];
-/**
- * Add an event to the ascendant events if it does not already exist.
- * @param {Object} event - The event to be added.
- */
-export const addToAscendantEvents = event => {
-    if (event.eventId && ascendantEvents.some(e => e.eventId === event.eventId)) {
-        return;
-    }
-    ascendantEvents.push(event);
-};
-/**
- * Get the current ascendant events.
- * @returns {Array} The current ascendant events.
- */
-export const getAscendantEvents = () => ascendantEvents;
 
 // Family events state
 export let familyEvents = [];
