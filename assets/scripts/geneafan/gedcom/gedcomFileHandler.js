@@ -456,29 +456,25 @@ async function onFileChange(data) {
         individuals.forEach((individual) => {
             tomSelect.addOption({
                 value: individual.id,
-                text: `${individual.surname} ${individual.name} ${individual.id} ${individual.birthYear ? individual.birthYear : "?"
-                    }-${individual.deathYear ? individual.deathYear : ""}`,
+                text: `${individual.surname} ${individual.name} ${individual.id} ${individual.birthYear ? individual.birthYear : "?"}-${individual.deathYear ? individual.deathYear : ""}`,
             });
         });
 
-        let rootId;
+        // Déterminer l'ID racine et trouver la personne correspondante
         const gedcomFileName = configStore.getConfig.gedcomFileName;
-        rootId = (gedcomFileName === "demo.ged") ? "@I111@" : findYoungestIndividual(individuals)?.id;
-        // Utiliser batchUpdate pour regrouper toutes les modifications de configStore
+        const rootId = (gedcomFileName === "demo.ged") ? "@I111@" : findYoungestIndividual(individuals)?.id;
+        const rootPerson = individuals.find((individual) => individual.id === rootId);
+
+        // Faire une seule mise à jour avec toutes les données
         configStore.batchUpdate(() => {
             configStore.setTomSelectValue(rootId);
-            configStore.setConfig({ root: rootId });
-
-            const rootPerson = individuals.find((individual) => individual.id === rootId);
-            if (rootPerson) {
-                configStore.setConfig({
-                    ...configStore.getConfig,
-                    rootPersonName: {
-                        name: rootPerson.name,
-                        surname: rootPerson.surname,
-                    },
-                });
-            }
+            configStore.setConfig({
+                root: rootId,
+                rootPersonName: rootPerson ? {
+                    name: rootPerson.name,
+                    surname: rootPerson.surname,
+                } : null
+            });
         });
 
         [
@@ -495,7 +491,7 @@ async function onFileChange(data) {
     } catch (error) {
         console.error("General Error:", error);
     } finally {
-        handleTabsAndOverlay(false);  // Désactive le chargement et active les onglets
+        handleTabsAndOverlay(false);
         setupPersonLinkEventListener();
     }
 }

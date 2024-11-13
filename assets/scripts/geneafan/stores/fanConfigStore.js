@@ -54,30 +54,18 @@ class ConfigStore {
     tomSelect = null;
     _batchUpdating = false;
     _queueTimeout = null;
+    _isInitializing = false;
     _updateQueued = false;
-
-    // Computed values
-    get angle() {
-        return (2 * Math.PI * this.config.fanAngle) / 360.0;
-    }
-
-    get dimensions() {
-        return this.calculateDimensions(
-            this.config.fanAngle,
-            this.config.maxGenerations,
-            this.config.showMarriages
-        );
-    }
+    _reactionDisposers = [];
+    _isReady = false;
 
     constructor() {
-        // Calculer les dimensions initiales avec les valeurs par défaut
         const initialDimensions = this.calculateDimensions(
             this.config.fanAngle,
             this.config.maxGenerations,
             this.config.showMarriages
         );
 
-        // Définir les dimensions initiales
         if (initialDimensions) {
             this.config.fanDimensions = initialDimensions.fanDimensionsInMm;
             this.config.frameDimensions = initialDimensions.frameDimensionsInMm;
@@ -96,39 +84,44 @@ class ConfigStore {
             redo: action,
             resetConfigHistory: action,
             queueSettingChange: action,
+            setupReactions: action,
+            disposeReactions: action,
 
-            // Computed values
             angle: computed,
             dimensions: computed,
+            isReady: computed,
 
-            // Non-observables
             _queueTimeout: false,
-            _updateQueued: false,
             _batchUpdating: false,
+            _isInitializing: false,
+            _updateQueued: false,
+            _reactionDisposers: false,
+            _isReady: false,
             tomSelect: false,
             configHistory: false
         });
 
-        // Une seule reaction pour tous les changements
-        reaction(
+        this.setupReactions();
+    }
+
+    setupReactions() {
+        this.disposeReactions();
+
+        const mainReaction = reaction(
             () => ({
-                fanAngle: this.config.fanAngle,
                 maxGenerations: this.config.maxGenerations,
                 showMarriages: this.config.showMarriages,
                 invertTextArc: this.config.invertTextArc,
                 coloringOption: this.config.coloringOption,
                 root: this.config.root,
-                showMissing: this.config.showMissing  // Ajouté
+                showMissing: this.config.showMissing
             }),
             (params, previousParams) => {
-                if (this._batchUpdating) return;
+                if (this._batchUpdating || this._isInitializing) return;
 
+                let hasChanges = false;
                 runInAction(() => {
-                    let hasChanges = false;
-
-                    // Si n'importe quel paramètre a changé, on doit redessiner
-                    if (params.fanAngle !== previousParams?.fanAngle ||
-                        params.maxGenerations !== previousParams?.maxGenerations ||
+                    if (params.maxGenerations !== previousParams?.maxGenerations ||
                         params.showMarriages !== previousParams?.showMarriages ||
                         params.invertTextArc !== previousParams?.invertTextArc ||
                         params.coloringOption !== previousParams?.coloringOption ||
@@ -137,56 +130,133 @@ class ConfigStore {
                         hasChanges = true;
                     }
 
-                    // Mises à jour spécifiques si nécessaire
-                    if (params.fanAngle !== previousParams?.fanAngle) {
-                        this.config.titleMargin = params.fanAngle === 360 ? 0.35 : 0.25;
-                    }
-
                     if (params.coloringOption !== previousParams?.coloringOption) {
                         this.config.computeChildrenCount = params.coloringOption === "childrencount";
                     }
 
-                    // Vérification des changements de dimensions
-                    if (params.fanAngle !== previousParams?.fanAngle ||
-                        params.maxGenerations !== previousParams?.maxGenerations ||
+                    if (params.maxGenerations !== previousParams?.maxGenerations ||
                         params.showMarriages !== previousParams?.showMarriages) {
                         const dimensions = this.dimensions;
                         if (dimensions) {
                             this.setDimensions(dimensions);
                         }
                     }
-
-                    if (hasChanges) {
-                        this.queueSettingChange();
-                    }
                 });
+
+                if (hasChanges && !this._updateQueued) {
+                    this.queueSettingChange();
+                }
             },
             {
                 equals: comparer.structural,
                 name: 'ConfigStore-MainReaction'
             }
         );
+
+        const angleReaction = reaction(
+            () => this.config.fanAngle,
+            (newAngle, prevAngle) => {
+                if (this._isInitializing || this._batchUpdating) return;
+                
+                if (newAngle !== prevAngle) {
+                    runInAction(() => {
+                        this.config.titleMargin = newAngle === 360 ? 0.35 : 0.25;
+                        const dimensions = this.dimensions;
+                        if (dimensions) {
+                            this.setDimensions(dimensions);
+                        }
+                    });
+
+                    if (!this._updateQueued) {
+                        this.queueSettingChange();
+                    }
+                }
+            }
+        );
+
+        this._reactionDisposers = [mainReaction, angleReaction];
+    }
+
+    disposeReactions() {
+        this._reactionDisposers.forEach(dispose => dispose());
+        this._reactionDisposers = [];
+    }
+
+    get isReady() {
+        return this._isReady;
+    }
+
+    get angle() {
+        return (2 * Math.PI * this.config.fanAngle) / 360.0;
+    }
+
+    get dimensions() {
+        return this.calculateDimensions(
+            this.config.fanAngle,
+            this.config.maxGenerations,
+            this.config.showMarriages
+        );
     }
 
     queueSettingChange = action(() => {
-        console.log('queueSettingChange called');
+        if (this._isInitializing || this._updateQueued) return;
 
-        // Annuler le timeout existant pour le remplacer par un nouveau
-        if (this._queueTimeout) {
-            clearTimeout(this._queueTimeout);
+        this._updateQueued = true;
+        this._queueTimeout = setTimeout(() => {
+            this._updateQueued = false;
+            this._queueTimeout = null;
+            this.handleSettingChangeInternal();
+        }, 100);
+    });
+
+    batchUpdate = action((updates) => {
+        if (this._batchUpdating) {
+            return;
         }
 
-        // Toujours programmer une nouvelle mise à jour
-        this._queueTimeout = setTimeout(() => {
-            if (this._queueTimeout) {  // Vérifier que le timeout n'a pas été annulé
-                this._queueTimeout = null;
+        this._batchUpdating = true;
+        
+        try {
+            runInAction(() => {
+                updates();
+            });
+        } finally {
+            this._batchUpdating = false;
+        }
+    });
+
+    setConfig = action((params) => {
+        const previousRoot = this.config.root;
+        const isInitialRoot = params.root && !previousRoot;
+
+        if (isInitialRoot) {
+            this._isInitializing = true;
+            this.disposeReactions();
+        }
+
+        runInAction(() => {
+            if (isInitialRoot) {
+                // Pour l'initialisation, tout faire d'un coup
+                Object.assign(this.config, params);
+                this.setTomSelectValue(params.root, true);
                 this.handleSettingChangeInternal();
+                this._isInitializing = false;
+                this.setupReactions();
+            } else if (!this._batchUpdating && !this._isInitializing) {
+                // Mise à jour normale
+                Object.assign(this.config, params);
+                if (!this._updateQueued) {
+                    this.queueSettingChange();
+                }
+            } else {
+                // Mise à jour en batch
+                Object.assign(this.config, params);
             }
-        }, 50);
+        });
     });
 
     handleSettingChange = action(() => {
-        if (this._batchUpdating) return;
+        if (this._batchUpdating || this._isInitializing || this._updateQueued) return;
         this.queueSettingChange();
     });
 
@@ -197,8 +267,6 @@ class ConfigStore {
             return;
         }
 
-        console.log('Processing handleSettingChange with config:', { ...this.config });
-
         try {
             const fanContainer = document.getElementById("fanContainer");
             if (!fanContainer || fanContainer.offsetParent === null) {
@@ -206,7 +274,6 @@ class ConfigStore {
                 return false;
             }
 
-            console.log('Starting fan drawing process');
             let svgElement = document.querySelector('#fan');
             if (svgElement && svgPanZoomStore.isInitialized) {
                 svgPanZoomStore.destroy();
@@ -218,36 +285,29 @@ class ConfigStore {
                 return false;
             }
 
-            console.log('Fan drawn successfully, displaying');
             displayFan();
 
-            // Gestion sécurisée de la timeline
-            try {
+            if (!this._isInitializing) {
                 if (this.config.root && drawResult.rootPersonName) {
                     initializeAscendantTimeline().catch(error => {
                         console.warn('Timeline initialization failed:', error);
                     });
+
+                    const rootPersonName = this.formatName(drawResult.rootPersonName);
+                    const filename = (__("Éventail généalogique de ") +
+                        rootPersonName +
+                        " créé sur genealog.ie"
+                    ).replace(/[|&;$%@"<>()+,]/g, "");
+
+                    this.config.filename = filename;
+                    updateFilename(filename);
                 }
-            } catch (timelineError) {
-                console.warn('Timeline error caught:', timelineError);
-            }
-
-            if (this.config.root && drawResult.rootPersonName) {
-                const rootPersonName = this.formatName(drawResult.rootPersonName);
-                const filename = (__("Éventail généalogique de ") +
-                    rootPersonName +
-                    " créé sur genealog.ie"
-                ).replace(/[|&;$%@"<>()+,]/g, "");
-
-                this.config.filename = filename;
-                updateFilename(filename);
             }
 
             document.getElementById('initial-group').style.display = 'none';
             document.getElementById("loading").style.display = "none";
             document.getElementById("overlay").classList.add("overlay-hidden");
 
-            console.log('Fan display completed');
             return true;
         } catch (error) {
             console.error("Error in handleSettingChange:", error);
@@ -255,43 +315,8 @@ class ConfigStore {
         }
     });
 
-    batchUpdate = action((updates) => {
-        if (this._batchUpdating) return;
-
-        this._batchUpdating = true;
-        try {
-            updates();
-            this.queueSettingChange();
-        } finally {
-            this._batchUpdating = false;
-        }
-    });
-
-    setConfig = action((params) => {
-        const previousRoot = this.config.root;
-
-        runInAction(() => {
-            Object.assign(this.config, params);
-
-            if (params.fanAngle !== undefined) {
-                console.log('Angle updated to:', this.angle);
-            }
-        });
-
-        // Gestion spéciale pour le root initial
-        if (params.root && !previousRoot) {
-            console.log('Initial root set, forcing fan drawing');
-            this.handleSettingChangeInternal();
-            return;
-        }
-
-        // Pour tous les autres changements, mettre en file d'attente
-        if (!this._batchUpdating) {
-            this.queueSettingChange();
-        }
-    });
-
     updateFanParameter = action((paramName, value) => {
+        if (this._isInitializing || this._batchUpdating) return;
         this.setConfig({ [paramName]: value });
     });
 
@@ -324,7 +349,7 @@ class ConfigStore {
     });
 
     setDimensions = action((dimensions) => {
-        if (dimensions && dimensions.fanDimensionsInMm && dimensions.frameDimensionsInMm) {
+        if (dimensions?.fanDimensionsInMm && dimensions?.frameDimensionsInMm) {
             this.config.fanDimensions = dimensions.fanDimensionsInMm;
             this.config.frameDimensions = dimensions.frameDimensionsInMm;
         }
@@ -332,34 +357,46 @@ class ConfigStore {
 
     formatName = action((rootPersonName) => {
         if (!rootPersonName) return "";
-        let firstName = rootPersonName?.name?.split(" ")[0] || "";
-        let surname = rootPersonName?.surname || "";
+        const firstName = rootPersonName?.name?.split(" ")[0] || "";
+        const surname = rootPersonName?.surname || "";
         return `${firstName} ${surname}`.trim();
     });
 
     initializeTomSelect() {
-        this.tomSelect = new TomSelect("#individual-select", {
-            create: false,
-            sortField: {
-                field: "text",
-                direction: "asc"
-            },
-            dropdownParent: "body",
-            placeholder: __("geneafan.choose_root_placeholder"),
-            allowClear: true,
-            maxItems: 1,
-            closeAfterSelect: true,
-            dropdownContentClass: 'ts-dropdown-content dropdown-content-modifiers',
-            plugins: ['dropdown_input', 'clear_button']
-        });
+        try {
+            this.tomSelect = new TomSelect("#individual-select", {
+                create: false,
+                sortField: {
+                    field: "text",
+                    direction: "asc"
+                },
+                dropdownParent: "body",
+                placeholder: __("geneafan.choose_root_placeholder"),
+                allowClear: true,
+                maxItems: 1,
+                closeAfterSelect: true,
+                dropdownContentClass: 'ts-dropdown-content dropdown-content-modifiers',
+                plugins: ['dropdown_input', 'clear_button']
+            });
 
-        this.tomSelect.addOption({ value: "", text: __("geneafan.choose_root_placeholder"), disabled: true });
-        this.tomSelect.addItem("", true);
+            this.tomSelect.addOption({ value: "", text: __("geneafan.choose_root_placeholder"), disabled: true });
+            this.tomSelect.addItem("", true);
+            
+            this._isReady = true;
+            document.dispatchEvent(new CustomEvent('configStoreReady'));
+        } catch (error) {
+            console.error("Error initializing TomSelect:", error);
+            this._isReady = false;
+        }
     }
 
-    setTomSelectValue = action((value) => {
+    setTomSelectValue = action((value, suppressEvent = false) => {
         if (this.tomSelect) {
-            this.tomSelect.setValue(value);
+            if (suppressEvent) {
+                this.tomSelect.addItem(value, true);
+            } else {
+                this.tomSelect.setValue(value);
+            }
         } else {
             console.error("TomSelect instance is not available.");
         }

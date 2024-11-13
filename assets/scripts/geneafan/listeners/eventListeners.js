@@ -165,69 +165,97 @@ export function setupFanParameterEventListeners() {
 
 // Setup person link event listener with delegation
 export function setupPersonLinkEventListener() {
-    const tomSelect = configStore.tomSelect;
-    if (!tomSelect) {
-        console.error("tomSelect is undefined");
-        return () => {}; // Retourner une fonction de nettoyage vide en cas d'erreur
-    }
+    let setupComplete = false;
+    let cleanup = null;
 
-    // Créer le gestionnaire d'événements
-    const handlePersonLinkClick = (event) => {
-        const personLink = event.target.closest(".person-link"); // Utiliser closest pour une meilleure délégation
-        if (!personLink) return;
+    function initializeListener() {
+        // Vérifier l'état de préparation via un accès direct à la propriété _isReady
+        if (!configStore._isReady) {
+            console.log('Waiting for ConfigStore to be ready...');
+            return;
+        }
         
-        event.preventDefault();
-        const personId = personLink.getAttribute("data-person-id");
-        
-        // Vérifier si tomSelect est toujours disponible
-        if (!tomSelect || !tomSelect.dropdown_content) {
-            console.error("tomSelect or its dropdown is no longer available");
+        if (setupComplete) {
+            console.log('Person link listener already setup');
             return;
         }
 
-        // Mettre à jour la valeur sélectionnée
-        try {
-            tomSelect.setValue(personId);
-            const changeEvent = new Event("change", { bubbles: true });
-            tomSelect.dropdown_content.dispatchEvent(changeEvent);
-        } catch (error) {
-            console.error("Error updating tomSelect value:", error);
+        const tomSelect = configStore.tomSelect;
+        if (!tomSelect) {
+            console.error("tomSelect is still undefined");
+            return;
         }
 
-        // Gérer les instances Offcanvas
-        try {
-            const individualMapContainer = document.getElementById("individualMapContainer");
-            const personDetails = document.getElementById("personDetails");
-
-            // Récupérer et cacher les instances Offcanvas si elles existent
-            const mapOffcanvas = individualMapContainer && Offcanvas.getInstance(individualMapContainer);
-            const detailsOffcanvas = personDetails && Offcanvas.getInstance(personDetails);
-
-            if (mapOffcanvas && individualMapContainer.classList.contains("show")) {
-                mapOffcanvas.hide();
+        // Créer le gestionnaire d'événements
+        const handlePersonLinkClick = (event) => {
+            const personLink = event.target.closest(".person-link");
+            if (!personLink) return;
+            
+            event.preventDefault();
+            const personId = personLink.getAttribute("data-person-id");
+            
+            if (!tomSelect || !tomSelect.dropdown_content) {
+                console.error("tomSelect or its dropdown is no longer available");
+                return;
             }
 
-            if (detailsOffcanvas && personDetails.classList.contains("show")) {
-                detailsOffcanvas.hide();
+            try {
+                // En mode initialisation, utiliser la version silencieuse
+                if (configStore._isInitializing) {
+                    configStore.setTomSelectValue(personId, true);
+                } else {
+                    configStore.setTomSelectValue(personId);
+                }
+            } catch (error) {
+                console.error("Error updating tomSelect value:", error);
             }
-        } catch (error) {
-            console.error("Error handling Offcanvas instances:", error);
-        }
-    };
 
-    // Ajouter l'écouteur d'événements avec délégation au niveau du document
-    document.addEventListener("click", handlePersonLinkClick);
+            try {
+                const individualMapContainer = document.getElementById("individualMapContainer");
+                const personDetails = document.getElementById("personDetails");
 
-    // Retourner une fonction de nettoyage
+                const mapOffcanvas = individualMapContainer && Offcanvas.getInstance(individualMapContainer);
+                const detailsOffcanvas = personDetails && Offcanvas.getInstance(personDetails);
+
+                if (mapOffcanvas && individualMapContainer.classList.contains("show")) {
+                    mapOffcanvas.hide();
+                }
+
+                if (detailsOffcanvas && personDetails.classList.contains("show")) {
+                    detailsOffcanvas.hide();
+                }
+            } catch (error) {
+                console.error("Error handling Offcanvas instances:", error);
+            }
+        };
+
+        // Ajouter l'écouteur d'événements avec délégation au niveau du document
+        document.addEventListener("click", handlePersonLinkClick);
+        setupComplete = true;
+
+        // Définir la fonction de nettoyage
+        cleanup = () => {
+            document.removeEventListener("click", handlePersonLinkClick);
+            setupComplete = false;
+        };
+    }
+
+    // Tenter l'initialisation immédiate
+    initializeListener();
+
+    // Si pas prêt, écouter l'événement configStoreReady
+    if (!setupComplete) {
+        const readyHandler = () => {
+            initializeListener();
+            document.removeEventListener('configStoreReady', readyHandler);
+        };
+        document.addEventListener('configStoreReady', readyHandler);
+    }
+
+    // Retourner la fonction de nettoyage
     return () => {
-        // Supprimer l'écouteur d'événements
-        document.removeEventListener("click", handlePersonLinkClick);
-        
-        // Nettoyer les références si nécessaire
-        if (tomSelect) {
-            // Éviter les fuites de mémoire potentielles
-            // Note : Ne pas détruire tomSelect ici car il peut être utilisé ailleurs
-            // La gestion du cycle de vie de tomSelect devrait être faite au niveau du store
+        if (cleanup) {
+            cleanup();
         }
     };
 }
