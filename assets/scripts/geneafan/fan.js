@@ -7,6 +7,7 @@ import _ from "lodash";
 import { mmToPixels } from './utils.js';
 import { extractYear } from './dates.js';
 import configStore from './stores/fanConfigStore.js';
+import gedcomDataStore from './stores/gedcomDataStore';
 import { buildHierarchy } from './parse.js';
 
 const weightFontFirst = 0.25,
@@ -558,7 +559,8 @@ export function drawFan() {
     console.time('drawFan');
     const config = configStore.getConfig;
     const angle = configStore.angle; // Récupérer l'angle via le getter
-    const data = buildHierarchy(); // setHierarchy(data);
+    const data = buildHierarchy();
+    gedcomDataStore.setHierarchy(data);
         
     if (data == null) {
         console.log("Data is null for drawFan. Exiting.");

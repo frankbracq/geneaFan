@@ -4,15 +4,11 @@ import Uppy from '@uppy/core';
 import AwsS3 from '@uppy/aws-s3';
 import configStore from '../stores/fanConfigStore.js';
 import authStore from '../stores/authStore.js';
+import gedcomDataStore from '../stores/gedcomDataStore.js';
 import {
-    clearAllStates,
-    setGedFileUploaded,
-    getGedFileUploaded,
     setFamilyTowns,
-    setSourceData,
-    setIndividualsCache,
-    getIndividualsCache,
-} from "../stores/state.js";
+    getFamilyTowns,
+} from "../stores/state.js";  // Ces états peuvent être déplacés dans un autre store dédié plus tard
 import {
     updateFamilyTownsViaProxy,
     updateIndividualTownsFromFamilyTowns,
@@ -146,7 +142,6 @@ function closeModal() {
 }
 
 export function loadGedcomFile(input) {
-    console.log("Chargement du fichier:", input);
     if (isLoadingFile) {
         console.log("Un chargement de fichier est déjà en cours.");
         return;
@@ -163,11 +158,8 @@ export function loadGedcomFile(input) {
             isLoadingFile = false;
             if (this.status === 200) {
                 const data = xhr.response;
-
-                // Extract the file name from the URL
                 gedcomFileName = input.split("/").pop();
-                configStore.setGedcomFileName(gedcomFileName); // Update the store
-
+                configStore.setGedcomFileName(gedcomFileName);
                 onFileChange(data);
             } else {
                 console.error("Erreur lors du chargement du fichier :", this.status);
@@ -185,11 +177,8 @@ export function loadGedcomFile(input) {
     } else {
         // Load local file
         const file = input[0];
-        console.log("Fichier local:", file);
         gedcomFileName = file.name;
         configStore.setGedcomFileName(gedcomFileName);
-
-        // Show modal to ask if the user wants to save the file
         showSaveFileModal(file);
     }
 }
@@ -411,26 +400,28 @@ function findYoungestIndividual(individuals) {
 }
 
 async function onFileChange(data) {
-    handleTabsAndOverlay(true);  // Active le chargement et désactive les onglets
+    handleTabsAndOverlay(true);
 
-    clearAllStates();
+    // Reset all data stores
+    gedcomDataStore.clearAllState();
 
-    if (getGedFileUploaded()) {
+
+    if (gedcomDataStore.isFileUploaded) {
         resetUI();
     }
-    setGedFileUploaded(true);
+    gedcomDataStore.setFileUploaded(true);
 
     try {
         await setFamilyTowns({});
 
         let json = toJson(data);
         let result = await getAllPlaces(json);
-        setSourceData(result.json);
+        gedcomDataStore.setSourceData(result.json);
 
         try {
             await updateFamilyTownsViaProxy();
-            updateIndividualTownsFromFamilyTowns(getIndividualsCache());
-            setIndividualsCache(getIndividualsCache());
+            updateIndividualTownsFromFamilyTowns(gedcomDataStore.individualsCache);
+            gedcomDataStore.setIndividualsCache(gedcomDataStore.individualsCache);
         } catch (error) {
             console.error("Error updating geolocation:", error);
         }
@@ -438,7 +429,7 @@ async function onFileChange(data) {
         googleMapManager.loadMarkersData();
 
         const selectElement = document.getElementById("individual-select");
-        selectElement.innerHTML = "";  // Efface tout contenu résiduel
+        selectElement.innerHTML = "";
         const placeholderOption = new Option("", "", true, true);
         placeholderOption.disabled = true;
         selectElement.appendChild(placeholderOption);
@@ -460,12 +451,10 @@ async function onFileChange(data) {
             });
         });
 
-        // Déterminer l'ID racine et trouver la personne correspondante
         const gedcomFileName = configStore.getConfig.gedcomFileName;
         const rootId = (gedcomFileName === "demo.ged") ? "@I111@" : findYoungestIndividual(individuals)?.id;
         const rootPerson = individuals.find((individual) => individual.id === rootId);
 
-        // Faire une seule mise à jour avec toutes les données
         configStore.batchUpdate(() => {
             configStore.setTomSelectValue(rootId);
             configStore.setConfig({
@@ -477,6 +466,7 @@ async function onFileChange(data) {
             });
         });
 
+        // Enable UI elements
         [
             ...document.querySelectorAll(".parameter"),
             document.getElementById("individual-select"),

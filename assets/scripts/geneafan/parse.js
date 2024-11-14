@@ -13,10 +13,6 @@ import {
     getFamilyTowns,
     setFamilyTowns,
     addToFamilyEvents,
-    getSourceData,
-    clearSourceData,
-    getIndividualsCache,
-    setIndividualsCache,
     addNodeToGenealogyGraph, 
     addEdgeToGenealogyGraph,
     getStatistics,
@@ -32,6 +28,7 @@ import {
 } from "./stores/state.js";
 import configStore from './stores/fanConfigStore.js';
 import timelineStore from './stores/timelineStore.js';
+import gedcomDataStore from './stores/gedcomDataStore';
 import jsonpointer from 'jsonpointer';
 
 const EMPTY = "";
@@ -1040,7 +1037,7 @@ function buildHierarchy() {
     }
 
     // Utiliser le cache des individus déjà construit
-    const individualsCache = getIndividualsCache(); 
+    const individualsCache = gedcomDataStore.individualsCache; 
 
     function buildRecursive(
         individualPointer,
@@ -1304,7 +1301,7 @@ async function processTree(tree, parentNode, dbTowns, familyTowns) {
 
 function prebuildindividualsCache() {
     console.time("prebuildindividualsCache");
-    const json = getSourceData(); // Retrieve source data
+    const json = gedcomDataStore.sourceData; // Retrieve source data
     const individualsCache = new Map();
 
     // Filter individuals and families from source data
@@ -1396,7 +1393,7 @@ function formatFamilyTreeData(individualsCache) {
 function getIndividualsList() {
     // Build the cache of individuals with all their information
     const individualsCache = prebuildindividualsCache();
-    clearSourceData(); // Reset source data to avoid memory leaks
+    gedcomDataStore.clearSourceData(); // Reset source data to avoid memory leaks
 
     // Preparing data for FamilyTreeJS
     const familyTreeData = formatFamilyTreeData(individualsCache);
@@ -1411,7 +1408,7 @@ function getIndividualsList() {
             console.error('Error loading the module:', error);
         });
 
-    setIndividualsCache(individualsCache);
+        gedcomDataStore.setIndividualsCache(individualsCache);
 
     // Convert the map to a list
     const individualsList = Array.from(individualsCache.values());

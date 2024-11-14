@@ -4,52 +4,11 @@ import _ from 'lodash';
  * Clear all relevant states when a new file is loaded.
  */
 export const clearAllStates = () => {
-    clearSourceData();
     clearFamilyTreeData();
     clearGenealogyGraph();
     clearAncestorMap();
     clearFamilyEvents();
     clearStatistics();
-    setIndividualsCache(new Map());  
-};
-
-// Source data state
-let sourceDataState = [];
-/**
- * Get the current source data state.
- * @returns {Array} The current source data.
- */
-export const getSourceData = () => sourceDataState;
-/**
- * Set new source data and clear ancestor map.
- * @param {Array} newSourceData - The new source data to be set.
- */
-export const setSourceData = newSourceData => {
-    sourceDataState = newSourceData;
-    clearAncestorMap();
-};
-/**
- * Clear the source data state and ancestor map.
- */
-export const clearSourceData = () => {
-    sourceDataState = [];
-    clearAncestorMap();
-};
-
-// Cache state
-let individualsCache = new Map();
-/**
- * Get the current individuals cache.
- * @returns {Map} The current individuals cache.
- */
-export const getIndividualsCache = () => individualsCache;
-/**
- * Set new individuals cache.
- * @param {Map} newCache - The new cache to be set.
- */
-export const setIndividualsCache = newCache => {
-    individualsCache = newCache;
-    // console.log("Individuals cache", individualsCache);
 };
 
 // Family tree data state
@@ -150,7 +109,7 @@ export const setAncestorMapCache = newMap => ancestorMapCache = newMap;
 /**
  * Clear the ancestor map cache.
  */
-const clearAncestorMap = () => ancestorMapCache.clear();
+export const clearAncestorMap = () => ancestorMapCache.clear();
 
 // Common ancestry graph state
 let commonAncestryGraphData = [];
