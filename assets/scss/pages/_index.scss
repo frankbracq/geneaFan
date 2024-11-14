@@ -482,3 +482,28 @@ svg.tommy .node.female>rect {
   padding: 10px;
   margin-top: 20px;
 }
+
+//Timeline
+.empty-timeline {
+  opacity: 0.7;
+}
+
+.empty-timeline .timeline-navigation a {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.empty-timeline .events-content {
+  text-align: center;
+  padding: 2rem;
+}
+
+.empty-timeline .events-content h2 {
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.empty-timeline .events-content em {
+  color: #999;
+  font-style: italic;
+}

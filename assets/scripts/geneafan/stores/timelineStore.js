@@ -3,191 +3,89 @@ import _ from 'lodash';
 import moment from 'moment';
 
 class TimelineStore {
-    // Timeline state
+    // Observable state
     timelineInstance = null;
     isInitialized = false;
-    periodSize = 5; // quinquennat by default
-
-    // Events state with cached parsed dates
+    periodSize = 5;
     ascendantEvents = [];
-    parsedEventsCache = new Map(); // Cache for parsed dates
-
+    parsedEventsCache = new Map();
+    placeholderDate = moment().format('DD/MM/YYYY');
+    
     constructor() {
         makeAutoObservable(this, {
+            // Actions
             initializeTimeline: action,
-            updateEvents: action,
-            setTimelineInstance: action,
-            setPeriodSize: action,
             destroyTimeline: action,
             addEvent: action,
+            addEvents: action,
             clearEvents: action,
-            _formatEvent: action,
-            _generateTimelineEvents: action,
-            _getAncestorBranchAndGeneration: action,
-            _parseDate: action,
+            setPeriodSize: action,
+            updateTimelineContent: action,
+            
+            // Computeds
             parsedEvents: computed,
             groupedEvents: computed,
-            // Exclude cache from observations
-            parsedEventsCache: false
+            eventsByType: computed,
+            timelineEventsHTML: computed,
+            hasEvents: computed,
+            
+            // Non-observable properties
+            parsedEventsCache: false,
+            _formatEvent: false,
+            _getAncestorBranchAndGeneration: false,
+            _parseDate: false
         });
     }
 
-    // Computed property for parsed events
-    // Cette propriété computed ne sera recalculée que lorsque ascendantEvents change
+    // Computed properties
+    get hasEvents() {
+        return this.parsedEvents.length > 0;
+    }
+
     get parsedEvents() {
         return this.ascendantEvents.map(event => {
-            // Vérifier si la date est déjà dans le cache
             if (!this.parsedEventsCache.has(event.date)) {
                 const parsedDate = this._parseDate(event.date);
-                if (parsedDate.isValid()) {
-                    this.parsedEventsCache.set(event.date, parsedDate);
-                } else {
-                    this.parsedEventsCache.set(event.date, null);
-                }
+                this.parsedEventsCache.set(event.date, parsedDate.isValid() ? parsedDate : null);
             }
             
             const parsedDate = this.parsedEventsCache.get(event.date);
             return parsedDate ? { ...event, parsedDate } : null;
-        }).filter(event => event !== null);
+        }).filter(Boolean);
     }
 
-    // Computed property for grouped events
-    // Ne sera recalculé que lorsque parsedEvents ou periodSize changent
     get groupedEvents() {
-        // Sort events by date (using cached parsed dates)
-        const sortedEvents = _.sortBy(this.parsedEvents, event => event.parsedDate.toISOString());
+        if (!this.hasEvents) return {};
 
-        // Group events by the specified number of years
-        const groupedByYears = _.groupBy(sortedEvents, event => {
+        const sortedEvents = _.sortBy(this.parsedEvents, event => 
+            event.parsedDate.toISOString()
+        );
+
+        const eventsByPeriod = _.groupBy(sortedEvents, event => {
             const yearStart = Math.floor(event.parsedDate.year() / this.periodSize) * this.periodSize;
             return `01/01/${yearStart}`;
         });
 
-        // Further group by event type within each year group
-        return _.mapValues(groupedByYears, eventsByDate => _.groupBy(eventsByDate, 'type'));
+        return _.mapValues(eventsByPeriod, periodEvents => 
+            _.groupBy(periodEvents, 'type')
+        );
     }
 
-    _parseDate = (dateString) => {
-        const formats = [
-            "DD/MM/YYYY",
-            "MM/YYYY",
-            "YYYY"
-        ];
-        return moment(dateString, formats);
+    get eventsByType() {
+        return _.groupBy(this.parsedEvents, 'type');
     }
 
-    // Event management methods
-    addEvent = action((event) => {
-        if (event.eventId && this.ascendantEvents.some(e => e.eventId === event.eventId)) {
-            return;
+    get timelineEventsHTML() {
+        if (!this.hasEvents) {
+            return `<div class="events-content">
+                <ol>
+                    <li class="selected" data-horizontal-timeline='{"date": "${this.placeholderDate}"}'>
+                        <h2>Aucun événement</h2>
+                        <em>Sélectionnez un autre individu pour voir ses événements</em>
+                    </li>
+                </ol>
+            </div>`;
         }
-        this.ascendantEvents.push(event);
-    })
-
-    clearEvents = action(() => {
-        this.ascendantEvents = [];
-        this.parsedEventsCache.clear(); // Clear the cache when events are cleared
-    })
-
-    setPeriodSize = action((size) => {
-        if (this.periodSize === size) return; // Avoid unnecessary updates
-        
-        this.periodSize = size;
-        if (this.ascendantEvents.length > 0 && this.isInitialized) {
-            const timelineHTML = this._generateTimelineEvents();
-            const timelineContainer = document.getElementById("ascendantTimeline");
-            if (timelineContainer) {
-                timelineContainer.innerHTML = timelineHTML;
-            }
-        }
-    })
-
-    // Timeline initialization and management
-    initializeTimeline = async () => {
-        try {
-            // Dynamically load jQuery
-            const jQueryModule = await import('jquery');
-            const $ = jQueryModule.default;
-            window.$ = $;
-            window.jQuery = $;
-
-            // Load horizontalTimeline after jQuery
-            await import('../timeline/horizontalTimeline.js');
-
-            // Generate timeline HTML
-            const timelineHTML = this._generateTimelineEvents();
-            const timelineContainer = document.getElementById("ascendantTimeline");
-            if (!timelineContainer) {
-                throw new Error("Timeline container not found");
-            }
-
-            timelineContainer.innerHTML = timelineHTML;
-
-            // Initialize horizontal timeline with configuration
-            const timelineInstance = $('#ascendantTimeline').horizontalTimeline({
-                dateIntervals: {
-                    "desktop": 175,
-                    "tablet": 150,
-                    "mobile": 120,
-                    "minimal": true
-                },
-                iconClass: {
-                    "base": "fas fa-2x",
-                    "scrollLeft": "fa-chevron-circle-left",
-                    "scrollRight": "fa-chevron-circle-right",
-                    "prev": "fa-arrow-circle-left",
-                    "next": "fa-arrow-circle-right",
-                    "pause": "fa-pause-circle",
-                    "play": "fa-play-circle"
-                },
-                "exit": {
-                    "left": "exit-left",
-                    "right": "exit-right"
-                },
-                contentContainerSelector: false
-            });
-
-            runInAction(() => {
-                this.timelineInstance = timelineInstance;
-                this.isInitialized = true;
-            });
-
-        } catch (error) {
-            console.error("Failed to initialize timeline:", error);
-            throw error;
-        }
-    }
-
-    destroyTimeline = action(() => {
-        if (this.timelineInstance) {
-            this.timelineInstance.destroy?.();
-            this.timelineInstance = null;
-        }
-        this.isInitialized = false;
-    })
-
-    // Helper methods for event formatting and display
-    _formatEvent = (event, eventType) => {
-        if (event.sosa) {
-            const ancestorInfo = this._getAncestorBranchAndGeneration(event.sosa);
-            const color = ancestorInfo.branch === 'paternal' ? 'darkblue' : 'deeppink';
-            return `${event.name} (${event.date}) at ${event.town} <span style="color: ${color}">(+ ${ancestorInfo.generation} generations up)</span>`;
-        }
-
-        switch(eventType) {
-            case 'birth':
-                return `${event.name} (${event.date}) at ${event.town}`;
-            case 'death':
-                return `${event.name} (${event.date}) at the age of ${event.age} at ${event.town}`;
-            case 'marriage':
-                return `${event.name} (${event.date}) with ${event.spouse} at ${event.town}`;
-            default:
-                return `${event.name} (${event.date}) at ${event.town}`;
-        }
-    }
-
-    _generateTimelineEvents = () => {
-        let eventsContentHTML = '<div class="events-content"><ol>';
 
         const eventTypes = [
             { type: 'birth', title: 'Naissances' },
@@ -195,39 +93,170 @@ class TimelineStore {
             { type: 'marriage', title: 'Mariages' }
         ];
 
-        const groupedEvents = this.groupedEvents;
-        for (const period in groupedEvents) {
-            eventsContentHTML += `<li class="box" data-horizontal-timeline='{"date": "${period}"}'>`;
+        const groupedHtml = Object.entries(this.groupedEvents).reduce((html, [period, eventsByType]) => {
+            const eventsHTML = eventTypes
+                .map(({ type, title }) => {
+                    const events = eventsByType[type] || [];
+                    if (!events.length) return '';
+                    
+                    const eventsListHTML = events
+                        .map(event => `<li>${this._formatEvent(event, type)}</li>`)
+                        .join('');
+                        
+                    return `<h4>${title}</h4><ul class="text-start">${eventsListHTML}</ul>`;
+                })
+                .join('');
 
-            eventTypes.forEach(({ type, title }) => {
-                const events = groupedEvents[period][type] || [];
-                if (events.length > 0) {
-                    eventsContentHTML += `<h4>${title}</h4><ul class="text-start">`;
-                    events.forEach(event => {
-                        eventsContentHTML += `<li>${this._formatEvent(event, type)}</li>`;
-                    });
-                    eventsContentHTML += '</ul>';
-                }
+            return html + `
+                <li class="box" data-horizontal-timeline='{"date": "${period}"}'>
+                    ${eventsHTML}
+                </li>`;
+        }, '<div class="events-content"><ol>');
+
+        return groupedHtml + '</ol></div>';
+    }
+
+    // Actions
+    initializeTimeline = async () => {
+        try {
+            const { default: $ } = await import('jquery');
+            window.$ = window.jQuery = $;
+            await import('../timeline/horizontalTimeline.js');
+
+            const timelineContainer = document.getElementById("ascendantTimeline");
+            if (!timelineContainer) throw new Error("Timeline container not found");
+
+            timelineContainer.innerHTML = this.timelineEventsHTML;
+
+            runInAction(() => {
+                this.timelineInstance = $('#ascendantTimeline').horizontalTimeline({
+                    dateIntervals: {
+                        desktop: 175,
+                        tablet: 150,
+                        mobile: 120,
+                        minimal: true
+                    },
+                    iconClass: {
+                        base: "fas fa-2x",
+                        scrollLeft: "fa-chevron-circle-left",
+                        scrollRight: "fa-chevron-circle-right",
+                        prev: "fa-arrow-circle-left",
+                        next: "fa-arrow-circle-right",
+                        pause: "fa-pause-circle",
+                        play: "fa-play-circle"
+                    },
+                    exit: {
+                        left: "exit-left",
+                        right: "exit-right"
+                    },
+                    contentContainerSelector: false
+                });
+                this.isInitialized = true;
             });
 
-            eventsContentHTML += '</li>';
+            if (this.hasEvents) {
+                timelineContainer.classList.remove('empty-timeline');
+            } else {
+                timelineContainer.classList.add('empty-timeline');
+            }
+
+        } catch (error) {
+            console.error("Failed to initialize timeline:", error);
+            throw error;
+        }
+    }
+
+    updateTimelineContent = action(() => {
+        if (!this.isInitialized) return;
+
+        const timelineContainer = document.getElementById("ascendantTimeline");
+        if (!timelineContainer) return;
+
+        if (this.timelineInstance?.destroy) {
+            this.timelineInstance.destroy();
+            this.timelineInstance = null;
         }
 
-        eventsContentHTML += '</ol></div>';
-        return eventsContentHTML;
+        timelineContainer.innerHTML = this.timelineEventsHTML;
+
+        runInAction(() => {
+            this.initializeTimeline();
+        });
+    })
+
+    addEvent = action((event) => {
+        if (!event?.eventId || this.ascendantEvents.some(e => e.eventId === event.eventId)) {
+            return;
+        }
+        this.ascendantEvents.push(event);
+        this.updateTimelineContent();
+    })
+
+    addEvents = action((events) => {
+        const newEvents = events.filter(event => 
+            event?.eventId && !this.ascendantEvents.some(e => e.eventId === event.eventId)
+        );
+        if (newEvents.length > 0) {
+            this.ascendantEvents.push(...newEvents);
+            this.updateTimelineContent();
+        }
+    })
+
+    clearEvents = action(() => {
+        this.ascendantEvents = [];
+        this.parsedEventsCache.clear();
+        this.updateTimelineContent();
+    })
+
+    setPeriodSize = action((size) => {
+        if (this.periodSize === size) return;
+        
+        this.periodSize = size;
+        if (this.isInitialized) {
+            this.updateTimelineContent();
+        }
+    })
+
+    destroyTimeline = action(() => {
+        if (this.timelineInstance?.destroy) {
+            this.timelineInstance.destroy();
+            this.timelineInstance = null;
+        }
+        this.isInitialized = false;
+        this.clearEvents();
+    })
+
+    // Private methods
+    _parseDate = (dateString) => {
+        return moment(dateString, ["DD/MM/YYYY", "MM/YYYY", "YYYY"]);
+    }
+
+    _formatEvent = (event, eventType) => {
+        const ancestorInfo = event.sosa ? 
+            this._getAncestorBranchAndGeneration(event.sosa) : null;
+
+        if (ancestorInfo) {
+            const color = ancestorInfo.branch === 'paternal' ? 'darkblue' : 'deeppink';
+            return `${event.name} (${event.date}) at ${event.town} <span style="color: ${color}">(+ ${ancestorInfo.generation} generations up)</span>`;
+        }
+
+        const formatters = {
+            birth: () => `${event.name} (${event.date}) à ${event.town}`,
+            death: () => `${event.name} (${event.date}) à l'âge de ${event.age} ans à ${event.town}`,
+            marriage: () => `${event.name} (${event.date}) avec ${event.spouse} à ${event.town}`,
+            default: () => `${event.name} (${event.date}) à ${event.town}`
+        };
+
+        return (formatters[eventType] || formatters.default)();
     }
 
     _getAncestorBranchAndGeneration = (sosaNumber) => {
         const binaryRep = sosaNumber.toString(2);
-        const generation = binaryRep.length - 1;
-        const firstBit = binaryRep[1];
-
         return {
-            branch: firstBit === '0' ? 'paternal' : 'maternal',
-            generation: generation
+            branch: binaryRep[1] === '0' ? 'paternal' : 'maternal',
+            generation: binaryRep.length - 1
         };
     }
 }
 
-const timelineStore = new TimelineStore();
-export default timelineStore;
+export default new TimelineStore();
