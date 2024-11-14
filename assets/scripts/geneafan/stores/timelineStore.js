@@ -1,4 +1,4 @@
-import { makeAutoObservable, action, runInAction, computed } from './mobx-config.js';
+import { makeAutoObservable, action, runInAction, computed, reaction } from './mobx-config.js';
 import _ from 'lodash';
 import moment from 'moment';
 
@@ -10,7 +10,9 @@ class TimelineStore {
     ascendantEvents = [];
     parsedEventsCache = new Map();
     placeholderDate = moment().format('DD/MM/YYYY');
-    
+    configStore = null; // Nouvelle propriété
+    rootReactionDisposer = null; // Pour gérer le nettoyage de la réaction
+
     constructor() {
         makeAutoObservable(this, {
             // Actions
@@ -21,21 +23,24 @@ class TimelineStore {
             clearEvents: action,
             setPeriodSize: action,
             updateTimelineContent: action,
-            
+
             // Computeds
             parsedEvents: computed,
             groupedEvents: computed,
             eventsByType: computed,
             timelineEventsHTML: computed,
             hasEvents: computed,
-            
+
             // Non-observable properties
+            configStore: false,
+            rootReactionDisposer: false,
             parsedEventsCache: false,
             _formatEvent: false,
             _getAncestorBranchAndGeneration: false,
             _parseDate: false
         });
     }
+
 
     // Computed properties
     get hasEvents() {
@@ -48,7 +53,7 @@ class TimelineStore {
                 const parsedDate = this._parseDate(event.date);
                 this.parsedEventsCache.set(event.date, parsedDate.isValid() ? parsedDate : null);
             }
-            
+
             const parsedDate = this.parsedEventsCache.get(event.date);
             return parsedDate ? { ...event, parsedDate } : null;
         }).filter(Boolean);
@@ -57,7 +62,7 @@ class TimelineStore {
     get groupedEvents() {
         if (!this.hasEvents) return {};
 
-        const sortedEvents = _.sortBy(this.parsedEvents, event => 
+        const sortedEvents = _.sortBy(this.parsedEvents, event =>
             event.parsedDate.toISOString()
         );
 
@@ -66,7 +71,7 @@ class TimelineStore {
             return `01/01/${yearStart}`;
         });
 
-        return _.mapValues(eventsByPeriod, periodEvents => 
+        return _.mapValues(eventsByPeriod, periodEvents =>
             _.groupBy(periodEvents, 'type')
         );
     }
@@ -98,11 +103,11 @@ class TimelineStore {
                 .map(({ type, title }) => {
                     const events = eventsByType[type] || [];
                     if (!events.length) return '';
-                    
+
                     const eventsListHTML = events
                         .map(event => `<li>${this._formatEvent(event, type)}</li>`)
                         .join('');
-                        
+
                     return `<h4>${title}</h4><ul class="text-start">${eventsListHTML}</ul>`;
                 })
                 .join('');
@@ -193,7 +198,7 @@ class TimelineStore {
     })
 
     addEvents = action((events) => {
-        const newEvents = events.filter(event => 
+        const newEvents = events.filter(event =>
             event?.eventId && !this.ascendantEvents.some(e => e.eventId === event.eventId)
         );
         if (newEvents.length > 0) {
@@ -210,7 +215,7 @@ class TimelineStore {
 
     setPeriodSize = action((size) => {
         if (this.periodSize === size) return;
-        
+
         this.periodSize = size;
         if (this.isInitialized) {
             this.updateTimelineContent();
@@ -232,7 +237,7 @@ class TimelineStore {
     }
 
     _formatEvent = (event, eventType) => {
-        const ancestorInfo = event.sosa ? 
+        const ancestorInfo = event.sosa ?
             this._getAncestorBranchAndGeneration(event.sosa) : null;
 
         if (ancestorInfo) {
@@ -256,6 +261,33 @@ class TimelineStore {
             branch: binaryRep[1] === '0' ? 'paternal' : 'maternal',
             generation: binaryRep.length - 1
         };
+    }
+
+    // Nouvelle méthode pour initialiser la connexion avec configStore
+    connectToConfigStore = (store) => {
+        this.configStore = store;
+        this.setupRootReaction();
+    }
+
+    // Déplacer la réaction dans une méthode séparée
+    setupRootReaction = () => {
+        if (this.rootReactionDisposer) {
+            this.rootReactionDisposer(); // Nettoyer l'ancienne réaction si elle existe
+        }
+
+        this.rootReactionDisposer = reaction(
+            () => this.configStore.config.root,
+            (newRoot, previousRoot) => {
+                if (newRoot && newRoot !== previousRoot) {
+                    this.initializeTimeline().catch(error => {
+                        console.warn('Timeline initialization failed:', error);
+                    });
+                }
+            },
+            {
+                name: 'Root Change Timeline Reaction'
+            }
+        );
     }
 }
 

@@ -1,7 +1,8 @@
 // MobX state management
 import { reaction, autorun } from './stores/mobx-config';
 import authStore from './stores/authStore.js';
-import configStore from './stores/fanConfigStore.js';
+import configStore from './stores/fanConfigStore';
+import timelineStore from './stores/timelineStore';
 import ShareFormStore from './stores/shareFormStore.js';
 import svgPanZoomStore from './stores/svgPanZoomStore.js';
 
@@ -48,6 +49,8 @@ import {
 
 // Map and Timeline features
 import { googleMapManager } from './mapManager.js';
+
+timelineStore.connectToConfigStore(configStore);
 
 let config;
 let rootPersonName;

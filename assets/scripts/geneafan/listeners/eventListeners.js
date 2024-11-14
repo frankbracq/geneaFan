@@ -1,6 +1,7 @@
 import { getFamilyTowns } from "../stores/state.js";
 import configStore from "../stores/fanConfigStore.js";
 import svgPanZoomStore from '../stores/svgPanZoomStore.js';
+import timelineStore from '../stores/timelineStore.js';
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
 import {
     setupResponsiveTabs,
@@ -478,6 +479,26 @@ function setupTabAndUIEventListeners() {
         tabFamilyMap.addEventListener("show.bs.tab", tabFamilyMapHandler);
         cleanupFunctions.push(() => {
             tabFamilyMap.removeEventListener("show.bs.tab", tabFamilyMapHandler);
+        });
+    }
+
+    // Gestionnaire de l'onglet Timeline
+    const tabTimeline = document.querySelector('[href="#tab4"]');
+    if (tabTimeline) {
+        const tabTimelineHandler = () => {
+            // Supprimer la classe 'disabled' si elle existe
+            tabTimeline.classList.remove('disabled');
+            
+            if (!timelineStore.isInitialized) {
+                timelineStore.initializeTimeline().catch(error => {
+                    console.warn('Timeline initialization failed:', error);
+                });
+            }
+        };
+
+        tabTimeline.addEventListener("shown.bs.tab", tabTimelineHandler);
+        cleanupFunctions.push(() => {
+            tabTimeline.removeEventListener("shown.bs.tab", tabTimelineHandler);
         });
     }
 

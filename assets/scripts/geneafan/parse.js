@@ -812,8 +812,9 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
                     ageAtEvent = calculateAge(birthDate, date);
                 }
 
-                const formattedAttendees = eventAttendees.map(attendee => 
-                    `${attendee.name}`).join(', ');
+                // Générer un identifiant unique pour l'événement s'il n'en a pas
+                const uniqueEventId = eventId || `${type}-${date}-${name}-${Math.random().toString(36).substr(2, 9)}`;
+
                 const event = {
                     type,
                     name: `${name} ${surname}`,
@@ -821,23 +822,27 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
                     town: town || "lieu inconnu",
                     townDisplay: town || "lieu inconnu",
                     description,
-                    eventId: eventId || '',
-                    eventAttendees: formattedAttendees,
-                    ageAtEvent
+                    eventId: uniqueEventId,
+                    eventAttendees: eventAttendees.length > 0 ? eventAttendees.join(', ') : '',
+                    ageAtEvent,
+                    sosa: individualJson.sosa || null,
+                    generation: individualJson.generation || 0
                 };
                 
                 individualEvents.push(event);
                 
+                // Ajouter à timelineStore pour les événements pertinents
+                if (["birth", "death", "marriage"].includes(type)) {
+                    try {
+                        timelineStore.addEvent(event);
+                    } catch (timelineError) {
+                        console.warn('Failed to add event to timeline:', timelineError, event);
+                    }
+                }
+                
+                // Ajouter aux événements familiaux si ce n'est pas un événement enfant ou occupation
                 if (!["child-birth", "occupation", "today"].includes(type)) {
                     addToFamilyEvents(event);
-                    // Ajouter à timelineStore si c'est un événement pertinent pour la timeline
-                    if (["birth", "death", "marriage"].includes(type)) {
-                        try {
-                            timelineStore.addEvent(event);
-                        } catch (timelineError) {
-                            console.warn('Failed to add event to timeline:', timelineError, event);
-                        }
-                    }
                 }
             } catch (error) {
                 console.error('Error adding event:', error, {type, name, date, town});
@@ -854,12 +859,14 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
         const birthData = buildEventFallback(individualJson, birthTags, individualTowns).eventDetails;
         const birthYear = birthData.date ? extractYear(birthData.date) : "";
         const formattedBirth = generateEventDescription("BIRT", birthData, gender, age);
-        addEventToIndividual("birth", name, surname, birthData.date, birthData.town, formattedBirth, "", [], birthData.date);
+        const birthEventId = `birth-${individualJson.pointer}`;
+        addEventToIndividual("birth", name, surname, birthData.date, birthData.town, formattedBirth, birthEventId, [], birthData.date);
 
         // Process death data
         const deathData = buildEventFallback(individualJson, deathTags, individualTowns).eventDetails;
         const deathYear = deathData.date ? extractYear(deathData.date) : "";
-        let currentYear = new Date().getFullYear();
+        const currentYear = new Date().getFullYear();
+        const deathEventId = `death-${individualJson.pointer}`;
 
         // Handle death information based on available data
         if (!birthData.date) {
@@ -868,7 +875,7 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
                 generateEventDescription("DEAT", deathData, gender, null, true) : 
                 "Information on life and death unknown";
             addEventToIndividual("death", name, surname, deathData.date || "date inconnue", 
-                deathData.town || "", formattedDeath, "", [], birthData.date);
+                deathData.town || "", formattedDeath, deathEventId, [], birthData.date);
         } else {
             if (!deathData.date) {
                 const today = moment().format("DD/MM/YYYY");
@@ -877,21 +884,22 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
                     deceased = false;
                     formattedDeath = generateEventDescription("DEAT", { date: today, town: "" }, 
                         gender, age, false);
-                    addEventToIndividual("today", name, surname, today, "", formattedDeath, "", [], 
-                        birthData.date);
+                    const todayEventId = `today-${individualJson.pointer}`;
+                    addEventToIndividual("today", name, surname, today, "", formattedDeath, 
+                        todayEventId, [], birthData.date);
                 } else {
                     deceased = true;
                     formattedDeath = generateEventDescription("DEAT", { date: today, town: "" }, 
                         gender, "", true);
                     addEventToIndividual("death", name, surname, "date inconnue", "", formattedDeath, 
-                        "", [], birthData.date);
+                        deathEventId, [], birthData.date);
                 }
             } else {
                 age = calculateAge(birthData.date, deathData.date);
                 deceased = true;
                 formattedDeath = generateEventDescription("DEAT", deathData, gender, age, true);
                 addEventToIndividual("death", name, surname, deathData.date, deathData.town, 
-                    formattedDeath, "", [], birthData.date);
+                    formattedDeath, deathEventId, [], birthData.date);
             }
         }
 
@@ -922,16 +930,18 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
         const marriages = processMarriages(individualJson.pointer, allIndividuals, allFamilies, 
             individualTowns);
 
-        marriages.forEach((marriage) => {
+        marriages.forEach((marriage, index) => {
+            const marriageEventId = `marriage-${individualJson.pointer}-${index}`;
             addEventToIndividual("marriage", name, surname, marriage.eventDetails.date, 
                 marriage.eventDetails.town, marriage.formattedMarriage, 
-                marriage.eventDetails.eventId, 
+                marriageEventId, 
                 marriage.couple ? [marriage.couple.husband, marriage.couple.wife] : [], 
                 birthData.date);
 
-            marriage.children.forEach((child) => {
+            marriage.children.forEach((child, childIndex) => {
+                const childEventId = `child-birth-${individualJson.pointer}-${index}-${childIndex}`;
                 addEventToIndividual("child-birth", child.name, "", child.birthDate, "", 
-                    formatChild(child), "", [], birthData.date);
+                    formatChild(child), childEventId, [], birthData.date);
                 
                 // Handle first child statistics
                 if (marriage.children.indexOf(child) === 0) {
@@ -988,6 +998,8 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
             formattedMarriages: marriages.map((marriage) => marriage.formattedMarriage).join("\n"),
             formattedSiblings,
             bgColor: birthData.departementColor ? birthData.departementColor : birthData.countryColor,
+            sosa: individualJson.sosa,
+            generation: individualJson.generation
         };
 
         return individual;

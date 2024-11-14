@@ -4,7 +4,6 @@ import TomSelect from 'tom-select';
 import 'tom-select/dist/css/tom-select.css';
 import { draw } from "../fan.js";
 import { displayFan } from "../ui.js";
-import { initializeAscendantTimeline } from '../timeline/ascendantTimeline.js';
 import { updateFilename } from "../downloads.js";
 
 class ConfigStore {
@@ -266,48 +265,42 @@ class ConfigStore {
             console.warn("No GEDCOM file loaded. Skipping handleSettingChange.");
             return;
         }
-
+    
         try {
             const fanContainer = document.getElementById("fanContainer");
             if (!fanContainer || fanContainer.offsetParent === null) {
                 console.warn("Fan container is not visible");
                 return false;
             }
-
+    
             let svgElement = document.querySelector('#fan');
             if (svgElement && svgPanZoomStore.isInitialized) {
                 svgPanZoomStore.destroy();
             }
-
+    
             const drawResult = draw();
             if (!drawResult) {
                 console.error("Failed to draw fan");
                 return false;
             }
-
+    
             displayFan();
-
-            if (!this._isInitializing) {
-                if (this.config.root && drawResult.rootPersonName) {
-                    initializeAscendantTimeline().catch(error => {
-                        console.warn('Timeline initialization failed:', error);
-                    });
-
-                    const rootPersonName = this.formatName(drawResult.rootPersonName);
-                    const filename = (__("Éventail généalogique de ") +
-                        rootPersonName +
-                        " créé sur genealog.ie"
-                    ).replace(/[|&;$%@"<>()+,]/g, "");
-
-                    this.config.filename = filename;
-                    updateFilename(filename);
-                }
+    
+            if (!this._isInitializing && this.config.root && drawResult.rootPersonName) {
+                const rootPersonName = this.formatName(drawResult.rootPersonName);
+                const filename = (__("Éventail généalogique de ") +
+                    rootPersonName +
+                    " créé sur genealog.ie"
+                ).replace(/[|&;$%@"<>()+,]/g, "");
+    
+                this.config.filename = filename;
+                updateFilename(filename);
             }
-
+    
             document.getElementById('initial-group').style.display = 'none';
             document.getElementById("loading").style.display = "none";
             document.getElementById("overlay").classList.add("overlay-hidden");
-
+    
             return true;
         } catch (error) {
             console.error("Error in handleSettingChange:", error);
