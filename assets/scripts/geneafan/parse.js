@@ -12,7 +12,6 @@ import { extractYear, calculateAge, prefixedDate } from "./dates.js";
 import {
     getFamilyTowns,
     setFamilyTowns,
-    addToFamilyEvents,
     addNodeToGenealogyGraph, 
     addEdgeToGenealogyGraph,
     getStatistics,
@@ -839,7 +838,7 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
                 
                 // Ajouter aux événements familiaux si ce n'est pas un événement enfant ou occupation
                 if (!["child-birth", "occupation", "today"].includes(type)) {
-                    addToFamilyEvents(event);
+                    gedcomDataStore.addFamilyEvent(event);
                 }
             } catch (error) {
                 console.error('Error adding event:', error, {type, name, date, town});

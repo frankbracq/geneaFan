@@ -2,13 +2,13 @@ import FamilyTree from '@balkangraph/familytree.js';
 import _ from 'lodash';
 import { reaction } from './stores/mobx-config';
 import {
-    getIndividualsCache,
     getCommonAncestryGraphData,
     getGenealogyGraph,
     getFamilyTreeData,
 } from './stores/state';
 import { commonAncestryGraph, getOldestAncestorOf } from './ancestorUtils';
 import configStore from './stores/fanConfigStore';
+import gedcomDataStore from './stores/gedcomDataStore';
 
 let family;
 let initializing = false;
@@ -204,7 +204,7 @@ function addFocusedTag(node) {
 // Example: Handle common ancestor button click event
 document.getElementById("commonAncestor").addEventListener("click", () => {
     const genealogyGraph = getGenealogyGraph();
-    const familyTreeData = formatIndividualsData(getIndividualsCache());
+    const familyTreeData = formatIndividualsData(gedcomDataStore.getIndividualsCache());
     const id1 = '@I789613205@';
     const id2 = '@I170@';
 

@@ -46,6 +46,10 @@ class GedcomDataStore {
         });
     }
 
+    getIndividualsCache() {
+        return new Map(this.individualsCache);
+    }
+
     getIndividual(id) {
         return this.individualsCache.get(id);
     }

@@ -7,7 +7,6 @@ export const clearAllStates = () => {
     clearFamilyTreeData();
     clearGenealogyGraph();
     clearAncestorMap();
-    clearFamilyEvents();
     clearStatistics();
 };
 
@@ -125,41 +124,6 @@ export const getCommonAncestryGraphData = () => commonAncestryGraphData;
 export const setCommonAncestryGraphData = newData => {
     commonAncestryGraphData = newData;
 };
-
-// Hierarchy state
-let hierarchyState = [];
-/**
- * Set new hierarchy state.
- * @param {Array} newHierarchy - The new hierarchy to be set.
- */
-export const setHierarchy = newHierarchy => hierarchyState = newHierarchy;
-/**
- * Get the current hierarchy state.
- * @returns {Array} The current hierarchy state.
- */
-export const getHierarchy = () => hierarchyState;
-
-// Family events state
-export let familyEvents = [];
-/**
- * Set new family events.
- * @param {Array} newEvents - The new family events to be set.
- */
-export const setFamilyEvents = newEvents => familyEvents = newEvents;
-/**
- * Get the current family events.
- * @returns {Array} The current family events.
- */
-export const getFamilyEvents = () => familyEvents;
-/**
- * Add an event to the family events.
- * @param {Object} event - The event to be added.
- */
-export const addToFamilyEvents = event => familyEvents.push(event);
-/**
- * Clear all family events.
- */
-const clearFamilyEvents = () => familyEvents = [];
 
 // GEDCOM file state
 export let gedFileUploaded = false;
