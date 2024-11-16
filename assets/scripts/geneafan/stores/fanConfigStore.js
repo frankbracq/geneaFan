@@ -1,11 +1,9 @@
 import { makeAutoObservable, action, reaction, runInAction, computed, comparer } from './mobx-config.js';
-import TomSelect from 'tom-select';
 import 'tom-select/dist/css/tom-select.css';
 import { draw } from "../fan.js";
 import { displayFan } from "../ui.js";
 import { getSvgPanZoomInstance, setSvgPanZoomInstance } from "./state.js";
-import { initializeAscendantTimeline } from '../timeline/ascendantTimeline.js';
-import { updateFilename } from "../downloads.js";
+import rootPersonStore from './rootPersonStore.js'; 
 
 class ConfigStore {
     config = {
@@ -15,8 +13,6 @@ class ConfigStore {
         invertTextArc: true,
         coloringOption: "none",
         showMissing: true,
-        root: null,
-        rootPersonName: "",
         dates: {
             showYearsOnly: true,
             showInvalidDates: false,
@@ -49,9 +45,6 @@ class ConfigStore {
         gedcomFileName: "",
     };
 
-    configHistory = [];
-    currentConfigIndex = -1;
-    tomSelect = null;
     _batchUpdating = false;
     _queueTimeout = null;
     _updateQueued = false;
@@ -117,8 +110,7 @@ class ConfigStore {
                 showMarriages: this.config.showMarriages,
                 invertTextArc: this.config.invertTextArc,
                 coloringOption: this.config.coloringOption,
-                root: this.config.root,
-                showMissing: this.config.showMissing  // Ajouté
+                showMissing: this.config.showMissing
             }),
             (params, previousParams) => {
                 if (this._batchUpdating) return;
@@ -126,18 +118,17 @@ class ConfigStore {
                 runInAction(() => {
                     let hasChanges = false;
         
-                    // Si n'importe quel paramètre a changé, on doit redessiner
+                    // Vérification des changements de paramètres
                     if (params.fanAngle !== previousParams?.fanAngle ||
                         params.maxGenerations !== previousParams?.maxGenerations ||
                         params.showMarriages !== previousParams?.showMarriages ||
                         params.invertTextArc !== previousParams?.invertTextArc ||
                         params.coloringOption !== previousParams?.coloringOption ||
-                        params.showMissing !== previousParams?.showMissing ||
-                        params.root !== previousParams?.root) {
+                        params.showMissing !== previousParams?.showMissing) {
                         hasChanges = true;
                     }
         
-                    // Mises à jour spécifiques si nécessaire
+                    // Mises à jour spécifiques
                     if (params.fanAngle !== previousParams?.fanAngle) {
                         this.config.titleMargin = params.fanAngle === 360 ? 0.35 : 0.25;
                     }
@@ -146,7 +137,7 @@ class ConfigStore {
                         this.config.computeChildrenCount = params.coloringOption === "childrencount";
                     }
         
-                    // Vérification des changements de dimensions
+                    // Mise à jour des dimensions si nécessaire
                     if (params.fanAngle !== previousParams?.fanAngle ||
                         params.maxGenerations !== previousParams?.maxGenerations ||
                         params.showMarriages !== previousParams?.showMarriages) {
@@ -163,7 +154,7 @@ class ConfigStore {
             },
             {
                 equals: comparer.structural,
-                name: 'ConfigStore-MainReaction'
+                name: 'ConfigStore-FanParametersReaction'
             }
         );
     }
@@ -191,13 +182,10 @@ class ConfigStore {
     });
 
     handleSettingChangeInternal = action(() => {
-        console.log('handleSettingChangeInternal called, root:', this.config.root);
         if (!this.config.gedcomFileName) {
             console.warn("No GEDCOM file loaded. Skipping handleSettingChange.");
             return;
         }
-
-        console.log('Processing handleSettingChange with config:', { ...this.config });
 
         try {
             const fanContainer = document.getElementById("fanContainer");
@@ -214,7 +202,11 @@ class ConfigStore {
                 setSvgPanZoomInstance(null);
             }
 
-            const drawResult = draw();
+            // Passer le root actuel à draw()
+            const currentRoot = rootPersonStore.root;
+            console.log('Drawing fan with current root:', currentRoot);
+            const drawResult = draw(currentRoot);
+            
             if (!drawResult) {
                 console.error("Failed to draw fan");
                 return false;
@@ -223,33 +215,9 @@ class ConfigStore {
             console.log('Fan drawn successfully, displaying');
             displayFan();
 
-            // Gestion sécurisée de la timeline
-            try {
-                if (this.config.root && drawResult.rootPersonName) {
-                    initializeAscendantTimeline().catch(error => {
-                        console.warn('Timeline initialization failed:', error);
-                    });
-                }
-            } catch (timelineError) {
-                console.warn('Timeline error caught:', timelineError);
-            }
-
-            if (this.config.root && drawResult.rootPersonName) {
-                const rootPersonName = this.formatName(drawResult.rootPersonName);
-                const filename = (__("Éventail généalogique de ") + 
-                    rootPersonName + 
-                    " créé sur genealog.ie"
-                ).replace(/[|&;$%@"<>()+,]/g, "");
-
-                this.config.filename = filename;
-                updateFilename(filename);
-            }
-
-            document.getElementById('initial-group').style.display = 'none';
             document.getElementById("loading").style.display = "none";
             document.getElementById("overlay").classList.add("overlay-hidden");
 
-            console.log('Fan display completed');
             return true;
         } catch (error) {
             console.error("Error in handleSettingChange:", error);
@@ -270,8 +238,6 @@ class ConfigStore {
     });
 
     setConfig = action((params) => {
-        const previousRoot = this.config.root;
-        
         runInAction(() => {
             Object.assign(this.config, params);
 
@@ -280,14 +246,6 @@ class ConfigStore {
             }
         });
 
-        // Gestion spéciale pour le root initial
-        if (params.root && !previousRoot) {
-            console.log('Initial root set, forcing fan drawing');
-            this.handleSettingChangeInternal();
-            return;
-        }
-
-        // Pour tous les autres changements, mettre en file d'attente
         if (!this._batchUpdating) {
             this.queueSettingChange();
         }
@@ -332,76 +290,8 @@ class ConfigStore {
         }
     });
 
-    formatName = action((rootPersonName) => {
-        if (!rootPersonName) return "";
-        let firstName = rootPersonName?.name?.split(" ")[0] || "";
-        let surname = rootPersonName?.surname || "";
-        return `${firstName} ${surname}`.trim();
-    });
-
-    initializeTomSelect() {
-        this.tomSelect = new TomSelect("#individual-select", {
-            create: false,
-            sortField: {
-                field: "text",
-                direction: "asc"
-            },
-            dropdownParent: "body",
-            placeholder: __("geneafan.choose_root_placeholder"),
-            allowClear: true,
-            maxItems: 1,
-            closeAfterSelect: true,
-            dropdownContentClass: 'ts-dropdown-content dropdown-content-modifiers',
-            plugins: ['dropdown_input', 'clear_button']
-        });
-
-        this.tomSelect.addOption({ value: "", text: __("geneafan.choose_root_placeholder"), disabled: true });
-        this.tomSelect.addItem("", true);
-    }
-
-    setTomSelectValue = action((value) => {
-        if (this.tomSelect) {
-            this.tomSelect.setValue(value);
-        } else {
-            console.error("TomSelect instance is not available.");
-        }
-    });
-
     setGedcomFileName = action((fileName) => {
         this.config.gedcomFileName = fileName;
-    });
-
-    undo = action(() => {
-        if (this.currentConfigIndex > 0) {
-            this.currentConfigIndex--;
-            const previousRoot = this.configHistory[this.currentConfigIndex].root;
-            this.config.root = previousRoot;
-            this.setTomSelectValue(previousRoot);
-
-            const changeEvent = new Event("change", { bubbles: true });
-            this.tomSelect.dropdown_content.dispatchEvent(changeEvent);
-        } else {
-            console.warn("No more actions to undo.");
-        }
-    });
-
-    redo = action(() => {
-        if (this.currentConfigIndex < this.configHistory.length - 1) {
-            this.currentConfigIndex++;
-            const nextRoot = this.configHistory[this.currentConfigIndex].root;
-            this.config.root = nextRoot;
-            this.setTomSelectValue(nextRoot);
-
-            const changeEvent = new Event("change", { bubbles: true });
-            this.tomSelect.dropdown_content.dispatchEvent(changeEvent);
-        } else {
-            console.warn("No more actions to redo.");
-        }
-    });
-
-    resetConfigHistory = action(() => {
-        this.configHistory = [];
-        this.currentConfigIndex = -1;
     });
 
     get getConfig() {

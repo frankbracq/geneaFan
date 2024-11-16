@@ -957,10 +957,14 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
     return individual;
 }
 
-function buildHierarchy() {
+function buildHierarchy(currentRoot) {
     console.time("buildHierarchy");
+    if (!currentRoot) {
+        console.warn("Root is undefined in buildHierarchy");
+        return null;
+    }
+
     const config = configStore.getConfig;
-    const rootIndividualPointer = config.root;
     const maxHeight = config.maxGenerations - 1;
 
     clearAscendantEvents();
@@ -991,8 +995,8 @@ function buildHierarchy() {
                 if (validTypes.includes(event.type)) {
                     addToAscendantEvents({
                         ...event,
-                        id: individualPointer, // Inclure l'identifiant de l'individu
-                        sosa, // Inclure le numéro Sosa pour le suivi généalogique
+                        id: individualPointer,
+                        sosa,
                     });
                 }
             });
@@ -1084,12 +1088,13 @@ function buildHierarchy() {
             gender: sosa % 2 === 0 ? "M" : "F",
             children: [],
             parent: null,
-            individualEvents: [], // Inclure un tableau vide pour les événements individuels pour la cohérence
+            individualEvents: [],
         };
     }
 
+    // Utiliser currentRoot au lieu de rootIndividualPointer
     const hierarchy = buildRecursive(
-        rootIndividualPointer,
+        currentRoot,
         null,
         1,
         0,
@@ -1097,8 +1102,6 @@ function buildHierarchy() {
         config
     );
 
-    // const collectedEvents = getAscendantEvents();
-    // const groupedEvents = groupEvents(collectedEvents, 10); // Regroupement par décennie
     console.timeEnd("buildHierarchy");
     return hierarchy;
 }

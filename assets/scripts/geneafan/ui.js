@@ -3,6 +3,7 @@ import { reaction, action, autorun } from './stores/mobx-config';
 import authStore from './stores/authStore.js';
 import configStore from './stores/fanConfigStore.js';
 import ShareFormStore from './stores/shareFormStore.js';
+import rootPersonStore from './stores/rootPersonStore.js'; // Ajouter l'import
 
 // Utility libraries
 import _ from 'lodash';                 // Utility functions
@@ -369,7 +370,7 @@ export async function resetUI() {
         individualSelectElement.innerHTML = "";
     }
 
-    let tomSelect = configStore.tomSelect;
+    let tomSelect = rootPersonStore.tomSelect;
     if (tomSelect) {
         tomSelect.clearOptions();
         tomSelect.clear();
@@ -408,7 +409,7 @@ export async function resetUI() {
         }
     });
 
-    configStore.resetConfigHistory();
+    rootPersonStore.resetHistory()
 }
 
 let shouldShowInitialMessage = true;

@@ -3,6 +3,7 @@ import _ from 'lodash';
 import Uppy from '@uppy/core';
 import AwsS3 from '@uppy/aws-s3';
 import configStore from '../stores/fanConfigStore.js';
+import rootPersonStore from '../stores/rootPersonStore.js'; // Nouveau import
 import authStore from '../stores/authStore.js';
 import {
     clearAllStates,
@@ -411,7 +412,7 @@ function findYoungestIndividual(individuals) {
 }
 
 async function onFileChange(data) {
-    handleTabsAndOverlay(true);  // Active le chargement et désactive les onglets
+    handleTabsAndOverlay(true);
 
     clearAllStates();
 
@@ -438,15 +439,15 @@ async function onFileChange(data) {
         googleMapManager.loadMarkersData();
 
         const selectElement = document.getElementById("individual-select");
-        selectElement.innerHTML = "";  // Efface tout contenu résiduel
+        selectElement.innerHTML = "";
         const placeholderOption = new Option("", "", true, true);
         placeholderOption.disabled = true;
         selectElement.appendChild(placeholderOption);
 
-        let tomSelect = configStore.tomSelect;
+        let tomSelect = rootPersonStore.tomSelect; // Utiliser rootPersonStore
         if (!tomSelect) {
-            configStore.initializeTomSelect();
-            tomSelect = configStore.tomSelect;
+            rootPersonStore.initializeTomSelect(); // Utiliser rootPersonStore
+            tomSelect = rootPersonStore.tomSelect;
         }
 
         tomSelect.clearOptions();
@@ -464,22 +465,17 @@ async function onFileChange(data) {
         let rootId;
         const gedcomFileName = configStore.getConfig.gedcomFileName;
         rootId = (gedcomFileName === "demo.ged") ? "@I111@" : findYoungestIndividual(individuals)?.id;
-        // Utiliser batchUpdate pour regrouper toutes les modifications de configStore
-        configStore.batchUpdate(() => {
-            configStore.setTomSelectValue(rootId);
-            configStore.setConfig({ root: rootId });
 
-            const rootPerson = individuals.find((individual) => individual.id === rootId);
-            if (rootPerson) {
-                configStore.setConfig({
-                    ...configStore.getConfig,
-                    rootPersonName: {
-                        name: rootPerson.name,
-                        surname: rootPerson.surname,
-                    },
-                });
-            }
-        });
+        // Mise à jour du root et du nom
+        const rootPerson = individuals.find((individual) => individual.id === rootId);
+        if (rootPerson) {
+            rootPersonStore.setRoot(rootId); // Utiliser rootPersonStore
+            rootPersonStore.setRootPersonName({ // Utiliser rootPersonStore
+                name: rootPerson.name,
+                surname: rootPerson.surname,
+            });
+            rootPersonStore.setTomSelectValue(rootId); // Utiliser rootPersonStore
+        }
 
         [
             ...document.querySelectorAll(".parameter"),
@@ -495,7 +491,7 @@ async function onFileChange(data) {
     } catch (error) {
         console.error("General Error:", error);
     } finally {
-        handleTabsAndOverlay(false);  // Désactive le chargement et active les onglets
+        handleTabsAndOverlay(false);
         setupPersonLinkEventListener();
     }
 }

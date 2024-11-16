@@ -1,5 +1,6 @@
 import { getFamilyTowns, getSvgPanZoomInstance } from "../stores/state.js";
 import configStore from "../stores/fanConfigStore.js";
+import rootPersonStore from "../stores/rootPersonStore.js"; // Nouveau import
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
 import {
     setupResponsiveTabs,
@@ -136,14 +137,14 @@ export function setupFanParameterEventListeners() {
     if (individualSelect) {
         individualSelect.addEventListener("change", () => {
             const selectedRoot = individualSelect.value;
-            configStore.setConfig({ root: selectedRoot });
+            rootPersonStore.setRoot(selectedRoot); // Utiliser rootPersonStore au lieu de configStore
         });
     }
 }
 
 // Setup person link event listener with delegation
 export function setupPersonLinkEventListener() {
-    const tomSelect = configStore.tomSelect;
+    const tomSelect = rootPersonStore.tomSelect; // Utiliser rootPersonStore
     if (!tomSelect) {
         console.error("tomSelect is undefined");
         return;
@@ -153,9 +154,7 @@ export function setupPersonLinkEventListener() {
         if (event.target.matches(".person-link")) {
             event.preventDefault();
             const personId = event.target.getAttribute("data-person-id");
-            tomSelect.setValue(personId);
-            const changeEvent = new Event("change", { bubbles: true });
-            tomSelect.dropdown_content.dispatchEvent(changeEvent);
+            rootPersonStore.setTomSelectValue(personId); // Utiliser rootPersonStore
 
             const individualMapContainer = document.getElementById(
                 "individualMapContainer"
@@ -173,13 +172,11 @@ export function setupPersonLinkEventListener() {
 
 // Update UI after undo/redo actions
 function updateUIAfterUndoRedo() {
-    const root = configStore.getConfig.root;
+    const root = rootPersonStore.root; // Utiliser rootPersonStore
     if (root) {
-        const tomSelect = getTomSelectInstance();
+        const tomSelect = rootPersonStore.tomSelect; // Utiliser rootPersonStore
         if (tomSelect) {
-            tomSelect.setValue(root);
-            const changeEvent = new Event("change", { bubbles: true });
-            tomSelect.dropdown_content.dispatchEvent(changeEvent);
+            rootPersonStore.setTomSelectValue(root);
         } else {
             console.error("tomSelect is undefined");
         }
@@ -189,11 +186,11 @@ function updateUIAfterUndoRedo() {
 // Setup undo/redo event listeners
 function setupUndoRedoEventListeners() {
     const undoHandler = () => {
-        configStore.undo();
+        rootPersonStore.undo(); // Utiliser rootPersonStore
         updateUIAfterUndoRedo();
     };
     const redoHandler = () => {
-        configStore.redo();
+        rootPersonStore.redo(); // Utiliser rootPersonStore
         updateUIAfterUndoRedo();
     };
     const keydownHandler = (event) => {

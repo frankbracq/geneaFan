@@ -553,12 +553,15 @@ function adjustFanVerticalPosition(svg, fanHeight, frameHeight, scale) {
     applyTransform('boxes');
 }
 
-export function drawFan() {
-    console.log('drawFan');
+export function drawFan(currentRoot) {  // Accepter le root en paramètre
+    console.log('drawFan with root:', currentRoot);
     console.time('drawFan');
     const config = configStore.getConfig;
-    const angle = configStore.angle; // Récupérer l'angle via le getter
-    const data = buildHierarchy(); // setHierarchy(data);
+    const angle = configStore.angle;
+
+    console.log('Drawing fan with root:', currentRoot); // Debug log
+
+    const data = buildHierarchy(currentRoot);  // Passer le root à buildHierarchy
         
     if (data == null) {
         console.log("Data is null for drawFan. Exiting.");
