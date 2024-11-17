@@ -5,19 +5,15 @@ import AwsS3 from '@uppy/aws-s3';
 import configStore from '../stores/fanConfigStore.js';
 import rootPersonStore from '../stores/rootPersonStore.js'; // Nouveau import
 import authStore from '../stores/authStore.js';
+import gedcomDataStore from '../stores/gedcomDataStore.js';  
 import {
-    clearAllStates,
-    setGedFileUploaded,
-    getGedFileUploaded,
     setFamilyTowns,
-    setSourceData,
-    setIndividualsCache,
-    getIndividualsCache,
+    clearAllStates,
 } from "../stores/state.js";
 import {
     updateFamilyTownsViaProxy,
     updateIndividualTownsFromFamilyTowns,
-} from "../utils.js";
+} from "../utils/utils.js";
 import { toJson, getAllPlaces, getIndividualsList } from "../parse.js";
 import { setupPersonLinkEventListener } from "../listeners/eventListeners.js";
 import { googleMapManager } from '../mapManager.js';
@@ -414,24 +410,26 @@ function findYoungestIndividual(individuals) {
 async function onFileChange(data) {
     handleTabsAndOverlay(true);
 
-    clearAllStates();
+    // Reset all stores
+    clearAllStates(); // Pour les états restants dans state.js
+    gedcomDataStore.clearAllState(); // Pour les états migrés vers le store
 
-    if (getGedFileUploaded()) {
+    if (gedcomDataStore.getFileUploaded()) {
         resetUI();
     }
-    setGedFileUploaded(true);
+    gedcomDataStore.setFileUploaded(true);
 
     try {
         await setFamilyTowns({});
 
         let json = toJson(data);
         let result = await getAllPlaces(json);
-        setSourceData(result.json);
+        gedcomDataStore.setSourceData(result.json);
 
         try {
             await updateFamilyTownsViaProxy();
-            updateIndividualTownsFromFamilyTowns(getIndividualsCache());
-            setIndividualsCache(getIndividualsCache());
+            updateIndividualTownsFromFamilyTowns(gedcomDataStore.getIndividualsCache());
+            gedcomDataStore.setIndividualsCache(gedcomDataStore.getIndividualsCache());
         } catch (error) {
             console.error("Error updating geolocation:", error);
         }

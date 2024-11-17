@@ -4,9 +4,10 @@ import { hierarchy } from 'd3-hierarchy';
 import { xml } from 'd3-fetch';
 import tinycolor from "tinycolor2";
 import _ from "lodash";
-import { mmToPixels } from './utils.js';
-import { extractYear } from './dates.js';
+import { mmToPixels } from './utils/utils.js';
+import { extractYear } from './utils/dates.js';
 import configStore from './stores/fanConfigStore.js';
+import gedcomDataStore from './stores/gedcomDataStore';
 import { buildHierarchy } from './parse.js';
 
 const weightFontFirst = 0.25,
@@ -562,7 +563,8 @@ export function drawFan(currentRoot) {  // Accepter le root en paramètre
     console.log('Drawing fan with root:', currentRoot); // Debug log
 
     const data = buildHierarchy(currentRoot);  // Passer le root à buildHierarchy
-        
+    gedcomDataStore.setHierarchy(data);
+    
     if (data == null) {
         console.log("Data is null for drawFan. Exiting.");
         window.alert(__('geneafan.cannot_read_this_file'));

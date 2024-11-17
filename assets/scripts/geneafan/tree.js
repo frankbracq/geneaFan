@@ -9,6 +9,7 @@ import {
 } from './stores/state';
 import { commonAncestryGraph, getOldestAncestorOf } from './ancestorUtils';
 import configStore from './stores/fanConfigStore';
+import gedcomDataStore from './stores/gedcomDataStore';
 
 let family;
 let initializing = false;
@@ -18,7 +19,7 @@ export function initializeFamilyTree() {
     console.log('Initializing family tree...');
     initializing = true;
 
-    const familyTreeData = getFamilyTreeData();
+    const familyTreeData = formatIndividualsData(gedcomDataStore.getIndividualsCache());
     if (familyTreeData.length === 0) {
         console.error('Error: familyTreeData is empty.');
         return;

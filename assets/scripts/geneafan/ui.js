@@ -23,7 +23,7 @@ import {
     getSvgPanZoomInstance,
     gmapApiKey,
 } from "./stores/state.js";
-import { debounce } from "./utils.js";
+import { debounce } from "./utils/utils.js";
 
 // Core functionality
 import {

@@ -1,5 +1,5 @@
 import { getAscendantEvents } from "../stores/state.js";
-import { groupEvents } from "../utils.js";
+import { groupEvents } from "../utils/utils.js";
 
 // Function to generate HTML format required by horizontalTimeline from grouped events
 function generateTimelineEvents(groupedEvents) {

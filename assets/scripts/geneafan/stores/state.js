@@ -151,7 +151,7 @@ export const setAncestorMapCache = newMap => ancestorMapCache = newMap;
 /**
  * Clear the ancestor map cache.
  */
-const clearAncestorMap = () => ancestorMapCache.clear();
+export const clearAncestorMap = () => ancestorMapCache.clear();
 
 // Common ancestry graph state
 let commonAncestryGraphData = [];
@@ -167,19 +167,6 @@ export const getCommonAncestryGraphData = () => commonAncestryGraphData;
 export const setCommonAncestryGraphData = newData => {
     commonAncestryGraphData = newData;
 };
-
-// Hierarchy state
-let hierarchyState = [];
-/**
- * Set new hierarchy state.
- * @param {Array} newHierarchy - The new hierarchy to be set.
- */
-export const setHierarchy = newHierarchy => hierarchyState = newHierarchy;
-/**
- * Get the current hierarchy state.
- * @returns {Array} The current hierarchy state.
- */
-export const getHierarchy = () => hierarchyState;
 
 // Ascendants events state
 let ascendantEvents = [];

@@ -4,21 +4,17 @@ import parseGedcom from "parse-gedcom";
 import {
     normalizeGeoString,
     formatTownName,
-} from "./geo.js";
+} from "./utils/geo.js";
 import {
     padTwoDigits,
-} from "./utils.js";
-import { extractYear, calculateAge, prefixedDate } from "./dates.js";
+} from "./utils/utils.js";
+import { extractYear, calculateAge, prefixedDate } from "./utils/dates.js";
 import {
     getFamilyTowns,
     setFamilyTowns,
     addToFamilyEvents,
     addToAscendantEvents,
     clearAscendantEvents,
-    getSourceData,
-    clearSourceData,
-    getIndividualsCache,
-    setIndividualsCache,
     addNodeToGenealogyGraph, 
     addEdgeToGenealogyGraph,
     getStatistics,
@@ -33,6 +29,7 @@ import {
     setFamilyTreeData,
 } from "./stores/state.js";
 import configStore from './stores/fanConfigStore.js';
+import gedcomDataStore from './stores/gedcomDataStore';
 import jsonpointer from 'jsonpointer';
 
 const EMPTY = "";
@@ -862,7 +859,7 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
             };
             individualEvents.push(event);
             if (!["child-birth", "occupation", "today"].includes(type)) {
-                addToFamilyEvents(event);
+                gedcomDataStore.addFamilyEvent(event);
             }
         }
     }
@@ -970,7 +967,7 @@ function buildHierarchy(currentRoot) {
     clearAscendantEvents();
 
     // Utiliser le cache des individus déjà construit
-    const individualsCache = getIndividualsCache(); 
+    const individualsCache = gedcomDataStore.getIndividualsCache()
 
     function buildRecursive(
         individualPointer,
@@ -1231,7 +1228,7 @@ async function processTree(tree, parentNode, dbTowns, familyTowns) {
 
 function prebuildindividualsCache() {
     console.time("prebuildindividualsCache");
-    const json = getSourceData(); // Retrieve source data
+    const json = gedcomDataStore.getSourceData(); // Retrieve source data
     const individualsCache = new Map();
 
     // Filter individuals and families from source data
@@ -1323,7 +1320,7 @@ function formatFamilyTreeData(individualsCache) {
 function getIndividualsList() {
     // Build the cache of individuals with all their information
     const individualsCache = prebuildindividualsCache();
-    clearSourceData(); // Reset source data to avoid memory leaks
+    gedcomDataStore.clearSourceData(); // Reset source data to avoid memory leaks
 
     // Preparing data for FamilyTreeJS
     const familyTreeData = formatFamilyTreeData(individualsCache);
@@ -1338,7 +1335,7 @@ function getIndividualsList() {
             console.error('Error loading the module:', error);
         });
 
-    setIndividualsCache(individualsCache);
+        gedcomDataStore.setIndividualsCache(individualsCache);
 
     // Convert the map to a list
     const individualsList = Array.from(individualsCache.values());

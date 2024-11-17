@@ -1,5 +1,5 @@
 import '../vendor/pdfkitFontRegister.js';
-import { mmToPoints, mmToPixels } from './utils.js';
+import { mmToPoints, mmToPixels } from './utils/utils.js';
 import { Modal } from 'bootstrap';
 import configStore from './stores/fanConfigStore.js';
 

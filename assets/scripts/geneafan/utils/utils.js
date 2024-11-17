@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import { getFamilyTowns } from './stores/state.js';
+import { getFamilyTowns } from '../stores/state.js';
 import { parseDate } from './dates.js';
 
 export const memoize = (fn) => {
