@@ -1,6 +1,5 @@
 import { makeAutoObservable, action, reaction, runInAction } from './mobx-config.js';
 import TomSelect from 'tom-select';
-import { initializeAscendantTimeline } from '../timeline/ascendantTimeline.js';
 import { updateFilename } from "../downloads.js";
 import { draw } from "../fan.js";
 import { displayFan } from "../ui.js";
@@ -95,12 +94,6 @@ class RootPersonStore {
 
             // Initialisation de la timeline
             if (drawResult.rootPersonName) {
-                try {
-                    await initializeAscendantTimeline();
-                } catch (timelineError) {
-                    console.warn('Timeline initialization failed:', timelineError);
-                }
-
                 // Mise à jour du nom de fichier
                 const rootPersonName = this.formatName(drawResult.rootPersonName);
                 const filename = (__("Éventail généalogique de ") + 

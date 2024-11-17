@@ -1,4 +1,9 @@
 import _ from 'lodash';
+import timelineEventsStore from './timelineEventsStore.js';
+import gedcomDataStore from './gedcomDataStore';
+
+
+export const getIndividualsCache = () => gedcomDataStore.getIndividualsCache();
 
 /**
  * Clear all relevant states when a new file is loaded.
@@ -7,7 +12,7 @@ export const clearAllStates = () => {
     clearFamilyTreeData();
     clearGenealogyGraph();
     clearAncestorMap();
-    clearAscendantEvents();
+    timelineEventsStore.clearEvents(); // Utiliser le nouveau store
     clearStatistics();
 };
 
@@ -38,36 +43,19 @@ const clearFamilyTreeData = () => {
 };
 
 // Genealogy graph state
-/*
-Nodes Array: Each individual from the original data is added to the nodes array with an id and name.
-Edges Array: For each individual, if a fatherId or motherId exists, an edge is created representing the parent-child relationship.
-genealogyGraph Object: Combines the nodes and edges
-*/
 let genealogyGraph = { nodes: [], edges: [] };
-/**
- * Get the current genealogy graph.
- * @returns {Object} The current genealogy graph.
- */
+
 export const getGenealogyGraph = () => genealogyGraph;
-/**
- * Set new genealogy graph and clear ancestor map.
- * @param {Object} newGraph - The new genealogy graph to be set.
- */
 export const setGenealogyGraph = newGraph => {
     genealogyGraph = newGraph;
     clearAncestorMap();
 };
-/**
- * Clear the genealogy graph and ancestor map.
- */
+
 const clearGenealogyGraph = () => {
     genealogyGraph = { nodes: [], edges: [] };
     clearAncestorMap();
 };
-/**
- * Add a node to the genealogy graph if it does not already exist.
- * @param {Object} individual - The individual to be added as a node.
- */
+
 export const addNodeToGenealogyGraph = individual => {
     if (!genealogyGraph.nodes.some(node => node.id === individual.id)) {
         genealogyGraph.nodes.push({
@@ -78,12 +66,7 @@ export const addNodeToGenealogyGraph = individual => {
         });
     }
 };
-/**
- * Add an edge to the genealogy graph if it does not already exist.
- * @param {string} sourceId - The source node ID.
- * @param {string} targetId - The target node ID.
- * @param {string} relation - The relation between nodes.
- */
+
 export const addEdgeToGenealogyGraph = (sourceId, targetId, relation) => {
     if (!genealogyGraph.edges.some(edge => edge.source === sourceId && edge.target === targetId)) {
         genealogyGraph.edges.push({
@@ -96,70 +79,29 @@ export const addEdgeToGenealogyGraph = (sourceId, targetId, relation) => {
 
 // Ancestor map cache
 let ancestorMapCache = new Map();
-/**
- * Get the current ancestor map cache.
- * @returns {Map} The current ancestor map cache.
- */
+
 export const getAncestorMapCache = () => ancestorMapCache;
-/**
- * Set new ancestor map cache.
- * @param {Map} newMap - The new ancestor map cache to be set.
- */
 export const setAncestorMapCache = newMap => ancestorMapCache = newMap;
-/**
- * Clear the ancestor map cache.
- */
 export const clearAncestorMap = () => ancestorMapCache.clear();
 
 // Common ancestry graph state
 let commonAncestryGraphData = [];
-/**
- * Get the current common ancestry graph data.
- * @returns {Array} The current common ancestry graph data.
- */
+
 export const getCommonAncestryGraphData = () => commonAncestryGraphData;
-/**
- * Set new common ancestry graph data.
- * @param {Array} newData - The new common ancestry graph data to be set.
- */
 export const setCommonAncestryGraphData = newData => {
     commonAncestryGraphData = newData;
 };
 
-// Ascendants events state
-let ascendantEvents = [];
-/**
- * Clear all ascendant events.
- */
-export const clearAscendantEvents = () => ascendantEvents = [];
-/**
- * Add an event to the ascendant events if it does not already exist.
- * @param {Object} event - The event to be added.
- */
-export const addToAscendantEvents = event => {
-    if (event.eventId && ascendantEvents.some(e => e.eventId === event.eventId)) {
-        return;
-    }
-    ascendantEvents.push(event);
-};
-/**
- * Get the current ascendant events.
- * @returns {Array} The current ascendant events.
- */
-export const getAscendantEvents = () => ascendantEvents;
+// Timeline events exports
+// Redirection vers le nouveau store pour la rétrocompatibilité
+export const clearAscendantEvents = () => timelineEventsStore.clearEvents();
+export const addToAscendantEvents = event => timelineEventsStore.addEvent(event);
+export const getAscendantEvents = () => timelineEventsStore.getAllEvents();
 
 // Family towns state
 export let familyTowns = {};
-/**
- * Get the current family towns state.
- * @returns {Object} The current family towns state.
- */
+
 export const getFamilyTowns = () => familyTowns;
-/**
- * Set new family towns state.
- * @param {Object} newFamilyTowns - The new family towns to be set.
- * @returns {Promise} A promise that resolves when the state is updated.
- */
 export const setFamilyTowns = newFamilyTowns => new Promise(resolve => {
     familyTowns = newFamilyTowns;
     resolve();
@@ -167,15 +109,8 @@ export const setFamilyTowns = newFamilyTowns => new Promise(resolve => {
 
 // SVG Pan Zoom instance state
 export let svgPanZoomInstance = null;
-/**
- * Get the current SVG Pan Zoom instance.
- * @returns {Object} The current SVG Pan Zoom instance.
- */
+
 export const getSvgPanZoomInstance = () => svgPanZoomInstance;
-/**
- * Set new SVG Pan Zoom instance.
- * @param {Object} newInstance - The new SVG Pan Zoom instance to be set.
- */
 export const setSvgPanZoomInstance = newInstance => svgPanZoomInstance = newInstance;
 
 // Statistics state
@@ -224,9 +159,6 @@ export const addAgeAtFirstChild = (period, age) => {
     statistics.ageAtFirstChild[period].push(age);
 };
 
-/**
- * Clear the statistics state.
- */
 const clearStatistics = () => {
     statistics = {
         totalIndividuals: 0,
@@ -240,9 +172,8 @@ const clearStatistics = () => {
     };
 };
 
-// Google Maps API key and style
-export let gmapApiKey = "AIzaSyDu9Qz5YXRF6CTJ4vf-0s89BaVq_eh13YE";
-
+// Google Maps related exports
+export const gmapApiKey = "AIzaSyDu9Qz5YXRF6CTJ4vf-0s89BaVq_eh13YE";
 export let gmapStyle = [
     {
         "featureType": "all",

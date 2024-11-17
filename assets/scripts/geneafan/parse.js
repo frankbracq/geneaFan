@@ -847,15 +847,17 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
     
             const formattedAttendees = eventAttendees.map(attendee => `${attendee.name}`).join(', ');
             const event = {
-                type,
-                name: `${name} ${surname}`,
-                date,
-                town: town || "lieu inconnu",
+                type,                   // Utilisé pour grouper les événements
+                name: `${name} ${surname}`, // Utilisé dans formatEvent
+                date,                   // Utilisé dans formatEvent
+                town: town || "lieu inconnu", // Utilisé dans formatEvent
                 townDisplay: town || "lieu inconnu",
                 description,
                 eventId: eventId || '',
-                eventAttendees: formattedAttendees,
-                ageAtEvent
+                eventAttendees: eventAttendees.join(', '),
+                age: ageAtEvent,        // Utilisé dans formatEvent pour les décès
+                spouse: '',             // Devrait être rempli pour les mariages
+                sosa: null              // Important pour les événements d'ancêtres
             };
             individualEvents.push(event);
             if (!["child-birth", "occupation", "today"].includes(type)) {

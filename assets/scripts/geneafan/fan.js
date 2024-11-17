@@ -555,16 +555,14 @@ function adjustFanVerticalPosition(svg, fanHeight, frameHeight, scale) {
 }
 
 export function drawFan(currentRoot) {  // Accepter le root en paramètre
-    console.log('drawFan with root:', currentRoot);
-    console.time('drawFan');
+    console.log('starting drawFan with root:', currentRoot);
+    console.time('starting drawFan');
     const config = configStore.getConfig;
     const angle = configStore.angle;
 
-    console.log('Drawing fan with root:', currentRoot); // Debug log
-
     const data = buildHierarchy(currentRoot);  // Passer le root à buildHierarchy
     gedcomDataStore.setHierarchy(data);
-    
+
     if (data == null) {
         console.log("Data is null for drawFan. Exiting.");
         window.alert(__('geneafan.cannot_read_this_file'));
@@ -766,7 +764,7 @@ export function drawFan(currentRoot) {  // Accepter le root en paramètre
 
     adjustFanVerticalPosition(svg, mmToPixels(fanHeightInMm), mmToPixels(frameHeightInMm), scale);
     
-    console.timeEnd('drawFan');
+    console.timeEnd('Ending drawFan');
     return {
         data: data,
         rootPersonName: { name: rootNode.data.name, surname: rootNode.data.surname }
