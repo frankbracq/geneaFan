@@ -4,53 +4,11 @@ import _ from 'lodash';
  * Clear all relevant states when a new file is loaded.
  */
 export const clearAllStates = () => {
-    clearSourceData();
     clearFamilyTreeData();
     clearGenealogyGraph();
     clearAncestorMap();
     clearAscendantEvents();
-    clearFamilyEvents();
     clearStatistics();
-    setIndividualsCache(new Map());  
-};
-
-// Source data state
-let sourceDataState = [];
-/**
- * Get the current source data state.
- * @returns {Array} The current source data.
- */
-export const getSourceData = () => sourceDataState;
-/**
- * Set new source data and clear ancestor map.
- * @param {Array} newSourceData - The new source data to be set.
- */
-export const setSourceData = newSourceData => {
-    sourceDataState = newSourceData;
-    clearAncestorMap();
-};
-/**
- * Clear the source data state and ancestor map.
- */
-export const clearSourceData = () => {
-    sourceDataState = [];
-    clearAncestorMap();
-};
-
-// Cache state
-let individualsCache = new Map();
-/**
- * Get the current individuals cache.
- * @returns {Map} The current individuals cache.
- */
-export const getIndividualsCache = () => individualsCache;
-/**
- * Set new individuals cache.
- * @param {Map} newCache - The new cache to be set.
- */
-export const setIndividualsCache = newCache => {
-    individualsCache = newCache;
-    // console.log("Individuals cache", individualsCache);
 };
 
 // Family tree data state
@@ -189,41 +147,6 @@ export const addToAscendantEvents = event => {
  * @returns {Array} The current ascendant events.
  */
 export const getAscendantEvents = () => ascendantEvents;
-
-// Family events state
-export let familyEvents = [];
-/**
- * Set new family events.
- * @param {Array} newEvents - The new family events to be set.
- */
-export const setFamilyEvents = newEvents => familyEvents = newEvents;
-/**
- * Get the current family events.
- * @returns {Array} The current family events.
- */
-export const getFamilyEvents = () => familyEvents;
-/**
- * Add an event to the family events.
- * @param {Object} event - The event to be added.
- */
-export const addToFamilyEvents = event => familyEvents.push(event);
-/**
- * Clear all family events.
- */
-const clearFamilyEvents = () => familyEvents = [];
-
-// GEDCOM file state
-export let gedFileUploaded = false;
-/**
- * Set the GEDCOM file upload state.
- * @param {boolean} value - The new GEDCOM file upload state.
- */
-export const setGedFileUploaded = value => gedFileUploaded = value;
-/**
- * Get the current GEDCOM file upload state.
- * @returns {boolean} The current GEDCOM file upload state.
- */
-export const getGedFileUploaded = () => gedFileUploaded;
 
 // Family towns state
 export let familyTowns = {};
