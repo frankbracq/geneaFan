@@ -4,6 +4,7 @@ import authStore from './stores/authStore.js';
 import configStore from './stores/fanConfigStore.js';
 import ShareFormStore from './stores/shareFormStore.js';
 import rootPersonStore from './stores/rootPersonStore.js'; // Ajouter l'import
+import TimelineManager from './timeline/timelineManager.js';
 
 // Utility libraries
 import _ from 'lodash';                 // Utility functions
@@ -945,6 +946,8 @@ export function initPage() {
         });
 
     handleUrlParameters();
+
+    new TimelineManager();
 }
 
 function handleUrlParameters() {

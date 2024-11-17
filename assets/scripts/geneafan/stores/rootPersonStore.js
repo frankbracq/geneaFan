@@ -92,7 +92,6 @@ class RootPersonStore {
             console.log('Fan drawn successfully, displaying');
             displayFan();
 
-            // Initialisation de la timeline
             if (drawResult.rootPersonName) {
                 // Mise à jour du nom de fichier
                 const rootPersonName = this.formatName(drawResult.rootPersonName);
