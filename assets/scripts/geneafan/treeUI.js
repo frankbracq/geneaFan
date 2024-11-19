@@ -2,30 +2,27 @@ import FamilyTree from '@balkangraph/familytree.js';
 import _ from 'lodash';
 import { reaction } from './stores/mobx-config';
 import {
-    getIndividualsCache,
     getCommonAncestryGraphData,
     getGenealogyGraph,
-    getFamilyTreeData,
 } from './stores/state';
 import { commonAncestryGraph, getOldestAncestorOf } from './ancestorUtils';
-import configStore from './stores/fanConfigStore';
-import gedcomDataStore from './stores/gedcomDataStore';
+import rootPersonStore from './stores/rootPersonStore';
+import familyTreeDataStore from './stores/familyTreeDataStore';
 
 let family;
 let initializing = false;
 
-// Initialize the family tree with given data and configurations
 export function initializeFamilyTree() {
     console.log('Initializing family tree...');
     initializing = true;
 
-    const familyTreeData = formatIndividualsData(gedcomDataStore.getIndividualsCache());
+    const familyTreeData = familyTreeDataStore.getFamilyTreeData;
     if (familyTreeData.length === 0) {
         console.error('Error: familyTreeData is empty.');
         return;
     }
 
-    const { root: initialRootId } = configStore.getConfig;
+    const initialRootId = rootPersonStore.root;
     let focusedNodeId = initialRootId;
 
     family = new FamilyTree(document.getElementById('treeContainer'), {
@@ -50,8 +47,8 @@ export function initializeFamilyTree() {
         tags: {
             "rootTag": {
                 node: {
-                    background: "#FFD700", // Example: golden background color
-                    color: "#000000" // Example: black text color
+                    background: "#FFD700",
+                    color: "#000000"
                 },
                 field_0: { color: "#000000" }
             }
@@ -100,18 +97,27 @@ export function initializeFamilyTree() {
         focusedNodeId = null;
     });
 
+    // Réagir aux changements dans familyTreeDataStore
+    reaction(
+        () => familyTreeDataStore.getFamilyTreeData,
+        (newData) => {
+            if (!initializing && family && newData.length > 0) {
+                family.load(newData);
+            }
+        }
+    );
+
     family.load(familyTreeData);
     initializing = false;
 }
 
-// Function to clear specific tags from nodes
+// Function implementations restent les mêmes
 function clearTags(nodes, tagsToClear) {
     Object.keys(nodes).forEach(id => {
         nodes[id].tags = nodes[id].tags.filter(tag => !tagsToClear.includes(tag));
     });
 }
 
-// Function to apply selection-related tags to a node and its relatives
 function applySelectionTags(nodes, node) {
     addTagToNode(node, 'selected');
     iterateParents(nodes, node);
@@ -120,14 +126,12 @@ function applySelectionTags(nodes, node) {
     blurUnfocusedNodes(nodes);
 }
 
-// Function to add a tag to a node
 function addTagToNode(node, tag) {
     if (!node.tags.includes(tag)) {
         node.tags.push(tag);
     }
 }
 
-// Function to blur nodes that are not focused
 function blurUnfocusedNodes(nodes) {
     Object.keys(nodes).forEach(id => {
         if (!nodes[id].tags.includes('focused')) {
@@ -136,30 +140,30 @@ function blurUnfocusedNodes(nodes) {
     });
 }
 
-// Handle root changes and apply specific color to the root node
+// Root change reaction reste similaire
 reaction(
-    () => configStore.config.root,
+    () => rootPersonStore.root,
     (rootId) => {
-        if (!initializing) {
+        if (!initializing && rootId) {
             if (!family) {
                 initializeFamilyTree();
             }
             const oldestAncestorId = getOldestAncestorOf(rootId, "both");
             family.config.roots = [oldestAncestorId];
 
-            const nodeObject = family.getNodeElement(rootId);
-            console.log(nodeObject);
-            /*
-            if (nodeObject) {
-                addTagToNode(nodeObject, 'selected'); // Apply the custom tag to the root node
+            const nodeData = family.get(rootId);
+            if (nodeData) {
+                nodeData.tags = nodeData.tags || [];
+                if (!nodeData.tags.includes('rootTag')) {
+                    nodeData.tags.push('rootTag');
+                }
             }
-            */
+            
             family.draw();
         }
     }
 );
 
-// Helper functions to traverse and apply tags to parents, children, and partners
 function iteratePartners(nodes, node) {
     if (node.pids) {
         node.pids.forEach(pid => {
@@ -195,17 +199,16 @@ function iterateChildren(nodes, node) {
     });
 }
 
-// Function to add a 'focused' tag to a node
 function addFocusedTag(node) {
     if (node && !node.tags.includes('focused')) {
         node.tags.push('focused');
     }
 }
 
-// Example: Handle common ancestor button click event
+// Handle common ancestor functionality
 document.getElementById("commonAncestor").addEventListener("click", () => {
     const genealogyGraph = getGenealogyGraph();
-    const familyTreeData = formatIndividualsData(getIndividualsCache());
+    const familyTreeData = familyTreeDataStore.getFamilyTreeData;
     const id1 = '@I789613205@';
     const id2 = '@I170@';
 
@@ -228,3 +231,7 @@ document.getElementById("commonAncestor").addEventListener("click", () => {
 
     family.load(filteredFamilyTreeData);
 });
+
+export function getTreeInstance() {
+    return family;
+}

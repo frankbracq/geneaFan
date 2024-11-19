@@ -26,10 +26,10 @@ import {
     updateMarriages,
     addChildrenPerCouple,
     addAgeAtFirstChild,
-    setFamilyTreeData,
 } from "./stores/state.js";
 import configStore from './stores/fanConfigStore.js';
 import gedcomDataStore from './stores/gedcomDataStore';
+import familyTreeDataStore from './stores/familyTreeDataStore';
 import jsonpointer from 'jsonpointer';
 
 const EMPTY = "";
@@ -1324,11 +1324,11 @@ function getIndividualsList() {
     const individualsCache = prebuildindividualsCache();
     gedcomDataStore.clearSourceData(); // Reset source data to avoid memory leaks
 
-    // Preparing data for FamilyTreeJS
-    const familyTreeData = formatFamilyTreeData(individualsCache);
-    setFamilyTreeData(familyTreeData);
+    // Le familyTreeData sera automatiquement mis à jour via la reaction dans familyTreeDataStore
+    // Plus besoin d'appeler setFamilyTreeData ici
+
     // Dynamically import the module and call the function
-    import(/* webpackChunkName: "tree" */ './tree.js')
+    import(/* webpackChunkName: "treeUI" */ './treeUI.js')
         .then(module => {
             const { initializeFamilyTree } = module;
             initializeFamilyTree(); // Call the function to initialize FamilyTreeJS
@@ -1337,7 +1337,7 @@ function getIndividualsList() {
             console.error('Error loading the module:', error);
         });
 
-        gedcomDataStore.setIndividualsCache(individualsCache);
+    gedcomDataStore.setIndividualsCache(individualsCache);
 
     // Convert the map to a list
     const individualsList = Array.from(individualsCache.values());

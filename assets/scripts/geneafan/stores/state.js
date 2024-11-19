@@ -9,37 +9,10 @@ export const getIndividualsCache = () => gedcomDataStore.getIndividualsCache();
  * Clear all relevant states when a new file is loaded.
  */
 export const clearAllStates = () => {
-    clearFamilyTreeData();
     clearGenealogyGraph();
     clearAncestorMap();
     timelineEventsStore.clearEvents(); // Utiliser le nouveau store
     clearStatistics();
-};
-
-// Family tree data state
-let familyTreeData = [];
-
-/**
- * Get the current family tree data.
- * @returns {Array} The current family tree data.
- */
-export const getFamilyTreeData = () => familyTreeData;
-
-/**
- * Set new family tree data and clear ancestor map.
- * @param {Array} newData - The new family tree data to be set.
- */
-export const setFamilyTreeData = newData => {
-    familyTreeData = newData;
-    clearAncestorMap();
-};
-
-/**
- * Clear the family tree data without creating a new reference.
- */
-const clearFamilyTreeData = () => {
-    familyTreeData.length = 0;
-    clearAncestorMap();
 };
 
 // Genealogy graph state
