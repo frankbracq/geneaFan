@@ -12,11 +12,8 @@ import { extractYear, calculateAge, prefixedDate } from "./utils/dates.js";
 import {
     getFamilyTowns,
     setFamilyTowns,
-    addToFamilyEvents,
     addToAscendantEvents,
     clearAscendantEvents,
-    addNodeToGenealogyGraph, 
-    addEdgeToGenealogyGraph,
     getStatistics,
     updateTotalIndividuals,
     updateGenderCount,
@@ -218,9 +215,8 @@ function formatChild(child) {
     const ageAtDeath = deathMoment
         ? ` à ${deathMoment.diff(birthMoment, "years")} ans`
         : "";
-    return `${formatPersonLink(child.id, child.name)}${
-        child.deathDate ? ` (†${child.deathDate}${ageAtDeath})` : ""
-    }`;
+    return `${formatPersonLink(child.id, child.name)}${child.deathDate ? ` (†${child.deathDate}${ageAtDeath})` : ""
+        }`;
 }
 
 function extractBasicInfo(individualJson) {
@@ -261,9 +257,9 @@ function getRelativeDetails(individualID, allIndividuals) {
     const { name, surname } = extractBasicInfo(individual);
     const firstName = name ? name.split(" ")[0] : "";
     const fullName =
-    firstName || surname
-        ? `${firstName || ""} ${surname || ""}`.trim()
-        : "Nom inconnu";
+        firstName || surname
+            ? `${firstName || ""} ${surname || ""}`.trim()
+            : "Nom inconnu";
 
     const birthEventNode = individual.tree.find((node) => node.tag === "BIRT");
     const deathEventNode = individual.tree.find((node) => node.tag === "DEAT");
@@ -286,7 +282,7 @@ function getRelativeDetails(individualID, allIndividuals) {
     };
 }
 
-/* Parental Family Members */   
+/* Parental Family Members */
 function getParentalFamily(individualPointer, allFamilies, allIndividuals) {
     // Find the family where the individual is a child
     const parentFamily = allFamilies.find((family) =>
@@ -294,7 +290,7 @@ function getParentalFamily(individualPointer, allFamilies, allIndividuals) {
             (node) => node.tag === "CHIL" && node.data === individualPointer
         )
     );
-    
+
     if (!parentFamily) {
         return { siblings: [], fatherId: null, motherId: null, siblingIds: [] };
     }
@@ -306,7 +302,7 @@ function getParentalFamily(individualPointer, allFamilies, allIndividuals) {
     // Extract the siblings
     let siblings = parentFamily.tree
         .filter((node) => node.tag === "CHIL" && node.data !== individualPointer)
-        .map((siblingNode) => 
+        .map((siblingNode) =>
             getRelativeDetails(siblingNode.data, allIndividuals)
         )
         .filter((sibling) => sibling !== null);
@@ -411,7 +407,7 @@ function processMarriages(
 
     const marriages = _.map(individualFamilyInfo.spouses, (spouseInfo, spouseId) => {
         const { details: spouseDetails, children, marriage } = spouseInfo;
-    
+
         // Process the details of the marriage event
         const event = {
             tree: [{ tag: 'DATE', data: marriage.date }, { tag: 'PLAC', data: marriage.place }],
@@ -421,17 +417,17 @@ function processMarriages(
             event,
             individualTowns
         );
-    
+
         // Add the family ID to the event details
         const eventDetails = { ...rawEventDetails, eventId: '', spouseId }; // Add spouseId here
-    
+
         // Get the spouse's name
         const spouseName = spouseDetails.name;
-    
+
         // Generate the formatted marriage description
         let gender = "";  // Assume that gender is determined elsewhere or can be added here
         let age = "";  // Assume that age is determined elsewhere or can be added here
-    
+
         const formattedMarriage = generateEventDescription(
             "MARR",
             {
@@ -442,13 +438,13 @@ function processMarriages(
             gender,
             age
         );
-    
+
         // Get the couple's details
         const couple = {
             husband: individualPointer,
             wife: spouseId
         };
-    
+
         return { formattedMarriage, children, spouseName, eventDetails, couple };
     });
 
@@ -518,9 +514,9 @@ async function processPlace({ data: original, tree } = {}) {
 
     // If the country is empty or equal to France, search for postal or departmental codes
     if (!placeObj.country || placeObj.country === "France") {
-        const codeRegex = /\b\d{5}\b|\(\d{2}\)/; 
+        const codeRegex = /\b\d{5}\b|\(\d{2}\)/;
         const codeMatch = original.match(codeRegex);
-    
+
         if (codeMatch) {
             const code = codeMatch[0];
             if (code.startsWith("(")) {
@@ -528,12 +524,12 @@ async function processPlace({ data: original, tree } = {}) {
             } else if (code.length === 5) {
                 placeObj.departement = code.substring(0, 2);
             }
-    
+
             // Check if placeObj.departement is a number
             if (!isNaN(placeObj.departement)) {
                 // Use Lodash's find method to find the departement
                 const departement = _.find(departementData, { 'code': placeObj.departement });
-            
+
                 // If the departement is found, replace placeObj.departement with the departement name
                 if (departement) {
                     placeObj.departement = departement.name;
@@ -542,7 +538,7 @@ async function processPlace({ data: original, tree } = {}) {
             } else if (typeof placeObj.departement === 'string') {
                 // If placeObj.departement is a string, find the departement by name
                 const departement = _.find(departementData, { 'name': placeObj.departement });
-            
+
                 // If the departement is found, set placeObj.departementColor to the departement color
                 if (departement) {
                     placeObj.departementColor = departement.departementColor;
@@ -589,7 +585,7 @@ async function processPlace({ data: original, tree } = {}) {
         placeObj.country,
     ]);
     placeObj.display = parts.join(", ");
-    
+
     return placeObj;
 }
 
@@ -618,11 +614,11 @@ function processDate(s) {
     if (split.length === 3) {
         day = parseInt(split[0], 10);
         month =
-      (isRepublican ? MONTHS_REPUBLICAN[split[1]] : MONTHS[split[1]]) || 0;
+            (isRepublican ? MONTHS_REPUBLICAN[split[1]] : MONTHS[split[1]]) || 0;
         year = parseInt(split[2], 10);
     } else if (split.length === 2) {
         month =
-      (isRepublican ? MONTHS_REPUBLICAN[split[0]] : MONTHS[split[0]]) || 0;
+            (isRepublican ? MONTHS_REPUBLICAN[split[0]] : MONTHS[split[0]]) || 0;
         year = parseInt(split[1], 10);
     } else if (split.length === 1) {
         year = parseInt(split[0], 10);
@@ -650,7 +646,7 @@ function processEventDatePlace(event, individualTowns) {
     let placeDetails = familyTowns[placeKey] || {};
     // Trouver si la ville est déjà dans individualTowns
     if (!individualTowns[placeKey]) {
-    // Si la ville n'est pas encore dans la liste, l'ajouter
+        // Si la ville n'est pas encore dans la liste, l'ajouter
         individualTowns[placeKey] = {
             // name: placeDetails.town || '',
             town: placeDetails.town || "",
@@ -664,7 +660,7 @@ function processEventDatePlace(event, individualTowns) {
             longitude: placeDetails.longitude || "",
         };
     } else {
-    // Si la ville est déjà présente, mettre à jour ses propriétés
+        // Si la ville est déjà présente, mettre à jour ses propriétés
         let town = individualTowns[placeKey];
         town.latitude = placeDetails.latitude || town.latitude;
         town.longitude = placeDetails.longitude || town.longitude;
@@ -710,9 +706,9 @@ function generateEventDescription(eventType, eventData, gender, age, deceased) {
     let eventPlace = eventData.townDisplay || "(lieu inconnu)";
     let townKey = eventData.placeKey || "unknown"; // Suppose that townKey is your unique identifier for each town
     let eventPlaceMarkup =
-    eventPlace === "(lieu inconnu)"
-        ? ` à ${eventPlace}`
-        : `à <a href="#"><span class="city-link" data-town-key="${townKey}">${eventPlace}</span></a>`;
+        eventPlace === "(lieu inconnu)"
+            ? ` à ${eventPlace}`
+            : `à <a href="#"><span class="city-link" data-town-key="${townKey}">${eventPlace}</span></a>`;
 
     // Update the eventType based on the deceased flag
     const eventTypeDescriptions = {
@@ -725,25 +721,24 @@ function generateEventDescription(eventType, eventData, gender, age, deceased) {
     let baseDescription = eventTypeDescriptions[eventType] || "Événement";
 
     switch (eventType) {
-    case "BIRT":
-        // Naissance n'a pas de détails supplémentaires autres que la date et le lieu
-        break;
-    case "MARR":
-        // Ajout du conjoint pour le mariage, si disponible
-        if (eventData.spouseName) {
-            additionalDetails = ` avec <a href="#"><span class="person-link" data-person-id=${eventData.spouseId}>${eventData.spouseName}</span></a>`;
-        }
-        break;
-    case "DEAT":
-        if (!deceased && age) {
-            additionalDetails = `${age} ans`;
-        }
-        break;
+        case "BIRT":
+            // Naissance n'a pas de détails supplémentaires autres que la date et le lieu
+            break;
+        case "MARR":
+            // Ajout du conjoint pour le mariage, si disponible
+            if (eventData.spouseName) {
+                additionalDetails = ` avec <a href="#"><span class="person-link" data-person-id=${eventData.spouseId}>${eventData.spouseName}</span></a>`;
+            }
+            break;
+        case "DEAT":
+            if (!deceased && age) {
+                additionalDetails = `${age} ans`;
+            }
+            break;
     }
 
-    let eventDescription = `${additionalDetails} ${
-        eventPlaceMarkup ? `${eventPlaceMarkup}` : ""
-    }`;
+    let eventDescription = `${additionalDetails} ${eventPlaceMarkup ? `${eventPlaceMarkup}` : ""
+        }`;
     return eventDescription;
 }
 
@@ -836,7 +831,7 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
             addEvent("death", name, surname, deathData.date, deathData.town, formattedDeath, "", [], birthData.date);
         }
     }
-             
+
     function addEvent(type, name, surname, date, town, description, eventId = '', eventAttendees = [], birthDate) {
         if (date) {
             // Calculate age at the time of the event if birthDate is known
@@ -844,7 +839,7 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
             if (birthDate) {
                 ageAtEvent = calculateAge(birthDate, date);
             }
-    
+
             const formattedAttendees = eventAttendees.map(attendee => `${attendee.name}`).join(', ');
             const event = {
                 type,                   // Utilisé pour grouper les événements
@@ -865,12 +860,12 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
             }
         }
     }
-    
+
     // Search for the family in which the individual is a child
     const parentalFamily = getParentalFamily(individualJson.pointer, allFamilies, allIndividuals);
-    
+
     // Add individual as a node in the genealogy graph
-    addNodeToGenealogyGraph({
+    familyTreeDataStore.addNodeToGenealogyGraph({
         id: individualJson.pointer,
         name: name + ' ' + surname,
         birthDate: birthData.date,
@@ -878,25 +873,65 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
     });
 
     if (parentalFamily.fatherId) {
-        // Add edge between father and individual
-        addEdgeToGenealogyGraph(parentalFamily.fatherId, individualJson.pointer, 'father');
+        familyTreeDataStore.addEdgeToGenealogyGraph(
+            parentalFamily.fatherId,
+            individualJson.pointer,
+            'father'
+        );
     }
 
     if (parentalFamily.motherId) {
-        // Add edge between mother and individual
-        addEdgeToGenealogyGraph(parentalFamily.motherId, individualJson.pointer, 'mother');
+        familyTreeDataStore.addEdgeToGenealogyGraph(
+            parentalFamily.motherId,
+            individualJson.pointer,
+            'mother'
+        );
     }
-    
-    const formattedSiblings = parentalFamily.siblings.length > 0 ? formatSiblings(parentalFamily.siblings) : "";
+
+    const formattedSiblings = parentalFamily.siblings.length > 0
+        ? formatSiblings(parentalFamily.siblings)
+        : "";
 
     // Search for the family in which the individual is a spouse/parent
-    const individualFamily = getIndividualFamily(individualJson.pointer, allFamilies, allIndividuals);
+    const individualFamily = getIndividualFamily(
+        individualJson.pointer,
+        allFamilies,
+        allIndividuals
+    );
 
-    const marriages = processMarriages(individualJson.pointer, allIndividuals, allFamilies, individualTowns);
+    const marriages = processMarriages(
+        individualJson.pointer,
+        allIndividuals,
+        allFamilies,
+        individualTowns
+    );
+
     marriages.forEach((marriage) => {
-        addEvent("marriage", name, surname, marriage.eventDetails.date, marriage.eventDetails.town, marriage.formattedMarriage, marriage.eventDetails.eventId, marriage.couple ? [marriage.couple.husband, marriage.couple.wife] : [], birthData.date);
+        addEvent(
+            "marriage",
+            name,
+            surname,
+            marriage.eventDetails.date,
+            marriage.eventDetails.town,
+            marriage.formattedMarriage,
+            marriage.eventDetails.eventId,
+            marriage.couple ? [marriage.couple.husband, marriage.couple.wife] : [],
+            birthData.date
+        );
+
         marriage.children.forEach((child) => {
-            addEvent("child-birth", child.name, "", child.birthDate, "", formatChild(child), "", [], birthData.date);
+            addEvent(
+                "child-birth",
+                child.name,
+                "",
+                child.birthDate,
+                "",
+                formatChild(child),
+                "",
+                [],
+                birthData.date
+            );
+
             // Collect age at first child
             if (marriage.children.indexOf(child) === 0) {  // First child
                 const firstChildBirthYear = extractYear(child.birthDate);
@@ -1113,18 +1148,18 @@ function toJson(data) {
 
     const isLikelyAnsi = new RegExp(triggers).test(text);
     const isAnsi =
-    getFirst(
-        parsed
-            .filter(byTag(TAG_HEAD))
-            .flatMap((a) => a.tree.filter(byTag(TAG_ENCODING)).map((a) => a.data)),
-        null
-    ) === TAG_ANSI;
+        getFirst(
+            parsed
+                .filter(byTag(TAG_HEAD))
+                .flatMap((a) => a.tree.filter(byTag(TAG_ENCODING)).map((a) => a.data)),
+            null
+        ) === TAG_ANSI;
 
     let result;
 
     if (isLikelyAnsi || isAnsi) {
         const extendedAsciiTable =
-      "€?‚ƒ„…†‡ˆ‰Š‹Œ?Ž??‘’“”•–—˜™š›œ?žŸ?¡¢£¤¥¦§¨©ª«¬?®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ";
+            "€?‚ƒ„…†‡ˆ‰Š‹Œ?Ž??‘’“”•–—˜™š›œ?žŸ?¡¢£¤¥¦§¨©ª«¬?®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ";
         const builder = Array.from(view, (charCode) =>
             (charCode & 0x80) === 0
                 ? String.fromCharCode(charCode)
@@ -1205,7 +1240,7 @@ async function processTree(tree, parentNode, dbTowns, familyTowns) {
                 latitude: placeInfo.latitude || currentData.latitude,
                 longitude: placeInfo.longitude || currentData.longitude,
             };
-            
+
             newData.townDisplay = newData.departement ? `${newData.town} (${newData.departement})` : newData.town;
 
             // Always update familyTowns, even if the key already exists to ensure all properties are correct
@@ -1222,7 +1257,7 @@ async function processTree(tree, parentNode, dbTowns, familyTowns) {
             );
         }
     }
-    
+
     // Remettre les données en cache à null après utilisation
     cachedCountryData = null;
     cachedDepartementData = null;
@@ -1239,8 +1274,8 @@ function prebuildindividualsCache() {
 
     // Function to check if an individual is a parent in another family
     function isParentInOtherFamily(individualId) {
-        return allFamilies.some(familyJson => 
-            familyJson.tree.some(node => 
+        return allFamilies.some(familyJson =>
+            familyJson.tree.some(node =>
                 node.tag === 'CHIL' && node.data === individualId
             )
         );
@@ -1249,9 +1284,9 @@ function prebuildindividualsCache() {
     // Iterate through all individuals
     _.forEach(allIndividuals, (individualJson) => {
         // Find families where the individual appears as a child or spouse
-        const familiesWithIndividual = allFamilies.filter(familyJson => 
-            familyJson.tree.some(node => 
-                node.data === individualJson.pointer && 
+        const familiesWithIndividual = allFamilies.filter(familyJson =>
+            familyJson.tree.some(node =>
+                node.data === individualJson.pointer &&
                 (node.tag === 'CHIL' || node.tag === 'HUSB' || node.tag === 'WIFE')
             )
         );
@@ -1265,17 +1300,17 @@ function prebuildindividualsCache() {
         if (familiesWithIndividual.length === 1) {
             const family = familiesWithIndividual[0];
             const hasChildren = family.tree.some(node => byTag(TAG_CHILD)(node));
-            
+
             // If the family has no children, check the spouse
             if (!hasChildren) {
                 const spouses = family.tree.filter(node => node.tag === 'HUSB' || node.tag === 'WIFE');
-                
+
                 // If there are two spouses, check if the other spouse is only in this family
                 if (spouses.length === 2) {
                     const otherSpouse = spouses.find(node => node.data !== individualJson.pointer);
-                    const otherSpouseFamilies = allFamilies.filter(familyJson => 
-                        familyJson.tree.some(node => 
-                            node.data === otherSpouse.data && 
+                    const otherSpouseFamilies = allFamilies.filter(familyJson =>
+                        familyJson.tree.some(node =>
+                            node.data === otherSpouse.data &&
                             (node.tag === 'HUSB' || node.tag === 'WIFE')
                         )
                     );

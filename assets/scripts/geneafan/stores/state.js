@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import timelineEventsStore from './timelineEventsStore.js';
 import gedcomDataStore from './gedcomDataStore';
-
+import familyTreeDataStore from './familyTreeDataStore';
 
 export const getIndividualsCache = () => gedcomDataStore.getIndividualsCache();
 
@@ -9,61 +9,22 @@ export const getIndividualsCache = () => gedcomDataStore.getIndividualsCache();
  * Clear all relevant states when a new file is loaded.
  */
 export const clearAllStates = () => {
-    clearGenealogyGraph();
-    clearAncestorMap();
-    timelineEventsStore.clearEvents(); // Utiliser le nouveau store
+    familyTreeDataStore.clearGenealogyGraph();
+    timelineEventsStore.clearEvents();
     clearStatistics();
 };
 
-// Genealogy graph state
-let genealogyGraph = { nodes: [], edges: [] };
+// Genealogy graph related exports - now delegates to familyTreeDataStore
+export const getGenealogyGraph = () => familyTreeDataStore.getGenealogyGraph;
 
-export const getGenealogyGraph = () => genealogyGraph;
-export const setGenealogyGraph = newGraph => {
-    genealogyGraph = newGraph;
-    clearAncestorMap();
-};
+// Ancestor map cache exports
+export const getAncestorMapCache = () => familyTreeDataStore.getAncestorMapCache;
+export const setAncestorMapCache = newMap => familyTreeDataStore.setAncestorMapCache(newMap);
+export const clearAncestorMap = () => familyTreeDataStore.clearAncestorMap();
 
-const clearGenealogyGraph = () => {
-    genealogyGraph = { nodes: [], edges: [] };
-    clearAncestorMap();
-};
-
-export const addNodeToGenealogyGraph = individual => {
-    if (!genealogyGraph.nodes.some(node => node.id === individual.id)) {
-        genealogyGraph.nodes.push({
-            id: individual.id,
-            name: individual.name,
-            birthDate: individual.birthDate,
-            deathDate: individual.deathDate
-        });
-    }
-};
-
-export const addEdgeToGenealogyGraph = (sourceId, targetId, relation) => {
-    if (!genealogyGraph.edges.some(edge => edge.source === sourceId && edge.target === targetId)) {
-        genealogyGraph.edges.push({
-            source: sourceId,
-            target: targetId,
-            relation: relation
-        });
-    }
-};
-
-// Ancestor map cache
-let ancestorMapCache = new Map();
-
-export const getAncestorMapCache = () => ancestorMapCache;
-export const setAncestorMapCache = newMap => ancestorMapCache = newMap;
-export const clearAncestorMap = () => ancestorMapCache.clear();
-
-// Common ancestry graph state
-let commonAncestryGraphData = [];
-
-export const getCommonAncestryGraphData = () => commonAncestryGraphData;
-export const setCommonAncestryGraphData = newData => {
-    commonAncestryGraphData = newData;
-};
+// Common ancestry graph exports
+export const getCommonAncestryGraphData = () => familyTreeDataStore.getCommonAncestryGraphData;
+export const setCommonAncestryGraphData = newData => familyTreeDataStore.setCommonAncestryGraphData(newData);
 
 // Timeline events exports
 // Redirection vers le nouveau store pour la rétrocompatibilité
