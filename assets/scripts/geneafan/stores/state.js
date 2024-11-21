@@ -18,13 +18,10 @@ export const clearAllStates = () => {
 export const getGenealogyGraph = () => familyTreeDataStore.getGenealogyGraph;
 
 // Ancestor map cache exports
-export const getAncestorMapCache = () => familyTreeDataStore.getAncestorMapCache;
-export const setAncestorMapCache = newMap => familyTreeDataStore.setAncestorMapCache(newMap);
 export const clearAncestorMap = () => familyTreeDataStore.clearAncestorMap();
 
 // Common ancestry graph exports
 export const getCommonAncestryGraphData = () => familyTreeDataStore.getCommonAncestryGraphData;
-export const setCommonAncestryGraphData = newData => familyTreeDataStore.setCommonAncestryGraphData(newData);
 
 // Timeline events exports
 // Redirection vers le nouveau store pour la rétrocompatibilité

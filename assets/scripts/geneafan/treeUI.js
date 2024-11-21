@@ -1,10 +1,6 @@
 import FamilyTree from '@balkangraph/familytree.js';
 import _ from 'lodash';
 import { reaction } from './stores/mobx-config';
-import {
-    getCommonAncestryGraphData,
-    getGenealogyGraph,
-} from './stores/state';
 import { commonAncestryGraph, getOldestAncestorOf } from './ancestorUtils';
 import rootPersonStore from './stores/rootPersonStore';
 import familyTreeDataStore from './stores/familyTreeDataStore';
@@ -55,7 +51,7 @@ export function initializeFamilyTree() {
         }
     });
 
-    // Handle tree initialization
+    // Event handlers remain the same, just update data source references
     family.onInit(() => {
         const rootNode = family.getNode(initialRootId);
         if (rootNode) {
@@ -65,13 +61,11 @@ export function initializeFamilyTree() {
         }
     });
 
-    // Handle node double click
     family.onNodeDoubleClick((args) => {
         focusedNodeId = args.data.id;
         family.draw();
     });
 
-    // Handle tree redraw
     family.on('redraw', () => {
         document.querySelector('#treeContainer svg').addEventListener('dblclick', (e) => {
             if (e.target.closest('svg')) {
@@ -80,7 +74,6 @@ export function initializeFamilyTree() {
         });
     });
 
-    // Handle tree prerender
     family.on("prerender", (sender, args) => {
         const nodes = args.res.nodes;
 
@@ -97,7 +90,6 @@ export function initializeFamilyTree() {
         focusedNodeId = null;
     });
 
-    // Réagir aux changements dans familyTreeDataStore
     reaction(
         () => familyTreeDataStore.getFamilyTreeData,
         (newData) => {
@@ -205,16 +197,37 @@ function addFocusedTag(node) {
     }
 }
 
+function getFilteredFamilyTreeData(familyTreeData, genealogyGraph, roots) {
+    const selectedNodes = new Set(roots);
+    let nodesToProcess = [...roots];
+
+    while (nodesToProcess.length > 0) {
+        const currentId = nodesToProcess.shift();
+        
+        genealogyGraph.edges.forEach(edge => {
+            if (edge.source === currentId || edge.target === currentId) {
+                const connectedNode = edge.source === currentId ? edge.target : edge.source;
+                if (!selectedNodes.has(connectedNode)) {
+                    selectedNodes.add(connectedNode);
+                    nodesToProcess.push(connectedNode);
+                }
+            }
+        });
+    }
+
+    return familyTreeData.filter(node => selectedNodes.has(node.id));
+}
+
 // Handle common ancestor functionality
 document.getElementById("commonAncestor").addEventListener("click", () => {
-    const genealogyGraph = getGenealogyGraph();
+    const genealogyGraph = familyTreeDataStore.getGenealogyGraph;
     const familyTreeData = familyTreeDataStore.getFamilyTreeData;
     const id1 = '@I789613205@';
     const id2 = '@I170@';
 
     commonAncestryGraph(id1, id2);
 
-    const selectedIds = getCommonAncestryGraphData();
+    const selectedIds = familyTreeDataStore.getCommonAncestryGraphData;
     const roots = [selectedIds[0]];
     const filteredFamilyTreeData = getFilteredFamilyTreeData(familyTreeData, genealogyGraph, roots);
 

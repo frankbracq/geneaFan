@@ -1,8 +1,6 @@
 import _ from 'lodash';
-import { getAncestorMapCache, setAncestorMapCache, getGenealogyGraph, setCommonAncestryGraphData } from './stores/state';
+import familyTreeDataStore from './stores/familyTreeDataStore';
 
-// Create a map for quick ancestor lookup
-// This function is only called if the map is not already cached
 function createAncestorMap(edges) {
     const ancestorMap = new Map();
     edges.forEach(edge => {
@@ -18,7 +16,6 @@ function createAncestorMap(edges) {
     return ancestorMap;
 }
 
-// Helper function to trace ancestors using the ancestor map
 function traceAncestors(id, ancestorMap) {
     let ancestors = [];
     let queue = [id];
@@ -38,13 +35,12 @@ function traceAncestors(id, ancestorMap) {
     return ancestors;
 }
 
-// Function to get the oldest ancestor (= root in FamilyTreeJS) of a node using ancestorMap
 export function getOldestAncestorOf(individualId, prioritize = "both") {
-    let ancestorMap = getAncestorMapCache();
+    let ancestorMap = familyTreeDataStore.getAncestorMapCache;
     if (ancestorMap.size === 0) {
-        const genealogyGraph = getGenealogyGraph();
+        const genealogyGraph = familyTreeDataStore.getGenealogyGraph;
         ancestorMap = createAncestorMap(genealogyGraph.edges);
-        setAncestorMapCache(ancestorMap);
+        familyTreeDataStore.setAncestorMapCache(ancestorMap);
     }
     
     let currentId = individualId;
@@ -60,7 +56,6 @@ export function getOldestAncestorOf(individualId, prioritize = "both") {
         const parents = ancestorMap.get(currentId);
         if (!parents) continue;
 
-        // Utilisation de lodash pour ajouter les parents à la file d'attente
         switch (prioritize) {
             case 'father':
                 if (parents.fid) queue.push(parents.fid);
@@ -80,12 +75,11 @@ export function getOldestAncestorOf(individualId, prioritize = "both") {
     return oldestAncestor;
 }
 
-// Function to find the closest common ancestor
 function closestAncestor(graph, id1, id2) {
-    let ancestorMap = getAncestorMapCache();
+    let ancestorMap = familyTreeDataStore.getAncestorMapCache;
     if (ancestorMap.size === 0) {
         ancestorMap = createAncestorMap(graph.edges);
-        setAncestorMapCache(ancestorMap);
+        familyTreeDataStore.setAncestorMapCache(ancestorMap);
     }
 
     const ancestors1 = new Set(traceAncestors(id1, ancestorMap));
@@ -99,7 +93,6 @@ function closestAncestor(graph, id1, id2) {
     return null;
 }
 
-// Function to trace the shortest path using BFS
 function shortestPath(graph, start, end) {
     const adjacencyList = new Map();
     graph.edges.forEach(edge => {
@@ -111,7 +104,7 @@ function shortestPath(graph, start, end) {
 
     let queue = [start];
     let visited = new Set();
-    let parentMap = new Map(); // Pour reconstruire le chemin
+    let parentMap = new Map();
 
     while (queue.length > 0) {
         let current = queue.shift();
@@ -121,8 +114,8 @@ function shortestPath(graph, start, end) {
                 path.unshift(current);
                 current = parentMap.get(current);
             }
-            path.unshift(start); // Ajouter le point de départ au début du chemin
-            return path; // Retourner le chemin dès que la cible est atteinte
+            path.unshift(start);
+            return path;
         }
         visited.add(current);
 
@@ -130,18 +123,17 @@ function shortestPath(graph, start, end) {
         for (let neighbor of neighbors) {
             if (!visited.has(neighbor)) {
                 queue.push(neighbor);
-                parentMap.set(neighbor, current); // Enregistrer le parent
+                parentMap.set(neighbor, current);
             }
         }
     }
     
-    return null; // Retourner null si aucun chemin n'est trouvé
+    return null;
 }
 
-// Function to find the common ancestry graph
 export function commonAncestryGraph(id1, id2) {
     console.time('commonAncestryGraph');
-    const graph = getGenealogyGraph();
+    const graph = familyTreeDataStore.getGenealogyGraph;
     let commonAncestorId = closestAncestor(graph, id1, id2);
     if (!commonAncestorId) {
         console.log('No ancestors found for ' + id1 + ' ' + id2);
@@ -153,7 +145,7 @@ export function commonAncestryGraph(id1, id2) {
     let edges1 = shortestPath(graph, commonAncestorId, id1);
     let edges2 = shortestPath(graph, commonAncestorId, id2);
     let commonAncestryGraph = _.union(edges1, edges2);
-    setCommonAncestryGraphData(commonAncestryGraph);
+    familyTreeDataStore.setCommonAncestryGraphData(commonAncestryGraph);
     console.timeEnd('commonAncestryGraph');
     return [...edges1, ...edges2];
 }

@@ -1,37 +1,42 @@
-import { makeObservable, observable, action, computed, reaction } from 'mobx';
+import { makeObservable, observable, action, computed, reaction } from './mobx-config.js';
 import gedcomDataStore from './gedcomDataStore';
 
 class FamilyTreeDataStore {
-    familyTreeData = [];
-    genealogyGraph = { nodes: [], edges: [] };
-    ancestorMapCache = new Map();
-    commonAncestryGraphData = [];
-
     constructor() {
+        // Initialize observable properties
+        this.familyTreeData = [];
+        this.genealogyGraph = { nodes: [], edges: [] };
+        this.ancestorMapCache = new Map();
+        this.commonAncestryGraphData = [];
+
+        // Make properties observable
         makeObservable(this, {
-            familyTreeData: observable,
-            genealogyGraph: observable,
-            commonAncestryGraphData: observable,
+            // Observable properties
+            familyTreeData: observable.ref,
+            genealogyGraph: observable.ref,
+            ancestorMapCache: observable.ref,
+            commonAncestryGraphData: observable.ref,
+
+            // Actions
             setFamilyTreeData: action,
             updateFromIndividualsCache: action,
             clearFamilyTreeData: action,
-            getFamilyTreeData: computed,
-            // New genealogy graph actions and computed
             clearGenealogyGraph: action,
             addNodeToGenealogyGraph: action,
             addEdgeToGenealogyGraph: action,
             setGenealogyGraph: action,
-            getGenealogyGraph: computed,
-            // Ancestor map actions
             clearAncestorMap: action,
             setAncestorMapCache: action,
-            getAncestorMapCache: computed,
-            // Common ancestry graph actions
             setCommonAncestryGraphData: action,
+
+            // Computed values
+            getFamilyTreeData: computed,
+            getGenealogyGraph: computed,
+            getAncestorMapCache: computed,
             getCommonAncestryGraphData: computed
         });
 
-        // Réagir aux changements dans individualsCache
+        // Set up reaction to individuals cache changes
         reaction(
             () => gedcomDataStore.getIndividualsList(),
             (individuals) => {
@@ -43,9 +48,9 @@ class FamilyTreeDataStore {
         );
     }
 
-    // Existing methods
+    // Family Tree Data Methods
     setFamilyTreeData = (newData) => {
-        this.familyTreeData = newData;
+        this.familyTreeData = [...newData];
     }
 
     updateFromIndividualsCache = (individuals) => {
@@ -70,36 +75,45 @@ class FamilyTreeDataStore {
         return this.familyTreeData;
     }
 
-    // New genealogy graph methods
+    // Genealogy Graph Methods
     clearGenealogyGraph = () => {
         this.genealogyGraph = { nodes: [], edges: [] };
         this.clearAncestorMap();
     }
 
     addNodeToGenealogyGraph = (individual) => {
-        if (!this.genealogyGraph.nodes.some(node => node.id === individual.id)) {
-            this.genealogyGraph.nodes.push({
+        const newNodes = [...this.genealogyGraph.nodes];
+        if (!newNodes.some(node => node.id === individual.id)) {
+            newNodes.push({
                 id: individual.id,
                 name: individual.name,
                 birthDate: individual.birthDate,
                 deathDate: individual.deathDate
             });
+            this.genealogyGraph = {
+                ...this.genealogyGraph,
+                nodes: newNodes
+            };
         }
     }
 
     addEdgeToGenealogyGraph = (sourceId, targetId, relation) => {
-        if (!this.genealogyGraph.edges.some(edge => 
-            edge.source === sourceId && edge.target === targetId)) {
-            this.genealogyGraph.edges.push({
+        const newEdges = [...this.genealogyGraph.edges];
+        if (!newEdges.some(edge => edge.source === sourceId && edge.target === targetId)) {
+            newEdges.push({
                 source: sourceId,
                 target: targetId,
                 relation: relation
             });
+            this.genealogyGraph = {
+                ...this.genealogyGraph,
+                edges: newEdges
+            };
         }
     }
 
     setGenealogyGraph = (newGraph) => {
-        this.genealogyGraph = newGraph;
+        this.genealogyGraph = { ...newGraph };
         this.clearAncestorMap();
     }
 
@@ -107,22 +121,22 @@ class FamilyTreeDataStore {
         return this.genealogyGraph;
     }
 
-    // Ancestor map methods
+    // Ancestor Map Methods
     clearAncestorMap = () => {
-        this.ancestorMapCache.clear();
+        this.ancestorMapCache = new Map();
     }
 
     setAncestorMapCache = (newMap) => {
-        this.ancestorMapCache = newMap;
+        this.ancestorMapCache = new Map(newMap);
     }
 
     get getAncestorMapCache() {
         return this.ancestorMapCache;
     }
 
-    // Common ancestry graph methods
+    // Common Ancestry Graph Methods
     setCommonAncestryGraphData = (newData) => {
-        this.commonAncestryGraphData = newData;
+        this.commonAncestryGraphData = [...newData];
     }
 
     get getCommonAncestryGraphData() {

@@ -1,5 +1,4 @@
-// assets/scripts/geneafan/stores/mobx-config.js
-import { configure, comparer, computed, makeAutoObservable, runInAction, autorun, reaction, action } from 'mobx';
+import { configure, comparer, computed, makeAutoObservable, makeObservable, runInAction, autorun, reaction, action, observable } from 'mobx';
 
 configure({
     enforceActions: 'never'
@@ -7,10 +6,12 @@ configure({
 
 export {
     makeAutoObservable,
+    makeObservable,
     runInAction,
     autorun,
     reaction,
     action,
     computed,
-    comparer
+    comparer,
+    observable
 };
