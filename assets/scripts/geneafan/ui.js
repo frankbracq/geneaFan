@@ -3,7 +3,7 @@ import { reaction, action, autorun } from './stores/mobx-config';
 import authStore from './stores/authStore.js';
 import configStore from './stores/fanConfigStore.js';
 import ShareFormStore from './stores/shareFormStore.js';
-import rootPersonStore from './stores/rootPersonStore.js'; // Ajouter l'import
+import rootPersonStore from './stores/rootPersonStore.js'; 
 import TimelineManager from './timeline/timelineManager.js';
 import familyTownsStore from './stores/familyTownsStore.js';
 
