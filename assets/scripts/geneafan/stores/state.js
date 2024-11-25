@@ -2,45 +2,27 @@ import _ from 'lodash';
 import timelineEventsStore from './timelineEventsStore.js';
 import gedcomDataStore from './gedcomDataStore';
 import familyTreeDataStore from './familyTreeDataStore';
+import familyTownsStore from '../stores/familyTownsStore.js';
 
 export const getIndividualsCache = () => gedcomDataStore.getIndividualsCache();
 
-/**
- * Clear all relevant states when a new file is loaded.
- */
 export const clearAllStates = () => {
     familyTreeDataStore.clearGenealogyGraph();
     timelineEventsStore.clearEvents();
+    familyTownsStore.setTownsData({});
     clearStatistics();
 };
 
-// Genealogy graph related exports - now delegates to familyTreeDataStore
 export const getGenealogyGraph = () => familyTreeDataStore.getGenealogyGraph;
-
-// Ancestor map cache exports
 export const clearAncestorMap = () => familyTreeDataStore.clearAncestorMap();
-
-// Common ancestry graph exports
 export const getCommonAncestryGraphData = () => familyTreeDataStore.getCommonAncestryGraphData;
 
-// Timeline events exports
-// Redirection vers le nouveau store pour la rétrocompatibilité
 export const clearAscendantEvents = () => timelineEventsStore.clearEvents();
 export const addToAscendantEvents = event => timelineEventsStore.addEvent(event);
 export const getAscendantEvents = () => timelineEventsStore.getAllEvents();
 
-// Family towns state
-export let familyTowns = {};
-
-export const getFamilyTowns = () => familyTowns;
-export const setFamilyTowns = newFamilyTowns => new Promise(resolve => {
-    familyTowns = newFamilyTowns;
-    resolve();
-});
-
 // SVG Pan Zoom instance state
 export let svgPanZoomInstance = null;
-
 export const getSvgPanZoomInstance = () => svgPanZoomInstance;
 export const setSvgPanZoomInstance = newInstance => svgPanZoomInstance = newInstance;
 
@@ -57,36 +39,18 @@ let statistics = {
 };
 
 export const getStatistics = () => statistics;
-export const setStatistics = newStatistics => {
-    statistics = newStatistics;
-};
-export const updateTotalIndividuals = count => {
-    statistics.totalIndividuals += count;
-};
+export const setStatistics = newStatistics => { statistics = newStatistics; };
+export const updateTotalIndividuals = count => { statistics.totalIndividuals += count; };
 export const updateGenderCount = (gender, count) => {
-    if (gender === 'male' || gender === 'female') {
-        statistics.genderCount[gender] += count;
-    }
+    if (gender === 'male' || gender === 'female') statistics.genderCount[gender] += count;
 };
-export const addBirthYear = year => {
-    statistics.birthYears.push(year);
-};
-export const addDeathYear = year => {
-    statistics.deathYears.push(year);
-};
-export const addAgeAtDeath = age => {
-    statistics.agesAtDeath.push(age);
-};
-export const updateMarriages = count => {
-    statistics.marriages += count;
-};
-export const addChildrenPerCouple = count => {
-    statistics.childrenPerCouple.push(count);
-};
+export const addBirthYear = year => { statistics.birthYears.push(year); };
+export const addDeathYear = year => { statistics.deathYears.push(year); };
+export const addAgeAtDeath = age => { statistics.agesAtDeath.push(age); };
+export const updateMarriages = count => { statistics.marriages += count; };
+export const addChildrenPerCouple = count => { statistics.childrenPerCouple.push(count); };
 export const addAgeAtFirstChild = (period, age) => {
-    if (!statistics.ageAtFirstChild[period]) {
-        statistics.ageAtFirstChild[period] = [];
-    }
+    if (!statistics.ageAtFirstChild[period]) statistics.ageAtFirstChild[period] = [];
     statistics.ageAtFirstChild[period].push(age);
 };
 
@@ -103,7 +67,7 @@ const clearStatistics = () => {
     };
 };
 
-// Google Maps related exports
+// Google Maps style configuration
 export const gmapApiKey = "AIzaSyDu9Qz5YXRF6CTJ4vf-0s89BaVq_eh13YE";
 export let gmapStyle = [
     {

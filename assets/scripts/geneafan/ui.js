@@ -5,7 +5,7 @@ import configStore from './stores/fanConfigStore.js';
 import ShareFormStore from './stores/shareFormStore.js';
 import rootPersonStore from './stores/rootPersonStore.js'; // Ajouter l'import
 import TimelineManager from './timeline/timelineManager.js';
-import familyTownsStore from './stores/familyTownsStore';
+import familyTownsStore from './stores/familyTownsStore.js';
 
 // Utility libraries
 import _ from 'lodash';                 // Utility functions
@@ -20,7 +20,6 @@ import { Loader } from "@googlemaps/js-api-loader";  // Google Maps loader
 
 // Application state and utilities
 import {
-    setFamilyTowns,
     setSvgPanZoomInstance,
     getSvgPanZoomInstance,
     gmapApiKey,
@@ -392,7 +391,9 @@ export async function resetUI() {
     if (fanSvg) {
         fanSvg.innerHTML = "";
     }
-    await setFamilyTowns({});
+    
+    // Remplacer setFamilyTowns par
+    familyTownsStore.setTownsData({});
 
     googleMapManager.clearMap();
 

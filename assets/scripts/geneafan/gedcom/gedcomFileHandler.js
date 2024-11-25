@@ -6,8 +6,8 @@ import configStore from '../stores/fanConfigStore.js';
 import rootPersonStore from '../stores/rootPersonStore.js'; // Nouveau import
 import authStore from '../stores/authStore.js';
 import gedcomDataStore from '../stores/gedcomDataStore.js';  
+import familyTownsStore from '../stores/familyTownsStore.js'; // Nouveau import
 import {
-    setFamilyTowns,
     clearAllStates,
 } from "../stores/state.js";
 import {
@@ -410,9 +410,8 @@ function findYoungestIndividual(individuals) {
 async function onFileChange(data) {
     handleTabsAndOverlay(true);
 
-    // Reset all stores
-    clearAllStates(); // Pour les états restants dans state.js
-    gedcomDataStore.clearAllState(); // Pour les états migrés vers le store
+    clearAllStates();
+    gedcomDataStore.clearAllState();
 
     if (gedcomDataStore.getFileUploaded()) {
         resetUI();
@@ -420,7 +419,8 @@ async function onFileChange(data) {
     gedcomDataStore.setFileUploaded(true);
 
     try {
-        await setFamilyTowns({});
+        // Remplacer setFamilyTowns par
+        familyTownsStore.setTownsData({});
 
         let json = toJson(data);
         let result = await getAllPlaces(json);

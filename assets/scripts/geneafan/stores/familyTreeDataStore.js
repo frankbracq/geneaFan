@@ -1,5 +1,4 @@
 import { makeObservable, observable, action, computed, reaction } from './mobx-config.js';
-import gedcomDataStore from './gedcomDataStore';
 
 class FamilyTreeDataStore {
     constructor() {
@@ -36,24 +35,38 @@ class FamilyTreeDataStore {
             getCommonAncestryGraphData: computed
         });
 
-        // Set up reaction to individuals cache changes
-        reaction(
-            () => gedcomDataStore.getIndividualsList(),
-            (individuals) => {
-                this.updateFromIndividualsCache(individuals);
-            },
-            {
-                name: 'FamilyTreeDataStore-IndividualsCacheReaction'
-            }
-        );
+        // Déplacer la réaction dans une méthode séparée
+        this.initializeReactions();
     }
 
-    // Family Tree Data Methods
+    // Nouvelle méthode pour initialiser les réactions
+    initializeReactions = () => {
+        // Import dynamique pour éviter la dépendance circulaire
+        import('./gedcomDataStore.js').then(gedcomDataStoreModule => {
+            const gedcomDataStore = gedcomDataStoreModule.default;
+            
+            reaction(
+                () => gedcomDataStore.getIndividualsList(),
+                (individuals) => {
+                    if (individuals && Array.isArray(individuals)) {
+                        this.updateFromIndividualsCache(individuals);
+                    }
+                },
+                {
+                    name: 'FamilyTreeDataStore-IndividualsCacheReaction'
+                }
+            );
+        });
+    }
+
+    // Le reste des méthodes reste inchangé
     setFamilyTreeData = (newData) => {
         this.familyTreeData = [...newData];
     }
 
     updateFromIndividualsCache = (individuals) => {
+        if (!individuals) return;
+        
         this.familyTreeData = individuals.map(data => ({
             id: data.id,
             fid: data.fatherId,

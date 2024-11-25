@@ -1,4 +1,5 @@
-import { getFamilyTowns, gmapStyle, gmapApiKey } from "./stores/state.js";
+import familyTownsStore from "./stores/familyTownsStore.js";
+import { gmapStyle, gmapApiKey } from "./stores/state.js";
 import { Loader } from "@googlemaps/js-api-loader";
 import { MarkerClusterer } from "@googlemaps/markerclusterer"; 
 
@@ -165,13 +166,12 @@ export const googleMapManager = {
     },
 
     loadMarkersData: function() {
-        const familyTowns = getFamilyTowns();
+        const familyTowns = familyTownsStore.getAllTowns();
         Object.entries(familyTowns).forEach(([key, town]) => {
             if (this.isValidCoordinate(town.latitude) && this.isValidCoordinate(town.longitude)) {
                 this.addMarker(key, town);
             }
         });
-        // console.log("Markers loaded:", this.allMarkers); // Vérifie que les marqueurs sont bien ajoutés
     },
 
     activateMapMarkers: function (individualTownKeys = null) {

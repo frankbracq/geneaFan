@@ -27,6 +27,8 @@ import {
 import configStore from './stores/fanConfigStore.js';
 import gedcomDataStore from './stores/gedcomDataStore';
 import familyTreeDataStore from './stores/familyTreeDataStore';
+import familyTownsStore from './stores/familyTownsStore.js';
+
 import jsonpointer from 'jsonpointer';
 
 const EMPTY = "";
@@ -639,16 +641,14 @@ function processDate(s) {
 }
 
 function processEventDatePlace(event, individualTowns) {
-    const familyTowns = getFamilyTowns();
+    const familyTowns = familyTownsStore.getAllTowns();
     const dateNode = event.tree.find((node) => node.tag === "DATE");
-    const date = dateNode ? processDate(dateNode.data) : ""; // Appel simplifié sans config
+    const date = dateNode ? processDate(dateNode.data) : "";
     const placeKey = event.key || "";
     let placeDetails = familyTowns[placeKey] || {};
-    // Trouver si la ville est déjà dans individualTowns
+
     if (!individualTowns[placeKey]) {
-        // Si la ville n'est pas encore dans la liste, l'ajouter
         individualTowns[placeKey] = {
-            // name: placeDetails.town || '',
             town: placeDetails.town || "",
             display: placeDetails.town || "",
             townDisplay: placeDetails.townDisplay || "",
@@ -660,12 +660,10 @@ function processEventDatePlace(event, individualTowns) {
             longitude: placeDetails.longitude || "",
         };
     } else {
-        // Si la ville est déjà présente, mettre à jour ses propriétés
         let town = individualTowns[placeKey];
         town.latitude = placeDetails.latitude || town.latitude;
         town.longitude = placeDetails.longitude || town.longitude;
         town.display = placeDetails.town || town.display;
-        // Mettre à jour l'entrée dans la liste
         individualTowns[placeKey] = town;
     }
 
@@ -743,8 +741,7 @@ function generateEventDescription(eventType, eventData, gender, age, deceased) {
 }
 
 function buildEvent(event, individualTowns) {
-    const familyTowns = getFamilyTowns();
-    if (event == null || familyTowns == null) {
+    if (!event) {
         return {};
     }
 
@@ -1177,18 +1174,17 @@ function toJson(data) {
 // Function to store all family locations in memory
 export async function getAllPlaces(json) {
     try {
-        // Récupération des villes stockées dans le LocalStorage
-        const dbTowns = await getAllRecords(); // Utilisez la fonction modifiée qui lit les données depuis LocalStorage
-        const familyTowns1 = getFamilyTowns(); // Supposons que cette fonction récupère l'état actuel des villes traitées
-
-        // Traitement de chaque individu dans le json avec les villes actuelles
+        const dbTowns = await getAllRecords();
+        familyTownsStore.setTownsData(dbTowns);
+        
+        // Process each individual for places
         for (const individual of json) {
-            await processTree(individual.tree, null, dbTowns, familyTowns1); // Passer familyTowns comme argument
+            await processTree(individual.tree, null);
         }
-
-        // Mise à jour des villes dans un état centralisé, probablement aussi dans LocalStorage
-        setFamilyTowns(familyTowns1); // Utilisation de setFamilyTowns pour mettre à jour l'état global
-        // Retour des données json traitées
+        
+        // Update geocoding after all places are collected
+        await familyTownsStore.updateTownsViaProxy();
+        
         return { json };
     } catch (error) {
         console.error("Error in getAllPlaces: ", error);
@@ -1218,49 +1214,37 @@ async function getAllRecords() {
     });
 }
 
-async function processTree(tree, parentNode, dbTowns, familyTowns) {
+async function processTree(tree, parentNode) {
     for (const node of tree) {
         if (node.tag === "PLAC" && parentNode) {
             let placeInfo = await processPlace({ data: node.data, tree: node.tree });
             let normalizedKey = normalizeGeoString(placeInfo.town);
-            if (!normalizedKey) {
-                continue;
-            }
+            if (!normalizedKey) continue;
+            
             parentNode.key = normalizedKey;
-
-            // Determine the data to use for the update
-            let currentData = dbTowns[normalizedKey] || {};
-            let newData = {
-                town: placeInfo.town || currentData.town,
-                departement: placeInfo.departement || currentData.departement,
-                departementColor: placeInfo.departementColor || currentData.departementColor,
-                country: placeInfo.country || currentData.country,
-                countryCode: placeInfo.countryCode || currentData.countryCode,
-                countryColor: placeInfo.countryColor || currentData.countryColor,
-                latitude: placeInfo.latitude || currentData.latitude,
-                longitude: placeInfo.longitude || currentData.longitude,
-            };
-
-            newData.townDisplay = newData.departement ? `${newData.town} (${newData.departement})` : newData.town;
-
-            // Always update familyTowns, even if the key already exists to ensure all properties are correct
-            familyTowns[normalizedKey] = newData;
+            
+            familyTownsStore.addTown(normalizedKey, {
+                town: placeInfo.town,
+                departement: placeInfo.departement,
+                departementColor: placeInfo.departementColor,
+                country: placeInfo.country,
+                countryCode: placeInfo.countryCode,
+                countryColor: placeInfo.countryColor,
+                latitude: placeInfo.latitude,
+                longitude: placeInfo.longitude,
+                townDisplay: placeInfo.departement ? 
+                    `${placeInfo.town} (${placeInfo.departement})` : 
+                    placeInfo.town
+            });
         }
+        
         if (node.tree && node.tree.length > 0) {
             await processTree(
                 node.tree,
-                ["BIRT", "DEAT", "BURI", "MARR", "OCCU", "EVEN"].includes(node.tag)
-                    ? node
-                    : parentNode,
-                dbTowns,
-                familyTowns // Passer familyTowns à chaque appel récursif
+                ["BIRT", "DEAT", "BURI", "MARR", "OCCU", "EVEN"].includes(node.tag) ? node : parentNode
             );
         }
     }
-
-    // Remettre les données en cache à null après utilisation
-    cachedCountryData = null;
-    cachedDepartementData = null;
 }
 
 function prebuildindividualsCache() {
@@ -1354,25 +1338,32 @@ function formatFamilyTreeData(individualsCache) {
 }
 
 // Fonction appelée depuis ui.js pour préparer la liste déroulante de sélection de l'individu racine
+// Fonction appelée depuis ui.js pour préparer la liste déroulante de sélection de l'individu racine
 function getIndividualsList() {
     // Build the cache of individuals with all their information
     const individualsCache = prebuildindividualsCache();
     gedcomDataStore.clearSourceData(); // Reset source data to avoid memory leaks
 
-    // Le familyTreeData sera automatiquement mis à jour via la reaction dans familyTreeDataStore
-    // Plus besoin d'appeler setFamilyTreeData ici
-
-    // Dynamically import the module and call the function
-    import(/* webpackChunkName: "treeUI" */ './treeUI.js')
-        .then(module => {
-            const { initializeFamilyTree } = module;
-            initializeFamilyTree(); // Call the function to initialize FamilyTreeJS
-        })
-        .catch(error => {
-            console.error('Error loading the module:', error);
-        });
-
+    // Mettre à jour le cache des individus
     gedcomDataStore.setIndividualsCache(individualsCache);
+
+    // Créer les données formatées pour l'arbre familial
+    const familyTreeData = formatFamilyTreeData(individualsCache);
+    
+    // Mettre à jour les données de l'arbre dans le store
+    familyTreeDataStore.setFamilyTreeData(familyTreeData);
+
+    // Maintenant que les données sont prêtes, initialiser l'arbre
+    requestAnimationFrame(() => {
+        import(/* webpackChunkName: "treeUI" */ './treeUI.js')
+            .then(module => {
+                const { initializeFamilyTree } = module;
+                initializeFamilyTree();
+            })
+            .catch(error => {
+                console.error('Error loading the module:', error);
+            });
+    });
 
     // Convert the map to a list
     const individualsList = Array.from(individualsCache.values());

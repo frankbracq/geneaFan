@@ -1,4 +1,4 @@
-import { makeObservable, observable, action, computed, runInAction, toJS } from 'mobx';
+import { makeObservable, observable, action, computed, runInAction, toJS } from './mobx-config.js';
 
 class FamilyTownsStore {
     townsData = new Map();

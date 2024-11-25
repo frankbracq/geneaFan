@@ -1,4 +1,5 @@
-import { getFamilyTowns, getSvgPanZoomInstance } from "../stores/state.js";
+import familyTownsStore from "../stores/familyTownsStore.js";
+import { getSvgPanZoomInstance } from "../stores/state.js";
 import configStore from "../stores/fanConfigStore.js";
 import rootPersonStore from "../stores/rootPersonStore.js"; // Nouveau import
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
@@ -34,7 +35,7 @@ document.addEventListener("showPersonDetails", (event) => {
 function handleCityLinkClick(event) {
     if (event.target.classList.contains("city-link")) {
         const townKey = event.target.dataset.townKey;
-        const townDetails = getFamilyTowns()[townKey];
+        const townDetails = familyTownsStore.getTown(townKey);
         const latitude = parseFloat(townDetails.latitude);
         const longitude = parseFloat(townDetails.longitude);
 
