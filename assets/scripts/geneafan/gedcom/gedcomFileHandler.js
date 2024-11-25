@@ -5,7 +5,7 @@ import AwsS3 from '@uppy/aws-s3';
 import configStore from '../stores/fanConfigStore.js';
 import rootPersonStore from '../stores/rootPersonStore.js'; // Nouveau import
 import authStore from '../stores/authStore.js';
-import gedcomDataStore from '../stores/gedcomDataStore.js';  
+import gedcomDataStore from '../stores/gedcomDataStore.js';
 import familyTownsStore from '../stores/familyTownsStore.js'; // Nouveau import
 import {
     clearAllStates,
@@ -16,7 +16,7 @@ import {
 } from "../utils/utils.js";
 import { toJson, getAllPlaces, getIndividualsList } from "../parse.js";
 import { setupPersonLinkEventListener } from "../listeners/eventListeners.js";
-import { googleMapManager } from '../mapManager.js';
+import { googleMapsStore } from '../stores/googleMapsStore.js';
 import { resetUI } from '../ui.js';
 
 /* Code to manage the upload of GEDCOM files to Cloudflare R2*/
@@ -434,7 +434,11 @@ async function onFileChange(data) {
             console.error("Error updating geolocation:", error);
         }
 
-        googleMapManager.loadMarkersData();
+        Object.entries(familyTownsStore.getAllTowns()).forEach(([key, town]) => {
+            if (googleMapsStore.isValidCoordinate(town.latitude) && googleMapsStore.isValidCoordinate(town.longitude)) {
+                googleMapsStore.addMarker(key, town);
+            }
+        });
 
         const selectElement = document.getElementById("individual-select");
         selectElement.innerHTML = "";

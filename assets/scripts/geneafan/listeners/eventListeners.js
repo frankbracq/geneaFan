@@ -9,7 +9,7 @@ import {
 } from "./responsiveTabs.js";
 import { displayPersonDetailsUI } from "../ui.js";
 import { loadGedcomFile } from "../gedcom/gedcomFileHandler.js";
-import { googleMapManager } from "../mapManager.js";
+import { googleMapsStore } from '../stores/googleMapsStore.js';
 import { Offcanvas, Tooltip } from "bootstrap";
 import screenfull from "screenfull";
 
@@ -40,18 +40,18 @@ function handleCityLinkClick(event) {
         const longitude = parseFloat(townDetails.longitude);
 
         if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
-            const marker = googleMapManager.markers[townKey];
+            const marker = googleMapsStore.allMarkers[townKey];
             if (marker) {
-                googleMapManager.map.setCenter(
+                googleMapsStore.map.setCenter(
                     new google.maps.LatLng(latitude, longitude)
                 );
-                googleMapManager.map.setZoom(10);
+                googleMapsStore.map.setZoom(10);
                 if (!marker.infowindow) {
                     marker.infowindow = new google.maps.InfoWindow({
                         content: marker.getTitle(),
                     });
                 }
-                marker.infowindow.open(googleMapManager.map, marker);
+                marker.infowindow.open(googleMapsStore.map, marker);
             } else {
                 console.error("No marker found for this town key:", townKey);
             }
@@ -308,11 +308,11 @@ function setupTabAndUIEventListeners() {
     const tabFamilyMap = document.querySelector('[href="#tab2"]');
     if (tabFamilyMap) {
         tabFamilyMap.addEventListener("show.bs.tab", () => {
-            if (googleMapManager.map) {
-                googleMapManager.moveMapToContainer("tab2");
-                googleMapManager.activateMapMarkers();
-                google.maps.event.trigger(googleMapManager.map, "resize");
-                googleMapManager.map.setCenter({ lat: 46.2276, lng: 2.2137 });
+            if (googleMapsStore.map) {
+                googleMapsStore.moveMapToContainer("tab2");
+                googleMapsStore.activateMapMarkers();
+                google.maps.event.trigger(googleMapsStore.map, "resize");
+                googleMapsStore.map.setCenter({ lat: 46.2276, lng: 2.2137 });
             }
         });
     }

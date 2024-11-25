@@ -6,6 +6,7 @@ import ShareFormStore from './stores/shareFormStore.js';
 import rootPersonStore from './stores/rootPersonStore.js'; 
 import TimelineManager from './timeline/timelineManager.js';
 import familyTownsStore from './stores/familyTownsStore.js';
+import { googleMapsStore } from './stores/googleMapsStore.js';
 
 // Utility libraries
 import _ from 'lodash';                 // Utility functions
@@ -22,7 +23,6 @@ import { Loader } from "@googlemaps/js-api-loader";  // Google Maps loader
 import {
     setSvgPanZoomInstance,
     getSvgPanZoomInstance,
-    gmapApiKey,
 } from "./stores/state.js";
 import { debounce } from "./utils/utils.js";
 
@@ -50,9 +50,6 @@ import {
 import {
     setupAllEventListeners,
 } from "./listeners/eventListeners.js";
-
-// Map and Timeline features
-import { googleMapManager } from './mapManager.js';
 
 let config;
 let rootPersonName;
@@ -170,9 +167,9 @@ function handleMapResize() {
     const mapElement = document.getElementById('individualMap');
     mapElement.style.height = `${offCanvasBody.clientHeight}px`;
 
-    googleMapManager.moveMapToContainer('individualMap');
-    google.maps.event.trigger(googleMapManager.map, "resize");
-    googleMapManager.map.setCenter({ lat: 46.2276, lng: 2.2137 });
+    googleMapsStore.moveMapToContainer('individualMap');
+    google.maps.event.trigger(googleMapsStore.map, "resize");
+    googleMapsStore.map.setCenter({ lat: 46.2276, lng: 2.2137 });
 }
 
 function handleOffcanvasHide() {
@@ -308,12 +305,12 @@ export function displayPersonDetailsUI(personDetails) {
     individualTimelineElement.appendChild(container);
 
     // Gestion de la carte Google Maps
-    if (!googleMapManager.map) {
-        googleMapManager.initMapIfNeeded();
+    if (!googleMapsStore.map) {
+        googleMapsStore.initMap("individualMap");
     }
 
     const individualTownKeys = Object.keys(individualTowns);
-    googleMapManager.activateMapMarkers(individualTownKeys);
+    googleMapsStore.activateMapMarkers(individualTownKeys);
 
     showOffCanvasDetails();
 }
@@ -395,7 +392,7 @@ export async function resetUI() {
     // Remplacer setFamilyTowns par
     familyTownsStore.setTownsData({});
 
-    googleMapManager.clearMap();
+    googleMapsStore.clearMap();
 
     [
         downloadMenuElement,
@@ -907,11 +904,11 @@ function adjustMapHeight() {
 }
 
 function setupOffcanvasMapTrigger() {
-    var offcanvasElement = document.getElementById("individualMap"); // ID de l'élément offcanvas
+    var offcanvasElement = document.getElementById("individualMap");
     if (offcanvasElement) {
         offcanvasElement.addEventListener("shown.bs.offcanvas", function () {
-            googleMapManager.initMapIfNeeded();
-            adjustMapHeight(); // Ajuster la hauteur après l'initialisation de la carte
+            googleMapsStore.initMap("individualMap");
+            adjustMapHeight();
         });
     }
 }
@@ -928,9 +925,8 @@ export function initPage() {
         localStorage.setItem('userId', userId);
     }
 
-    // Load Google Maps
     const loader = new Loader({
-        apiKey: gmapApiKey,
+        apiKey: googleMapsStore.apiKey,
         version: "weekly",
         libraries: []
     });
@@ -938,10 +934,10 @@ export function initPage() {
     loader
         .load()
         .then(() => {
-            if (!googleMapManager.map) {
-                googleMapManager.initMapIfNeeded();
+            if (!googleMapsStore.map) {
+                googleMapsStore.initMap("familyMap");
             }
-            setupOffcanvasMapTrigger(); // Configuration de déclencheur pour offcanvas si nécessaire
+            setupOffcanvasMapTrigger();
         })
         .catch((e) => {
             console.error("Error loading Google Maps", e);
