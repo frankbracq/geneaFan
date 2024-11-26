@@ -1,5 +1,5 @@
-import { makeAutoObservable, action, computed, runInAction } from './mobx-config.js';
-import { groupEvents } from "../utils/utils.js";
+import { makeAutoObservable, action, computed, runInAction } from '../../common/stores/mobx-config.js';
+import { groupEvents } from "../../utils/utils.js";
 
 /**
  * Store responsible for managing timeline events data

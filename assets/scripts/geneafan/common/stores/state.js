@@ -1,8 +1,8 @@
 import _ from 'lodash';
-import timelineEventsStore from './timelineEventsStore.js';
-import gedcomDataStore from './gedcomDataStore';
-import familyTreeDataStore from './familyTreeDataStore';
-import familyTownsStore from '../stores/familyTownsStore.js';
+import timelineEventsStore from '../../tabs/timeline/timelineEventsStore.js';
+import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
+import familyTreeDataStore from '../../tabs/familyTree/familyTreeDataStore.js';
+import familyTownsStore from '../../gedcom/familyTownsStore.js';
 
 export const getIndividualsCache = () => gedcomDataStore.getIndividualsCache();
 

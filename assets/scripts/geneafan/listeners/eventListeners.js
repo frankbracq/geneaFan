@@ -1,7 +1,7 @@
-import familyTownsStore from "../stores/familyTownsStore.js";
-import { getSvgPanZoomInstance } from "../stores/state.js";
-import configStore from "../stores/fanConfigStore.js";
-import rootPersonStore from "../stores/rootPersonStore.js"; // Nouveau import
+import familyTownsStore from "../gedcom/familyTownsStore.js";
+import { getSvgPanZoomInstance } from "../common/stores/state.js";
+import configStore from "../fanChart/fanConfigStore.js";
+import rootPersonStore from "../common/stores/rootPersonStore.js"; // Nouveau import
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
 import {
     setupResponsiveTabs,
@@ -9,7 +9,7 @@ import {
 } from "./responsiveTabs.js";
 import { displayPersonDetailsUI } from "../ui.js";
 import { loadGedcomFile } from "../gedcom/gedcomFileHandler.js";
-import { googleMapsStore } from '../stores/googleMapsStore.js';
+import { googleMapsStore } from '../tabs/familyMap/googleMapsStore.js';
 import { Offcanvas, Tooltip } from "bootstrap";
 import screenfull from "screenfull";
 

@@ -1,6 +1,6 @@
 import { makeObservable, observable, action, computed, runInAction } from 'mobx';
 import _ from 'lodash';
-import { clearAncestorMap } from './state.js';
+import { clearAncestorMap } from '../common/stores/state.js';
 
 class GedcomDataStore {
     sourceData = [];

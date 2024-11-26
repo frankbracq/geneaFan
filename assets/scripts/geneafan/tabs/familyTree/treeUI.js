@@ -1,9 +1,9 @@
 import FamilyTree from '@balkangraph/familytree.js';
 import _ from 'lodash';
-import { reaction } from './stores/mobx-config';
-import { commonAncestryGraph, getOldestAncestorOf } from './ancestorUtils';
-import rootPersonStore from './stores/rootPersonStore';
-import familyTreeDataStore from './stores/familyTreeDataStore';
+import { reaction } from '../../common/stores/mobx-config.js';
+import { commonAncestryGraph, getOldestAncestorOf } from './ancestorUtils.js';
+import rootPersonStore from '../../common/stores/rootPersonStore.js';
+import familyTreeDataStore from './familyTreeDataStore.js';
 
 let family;
 let initializing = false;

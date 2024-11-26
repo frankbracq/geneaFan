@@ -1,6 +1,6 @@
-import timelineStore from '../stores/timelineStore.js';
-import rootPersonStore from '../stores/rootPersonStore.js';
-import { reaction } from '../stores/mobx-config.js';
+import timelineStore from './timelineStore.js';
+import rootPersonStore from '../../common/stores/rootPersonStore.js';
+import { reaction } from '../../common/stores/mobx-config.js';
 
 class TimelineManager {
     constructor() {

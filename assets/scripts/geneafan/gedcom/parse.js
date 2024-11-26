@@ -1,35 +1,45 @@
+// External libraries
 import _ from "lodash";
 import moment from "moment";
 import parseGedcom from "parse-gedcom";
-import {
-    normalizeGeoString,
-    formatTownName,
-} from "./utils/geo.js";
-import {
-    padTwoDigits,
-} from "./utils/utils.js";
-import { extractYear, calculateAge, prefixedDate } from "./utils/dates.js";
-import {
-    getFamilyTowns,
-    setFamilyTowns,
-    addToAscendantEvents,
-    clearAscendantEvents,
-    getStatistics,
-    updateTotalIndividuals,
-    updateGenderCount,
-    addBirthYear,
-    addDeathYear,
-    addAgeAtDeath,
-    updateMarriages,
-    addChildrenPerCouple,
-    addAgeAtFirstChild,
-} from "./stores/state.js";
-import configStore from './stores/fanConfigStore.js';
-import gedcomDataStore from './stores/gedcomDataStore';
-import familyTreeDataStore from './stores/familyTreeDataStore';
-import familyTownsStore from './stores/familyTownsStore.js';
-
 import jsonpointer from 'jsonpointer';
+
+// Utility functions
+import { 
+    normalizeGeoString, 
+    formatTownName 
+} from "../utils/geo.js";
+
+import { 
+    padTwoDigits 
+} from "../utils/utils.js";
+
+import { 
+    extractYear, 
+    calculateAge, 
+    prefixedDate 
+} from "../utils/dates.js";
+
+// State management
+import { 
+    addToAscendantEvents, 
+    clearAscendantEvents, 
+    getStatistics, 
+    updateTotalIndividuals, 
+    updateGenderCount, 
+    addBirthYear, 
+    addDeathYear, 
+    addAgeAtDeath, 
+    updateMarriages, 
+    addChildrenPerCouple, 
+    addAgeAtFirstChild 
+} from "../common/stores/state.js";
+
+// Stores
+import configStore from '../fanChart/fanConfigStore.js';
+import gedcomDataStore from './gedcomDataStore.js';
+import familyTreeDataStore from '../tabs/familyTree/familyTreeDataStore.js';
+import familyTownsStore from './familyTownsStore.js';
 
 const EMPTY = "";
 const TAG_HEAD = "HEAD",
@@ -1355,7 +1365,7 @@ function getIndividualsList() {
 
     // Maintenant que les données sont prêtes, initialiser l'arbre
     requestAnimationFrame(() => {
-        import(/* webpackChunkName: "treeUI" */ './treeUI.js')
+        import(/* webpackChunkName: "treeUI" */ '../tabs/familyTree/treeUI.js')
             .then(module => {
                 const { initializeFamilyTree } = module;
                 initializeFamilyTree();

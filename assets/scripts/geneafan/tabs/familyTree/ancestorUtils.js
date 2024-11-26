@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import familyTreeDataStore from './stores/familyTreeDataStore';
+import familyTreeDataStore from './familyTreeDataStore.js';
 
 function createAncestorMap(edges) {
     const ancestorMap = new Map();

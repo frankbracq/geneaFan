@@ -1,4 +1,4 @@
-import { makeObservable, observable, action, computed, reaction } from './mobx-config.js';
+import { makeObservable, observable, action, computed, reaction } from '../../common/stores/mobx-config.js';
 
 class FamilyTreeDataStore {
     constructor() {
@@ -42,7 +42,7 @@ class FamilyTreeDataStore {
     // Nouvelle méthode pour initialiser les réactions
     initializeReactions = () => {
         // Import dynamique pour éviter la dépendance circulaire
-        import('./gedcomDataStore.js').then(gedcomDataStoreModule => {
+        import('../../gedcom/gedcomDataStore.js').then(gedcomDataStoreModule => {
             const gedcomDataStore = gedcomDataStoreModule.default;
             
             reaction(

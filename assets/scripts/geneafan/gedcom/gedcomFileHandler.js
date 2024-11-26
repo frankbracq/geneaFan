@@ -2,21 +2,21 @@ import { Modal } from 'bootstrap';
 import _ from 'lodash';
 import Uppy from '@uppy/core';
 import AwsS3 from '@uppy/aws-s3';
-import configStore from '../stores/fanConfigStore.js';
-import rootPersonStore from '../stores/rootPersonStore.js'; // Nouveau import
-import authStore from '../stores/authStore.js';
-import gedcomDataStore from '../stores/gedcomDataStore.js';
-import familyTownsStore from '../stores/familyTownsStore.js'; // Nouveau import
+import configStore from '../fanChart/fanConfigStore.js';
+import rootPersonStore from '../common/stores/rootPersonStore.js'; // Nouveau import
+import authStore from '../common/stores/authStore.js';
+import gedcomDataStore from './gedcomDataStore.js';
+import familyTownsStore from './familyTownsStore.js'; // Nouveau import
 import {
     clearAllStates,
-} from "../stores/state.js";
+} from "../common/stores/state.js";
 import {
     updateFamilyTownsViaProxy,
     updateIndividualTownsFromFamilyTowns,
 } from "../utils/utils.js";
-import { toJson, getAllPlaces, getIndividualsList } from "../parse.js";
+import { toJson, getAllPlaces, getIndividualsList } from "./parse.js";
 import { setupPersonLinkEventListener } from "../listeners/eventListeners.js";
-import { googleMapsStore } from '../stores/googleMapsStore.js';
+import { googleMapsStore } from '../tabs/familyMap/googleMapsStore.js';
 import { resetUI } from '../ui.js';
 
 /* Code to manage the upload of GEDCOM files to Cloudflare R2*/

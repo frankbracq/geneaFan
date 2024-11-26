@@ -1,7 +1,7 @@
-import { makeAutoObservable, action, computed, reaction, runInAction } from './mobx-config.js';
+import { makeAutoObservable, action, computed, reaction, runInAction } from '../../common/stores/mobx-config.js';
 import timelineEventsStore from './timelineEventsStore.js';
 import $ from 'jquery';
-import rootPersonStore from './rootPersonStore.js';
+import rootPersonStore from '../../common/stores/rootPersonStore.js';
 
 /**
  * Store responsible for managing the timeline visualization.
@@ -150,7 +150,7 @@ class TimelineStore {
                 window.jQuery = $;
             }
 
-            await import('../timeline/horizontalTimeline.js');
+            await import('./horizontalTimeline.js');
 
             this.horizontalTimelineInstance = $('#ascendantTimeline').horizontalTimeline({
                 dateIntervals: {

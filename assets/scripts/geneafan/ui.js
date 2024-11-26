@@ -1,12 +1,12 @@
 // MobX state management
-import { reaction, action, autorun } from './stores/mobx-config';
-import authStore from './stores/authStore.js';
-import configStore from './stores/fanConfigStore.js';
-import ShareFormStore from './stores/shareFormStore.js';
-import rootPersonStore from './stores/rootPersonStore.js'; 
-import TimelineManager from './timeline/timelineManager.js';
-import familyTownsStore from './stores/familyTownsStore.js';
-import { googleMapsStore } from './stores/googleMapsStore.js';
+import { reaction, action, autorun } from './common/stores/mobx-config.js';
+import authStore from './common/stores/authStore.js';
+import configStore from './fanChart/fanConfigStore.js';
+import ShareFormStore from './common/stores/shareFormStore.js';
+import rootPersonStore from './common/stores/rootPersonStore.js'; 
+import TimelineManager from './tabs/timeline/timelineManager.js';
+import familyTownsStore from './gedcom/familyTownsStore.js';
+import { googleMapsStore } from './tabs/familyMap/googleMapsStore.js';
 
 // Utility libraries
 import _ from 'lodash';                 // Utility functions
@@ -23,7 +23,7 @@ import { Loader } from "@googlemaps/js-api-loader";  // Google Maps loader
 import {
     setSvgPanZoomInstance,
     getSvgPanZoomInstance,
-} from "./stores/state.js";
+} from "./common/stores/state.js";
 import { debounce } from "./utils/utils.js";
 
 // Core functionality

@@ -4,11 +4,11 @@ import { hierarchy } from 'd3-hierarchy';
 import { xml } from 'd3-fetch';
 import tinycolor from "tinycolor2";
 import _ from "lodash";
-import { mmToPixels } from './utils/utils.js';
-import { extractYear } from './utils/dates.js';
-import configStore from './stores/fanConfigStore.js';
-import gedcomDataStore from './stores/gedcomDataStore';
-import { buildHierarchy } from './parse.js';
+import { mmToPixels } from '../utils/utils.js';
+import { extractYear } from '../utils/dates.js';
+import configStore from './fanConfigStore.js';
+import gedcomDataStore from '../gedcom/gedcomDataStore.js';
+import { buildHierarchy } from '../gedcom/parse.js';
 
 const weightFontFirst = 0.25,
     weightFontOther = 0.22,

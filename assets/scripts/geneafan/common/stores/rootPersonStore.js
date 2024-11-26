@@ -1,8 +1,8 @@
 import { makeAutoObservable, action, reaction, runInAction } from './mobx-config.js';
 import TomSelect from 'tom-select';
-import { updateFilename } from "../downloads.js";
-import { draw } from "../fan.js";
-import { displayFan } from "../ui.js";
+import { updateFilename } from "../../downloads.js";
+import { draw } from "../../fanChart/fan.js";
+import { displayFan } from "../../ui.js";
 import { getSvgPanZoomInstance, setSvgPanZoomInstance } from "./state.js";
 
 class RootPersonStore {
