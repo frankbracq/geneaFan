@@ -1,13 +1,13 @@
 import familyTownsStore from "../gedcom/familyTownsStore.js";
 import { getSvgPanZoomInstance } from "../common/stores/state.js";
-import configStore from "../fanChart/fanConfigStore.js";
+import configStore from "../tabs/fanChart/fanConfigStore.js";
 import rootPersonStore from "../common/stores/rootPersonStore.js"; // Nouveau import
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
 import {
     setupResponsiveTabs,
     setupTabResizeListener,
 } from "./responsiveTabs.js";
-import { displayPersonDetailsUI } from "../ui.js";
+import { personDetailsUI } from "../tabs/fanChart/personDetailsUI.js";
 import { loadGedcomFile } from "../gedcom/gedcomFileHandler.js";
 import { googleMapsStore } from '../tabs/familyMap/googleMapsStore.js';
 import { Offcanvas, Tooltip } from "bootstrap";
@@ -28,7 +28,7 @@ export function setupTooltips() {
 
 // Listener for custom 'showPersonDetails' event
 document.addEventListener("showPersonDetails", (event) => {
-    displayPersonDetailsUI(event.detail);
+    personDetailsUI.display(event.detail);
 });
 
 // Handle city link clicks with delegation

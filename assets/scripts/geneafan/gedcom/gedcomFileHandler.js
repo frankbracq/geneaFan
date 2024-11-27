@@ -2,7 +2,7 @@ import { Modal } from 'bootstrap';
 import _ from 'lodash';
 import Uppy from '@uppy/core';
 import AwsS3 from '@uppy/aws-s3';
-import configStore from '../fanChart/fanConfigStore.js';
+import configStore from '../tabs/fanChart/fanConfigStore.js';
 import rootPersonStore from '../common/stores/rootPersonStore.js'; // Nouveau import
 import authStore from '../common/stores/authStore.js';
 import gedcomDataStore from './gedcomDataStore.js';
@@ -17,7 +17,7 @@ import {
 import { toJson, getAllPlaces, getIndividualsList } from "./parse.js";
 import { setupPersonLinkEventListener } from "../listeners/eventListeners.js";
 import { googleMapsStore } from '../tabs/familyMap/googleMapsStore.js';
-import { resetUI } from '../ui.js';
+import fanChartManager from '../tabs/fanChart/fanChartManager.js';
 
 /* Code to manage the upload of GEDCOM files to Cloudflare R2*/
 let isLoadingFile = false;
@@ -414,7 +414,7 @@ async function onFileChange(data) {
     gedcomDataStore.clearAllState();
 
     if (gedcomDataStore.getFileUploaded()) {
-        resetUI();
+        fanChartManager.resetUI();
     }
     gedcomDataStore.setFileUploaded(true);
 

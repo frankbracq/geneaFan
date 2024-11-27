@@ -36,7 +36,7 @@ import {
 } from "../common/stores/state.js";
 
 // Stores
-import configStore from '../fanChart/fanConfigStore.js';
+import configStore from '../tabs/fanChart/fanConfigStore.js';
 import gedcomDataStore from './gedcomDataStore.js';
 import familyTreeDataStore from '../tabs/familyTree/familyTreeDataStore.js';
 import familyTownsStore from './familyTownsStore.js';
