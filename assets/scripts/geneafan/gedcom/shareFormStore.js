@@ -1,4 +1,4 @@
-import { makeAutoObservable, reaction } from './mobx-config';
+import { makeAutoObservable, reaction } from '../common/stores/mobx-config';
 
 /**
  * The ShareFormStore is responsible for managing the entered emails and determining the validity of the form.
