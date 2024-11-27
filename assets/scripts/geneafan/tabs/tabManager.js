@@ -1,20 +1,34 @@
 import fanChartManager from './fanChart/fanChartManager.js';
+import configStore from './fanChart/fanConfigStore.js';
 import TimelineManager from './timeline/timelineManager.js';
+import { googleMapsStore } from './familyMap/googleMapsStore.js';
+import { Offcanvas } from 'bootstrap';
 
 // Tab configuration with their respective managers
 const TAB_MANAGERS = {
     'tab1': {
         manager: fanChartManager,
         name: 'Fan Chart',
-        enabled: true
+        enabled: true,
+        onShow: () => {
+            configStore.handleSettingChange();
+        }
     },
     'tab2': {
-        manager: null, // Family Map - to be implemented
+        manager: null,
         name: 'Family Map',
-        enabled: false
+        enabled: false,
+        onShow: () => {
+            if (googleMapsStore.map) {
+                googleMapsStore.moveMapToContainer("tab2");
+                googleMapsStore.activateMapMarkers();
+                google.maps.event.trigger(googleMapsStore.map, "resize");
+                googleMapsStore.map.setCenter({ lat: 46.2276, lng: 2.2137 });
+            }
+        }
     },
     'tab3': {
-        manager: null, // Family Tree - to be implemented
+        manager: null,
         name: 'Family Tree',
         enabled: false
     },
@@ -32,6 +46,7 @@ export class TabManager {
     constructor() {
         this.currentTab = 'tab1';
         this.setupTabEventListeners();
+        this.setupParameterPanels();
     }
 
     /**
@@ -39,10 +54,28 @@ export class TabManager {
      */
     setupTabEventListeners() {
         document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tabElement => {
+            const tabId = tabElement.getAttribute('href').slice(1);
             tabElement.addEventListener('show.bs.tab', (event) => {
-                const targetTab = event.target.getAttribute('href').slice(1);
-                this.handleTabChange(targetTab);
+                this.handleTabChange(tabId);
             });
+
+            // Add shown.bs.tab listener if tab has onShow handler
+            if (TAB_MANAGERS[tabId]?.onShow) {
+                tabElement.addEventListener('shown.bs.tab', TAB_MANAGERS[tabId].onShow);
+            }
+        });
+    }
+
+    /**
+     * Set up parameter panels for fan and tree views
+     */
+    setupParameterPanels() {
+        document.getElementById("fanParametersDisplay")?.addEventListener("click", () => {
+            new Offcanvas(document.getElementById("fanParameters")).show();
+        });
+
+        document.getElementById("treeParametersDisplay")?.addEventListener("click", () => {
+            new Offcanvas(document.getElementById("treeParameters")).show();
         });
     }
 

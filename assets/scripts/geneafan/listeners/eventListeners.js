@@ -289,7 +289,8 @@ const setupFileLoadingEventListeners = () => {
 };
 
 // Setup tab and UI event listeners
-function setupTabAndUIEventListeners() {
+export function setupTabAndUIEventListeners() {
+    // Keep dropdown menu handling
     document.querySelectorAll(".dropdown-menu a").forEach((element) => {
         element.addEventListener("click", function () {
             const dropdownButton = this.closest(".dropdown");
@@ -297,43 +298,6 @@ function setupTabAndUIEventListeners() {
             dropdownButton.querySelector(".dropdown-menu").classList.remove("show");
         });
     });
-
-    const tabFan = document.querySelector('[href="#tab1"]');
-    if (tabFan) {
-        tabFan.addEventListener("shown.bs.tab", () => {
-            configStore.handleSettingChange();
-        });
-    }
-
-    const tabFamilyMap = document.querySelector('[href="#tab2"]');
-    if (tabFamilyMap) {
-        tabFamilyMap.addEventListener("show.bs.tab", () => {
-            if (googleMapsStore.map) {
-                googleMapsStore.moveMapToContainer("tab2");
-                googleMapsStore.activateMapMarkers();
-                google.maps.event.trigger(googleMapsStore.map, "resize");
-                googleMapsStore.map.setCenter({ lat: 46.2276, lng: 2.2137 });
-            }
-        });
-    }
-
-    document
-        .getElementById("fanParametersDisplay")
-        .addEventListener("click", () => {
-            const fanParametersOffcanvas = new Offcanvas(
-                document.getElementById("fanParameters")
-            );
-            fanParametersOffcanvas.show();
-        });
-
-    document
-        .getElementById("treeParametersDisplay")
-        .addEventListener("click", () => {
-            const treeParametersOffcanvas = new Offcanvas(
-                document.getElementById("treeParameters")
-            );
-            treeParametersOffcanvas.show();
-        });
 
     setupFullscreenToggle();
     setupTooltips();
@@ -390,13 +354,3 @@ export const setupAllEventListeners = (authStore) => {
         initializeEventListeners();
     }
 };
-
-/*
-// Setup advanced modal
-export function setupAdvancedModal(modalPath) {
-    $('#advanced-parameters').click(function() {
-        $('#advancedModal').load(modalPath, function() {
-            $(this).modal('show');
-        });
-    });
-}*/
