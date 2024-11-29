@@ -162,6 +162,21 @@ class GedcomDataStore {
             display: true
         }));
     }
+
+    updateEntireState = async (sourceData, individuals, hierarchy) => {
+        runInAction(() => {
+            this.sourceData = sourceData;
+            this.individualsCache = new Map(individuals);
+            this._hierarchy = hierarchy;
+            this.isFileUploaded = true;
+        });
+    }
+
+    updateGeolocationData = (updatedCache) => {
+        runInAction(() => {
+            this.individualsCache = new Map(updatedCache);
+        });
+    }
 }
 
 const gedcomDataStore = new GedcomDataStore();

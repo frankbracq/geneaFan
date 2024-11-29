@@ -1,9 +1,5 @@
-import { makeAutoObservable, action, reaction, runInAction } from './mobx-config.js';
+import { makeAutoObservable, action } from './mobx-config.js';
 import TomSelect from 'tom-select';
-import { updateFilename } from "../downloads.js";
-import { draw } from "../../tabs/fanChart/fan.js";
-import fanChartManager from '../../tabs/fanChart/fanChartManager.js';
-import { getSvgPanZoomInstance, setSvgPanZoomInstance } from "./state.js";
 
 class RootPersonStore {
     root = null;
@@ -16,42 +12,15 @@ class RootPersonStore {
         makeAutoObservable(this, {
             setRoot: action,
             setRootPersonName: action,
-            initializeTomSelect: action,
             setTomSelectValue: action,
             undo: action,
             redo: action,
             resetHistory: action,
-            handleRootChange: action,
             
             // Non-observables
-            tomSelect: false,
-            configHistory: false
+            configHistory: false,
+            getTomSelect: false
         });
-
-        // Réagir aux changements de root
-        // Reaction pour les changements de root
-        reaction(
-            () => this.root,
-            async (newRoot, previousRoot) => {
-                if (newRoot === previousRoot) return;
-                
-                try {
-                    // Mise à jour de la visualisation
-                    await this.handleRootChange(newRoot);
-
-                    // Si le changement de root s'est bien passé, mettre à jour l'historique
-                    this.updateHistory(newRoot);
-
-                    // Mettre à jour l'interface
-                    document.getElementById('initial-group').style.display = 'none';
-                } catch (error) {
-                    console.error("Error handling root change:", error);
-                }
-            },
-            {
-                name: 'RootPersonStore-RootChangeReaction'
-            }
-        );
     }
 
     setRoot = action((newRoot) => {
@@ -63,66 +32,10 @@ class RootPersonStore {
         this.rootPersonName = name;
     });
 
-    handleRootChange = action(async (newRoot) => {
-        if (!newRoot) {
-            console.warn("Attempting to handle root change with undefined root");
-            return false;
-        }
-
-        try {
-            console.log('Starting fan drawing process with new root:', newRoot);
-            
-            // S'assurer que le root est mis à jour avant d'appeler draw
-            this.root = newRoot;
-
-            let svgElement = document.querySelector('#fan');
-            let svgPanZoomInstance = getSvgPanZoomInstance();
-            if (svgElement && svgPanZoomInstance) {
-                svgPanZoomInstance.destroy();
-                setSvgPanZoomInstance(null);
-            }
-
-            // Passer le root en paramètre à draw()
-            const drawResult = draw(this.root);
-            if (!drawResult) {
-                console.error("Failed to draw fan");
-                return false;
-            }
-
-            console.log('Fan drawn successfully, displaying');
-            fanChartManager.display();
-
-            if (drawResult.rootPersonName) {
-                // Mise à jour du nom de fichier
-                const rootPersonName = this.formatName(drawResult.rootPersonName);
-                const filename = (__("Éventail généalogique de ") + 
-                    rootPersonName + 
-                    " créé sur genealog.ie"
-                ).replace(/[|&;$%@"<>()+,]/g, "");
-
-                updateFilename(filename);
-                this.setRootPersonName(rootPersonName);
-            }
-
-            // Mise à jour de l'interface
-            document.getElementById('initial-group').style.display = 'none';
-            document.getElementById("loading").style.display = "none";
-            document.getElementById("overlay").classList.add("overlay-hidden");
-
-            return true;
-        } catch (error) {
-            console.error("Error in handleRootChange:", error);
-            return false;
-        }
-    });
-
     initializeTomSelect() {
         this.tomSelect = new TomSelect("#individual-select", {
             create: false,
-            sortField: {
-                field: "text",
-                direction: "asc"
-            },
+            sortField: { field: "text", direction: "asc" },
             dropdownParent: "body",
             placeholder: __("geneafan.choose_root_placeholder"),
             allowClear: true,
@@ -143,6 +56,10 @@ class RootPersonStore {
             console.error("TomSelect instance is not available.");
         }
     });
+
+    getTomSelect() {
+        return this.tomSelect;
+    }
 
     formatName(rootPersonName) {
         if (!rootPersonName) return "";

@@ -145,9 +145,9 @@ export function setupFanParameterEventListeners() {
 
 // Setup person link event listener with delegation
 export function setupPersonLinkEventListener() {
-    const tomSelect = rootPersonStore.tomSelect; // Utiliser rootPersonStore
+    const tomSelect = rootPersonStore.getTomSelect();
     if (!tomSelect) {
-        console.error("tomSelect is undefined");
+        console.warn('TomSelect not initialized yet');
         return;
     }
 

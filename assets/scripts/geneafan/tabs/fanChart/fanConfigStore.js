@@ -102,6 +102,24 @@ class ConfigStore {
             configHistory: false
         });
 
+        reaction(
+            () => rootPersonStore.root,
+            async (newRoot, previousRoot) => {
+                if (newRoot === previousRoot) return;
+                
+                try {
+                    await this.handleRootChange(newRoot);
+                    // Update UI
+                    document.getElementById('initial-group').style.display = 'none';
+                } catch (error) {
+                    console.error("Error handling root change:", error);
+                }
+            },
+            {
+                name: 'FanConfigStore-RootChangeReaction'
+            }
+        );
+
         // Une seule reaction pour tous les changements
         reaction(
             () => ({
@@ -158,6 +176,53 @@ class ConfigStore {
             }
         );
     }
+
+    handleRootChange = action(async (newRoot) => {
+        if (!newRoot) {
+            console.warn("Attempting to handle root change with undefined root");
+            return false;
+        }
+    
+        try {
+            let svgElement = document.querySelector('#fan');
+            let svgPanZoomInstance = getSvgPanZoomInstance();
+            if (svgElement && svgPanZoomInstance) {
+                svgPanZoomInstance.destroy();
+                setSvgPanZoomInstance(null);
+            }
+    
+            const drawResult = draw(newRoot);
+            if (!drawResult) {
+                console.error("Failed to draw fan");
+                return false;
+            }
+    
+            if (drawResult.rootPersonName) {
+                const rootPersonName = rootPersonStore.formatName(drawResult.rootPersonName);
+                const filename = (__("Éventail généalogique de ") + 
+                    rootPersonName + 
+                    " créé sur genealog.ie"
+                ).replace(/[|&;$%@"<>()+,]/g, "");
+    
+                // Mise à jour directe dans le state
+                this.config.filename = filename;
+                rootPersonStore.setRootPersonName(rootPersonName);
+            }
+    
+            fanChartManager.display();
+            this.updateUIState();
+            return true;
+        } catch (error) {
+            console.error("Error in handleRootChange:", error);
+            return false;
+        }
+    });
+
+    updateUIState = action(() => {
+        document.getElementById('initial-group').style.display = 'none';
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("overlay").classList.add("overlay-hidden");
+    });
 
     queueSettingChange = action(() => {
         console.log('queueSettingChange called');
