@@ -1,6 +1,6 @@
 import familyTownsStore from "../gedcom/familyTownsStore.js";
 import { getSvgPanZoomInstance } from "../common/stores/state.js";
-import configStore from "../fanChart/fanConfigStore.js";
+import configStore from "../tabs/fanChart/fanConfigStore.js";
 import rootPersonStore from "../common/stores/rootPersonStore.js"; // Nouveau import
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
 import {

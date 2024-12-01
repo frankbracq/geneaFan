@@ -2,7 +2,7 @@ import { Modal } from 'bootstrap';
 import _ from 'lodash';
 import Uppy from '@uppy/core';
 import AwsS3 from '@uppy/aws-s3';
-import configStore from '../fanChart/fanConfigStore.js';
+import configStore from '../tabs/fanChart/fanConfigStore.js';
 import rootPersonStore from '../common/stores/rootPersonStore.js'; // Nouveau import
 import authStore from '../common/stores/authStore.js';
 import gedcomDataStore from './gedcomDataStore.js';

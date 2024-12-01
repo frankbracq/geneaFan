@@ -1,7 +1,7 @@
 // MobX state management
 import { reaction, action, autorun } from "./common/stores/mobx-config.js";
 import authStore from "./common/stores/authStore.js";
-import configStore from "./fanChart/fanConfigStore.js";
+import configStore from "./tabs/fanChart/fanConfigStore.js";
 import rootPersonStore from "./common/stores/rootPersonStore.js";
 import TimelineManager from "./tabs/timeline/timelineManager.js";
 import familyTownsStore from "./gedcom/familyTownsStore.js";
@@ -33,7 +33,7 @@ import {
   generateFileName,
   downloadPDF,
   handleUploadAndPost,
-} from "./downloads.js";
+} from "./common/downloads.js";
 
 // GEDCOM handling
 import { loadGedcomFile } from "./gedcom/gedcomFileHandler.js";
