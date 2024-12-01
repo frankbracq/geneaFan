@@ -1,5 +1,5 @@
 // MobX state management
-import { reaction, action, autorun } from "./common/stores/mobx-config.js";
+import { autorun } from "./common/stores/mobx-config.js";
 import authStore from "./common/stores/authStore.js";
 import configStore from "./tabs/fanChart/fanConfigStore.js";
 import rootPersonStore from "./common/stores/rootPersonStore.js";
@@ -34,16 +34,6 @@ import {
   downloadPDF,
   handleUploadAndPost,
 } from "./common/downloads.js";
-
-// GEDCOM handling
-import { loadGedcomFile } from "./gedcom/gedcomFileHandler.js";
-
-// GEDCOM modal utilities
-import {
-  createGedcomModal,
-  toggleShareForm,
-  sanitizeFileId,
-} from "./gedcom/gedcomModalUtils.js";
 
 // Event listeners
 import { setupAllEventListeners } from "./listeners/eventListeners.js";
