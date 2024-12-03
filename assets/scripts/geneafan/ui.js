@@ -1,5 +1,4 @@
 // MobX state management
-import { autorun } from "./common/stores/mobx-config.js";
 import authStore from "./common/stores/authStore.js";
 import configStore from "./tabs/fanChart/fanConfigStore.js";
 import rootPersonStore from "./common/stores/rootPersonStore.js";
@@ -34,10 +33,6 @@ import { setupAllEventListeners } from "./listeners/eventListeners.js";
 let config;
 let rootPersonName;
 
-// Récupérer le publishableKey depuis les variables d'environnement
-const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
-console.log("Clerk Publishable Key:", publishableKey);
-
 window.addEventListener("beforeunload", function (e) {
   console.log("La page est sur le point de se recharger ou de se fermer.");
 });
@@ -45,54 +40,10 @@ window.addEventListener("beforeunload", function (e) {
 document.addEventListener("DOMContentLoaded", async function () {
   console.log("DOMContentLoaded fired.");
 
-  // Initialize Clerk via the MobX store
-  await authStore.initializeClerk(publishableKey);
-
-  // Call initPage after Clerk initialization
   initPage();
 
   // Set up all event listeners with Clerk via MobX
   setupAllEventListeners(authStore);
-
-  // Add event listener for the sign-in button
-  const signInButton = document.getElementById("sign-in-button");
-  if (signInButton) {
-    signInButton.addEventListener("click", () => {
-      authStore.showSignInForm(authStore.clerk);
-    });
-  }
-
-  // Autorun to toggle user controls
-  autorun(() => {
-    const userInfo = authStore.userInfo;
-
-    const signInButton = document.getElementById("sign-in-button");
-    const userButtonDiv = document.getElementById("user-button");
-
-    if (!signInButton || !userButtonDiv) {
-      console.error("User controls elements not found.");
-      return;
-    }
-
-    if (userInfo) {
-      // User is authenticated
-      signInButton.style.display = "none";
-      userButtonDiv.style.display = "block";
-
-      // Mount the Clerk UserButton if not already mounted
-      if (!userButtonDiv.hasChildNodes()) {
-        authStore.clerk.mountUserButton(userButtonDiv);
-        authStore.clerk.navigate = () => {
-          signInButton.style.display = "block";
-          userButtonDiv.style.display = "none";
-        };
-      }
-    } else {
-      // User is not authenticated
-      userButtonDiv.style.display = "none";
-      signInButton.style.display = "block";
-    }
-  });
 
   // Hide the overlay after initialization
   const overlay = document.getElementById("overlay");

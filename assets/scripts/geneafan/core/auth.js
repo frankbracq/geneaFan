@@ -23,9 +23,25 @@ export async function initializeAuth() {
 
 function setupAuthUI() {
     const signInButton = document.getElementById('sign-in-button');
+    const userButtonDiv = document.getElementById('user-button');
+
+    // Configuration initiale des boutons en fonction de l'état de connexion
+    if (authStore.userInfo) {
+        if (signInButton) signInButton.style.display = 'none';
+        if (userButtonDiv) {
+            userButtonDiv.style.display = 'block';
+            if (!userButtonDiv.hasChildNodes()) {
+                authStore.clerk.mountUserButton(userButtonDiv);
+            }
+        }
+    }
+
+    // Setup du click handler
     if (signInButton) {
         signInButton.addEventListener('click', () => {
-            authStore.showSignInForm(authStore.clerk);
+            if (!authStore.userInfo) {
+                authStore.showSignInForm(authStore.clerk);
+            }
         });
     }
 }

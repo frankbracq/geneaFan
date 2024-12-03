@@ -135,18 +135,19 @@ class AuthStore {
 
     showSignInForm(clerk, onUnauthenticated) {
         if (!clerk) return;
-
+        if (this.userInfo) return; // Early return si l'utilisateur est déjà connecté
+    
         const handleClose = () => {
             if (!clerk.user && onUnauthenticated) {
                 onUnauthenticated();
             }
             this.removeAuthenticationListener();
         };
-
+    
         clerk.navigate = () => {
             const signInButton = document.getElementById('sign-in-button');
             const userButtonDiv = document.getElementById('user-button');
-
+    
             if (signInButton) signInButton.style.display = 'none';
             if (userButtonDiv) {
                 userButtonDiv.style.display = 'block';
@@ -160,7 +161,7 @@ class AuthStore {
                 }
             }
         };
-
+    
         clerk.openSignIn();
     }
 
