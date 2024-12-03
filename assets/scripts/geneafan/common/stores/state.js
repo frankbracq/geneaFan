@@ -12,6 +12,7 @@ export const clearAllStates = () => {
     timelineEventsStore.clearEvents();
     familyTownsStore.setTownsData({});
     clearStatistics();
+    destroySvgPanZoom();
 };
 
 export const getGenealogyGraph = () => familyTreeDataStore.getGenealogyGraph;
@@ -22,10 +23,27 @@ export const clearAscendantEvents = () => timelineEventsStore.clearEvents();
 export const addToAscendantEvents = event => timelineEventsStore.addEvent(event);
 export const getAscendantEvents = () => timelineEventsStore.getAllEvents();
 
+
 // SVG Pan Zoom instance state
 export let svgPanZoomInstance = null;
 export const getSvgPanZoomInstance = () => svgPanZoomInstance;
 export const setSvgPanZoomInstance = newInstance => svgPanZoomInstance = newInstance;
+
+// Nouvelles fonctions pour une meilleure gestion du cycle de vie
+export const initSvgPanZoom = (svg, options) => {
+    if (svgPanZoomInstance) {
+        svgPanZoomInstance.destroy();
+    }
+    svgPanZoomInstance = new SVGPanZoomManager(svg, options);
+    return svgPanZoomInstance;
+};
+
+export const destroySvgPanZoom = () => {
+    if (svgPanZoomInstance) {
+        svgPanZoomInstance.destroy();
+        svgPanZoomInstance = null;
+    }
+};
 
 // Statistics state
 let statistics = {
