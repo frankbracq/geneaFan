@@ -22,9 +22,10 @@ export class SVGPanZoomManager {
             containerHeight: 0
         };
 
-        this.svg.style.cursor = 'grab';
-        this.svg.style.width = '100%';
-        this.svg.style.height = '100%';
+        this.svg.style.width = 'auto';
+        this.svg.style.height = 'auto';
+        this.svg.style.maxWidth = '100%';
+        this.svg.style.maxHeight = '100%';
         this.svg.style.display = 'block';
 
         this._initialDisplay = true;
@@ -67,11 +68,7 @@ export class SVGPanZoomManager {
             height: bbox.height
         };
     
-        if (this._initialDisplay) {
-            this.svg.style.transform = 'scale(1)';
-            this.svg.style.transformOrigin = '0 0';
-        }
-    
+        // Ne pas définir de transform initial
         this.setupEventListeners();
     }
 
@@ -200,53 +197,47 @@ export class SVGPanZoomManager {
     }
 
     updateTransform() {
-        // Si aucun zoom ou décalage n'est nécessaire, ne rien faire
-        if (this.state.zoom === 1 && this.state.pointX === 0 && this.state.pointY === 0) {
-            console.log("=== updateTransform === No transform applied (already centered)");
+        // N'utiliser cette méthode que pour les interactions utilisateur
+        if (!this.state.panning && this.state.zoom === this.lastCenteredZoom) {
             return;
         }
-    
+        
         const transform = `translate(${this.state.pointX}px, ${this.state.pointY}px) scale(${this.state.zoom})`;
         this.svg.style.transform = transform;
         this.svg.style.transformOrigin = '0 0';
     
-        // Logs pour validation
         console.log("=== updateTransform ===");
         console.log("Applied transform:", transform);
-        console.log("PointX:", this.state.pointX, "PointY:", this.state.pointY);
     }
 
     centerAndFit() {
         const containerRect = this.container.getBoundingClientRect();
         const viewBox = this.state.viewBox;
-    
+
+        // Calcul de l'échelle pour ajuster aux dimensions du conteneur
         const scaleX = containerRect.width / viewBox.width;
         const scaleY = containerRect.height / viewBox.height;
-    
-        // Réduction légère de l'échelle pour laisser un peu de marge
         const scale = Math.min(scaleX, scaleY) * 0.95; // Réduit de 5%
-    
+
+        // Largeur et hauteur du SVG après application de l'échelle
+        const scaledWidth = viewBox.width * scale;
+        const scaledHeight = viewBox.height * scale;
+
+        // Calcul du centrage
+        const offsetX = (containerRect.width - scaledWidth) / 2;
+        const offsetY = (containerRect.height - scaledHeight) / 2;
+
+        // Mise à jour de l'état
         this.state.zoom = scale;
-    
-        // Calcul des décalages pour le centrage (mais sans perturber)
-        const widthDiff = containerRect.width - viewBox.width * scale;
-        this.state.pointX = widthDiff > 0 ? widthDiff / 2 : 0;
-    
-        const heightDiff = containerRect.height - viewBox.height * scale;
-        this.state.pointY = heightDiff > 0 ? heightDiff / 2 : 0;
-    
+        this.state.pointX = offsetX;
+        this.state.pointY = offsetY;
+
         console.log("=== centerAndFit ===");
         console.log("Container dimensions:", containerRect.width, "x", containerRect.height);
         console.log("SVG viewBox:", viewBox.width, "x", viewBox.height);
+        console.log("Scaled dimensions:", scaledWidth, "x", scaledHeight);
         console.log("Computed scale:", scale);
-        console.log("PointX:", this.state.pointX, "PointY:", this.state.pointY);
-    
-        // Désactivation de updateTransform, car CSS gère le centrage
-        // this.updateTransform();
-    
-        // Appliquez uniquement l'échelle via CSS
-        this.svg.style.transform = `scale(${scale})`; // Ajuste la taille du SVG
-        this.svg.style.transformOrigin = 'center'; // Maintient le centrage
+        console.log("Offsets - X:", offsetX, "Y:", offsetY);
     }
 
     destroy() {
