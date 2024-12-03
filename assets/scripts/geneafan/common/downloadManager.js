@@ -2,6 +2,7 @@ import '../../vendor/pdfkitFontRegister.js';
 import { mmToPoints, mmToPixels } from '../utils/utils.js';
 import { Modal } from 'bootstrap';
 import configStore from '../tabs/fanChart/fanConfigStore.js';
+import authStore from './stores/authStore.js';
 
 const PAGE_WIDTH_IN_MM = 297; // Largeur en millimètres
 const PAGE_HEIGHT_IN_MM = 420; // Hauteur en millimètres
@@ -309,4 +310,58 @@ export function downloadPNG(config, transparency) {
     }).catch(error => {
         console.error('Error generating or downloading PNG:', error);
     });
+}
+
+export class DownloadManager {
+    constructor(rootPersonName) {
+        this.rootPersonName = rootPersonName;
+        this.setupEventListeners();
+    }
+
+    setupEventListeners() {
+        document.getElementById("download-pdf")
+            .addEventListener("click", (event) => {
+                event.preventDefault();
+                authStore.handleUserAuthentication(authStore.clerk, async (userInfo) => {
+                    if (userInfo) {
+                        const userEmail = userInfo.email;
+                        await handleUploadAndPost(this.rootPersonName, userEmail);
+                    } else {
+                        console.error("Erreur lors de la connexion de l'utilisateur.");
+                    }
+                });
+            });
+
+        document.getElementById("download-pdf-watermark")
+            .addEventListener("click", (event) => {
+                event.preventDefault();
+                downloadPDF(configStore.getConfig, function (blob) {
+                    downloadContent(blob, generateFileName("pdf"), "pdf");
+                }, true);
+            });
+
+        document.getElementById("download-svg")
+            .addEventListener("click", (event) => {
+                event.preventDefault();
+                let elements = document.querySelectorAll("#boxes *");
+                elements.forEach(function (element) {
+                    element.style.stroke = "rgb(0, 0, 255)";
+                    element.style["-inkscape-stroke"] = "hairline";
+                    element.setAttribute("stroke-width", "0.01");
+                });
+                downloadContent(fanAsXml(), generateFileName("svg"), "svg");
+            });
+
+        document.getElementById("download-png-transparency")
+            .addEventListener("click", (event) => {
+                event.preventDefault();
+                downloadPNG(configStore.getConfig, true);
+            });
+
+        document.getElementById("download-png-background")
+            .addEventListener("click", (event) => {
+                event.preventDefault();
+                downloadPNG(configStore.getConfig, false);
+            });
+    }
 }

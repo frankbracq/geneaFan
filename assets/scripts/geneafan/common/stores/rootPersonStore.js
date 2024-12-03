@@ -1,6 +1,6 @@
 import { makeAutoObservable, action, reaction, runInAction } from './mobx-config.js';
 import TomSelect from 'tom-select';
-import { updateFilename } from "../../common/downloads.js";
+import { updateFilename } from "../downloadManager.js";
 import { draw } from "../../tabs/fanChart/fan.js";
 import { displayFan } from "../../ui.js";
 import { getSvgPanZoomInstance, setSvgPanZoomInstance } from "./state.js";

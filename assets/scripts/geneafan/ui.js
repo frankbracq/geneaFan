@@ -11,9 +11,11 @@ import { googleMapsStore } from "./tabs/familyMap/googleMapsStore.js";
 import {
   setSvgPanZoomInstance,
   getSvgPanZoomInstance,
+  initSvgPanZoom,
+  destroySvgPanZoom,
 } from "./common/stores/state.js";
-import { SVGPanZoomManager } from './tabs/fanChart/SVGPanZoomManager.js';
-import { debounce } from "./utils/utils.js";
+
+import { DownloadManager } from "./common/downloadManager.js";
 
 // Utility libraries
 import _ from "lodash"; // Utility functions
@@ -25,18 +27,6 @@ import { Offcanvas } from "bootstrap"; // Bootstrap components
 
 // Google Maps
 import { Loader } from "@googlemaps/js-api-loader"; // Google Maps loader
-
-
-
-// Core functionality
-import {
-  downloadContent,
-  downloadPNG,
-  fanAsXml,
-  generateFileName,
-  downloadPDF,
-  handleUploadAndPost,
-} from "./common/downloads.js";
 
 // Event listeners
 import { setupAllEventListeners } from "./listeners/eventListeners.js";
@@ -341,32 +331,6 @@ function ordinalSuffixOf(i) {
   return "ème";
 }
 
-function resizeSvg() {
-  const fanContainer = document.getElementById("fanContainer");
-  const svgElement = document.getElementById("fan");
-
-  const panZoomInstance = getSvgPanZoomInstance();
-
-  const resize = () => {
-    const containerWidth = fanContainer.clientWidth;
-    const containerHeight = fanContainer.clientHeight;
-
-    svgElement.setAttribute("width", containerWidth);
-    svgElement.setAttribute("height", containerHeight);
-
-    panZoomInstance.resize();
-    panZoomInstance.fit();
-    panZoomInstance.center();
-  };
-
-  const debouncedResize = debounce(resize, 100);
-
-  window.addEventListener("resize", debouncedResize);
-
-  // Redimensionnement initial
-  resize();
-}
-
 export async function resetUI() {
   const parametersElements = document.querySelectorAll(".parameter");
   const individualSelectElement = document.getElementById("individual-select");
@@ -405,10 +369,12 @@ export async function resetUI() {
     setSvgPanZoomInstance(null);
   }
 
-  const fanSvg = document.getElementById("fan");
-  if (fanSvg) {
-    fanSvg.innerHTML = "";
-  }
+  destroySvgPanZoom();
+    
+    const fanSvg = document.getElementById("fan");
+    if (fanSvg) {
+        fanSvg.innerHTML = "";
+    }
 
   // Remplacer setFamilyTowns par
   familyTownsStore.setTownsData({});
@@ -433,51 +399,38 @@ export async function resetUI() {
   rootPersonStore.resetHistory();
 }
 
-let shouldShowInitialMessage = true;
-let filename = "";
-
-let svgPanZoomInstance = null;
-
 export function displayFan() {
-    const svg = document.querySelector('#fan');
-    const container = document.getElementById('fanContainer');
+  const svg = document.querySelector('#fan');
+  const container = document.getElementById('fanContainer');
 
-    // Évitez de réinitialiser si l'instance existe déjà
-    if (svgPanZoomInstance) {
-        console.log("Instance already initialized");
-        return;
-    }
+  svg.style.opacity = '0';
 
-    svg.style.opacity = '0';
+  requestAnimationFrame(() => {
+      const instance = initSvgPanZoom(svg, {
+          minZoom: 0.1,
+          maxZoom: 10,
+          zoomScaleSensitivity: 0.2,
+          fitPadding: 20
+      });
 
-    requestAnimationFrame(() => {
-        svgPanZoomInstance = new SVGPanZoomManager(svg, {
-            minZoom: 0.1,
-            maxZoom: 10,
-            zoomScaleSensitivity: 0.2,
-            fitPadding: 20
-        });
+      svg.style.transition = 'opacity 0.3s ease-in-out';
+      svg.style.opacity = '1';
 
-        setSvgPanZoomInstance(svgPanZoomInstance);
-
-        svg.style.transition = 'opacity 0.3s ease-in-out';
-        svg.style.opacity = '1';
-
-        const fullscreenButton = document.getElementById('fullscreenButton');
-        if (fullscreenButton) {
-            fullscreenButton.addEventListener('click', () => {
-                if (!document.fullscreenElement) {
-                    container.requestFullscreen().then(() => {
-                        svgPanZoomInstance.handleResize();
-                    });
-                } else {
-                    document.exitFullscreen().then(() => {
-                        svgPanZoomInstance.handleResize();
-                    });
-                }
-            });
-        }
-    });
+      const fullscreenButton = document.getElementById('fullscreenButton');
+      if (fullscreenButton) {
+          fullscreenButton.addEventListener('click', () => {
+              if (!document.fullscreenElement) {
+                  container.requestFullscreen().then(() => {
+                      instance.handleResize();
+                  });
+              } else {
+                  document.exitFullscreen().then(() => {
+                      instance.handleResize();
+                  });
+              }
+          });
+      }
+  });
 }
 
 // Function to check if the fan container is visible
@@ -485,65 +438,6 @@ const isFanContainerVisible = () => {
   const fanContainer = document.getElementById("fanContainer");
   return fanContainer && fanContainer.offsetParent !== null;
 };
-
-// Download buttons
-document
-  .getElementById("download-pdf")
-  .addEventListener("click", function (event) {
-    event.preventDefault(); // Prevent default link action
-
-    // Use the handleUserAuthentication function from authStore
-    authStore.handleUserAuthentication(authStore.clerk, async (userInfo) => {
-      if (userInfo) {
-        // Check if user information is available
-        const userEmail = userInfo.email; // Get the user's email
-        await handleUploadAndPost(rootPersonName, userEmail); // Call the function with the user's email
-      } else {
-        console.error("Erreur lors de la connexion de l'utilisateur.");
-      }
-    });
-  });
-
-document
-  .getElementById("download-pdf-watermark")
-  .addEventListener("click", function (event) {
-    downloadPDF(
-      config,
-      function (blob) {
-        downloadContent(blob, generateFileName("pdf"), "pdf");
-      },
-      true
-    );
-
-    event.preventDefault(); // Prevent default link action
-  });
-
-document
-  .getElementById("download-svg")
-  .addEventListener("click", function (event) {
-    let elements = document.querySelectorAll("#boxes *");
-    elements.forEach(function (element) {
-      element.style.stroke = "rgb(0, 0, 255)";
-      element.style["-inkscape-stroke"] = "hairline";
-      element.setAttribute("stroke-width", "0.01");
-    });
-    downloadContent(fanAsXml(), generateFileName("svg"), "svg");
-    event.preventDefault(); // Prevent default link action
-  });
-
-document
-  .getElementById("download-png-transparency")
-  .addEventListener("click", function (event) {
-    downloadPNG(config, true);
-    event.preventDefault(); // Prevent default link action
-  });
-
-document
-  .getElementById("download-png-background")
-  .addEventListener("click", function (event) {
-    downloadPNG(config, false);
-    event.preventDefault(); // Prevent default link action
-  });
 
 // Prevent the user from entering invalid quantities
 document.querySelectorAll("input[type=number]").forEach(function (input) {
@@ -592,6 +486,8 @@ export function initPage() {
     userId = generateUniqueId();
     localStorage.setItem("userId", userId);
   }
+
+  new DownloadManager(rootPersonName);
 
   const loader = new Loader({
     apiKey: googleMapsStore.apiKey,

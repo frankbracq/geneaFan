@@ -1,5 +1,5 @@
 import { fetchUserGedcomFiles } from '../gedcom/gedcomFileHandler.js'; 
-import { handleUploadAndPost } from '../common/downloads.js';
+import { handleUploadAndPost } from '../common/downloadManager.js';
 import gedcomModalManager from '../gedcom/gedcomModalUtils';
 
 /**
