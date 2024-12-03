@@ -7,23 +7,26 @@ import TimelineManager from "./tabs/timeline/timelineManager.js";
 import familyTownsStore from "./gedcom/familyTownsStore.js";
 import { googleMapsStore } from "./tabs/familyMap/googleMapsStore.js";
 
-// Utility libraries
-import _ from "lodash"; // Utility functions
-import { v4 as uuidv4 } from "uuid"; // UUID generation
-
-// UI Libraries & Components
-import svgPanZoom from "svg-pan-zoom"; // SVG pan and zoom functionality
-import { Modal, Offcanvas, Tooltip } from "bootstrap"; // Bootstrap components
-
-// Google Maps
-import { Loader } from "@googlemaps/js-api-loader"; // Google Maps loader
-
 // Application state and utilities
 import {
   setSvgPanZoomInstance,
   getSvgPanZoomInstance,
 } from "./common/stores/state.js";
+import { SVGPanZoomManager } from './tabs/fanChart/SVGPanZoomManager.js';
 import { debounce } from "./utils/utils.js";
+
+// Utility libraries
+import _ from "lodash"; // Utility functions
+import { v4 as uuidv4 } from "uuid"; // UUID generation
+
+// UI Libraries & Components
+// import svgPanZoom from "svg-pan-zoom"; // SVG pan and zoom functionality
+import { Offcanvas } from "bootstrap"; // Bootstrap components
+
+// Google Maps
+import { Loader } from "@googlemaps/js-api-loader"; // Google Maps loader
+
+
 
 // Core functionality
 import {
@@ -433,39 +436,48 @@ export async function resetUI() {
 let shouldShowInitialMessage = true;
 let filename = "";
 
+let svgPanZoomInstance = null;
+
 export function displayFan() {
-  const instance = svgPanZoom("#fan", {
-    zoomEnabled: true,
-    controlIconsEnabled: true,
-    fit: true,
-    center: true,
-  });
+    const svg = document.querySelector('#fan');
+    const container = document.getElementById('fanContainer');
 
-  var mapElement = document.querySelector("#fan");
-  if (mapElement) {
-    mapElement.addEventListener(
-      "dblclick",
-      function (event) {
-        event.stopImmediatePropagation();
-      },
-      true
-    );
+    // Évitez de réinitialiser si l'instance existe déjà
+    if (svgPanZoomInstance) {
+        console.log("Instance already initialized");
+        return;
+    }
 
-    mapElement.addEventListener(
-      "wheel",
-      function (event) {
-        if (event.ctrlKey) {
-          event.preventDefault();
+    svg.style.opacity = '0';
+
+    requestAnimationFrame(() => {
+        svgPanZoomInstance = new SVGPanZoomManager(svg, {
+            minZoom: 0.1,
+            maxZoom: 10,
+            zoomScaleSensitivity: 0.2,
+            fitPadding: 20
+        });
+
+        setSvgPanZoomInstance(svgPanZoomInstance);
+
+        svg.style.transition = 'opacity 0.3s ease-in-out';
+        svg.style.opacity = '1';
+
+        const fullscreenButton = document.getElementById('fullscreenButton');
+        if (fullscreenButton) {
+            fullscreenButton.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    container.requestFullscreen().then(() => {
+                        svgPanZoomInstance.handleResize();
+                    });
+                } else {
+                    document.exitFullscreen().then(() => {
+                        svgPanZoomInstance.handleResize();
+                    });
+                }
+            });
         }
-      },
-      { passive: false }
-    );
-  } else {
-    console.error("L'élément SVG '#fan' n'a pas été trouvé dans le DOM.");
-  }
-
-  setSvgPanZoomInstance(instance);
-  return instance;
+    });
 }
 
 // Function to check if the fan container is visible

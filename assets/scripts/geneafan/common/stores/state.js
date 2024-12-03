@@ -3,6 +3,7 @@ import timelineEventsStore from '../../tabs/timeline/timelineEventsStore.js';
 import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
 import familyTreeDataStore from '../../tabs/familyTree/familyTreeDataStore.js';
 import familyTownsStore from '../../gedcom/familyTownsStore.js';
+import { SVGPanZoomManager } from '../../tabs/fanChart/SVGPanZoomManager.js'; 
 
 export const getIndividualsCache = () => gedcomDataStore.getIndividualsCache();
 

@@ -363,6 +363,12 @@ export const setupAllEventListeners = (authStore) => {
             closePopoverOnClickOutside(event); // Close popovers when clicking outside
         });
 
+        // Add a resize event listener to the window
+        window.addEventListener("resize", () => {
+            console.log("=== Browser Resize ===");
+            console.log("Window dimensions:", window.innerWidth, "x", window.innerHeight);
+        });
+
         // Set up event listeners for fan parameters
         setupFanParameterEventListeners();
         // Set up event listeners for tabs and UI elements

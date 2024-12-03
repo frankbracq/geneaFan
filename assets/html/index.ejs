@@ -203,9 +203,14 @@
                                 </h5>
                             </div>
                         </div>
-                        <!-- Fan container -->
-                        <div class="col-12 container-fluid align-items-center mt-2" id="fanContainer">
+                        <!-- Fan container class="col-12 container-fluid"-->
+                        <div id="fanContainer" class="col-12 container-fluid">
                             <svg id="fan"></svg>
+                            <div id="controls">
+                                <button id="zoomIn">+</button>
+                                <button id="zoomOut">-</button>
+                                <button id="reset">Reset</button>
+                            </div>
                         </div>
                         <!-- Offcanvas for fan settings -->
                         <div class="offcanvas offcanvas-start" tabindex="-1" id="fanParameters" aria-labelledby="fanParametersLabel">
