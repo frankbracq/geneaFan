@@ -57,7 +57,6 @@
     "pdfkit": "^0.15.0",
     "popper.js": "^1.16.1",
     "screenfull": "^6.0.2",
-    "svg-pan-zoom": "^3.6.1",
     "svg-to-pdfkit": "^0.1.8",
     "tinycolor2": "^1.6.0",
     "tom-select": "^2.3.1",
