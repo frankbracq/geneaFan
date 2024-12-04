@@ -1,6 +1,5 @@
-import { makeAutoObservable, action, reaction, runInAction, computed, comparer } from '../../common/stores/mobx-config.js';
+import { makeAutoObservable, action, computed, comparer } from '../../common/stores/mobx-config.js';
 import 'tom-select/dist/css/tom-select.css';
-import { FanChartManager } from "./fanChartManager.js";
 
 class ConfigStore {
     config = {
@@ -43,8 +42,28 @@ class ConfigStore {
     };
 
     _batchUpdating = false;
-    _queueTimeout = null;
-    _updateQueued = false;
+
+    constructor() {
+        const initialDimensions = this.calculateDimensions(
+            this.config.fanAngle,
+            this.config.maxGenerations,
+            this.config.showMarriages
+        );
+
+        if (initialDimensions) {
+            this.config.fanDimensions = initialDimensions.fanDimensionsInMm;
+            this.config.frameDimensions = initialDimensions.frameDimensionsInMm;
+        }
+
+        makeAutoObservable(this, {
+            updateConfig: action,
+            setConfig: action,
+            setGedcomFileName: action,
+            angle: computed,
+            dimensions: computed,
+            _batchUpdating: false
+        });
+    }
 
     // Computed values
     get angle() {
@@ -59,165 +78,7 @@ class ConfigStore {
         );
     }
 
-    constructor() {
-        // Calculer les dimensions initiales avec les valeurs par défaut
-        const initialDimensions = this.calculateDimensions(
-            this.config.fanAngle,
-            this.config.maxGenerations,
-            this.config.showMarriages
-        );
-
-        // Définir les dimensions initiales
-        if (initialDimensions) {
-            this.config.fanDimensions = initialDimensions.fanDimensionsInMm;
-            this.config.frameDimensions = initialDimensions.frameDimensionsInMm;
-        }
-
-        makeAutoObservable(this, {
-            batchUpdate: action,
-            updateFanParameter: action,
-            handleSettingChange: action,
-            handleSettingChangeInternal: action,
-            setConfig: action,
-            setDimensions: action,
-            setGedcomFileName: action,
-            setTomSelectValue: action,
-            undo: action,
-            redo: action,
-            resetConfigHistory: action,
-            queueSettingChange: action,
-            
-            // Computed values
-            angle: computed,
-            dimensions: computed,
-            
-            // Non-observables
-            _queueTimeout: false,
-            _updateQueued: false,
-            _batchUpdating: false,
-            tomSelect: false,
-            configHistory: false
-        });
-
-        // Une seule reaction pour tous les changements
-        reaction(
-            () => ({
-                fanAngle: this.config.fanAngle,
-                maxGenerations: this.config.maxGenerations,
-                showMarriages: this.config.showMarriages,
-                invertTextArc: this.config.invertTextArc,
-                coloringOption: this.config.coloringOption,
-                showMissing: this.config.showMissing
-            }),
-            (params, previousParams) => {
-                if (this._batchUpdating) return;
-        
-                runInAction(() => {
-                    let hasChanges = false;
-        
-                    // Vérification des changements de paramètres
-                    if (params.fanAngle !== previousParams?.fanAngle ||
-                        params.maxGenerations !== previousParams?.maxGenerations ||
-                        params.showMarriages !== previousParams?.showMarriages ||
-                        params.invertTextArc !== previousParams?.invertTextArc ||
-                        params.coloringOption !== previousParams?.coloringOption ||
-                        params.showMissing !== previousParams?.showMissing) {
-                        hasChanges = true;
-                    }
-        
-                    // Mises à jour spécifiques
-                    if (params.fanAngle !== previousParams?.fanAngle) {
-                        this.config.titleMargin = params.fanAngle === 360 ? 0.35 : 0.25;
-                    }
-        
-                    if (params.coloringOption !== previousParams?.coloringOption) {
-                        this.config.computeChildrenCount = params.coloringOption === "childrencount";
-                    }
-        
-                    // Mise à jour des dimensions si nécessaire
-                    if (params.fanAngle !== previousParams?.fanAngle ||
-                        params.maxGenerations !== previousParams?.maxGenerations ||
-                        params.showMarriages !== previousParams?.showMarriages) {
-                        const dimensions = this.dimensions;
-                        if (dimensions) {
-                            this.setDimensions(dimensions);
-                        }
-                    }
-        
-                    if (hasChanges) {
-                        this.queueSettingChange();
-                    }
-                });
-            },
-            {
-                equals: comparer.structural,
-                name: 'ConfigStore-FanParametersReaction'
-            }
-        );
-    }
-
-    queueSettingChange = action(() => {
-        console.log('queueSettingChange called');
-        
-        // Annuler le timeout existant pour le remplacer par un nouveau
-        if (this._queueTimeout) {
-            clearTimeout(this._queueTimeout);
-        }
-        
-        // Toujours programmer une nouvelle mise à jour
-        this._queueTimeout = setTimeout(() => {
-            if (this._queueTimeout) {  // Vérifier que le timeout n'a pas été annulé
-                this._queueTimeout = null;
-                this.handleSettingChangeInternal();
-            }
-        }, 50);
-    });
-
-    handleSettingChange = action(() => {
-        if (this._batchUpdating) return;
-        this.queueSettingChange();
-    });
-
-    handleSettingChangeInternal = action(() => {
-        if (!this.config.gedcomFileName) {
-            console.warn("No GEDCOM file loaded. Skipping handleSettingChange.");
-            return false;
-        }
-    
-        return FanChartManager.redrawFan();
-    });
-
-    batchUpdate = action((updates) => {
-        if (this._batchUpdating) return;
-        
-        this._batchUpdating = true;
-        try {
-            updates();
-            this.queueSettingChange();
-        } finally {
-            this._batchUpdating = false;
-        }
-    });
-
-    setConfig = action((params) => {
-        runInAction(() => {
-            Object.assign(this.config, params);
-
-            if (params.fanAngle !== undefined) {
-                console.log('Angle updated to:', this.angle);
-            }
-        });
-
-        if (!this._batchUpdating) {
-            this.queueSettingChange();
-        }
-    });
-
-    updateFanParameter = action((paramName, value) => {
-        this.setConfig({ [paramName]: value });
-    });
-
-    calculateDimensions = action((fanAngle, maxGenerations, showMarriages) => {
+    calculateDimensions(fanAngle, maxGenerations, showMarriages) {
         const dimensionsMap = {
             270: {
                 8: { fanDimensionsInMm: "301x257", frameDimensionsInMm: "331x287" },
@@ -243,13 +104,67 @@ class ConfigStore {
         if (!generationDimensions) return defaultDimensions;
 
         return generationDimensions[showMarriages] || generationDimensions;
+    }
+
+    validateConfig(params) {
+        // Add validation rules here
+        const validations = {
+            fanAngle: (value) => value >= 0 && value <= 360,
+            maxGenerations: (value) => value >= 1 && value <= 8,
+            titleMargin: (value) => value >= 0 && value <= 1,
+        };
+
+        for (const [key, validator] of Object.entries(validations)) {
+            if (params[key] !== undefined && !validator(params[key])) {
+                throw new Error(`Invalid value for ${key}: ${params[key]}`);
+            }
+        }
+
+        return true;
+    }
+
+    batchUpdate = action((updates) => {
+        if (this._batchUpdating) return;
+        
+        this._batchUpdating = true;
+        try {
+            updates();
+            FanChartManager.queueRedraw();
+        } finally {
+            this._batchUpdating = false;
+        }
     });
 
-    setDimensions = action((dimensions) => {
-        if (dimensions && dimensions.fanDimensionsInMm && dimensions.frameDimensionsInMm) {
-            this.config.fanDimensions = dimensions.fanDimensionsInMm;
-            this.config.frameDimensions = dimensions.frameDimensionsInMm;
+    updateConfig = action((params) => {
+        if (this.validateConfig(params)) {
+            if (params.fanAngle !== undefined) {
+                params.titleMargin = params.fanAngle === 360 ? 0.35 : 0.25;
+            }
+            
+            if (params.coloringOption !== undefined) {
+                params.computeChildrenCount = params.coloringOption === "childrencount";
+            }
+
+            Object.assign(this.config, params);
+
+            if (!this._batchUpdating && (
+                params.fanAngle !== undefined ||
+                params.maxGenerations !== undefined ||
+                params.showMarriages !== undefined
+            )) {
+                const dimensions = this.dimensions;
+                if (dimensions) {
+                    this.config.fanDimensions = dimensions.fanDimensionsInMm;
+                    this.config.frameDimensions = dimensions.frameDimensionsInMm;
+                }
+            }
+
+            if (!this._batchUpdating) {
+                FanChartManager.queueRedraw();
+            }
+            return true;
         }
+        return false;
     });
 
     setGedcomFileName = action((fileName) => {

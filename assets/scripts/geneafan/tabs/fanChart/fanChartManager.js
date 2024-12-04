@@ -9,7 +9,8 @@ import rootPersonStore from "../../common/stores/rootPersonStore.js";
 import configStore from "./fanConfigStore.js";
 
 export class FanChartManager {
-    static instances = new Map();
+    static instances = new Map(); // Ajout de la propriété statique manquante
+    static updateTimeout = null;
 
     static initialize() {
         console.log("Initializing fan chart...");
@@ -36,11 +37,9 @@ export class FanChartManager {
         svg.style.opacity = '0';
 
         try {
-            // Créer l'instance SVG Pan Zoom avec les options appropriées
             const instance = await this.initializePanZoom(svg);
             this.instances.set('panZoom', instance);
 
-            // Animer l'apparition du fan
             requestAnimationFrame(() => {
                 svg.style.transition = 'opacity 0.3s ease-in-out';
                 svg.style.opacity = '1';
@@ -48,7 +47,23 @@ export class FanChartManager {
 
         } catch (error) {
             console.error('Error displaying fan:', error);
+            throw error; // Propager l'erreur pour une meilleure gestion
         }
+    }
+
+    static isDisplayable() {
+        if (!configStore.config.gedcomFileName) {
+            console.warn("No GEDCOM file loaded");
+            return false;
+        }
+
+        const fanContainer = document.getElementById("fanContainer");
+        if (!fanContainer || fanContainer.offsetParent === null) {
+            console.warn("Fan container is not visible");
+            return false;
+        }
+
+        return true;
     }
 
     static async initializePanZoom(svg) {
@@ -84,23 +99,27 @@ export class FanChartManager {
         }
     }
 
-    static async redrawFan() {
-        if (!configStore.config.gedcomFileName) {
-            console.warn("No GEDCOM file loaded. Skipping redraw.");
-            return false;
+    static queueRedraw() {
+        if (this.updateTimeout) {
+            clearTimeout(this.updateTimeout);
         }
+        
+        this.updateTimeout = setTimeout(() => {
+            this.updateTimeout = null;
+            if (this.isDisplayable()) {
+                this.redrawFan();
+            }
+        }, 50);
+    }
 
-        const fanContainer = document.getElementById("fanContainer");
-        if (!fanContainer || fanContainer.offsetParent === null) {
-            console.warn("Fan container is not visible");
+    static async redrawFan() {
+        if (!this.isDisplayable()) {
             return false;
         }
 
         try {
-            // Nettoyer l'instance existante
             await this.cleanupExistingInstance();
 
-            // Dessiner le nouveau fan
             const currentRoot = rootPersonStore.root;
             console.log('Drawing fan with current root:', currentRoot);
             
@@ -109,10 +128,7 @@ export class FanChartManager {
                 throw new Error("Failed to draw fan");
             }
 
-            // Afficher le nouveau fan
             await this.displayFan();
-
-            // Mettre à jour l'UI
             this.updateUIAfterRedraw();
 
             return true;
@@ -152,18 +168,19 @@ export class FanChartManager {
     }
 
     static reset() {
+        if (this.updateTimeout) {
+            clearTimeout(this.updateTimeout);
+            this.updateTimeout = null;
+        }
+
         this.cleanupExistingInstance();
-        
-        // Réinitialiser les instances stockées
         this.instances.clear();
 
-        // Réinitialiser l'état du fan
         const fanSvg = document.getElementById("fan");
         if (fanSvg) {
             fanSvg.innerHTML = "";
         }
 
-        // Réactiver les écouteurs d'événements
         this.setupEventListeners();
     }
 }

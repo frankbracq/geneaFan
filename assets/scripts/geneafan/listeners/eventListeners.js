@@ -1,7 +1,7 @@
 import familyTownsStore from "../gedcom/familyTownsStore.js";
 import { getSvgPanZoomInstance } from "../common/stores/state.js";
 import configStore from "../tabs/fanChart/fanConfigStore.js";
-import rootPersonStore from "../common/stores/rootPersonStore.js"; // Nouveau import
+import rootPersonStore from "../common/stores/rootPersonStore.js";
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
 import {
     setupResponsiveTabs,
@@ -11,387 +11,213 @@ import { displayPersonDetailsUI } from "../tabs/fanChart/ui.js";
 import { loadGedcomFile } from "../gedcom/gedcomFileHandler.js";
 import { Offcanvas, Tooltip } from "bootstrap";
 import screenfull from "screenfull";
+import { FanChartManager } from "../tabs/fanChart/fanChartManager.js";
 
-// WeakMap to store event listener references
-const eventListenersMap = new WeakMap();
-
-// Setup tooltips with HTML support
-export function setupTooltips() {
-    const tooltipTriggerList = document.querySelectorAll(
-        '[data-bs-toggle="tooltip"]'
-    );
-    tooltipTriggerList.forEach((tooltipTriggerEl) => {
-        new Tooltip(tooltipTriggerEl, { html: true });
-    });
-}
-
-// Listener for custom 'showPersonDetails' event
-document.addEventListener("showPersonDetails", (event) => {
-    displayPersonDetailsUI(event.detail);
-});
-
-// Handle city link clicks with delegation
-/*
-function handleCityLinkClick(event) {
-    if (event.target.classList.contains("city-link")) {
-        const townKey = event.target.dataset.townKey;
-        const townDetails = familyTownsStore.getTown(townKey);
-        const latitude = parseFloat(townDetails.latitude);
-        const longitude = parseFloat(townDetails.longitude);
-
-        if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
-            const marker = googleMapsStore.allMarkers[townKey];
-            if (marker) {
-                googleMapsStore.map.setCenter(
-                    new google.maps.LatLng(latitude, longitude)
-                );
-                googleMapsStore.map.setZoom(10);
-                if (!marker.infowindow) {
-                    marker.infowindow = new google.maps.InfoWindow({
-                        content: marker.getTitle(),
-                    });
-                }
-                marker.infowindow.open(googleMapsStore.map, marker);
-            } else {
-                console.error("No marker found for this town key:", townKey);
-            }
-        } else {
-            console.error("Invalid latitude or longitude values", townDetails);
-        }
-    }
-}
-    */
-
-// Close popover on outside click
-function closePopoverOnClickOutside(event) {
-    const popover = document.getElementById("customPopover");
-    if (popover && !popover.contains(event.target)) {
-        popover.style.display = "none";
-    }
-}
-
-// Setup fan parameter event listeners
-export function setupFanParameterEventListeners() {
-    document.querySelectorAll(".parameter").forEach((item) => {
-        // Supprimer l'ancien écouteur d'événements s'il existe
-        const oldHandler = item._changeHandler;
-        if (oldHandler) {
-            item.removeEventListener("change", oldHandler);
-        }
-
-        // Créer un nouveau gestionnaire d'événements
-        const handleParameterChange = (event) => {
-            const input = event.target;
-            console.log("Input type:", input.type);
-            console.log("Input name:", input.name);
-            console.log("Raw value:", input.value);
-
-            // Convertir les valeurs "true"/"false" en booléens pour certains paramètres
-            let value;
-            const booleanParameters = [
-                "showMarriages",
-                "invert-text-arc",
-                "showMissing",
-            ];
-
-            if (booleanParameters.includes(input.name)) {
-                value = input.value === "true";
-            } else if (
-                input.type === "number" ||
-                ["fanAngle", "max-generations"].includes(input.name)
-            ) {
-                value = parseInt(input.value, 10);
-            } else {
-                value = input.value;
-            }
-
-            // Mapping des noms de paramètres pour correspondre à ceux du store
-            const parameterMapping = {
-                showMarriages: "showMarriages",
-                "invert-text-arc": "invertTextArc",
-                showMissing: "showMissing",
-                fanAngle: "fanAngle",
-                "max-generations": "maxGenerations",
-                fanColor: "coloringOption",
-            };
-
-            const storeParamName = parameterMapping[input.name];
-            if (!storeParamName) {
-                console.warn("Unknown parameter:", input.name);
-                return;
-            }
-
-            console.log(
-                `Updating ${storeParamName} with value:`,
-                value,
-                `(type: ${typeof value})`
-            );
-            configStore.updateFanParameter(storeParamName, value);
-        };
-
-        // Sauvegarder la référence du gestionnaire et ajouter l'écouteur
-        item._changeHandler = handleParameterChange;
-        item.addEventListener("change", handleParameterChange);
-    });
-
-    // Gérer le sélecteur d'individu
-    const individualSelect = document.getElementById("individual-select");
-    if (individualSelect) {
-        individualSelect.addEventListener("change", () => {
-            const selectedRoot = individualSelect.value;
-            rootPersonStore.setRoot(selectedRoot); // Utiliser rootPersonStore au lieu de configStore
-        });
-    }
-}
-
-// Setup person link event listener with delegation
+// Export standalone functions
 export function setupPersonLinkEventListener() {
-    const tomSelect = rootPersonStore.tomSelect; // Utiliser rootPersonStore
-    if (!tomSelect) {
-        console.error("tomSelect is undefined");
-        return;
-    }
-
+    console.log("Setting up person link event listener");
+    
     document.addEventListener("click", (event) => {
         if (event.target.matches(".person-link")) {
             event.preventDefault();
             const personId = event.target.getAttribute("data-person-id");
-            rootPersonStore.setTomSelectValue(personId); // Utiliser rootPersonStore
+            console.log("Person link clicked:", personId);
 
-            const individualMapContainer = document.getElementById(
-                "individualMapContainer"
-            );
-            const personDetails = document.getElementById("personDetails");
-            if (individualMapContainer?.classList.contains("show")) {
-                Offcanvas.getInstance(individualMapContainer).hide();
+            rootPersonStore.setRoot(personId);
+
+            if (rootPersonStore.tomSelect) {
+                rootPersonStore.tomSelect.setValue(personId);
             }
-            if (personDetails?.classList.contains("show")) {
-                Offcanvas.getInstance(personDetails).hide();
-            }
-        }
-    });
-}
 
-// Update UI after undo/redo actions
-function updateUIAfterUndoRedo() {
-    const root = rootPersonStore.root; // Utiliser rootPersonStore
-    if (root) {
-        const tomSelect = rootPersonStore.tomSelect; // Utiliser rootPersonStore
-        if (tomSelect) {
-            rootPersonStore.setTomSelectValue(root);
-        } else {
-            console.error("tomSelect is undefined");
-        }
-    }
-}
-
-// Setup undo/redo event listeners
-function setupUndoRedoEventListeners() {
-    const undoHandler = () => {
-        rootPersonStore.undo(); // Utiliser rootPersonStore
-        updateUIAfterUndoRedo();
-    };
-    const redoHandler = () => {
-        rootPersonStore.redo(); // Utiliser rootPersonStore
-        updateUIAfterUndoRedo();
-    };
-    const keydownHandler = (event) => {
-        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
-            event.preventDefault();
-            undoHandler();
-        }
-        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "y") {
-            event.preventDefault();
-            redoHandler();
-        }
-    };
-
-    document.getElementById("undoButton").addEventListener("click", undoHandler);
-    document.getElementById("redoButton").addEventListener("click", redoHandler);
-    document.addEventListener("keydown", keydownHandler);
-
-    // Store references in WeakMap
-    eventListenersMap.set(document.getElementById("undoButton"), undoHandler);
-    eventListenersMap.set(document.getElementById("redoButton"), redoHandler);
-    eventListenersMap.set(document, keydownHandler);
-}
-
-// Setup fullscreen toggle
-function setupFullscreenToggle() {
-    const fullscreenButton = document.getElementById("fullscreenButton");
-    const fanContainer = document.getElementById("fanContainer");
-
-    const fullscreenHandler = () => {
-        if (screenfull.isEnabled) {
-            screenfull.toggle(fanContainer);
-        }
-    };
-
-    fullscreenButton.addEventListener("click", fullscreenHandler);
-
-    if (screenfull.isEnabled) {
-        screenfull.on("change", () => {
-            const panZoomInstance = getSvgPanZoomInstance();
-            panZoomInstance.updateBBox();
-            panZoomInstance.fit();
-            panZoomInstance.center();
-
-            const fan = document.getElementById("fan");
-
-            if (screenfull.isFullscreen) {
-                panZoomInstance.disableDblClickZoom(false);
-
-                const mousedownHandler = () => {
-                    fan.style.cursor = "grabbing";
-                };
-                const mouseupHandler = () => {
-                    fan.style.cursor = "grab";
-                };
-
-                fan.addEventListener("mousedown", mousedownHandler);
-                fan.addEventListener("mouseup", mouseupHandler);
-
-                // Store references in WeakMap
-                eventListenersMap.set(fan, { mousedownHandler, mouseupHandler });
-            } else {
-                panZoomInstance.enableDblClickZoom(true);
-                panZoomInstance.reset();
-                fan.style.cursor = "default";
-
-                const handlers = eventListenersMap.get(fan);
-                if (handlers) {
-                    fan.removeEventListener("mousedown", handlers.mousedownHandler);
-                    fan.removeEventListener("mouseup", handlers.mouseupHandler);
+            ["individualMapContainer", "personDetails"].forEach(id => {
+                const element = document.getElementById(id);
+                if (element?.classList.contains("show")) {
+                    const instance = Offcanvas.getInstance(element);
+                    if (instance) instance.hide();
                 }
+            });
+        }
+    });
+}
+
+class EventListenerStore {
+    constructor() {
+        this.eventListenersMap = new WeakMap();
+        this.initialized = false;
+    }
+
+    // Ajout de la méthode initialize
+    initialize(authStore) {
+        if (this.initialized) {
+            console.log("Event listeners already initialized");
+            return;
+        }
+
+        console.log("Initializing event listeners");
+        
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => this.initializeAll(authStore));
+        } else {
+            this.initializeAll(authStore);
+        }
+
+        this.initialized = true;
+    }
+
+    setupTooltips() {
+        document.querySelectorAll('[data-bs-toggle="tooltip"]')
+            .forEach(el => new Tooltip(el, { html: true }));
+    }
+
+    setupFanParameters() {
+        const handleParameterChange = (event) => {
+            const input = event.target;
+            const value = this.parseInputValue(input);
+            const storeParamName = this.mapParameterName(input.name);
+            
+            if (storeParamName) {
+                console.log(`Updating ${storeParamName} with value:`, value);
+                configStore.updateConfig({ [storeParamName]: value });
+            }
+        };
+
+        document.querySelectorAll(".parameter").forEach(item => {
+            if (item._changeHandler) {
+                item.removeEventListener("change", item._changeHandler);
+            }
+            item._changeHandler = handleParameterChange;
+            item.addEventListener("change", handleParameterChange);
+        });
+    }
+
+    parseInputValue(input) {
+        const booleanParameters = ["showMarriages", "invert-text-arc", "showMissing"];
+        if (booleanParameters.includes(input.name)) {
+            return input.value === "true";
+        }
+        if (input.type === "number" || ["fanAngle", "max-generations"].includes(input.name)) {
+            return parseInt(input.value, 10);
+        }
+        return input.value;
+    }
+
+    mapParameterName(inputName) {
+        const mapping = {
+            showMarriages: "showMarriages",
+            "invert-text-arc": "invertTextArc",
+            showMissing: "showMissing",
+            fanAngle: "fanAngle",
+            "max-generations": "maxGenerations",
+            fanColor: "coloringOption",
+        };
+        return mapping[inputName];
+    }
+
+    setupFileLoading() {
+        // Chargement des fichiers de démonstration
+        document.querySelectorAll(".remote-file").forEach(element => {
+            element.addEventListener("click", (e) => {
+                loadGedcomFile(e.target.getAttribute("data-link"));
+                return false;
+            });
+        });
+
+        // Chargement des fichiers utilisateur
+        const fileInput = document.getElementById("file");
+        if (fileInput) {
+            fileInput.addEventListener("change", (e) => {
+                loadGedcomFile(e.target.files);
+            });
+        }
+    }
+
+    setupOverlayHandling() {
+        document.addEventListener("click", (event) => {
+            const popover = document.getElementById("customPopover");
+            if (popover && !popover.contains(event.target)) {
+                popover.style.display = "none";
+            }
+        });
+
+        const loadingElement = document.getElementById("loading");
+        const overlayElement = document.getElementById("overlay");
+
+        if (loadingElement) {
+            document.addEventListener("fileLoaded", () => {
+                loadingElement.style.display = "none";
+            });
+        }
+
+        if (overlayElement) {
+            document.addEventListener("fileLoaded", () => {
+                overlayElement.classList.add("overlay-hidden");
+            });
+        }
+    }
+
+    setupTabsAndUI() {
+        // Gestion des dropdowns
+        document.querySelectorAll(".dropdown-menu a").forEach(element => {
+            element.addEventListener("click", function() {
+                const dropdown = this.closest(".dropdown");
+                dropdown.classList.remove("show");
+                dropdown.querySelector(".dropdown-menu").classList.remove("show");
+            });
+        });
+
+        // Gestion des onglets
+        const tabFan = document.querySelector('[href="#tab1"]');
+        if (tabFan) {
+            tabFan.addEventListener("shown.bs.tab", () => {
+                FanChartManager.redrawFan();
+            });
+        }
+
+        // Configuration des panneaux de paramètres
+        ["fan", "tree"].forEach(type => {
+            const button = document.getElementById(`${type}ParametersDisplay`);
+            const panel = document.getElementById(`${type}Parameters`);
+            if (button && panel) {
+                button.addEventListener("click", () => {
+                    new Offcanvas(panel).show();
+                });
             }
         });
     }
 
-    // Store reference in WeakMap
-    eventListenersMap.set(fullscreenButton, fullscreenHandler);
-}
-
-// Function to initialize file loading event listeners
-const setupFileLoadingEventListeners = () => {
-    // Demo file loading
-    Array.from(document.getElementsByClassName("remote-file")).forEach(function (
-        element
-    ) {
-        element.addEventListener("click", function (e) {
-            loadGedcomFile(e.target.getAttribute("data-link"));
-            return false;
-        });
-    });
-
-    // User file loading
-    document.getElementById("file").addEventListener("change", function (e) {
-        loadGedcomFile(e.target.files);
-    });
-};
-
-// Setup tab and UI event listeners
-function setupTabAndUIEventListeners() {
-    document.querySelectorAll(".dropdown-menu a").forEach((element) => {
-        element.addEventListener("click", function () {
-            const dropdownButton = this.closest(".dropdown");
-            dropdownButton.classList.remove("show");
-            dropdownButton.querySelector(".dropdown-menu").classList.remove("show");
-        });
-    });
-
-    const tabFan = document.querySelector('[href="#tab1"]');
-    if (tabFan) {
-        tabFan.addEventListener("shown.bs.tab", () => {
-            configStore.handleSettingChange();
-        });
-    }
-
-    document
-        .getElementById("fanParametersDisplay")
-        .addEventListener("click", () => {
-            const fanParametersOffcanvas = new Offcanvas(
-                document.getElementById("fanParameters")
-            );
-            fanParametersOffcanvas.show();
-        });
-
-    document
-        .getElementById("treeParametersDisplay")
-        .addEventListener("click", () => {
-            const treeParametersOffcanvas = new Offcanvas(
-                document.getElementById("treeParameters")
-            );
-            treeParametersOffcanvas.show();
-        });
-
-    setupFullscreenToggle();
-    setupTooltips();
-}
-
-/**
- * Function to set up all event listeners.
- *
- * @param {AuthStore} authStore - Instance of the MobX store for authentication.
- */
-let eventListenersInitialized = false;
-
-export const setupAllEventListeners = (authStore) => {
-    // Check if event listeners have already been initialized
-    if (eventListenersInitialized) {
-        return;
-    }
-
-    // Mark event listeners as initialized
-    eventListenersInitialized = true;
-
-    // Function to initialize all event listeners
-    const initializeEventListeners = () => {
-        // Add a click event listener to the document
-        document.addEventListener("click", (event) => {
-            // handleCityLinkClick(event); // Handle city link clicks
-            closePopoverOnClickOutside(event); // Close popovers when clicking outside
-        });
-
-        // Add a resize event listener to the window
-        window.addEventListener("resize", () => {
-            console.log("=== Browser Resize ===");
-            console.log("Window dimensions:", window.innerWidth, "x", window.innerHeight);
-        });
-
-        // Set up event listeners for fan parameters
-        setupFanParameterEventListeners();
-        // Set up event listeners for tabs and UI elements
-        setupTabAndUIEventListeners();
-        // Set up event listeners for file loading
-        setupFileLoadingEventListeners();
-        // Set up event listeners for undo and redo actions
-        setupUndoRedoEventListeners();
-        // Set up responsive tabs and tab resize listener after a short delay
-        setTimeout(() => {
-            setupResponsiveTabs();
-            setupTabResizeListener();
-        }, 0);
-
-        // Call the function to set up event listeners for protected features using the MobX store
+    initializeAll(authStore) {
+        this.setupTooltips();
+        this.setupFanParameters();
+        setupPersonLinkEventListener(); // Utilisation de la fonction exportée
+        this.setupFileLoading();
+        this.setupOverlayHandling();
+        this.setupTabsAndUI();
+        
         setupProtectedFeatureEventListeners(authStore);
-    };
+        setupResponsiveTabs();
+        setupTabResizeListener();
 
-    // Check if the document is still loading
-    if (document.readyState === "loading") {
-        // If the document is loading, set up event listeners after the DOM content is loaded
-        document.addEventListener("DOMContentLoaded", initializeEventListeners);
-    } else {
-        // If the document is already loaded, initialize event listeners immediately
-        initializeEventListeners();
+        document.addEventListener("showPersonDetails", (event) => {
+            displayPersonDetailsUI(event.detail);
+        });
     }
+}
+
+// Export de l'instance unique
+export const eventListenerStore = new EventListenerStore();
+
+// Export des fonctions de compatibilité
+export const setupAllEventListeners = (authStore) => {
+    if (!authStore) {
+        console.warn("Auth store not provided to setupAllEventListeners");
+    }
+    eventListenerStore.initialize(authStore);
 };
 
-/*
-// Setup advanced modal
-export function setupAdvancedModal(modalPath) {
-    $('#advanced-parameters').click(function() {
-        $('#advancedModal').load(modalPath, function() {
-            $(this).modal('show');
-        });
-    });
-}*/
+export const setupTooltips = () => {
+    eventListenerStore.setupTooltips();
+};
+
+export const setupFanParameterEventListeners = () => {
+    eventListenerStore.setupFanParameters();
+};
