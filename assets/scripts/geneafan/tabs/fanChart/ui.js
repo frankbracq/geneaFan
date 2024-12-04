@@ -13,6 +13,7 @@ import {
 } from "../../common/stores/state.js";
 
 import { DownloadManager } from "../../common/downloadManager.js";
+import { offcanvasManager } from "./offcanvasManager.js";
 
 // Utility libraries
 import _ from "lodash"; // Utility functions
@@ -38,76 +39,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 
   console.log("DOMContentLoaded event handler completed.");
 });
-
-/* BS offcanvas elements management */
-let offCanvasPersonDetailsInstance = null;
-let offCanvasIndividualMapInstance = null;
-
-function getOffCanvasInstance(elementId, options) {
-  let instance = Offcanvas.getInstance(document.getElementById(elementId));
-  if (!instance) {
-    instance = new Offcanvas(document.getElementById(elementId), options);
-  }
-  return instance;
-}
-
-function showOffCanvasDetails() {
-  const personDetailsElement = document.getElementById("personDetails");
-  const individualMapContainerElement = document.getElementById(
-    "individualMapContainer"
-  );
-
-  offCanvasPersonDetailsInstance = getOffCanvasInstance("personDetails", {});
-  offCanvasIndividualMapInstance = getOffCanvasInstance(
-    "individualMapContainer",
-    {
-      backdrop: false,
-    }
-  );
-
-  if (!offCanvasPersonDetailsInstance._isShown) {
-    offCanvasPersonDetailsInstance.show();
-  }
-  if (!offCanvasIndividualMapInstance._isShown) {
-    offCanvasIndividualMapInstance.show();
-  }
-
-  individualMapContainerElement.removeEventListener(
-    "shown.bs.offcanvas",
-    handleMapResize
-  );
-  individualMapContainerElement.addEventListener(
-    "shown.bs.offcanvas",
-    handleMapResize
-  );
-
-  personDetailsElement.removeEventListener(
-    "hidden.bs.offcanvas",
-    handleOffcanvasHide
-  );
-  personDetailsElement.addEventListener(
-    "hidden.bs.offcanvas",
-    handleOffcanvasHide
-  );
-}
-
-function handleMapResize() {
-  const offCanvasBody = document.querySelector(
-    "#individualMapContainer .offcanvas-body"
-  );
-  const mapElement = document.getElementById("individualMap");
-  mapElement.style.height = `${offCanvasBody.clientHeight}px`;
-
-  googleMapsStore.moveMapToContainer("individualMap");
-  google.maps.event.trigger(googleMapsStore.map, "resize");
-  googleMapsStore.map.setCenter({ lat: 46.2276, lng: 2.2137 });
-}
-
-function handleOffcanvasHide() {
-  if (offCanvasIndividualMapInstance) {
-    offCanvasIndividualMapInstance.hide();
-  }
-}
 
 export function displayPersonDetailsUI(personDetails) {
   const {
@@ -252,7 +183,7 @@ export function displayPersonDetailsUI(personDetails) {
   const individualTownKeys = Object.keys(individualTowns);
   googleMapsStore.activateMapMarkers(individualTownKeys);
 
-  showOffCanvasDetails();
+  offcanvasManager.showOffCanvasDetails()
 }
 
 function ordinalSuffixOf(i) {
@@ -365,12 +296,6 @@ export function displayFan() {
       }
   });
 }
-
-// Function to check if the fan container is visible
-const isFanContainerVisible = () => {
-  const fanContainer = document.getElementById("fanContainer");
-  return fanContainer && fanContainer.offsetParent !== null;
-};
 
 export function initPage() {
   console.log("Initialisation de la page...");
