@@ -1,6 +1,7 @@
 import { makeAutoObservable, action, reaction, runInAction } from './mobx-config.js';
 import TomSelect from 'tom-select';
 import { updateFilename } from "../downloadManager.js";
+import { DownloadManager } from "../downloadManager.js"; 
 import { draw } from "../../tabs/fanChart/fan.js";
 import { FanChartManager } from "../../tabs/fanChart/fanChartManager.js";
 import { getSvgPanZoomInstance, setSvgPanZoomInstance } from "./state.js";
@@ -11,6 +12,7 @@ class RootPersonStore {
     tomSelect = null;
     configHistory = [];
     currentConfigIndex = -1;
+    downloadManager = null;
 
     constructor() {
         makeAutoObservable(this, {
@@ -25,7 +27,8 @@ class RootPersonStore {
             
             // Non-observables
             tomSelect: false,
-            configHistory: false
+            configHistory: false,
+            downloadManager: false
         });
 
         // Réagir aux changements de root
@@ -52,6 +55,27 @@ class RootPersonStore {
                 name: 'RootPersonStore-RootChangeReaction'
             }
         );
+
+        // Réaction qui met à jour automatiquement le DownloadManager
+        reaction(
+            () => this.rootPersonName,
+            (newRootPersonName) => {
+                if (newRootPersonName) {
+                    runInAction(() => {
+                        if (this.downloadManager) {
+                            this.downloadManager.updateRootPersonName(newRootPersonName);
+                        } else {
+                            this.downloadManager = new DownloadManager(newRootPersonName);
+                        }
+                    });
+                }
+            },
+            {
+                name: 'RootPersonStore-DownloadManagerInitialization'
+            }
+        );
+
+
     }
 
     setRoot = action((newRoot) => {

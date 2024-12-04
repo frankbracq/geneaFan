@@ -318,6 +318,10 @@ export class DownloadManager {
         this.setupEventListeners();
     }
 
+    updateRootPersonName(newRootPersonName) {
+        this.rootPersonName = newRootPersonName;
+    }
+
     setupEventListeners() {
         document.getElementById("download-pdf")
             .addEventListener("click", (event) => {
