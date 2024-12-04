@@ -1,35 +1,9 @@
 // MobX state management
-import configStore from "./fanConfigStore.js";
-import rootPersonStore from "../../common/stores/rootPersonStore.js";
-import familyTownsStore from "../../gedcom/familyTownsStore.js";
 import { googleMapsStore } from "../familyMap/googleMapsStore.js";
-import { DownloadManager } from "../../common/downloadManager.js";
 import { offcanvasManager } from "./offcanvasManager.js";
-import { FanChartManager } from "./fanChartManager.js";
 
 // Utility libraries
 import _ from "lodash";
-
-let rootPersonName;
-
-/*
-document.addEventListener("DOMContentLoaded", async function () {
-    console.log("DOMContentLoaded fired.");
-
-    FanChartManager.initialize();
-
-    // Hide the overlay after initialization
-    const overlay = document.getElementById("overlay");
-    if (overlay) {
-        overlay.style.display = "none";
-        console.log("Overlay hidden.");
-    } else {
-        console.error("Element with ID 'overlay' not found.");
-    }
-
-    console.log("DOMContentLoaded event handler completed.");
-});
-*/
 
 export function displayPersonDetailsUI(personDetails) {
     const {
@@ -167,57 +141,4 @@ function ordinalSuffixOf(i) {
         return "er";
     }
     return "ème";
-}
-
-export async function resetUI() {
-    const parametersElements = document.querySelectorAll(".parameter");
-    const individualSelectElement = document.getElementById("individual-select");
-    const downloadMenuElement = document.getElementById("download-menu");
-    const fanParametersDisplayElement = document.getElementById("fanParametersDisplay");
-    const treeParametersDisplayElement = document.getElementById("treeParametersDisplay");
-    const fullscreenButtonElement = document.getElementById("fullscreenButton");
-
-    // Remove event listeners
-    [...parametersElements, individualSelectElement].forEach((element) => {
-        if (element) {
-            element.removeEventListener("change", configStore.handleSettingChange);
-        }
-    });
-
-    // Reset select elements
-    if (individualSelectElement) {
-        individualSelectElement.innerHTML = "";
-    }
-
-    let tomSelect = rootPersonStore.tomSelect;
-    if (tomSelect) {
-        tomSelect.clearOptions();
-        tomSelect.clear();
-    }
-
-    // Reset fan chart
-    await FanChartManager.reset();
-
-    // Reset stores
-    familyTownsStore.setTownsData({});
-    googleMapsStore.clearMap();
-
-    // Disable UI elements
-    [
-        downloadMenuElement,
-        fanParametersDisplayElement,
-        treeParametersDisplayElement,
-        fullscreenButtonElement,
-    ].forEach((el) => {
-        if (el) el.disabled = true;
-    });
-
-    // Re-add event listeners
-    [...parametersElements, individualSelectElement].forEach((element) => {
-        if (element) {
-            element.addEventListener("change", configStore.handleSettingChange);
-        }
-    });
-
-    rootPersonStore.resetHistory();
 }

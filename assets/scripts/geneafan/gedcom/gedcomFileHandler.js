@@ -3,10 +3,11 @@ import _ from 'lodash';
 import Uppy from '@uppy/core';
 import AwsS3 from '@uppy/aws-s3';
 import configStore from '../tabs/fanChart/fanConfigStore.js';
-import rootPersonStore from '../common/stores/rootPersonStore.js'; // Nouveau import
+import rootPersonStore from '../common/stores/rootPersonStore.js'; 
 import authStore from '../common/stores/authStore.js';
 import gedcomDataStore from './gedcomDataStore.js';
-import familyTownsStore from './familyTownsStore.js'; // Nouveau import
+import familyTownsStore from './familyTownsStore.js'; 
+import { FanChartManager } from '../tabs/fanChart/fanChartManager.js';
 import {
     clearAllStates,
 } from "../common/stores/state.js";
@@ -17,7 +18,6 @@ import {
 import { toJson, getAllPlaces, getIndividualsList } from "./parse.js";
 import { setupPersonLinkEventListener } from "../listeners/eventListeners.js";
 import { googleMapsStore } from '../tabs/familyMap/googleMapsStore.js';
-import { resetUI } from '../tabs/fanChart/ui.js';
 
 /* Code to manage the upload of GEDCOM files to Cloudflare R2*/
 let isLoadingFile = false;
@@ -407,19 +407,70 @@ function findYoungestIndividual(individuals) {
     return _.maxBy(individualsWithBirthDates, "birthDate");
 }
 
+async function resetUIForNewGedcom() {
+    console.log("Resetting UI for new GEDCOM file.");
+    const parametersElements = document.querySelectorAll(".parameter");
+    const individualSelectElement = document.getElementById("individual-select");
+    const downloadMenuElement = document.getElementById("download-menu");
+    const fanParametersDisplayElement = document.getElementById("fanParametersDisplay");
+    const treeParametersDisplayElement = document.getElementById("treeParametersDisplay");
+    const fullscreenButtonElement = document.getElementById("fullscreenButton");
+
+    // Remove event listeners
+    [...parametersElements, individualSelectElement].forEach((element) => {
+        if (element) {
+            element.removeEventListener("change", configStore.handleSettingChange);
+        }
+    });
+
+    // Reset select elements
+    if (individualSelectElement) {
+        individualSelectElement.innerHTML = "";
+    }
+
+    let tomSelect = rootPersonStore.tomSelect;
+    if (tomSelect) {
+        tomSelect.clearOptions();
+        tomSelect.clear();
+    }
+
+    // Reset fan chart
+    await FanChartManager.reset();
+
+    // Reset stores
+    familyTownsStore.setTownsData({});
+    googleMapsStore.clearMap();
+
+    // Disable UI elements
+    [
+        downloadMenuElement,
+        fanParametersDisplayElement,
+        treeParametersDisplayElement,
+        fullscreenButtonElement,
+    ].forEach((el) => {
+        if (el) el.disabled = true;
+    });
+
+    // Re-add event listeners
+    [...parametersElements, individualSelectElement].forEach((element) => {
+        if (element) {
+            element.addEventListener("change", configStore.handleSettingChange);
+        }
+    });
+
+    rootPersonStore.resetHistory();
+}
+
 async function onFileChange(data) {
     handleTabsAndOverlay(true);
-
     clearAllStates();
     gedcomDataStore.clearAllState();
 
-    if (gedcomDataStore.getFileUploaded()) {
-        resetUI();
-    }
+    // Toujours réinitialiser l'UI avant de charger un nouveau fichier
+    await resetUIForNewGedcom();
     gedcomDataStore.setFileUploaded(true);
 
     try {
-        // Remplacer setFamilyTowns par
         familyTownsStore.setTownsData({});
 
         let json = toJson(data);
