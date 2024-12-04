@@ -2,7 +2,7 @@ import { makeAutoObservable, action, reaction, runInAction } from './mobx-config
 import TomSelect from 'tom-select';
 import { updateFilename } from "../downloadManager.js";
 import { draw } from "../../tabs/fanChart/fan.js";
-import { displayFan } from "../../tabs/fanChart/ui.js";
+import { FanChartManager } from "../../tabs/fanChart/fanChartManager.js";
 import { getSvgPanZoomInstance, setSvgPanZoomInstance } from "./state.js";
 
 class RootPersonStore {
@@ -90,7 +90,7 @@ class RootPersonStore {
             }
 
             console.log('Fan drawn successfully, displaying');
-            displayFan();
+            await FanChartManager.displayFan();
 
             if (drawResult.rootPersonName) {
                 // Mise à jour du nom de fichier

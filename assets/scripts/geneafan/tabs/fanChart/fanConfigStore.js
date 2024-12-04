@@ -1,9 +1,6 @@
 import { makeAutoObservable, action, reaction, runInAction, computed, comparer } from '../../common/stores/mobx-config.js';
 import 'tom-select/dist/css/tom-select.css';
-import { draw } from "./fan.js";
-import { displayFan } from "./ui.js";
-import { getSvgPanZoomInstance, setSvgPanZoomInstance } from "../../common/stores/state.js";
-import rootPersonStore from '../../common/stores/rootPersonStore.js'; 
+import { FanChartManager } from "./fanChartManager.js";
 
 class ConfigStore {
     config = {
@@ -184,45 +181,10 @@ class ConfigStore {
     handleSettingChangeInternal = action(() => {
         if (!this.config.gedcomFileName) {
             console.warn("No GEDCOM file loaded. Skipping handleSettingChange.");
-            return;
-        }
-
-        try {
-            const fanContainer = document.getElementById("fanContainer");
-            if (!fanContainer || fanContainer.offsetParent === null) {
-                console.warn("Fan container is not visible");
-                return false;
-            }
-
-            console.log('Starting fan drawing process');
-            let svgElement = document.querySelector('#fan');
-            let svgPanZoomInstance = getSvgPanZoomInstance();
-            if (svgElement && svgPanZoomInstance) {
-                svgPanZoomInstance.destroy();
-                setSvgPanZoomInstance(null);
-            }
-
-            // Passer le root actuel à draw()
-            const currentRoot = rootPersonStore.root;
-            console.log('Drawing fan with current root:', currentRoot);
-            const drawResult = draw(currentRoot);
-            
-            if (!drawResult) {
-                console.error("Failed to draw fan");
-                return false;
-            }
-
-            console.log('Fan drawn successfully, displaying');
-            displayFan();
-
-            document.getElementById("loading").style.display = "none";
-            document.getElementById("overlay").classList.add("overlay-hidden");
-
-            return true;
-        } catch (error) {
-            console.error("Error in handleSettingChange:", error);
             return false;
         }
+    
+        return FanChartManager.redrawFan();
     });
 
     batchUpdate = action((updates) => {
