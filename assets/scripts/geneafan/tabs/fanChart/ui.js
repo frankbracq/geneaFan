@@ -1,9 +1,8 @@
 // MobX state management
-import authStore from "./common/stores/authStore.js";
-import configStore from "./tabs/fanChart/fanConfigStore.js";
-import rootPersonStore from "./common/stores/rootPersonStore.js";
-import familyTownsStore from "./gedcom/familyTownsStore.js";
-import { googleMapsStore } from "./tabs/familyMap/googleMapsStore.js";
+import configStore from "./fanConfigStore.js";
+import rootPersonStore from "../../common/stores/rootPersonStore.js";
+import familyTownsStore from "../../gedcom/familyTownsStore.js";
+import { googleMapsStore } from "../familyMap/googleMapsStore.js";
 
 // Application state and utilities
 import {
@@ -11,31 +10,22 @@ import {
   getSvgPanZoomInstance,
   initSvgPanZoom,
   destroySvgPanZoom,
-} from "./common/stores/state.js";
+} from "../../common/stores/state.js";
 
-import { DownloadManager } from "./common/downloadManager.js";
+import { DownloadManager } from "../../common/downloadManager.js";
 
 // Utility libraries
 import _ from "lodash"; // Utility functions
 
 // UI Libraries & Components
-// import svgPanZoom from "svg-pan-zoom"; // SVG pan and zoom functionality
 import { Offcanvas } from "bootstrap"; // Bootstrap components
 
-// Event listeners
-import { setupAllEventListeners } from "./listeners/eventListeners.js";
-
-let config;
 let rootPersonName;
-
 
 document.addEventListener("DOMContentLoaded", async function () {
   console.log("DOMContentLoaded fired.");
 
   initPage();
-
-  // Set up all event listeners with Clerk via MobX
-  setupAllEventListeners(authStore);
 
   // Hide the overlay after initialization
   const overlay = document.getElementById("overlay");
@@ -381,17 +371,6 @@ const isFanContainerVisible = () => {
   const fanContainer = document.getElementById("fanContainer");
   return fanContainer && fanContainer.offsetParent !== null;
 };
-
-// Prevent the user from entering invalid quantities
-document.querySelectorAll("input[type=number]").forEach(function (input) {
-  input.addEventListener("change", function () {
-    const min = parseInt(input.getAttribute("min"));
-    const max = parseInt(input.getAttribute("max"));
-    let val = parseInt(input.value) || min - 1;
-    if (val < min) input.value = min;
-    if (val > max) input.value = max;
-  });
-});
 
 export function initPage() {
   console.log("Initialisation de la page...");

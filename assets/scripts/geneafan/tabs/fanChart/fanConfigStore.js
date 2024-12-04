@@ -1,7 +1,7 @@
 import { makeAutoObservable, action, reaction, runInAction, computed, comparer } from '../../common/stores/mobx-config.js';
 import 'tom-select/dist/css/tom-select.css';
 import { draw } from "./fan.js";
-import { displayFan } from "../../ui.js";
+import { displayFan } from "./ui.js";
 import { getSvgPanZoomInstance, setSvgPanZoomInstance } from "../../common/stores/state.js";
 import rootPersonStore from '../../common/stores/rootPersonStore.js'; 
 

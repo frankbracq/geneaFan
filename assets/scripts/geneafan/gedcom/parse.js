@@ -1347,8 +1347,6 @@ function formatFamilyTreeData(individualsCache) {
     return formattedData;
 }
 
-// Fonction appelée depuis ui.js pour préparer la liste déroulante de sélection de l'individu racine
-// Fonction appelée depuis ui.js pour préparer la liste déroulante de sélection de l'individu racine
 function getIndividualsList() {
     // Build the cache of individuals with all their information
     const individualsCache = prebuildindividualsCache();

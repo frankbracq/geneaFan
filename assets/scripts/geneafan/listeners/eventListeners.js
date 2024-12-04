@@ -7,7 +7,7 @@ import {
     setupResponsiveTabs,
     setupTabResizeListener,
 } from "./responsiveTabs.js";
-import { displayPersonDetailsUI } from "../ui.js";
+import { displayPersonDetailsUI } from "../tabs/fanChart/ui.js";
 import { loadGedcomFile } from "../gedcom/gedcomFileHandler.js";
 import { Offcanvas, Tooltip } from "bootstrap";
 import screenfull from "screenfull";

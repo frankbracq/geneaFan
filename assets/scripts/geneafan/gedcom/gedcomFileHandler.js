@@ -17,7 +17,7 @@ import {
 import { toJson, getAllPlaces, getIndividualsList } from "./parse.js";
 import { setupPersonLinkEventListener } from "../listeners/eventListeners.js";
 import { googleMapsStore } from '../tabs/familyMap/googleMapsStore.js';
-import { resetUI } from '../ui.js';
+import { resetUI } from '../tabs/fanChart/ui.js';
 
 /* Code to manage the upload of GEDCOM files to Cloudflare R2*/
 let isLoadingFile = false;
