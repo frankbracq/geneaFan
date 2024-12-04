@@ -1,4 +1,3 @@
-import familyTownsStore from "../gedcom/familyTownsStore.js";
 import { getSvgPanZoomInstance } from "../common/stores/state.js";
 import configStore from "../tabs/fanChart/fanConfigStore.js";
 import rootPersonStore from "../common/stores/rootPersonStore.js"; // Nouveau import
@@ -7,7 +6,7 @@ import {
     setupResponsiveTabs,
     setupTabResizeListener,
 } from "./responsiveTabs.js";
-import { displayPersonDetailsUI } from "../tabs/fanChart/ui.js";
+import { displayPersonDetailsUI } from "../tabs/fanChart/personDetailsDisplay.js";
 import { loadGedcomFile } from "../gedcom/gedcomFileHandler.js";
 import { Offcanvas, Tooltip } from "bootstrap";
 import screenfull from "screenfull";
