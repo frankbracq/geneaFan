@@ -1,15 +1,18 @@
 import TimelineManager from './timeline/timelineManager.js';
+import { googleMapManager } from './familyMap/googleMapManager.js';
 
 export async function initializeTabs() {
     console.log('Tab initialization started');
     
     try {
-        // Pour l'instant, on initialise juste le TimelineManager comme dans l'ancien système
+        // Initialize Timeline
         new TimelineManager();
+        
+        // Initialize Google Maps
+        await googleMapManager.initialize();
         
         // Les autres initialisations de tabs seront ajoutées progressivement
         // TODO: FanChart
-        // TODO: FamilyMap
         // TODO: FamilyTree
         
     } catch (error) {

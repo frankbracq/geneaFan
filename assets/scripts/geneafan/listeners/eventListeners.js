@@ -9,7 +9,6 @@ import {
 } from "./responsiveTabs.js";
 import { displayPersonDetailsUI } from "../ui.js";
 import { loadGedcomFile } from "../gedcom/gedcomFileHandler.js";
-import { googleMapsStore } from '../tabs/familyMap/googleMapsStore.js';
 import { Offcanvas, Tooltip } from "bootstrap";
 import screenfull from "screenfull";
 
@@ -32,6 +31,7 @@ document.addEventListener("showPersonDetails", (event) => {
 });
 
 // Handle city link clicks with delegation
+/*
 function handleCityLinkClick(event) {
     if (event.target.classList.contains("city-link")) {
         const townKey = event.target.dataset.townKey;
@@ -60,6 +60,7 @@ function handleCityLinkClick(event) {
         }
     }
 }
+    */
 
 // Close popover on outside click
 function closePopoverOnClickOutside(event) {
@@ -305,18 +306,6 @@ function setupTabAndUIEventListeners() {
         });
     }
 
-    const tabFamilyMap = document.querySelector('[href="#tab2"]');
-    if (tabFamilyMap) {
-        tabFamilyMap.addEventListener("show.bs.tab", () => {
-            if (googleMapsStore.map) {
-                googleMapsStore.moveMapToContainer("tab2");
-                googleMapsStore.activateMapMarkers();
-                google.maps.event.trigger(googleMapsStore.map, "resize");
-                googleMapsStore.map.setCenter({ lat: 46.2276, lng: 2.2137 });
-            }
-        });
-    }
-
     document
         .getElementById("fanParametersDisplay")
         .addEventListener("click", () => {
@@ -359,7 +348,7 @@ export const setupAllEventListeners = (authStore) => {
     const initializeEventListeners = () => {
         // Add a click event listener to the document
         document.addEventListener("click", (event) => {
-            handleCityLinkClick(event); // Handle city link clicks
+            // handleCityLinkClick(event); // Handle city link clicks
             closePopoverOnClickOutside(event); // Close popovers when clicking outside
         });
 

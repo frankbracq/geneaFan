@@ -1,5 +1,5 @@
 import { initializeAuth } from './auth.js';
-import { initializeMaps } from './maps.js';
+import { initializeTabs } from '../tabs/tabManager.js';
 import { setupEventListeners } from './events.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -7,16 +7,11 @@ export async function setupCore() {
     console.log('Core setup started');
     
     try {
-        // Ensure user ID exists
         ensureUserId();
-        
-        // Initialize core services
         await initializeAuth();
-        await initializeMaps();
+        await initializeTabs(); // Initialize tabs including Google Maps
         setupEventListeners();
-        
         handleUrlParameters();
-        
     } catch (error) {
         console.error("Error in core setup:", error);
         throw error;
