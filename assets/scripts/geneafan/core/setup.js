@@ -7,26 +7,61 @@ export async function setupCore() {
     console.log('Core setup started');
     
     try {
+        setupBeforeUnload();
+        await initializeDOMContent();
         ensureUserId();
         await initializeAuth();
-        await initializeTabs(); // Initialize tabs including Google Maps
+        await initializeTabs();
         setupEventListeners();
         handleUrlParameters();
+        hideOverlay();
     } catch (error) {
         console.error("Error in core setup:", error);
         throw error;
     }
 }
 
+function setupBeforeUnload() {
+    window.addEventListener("beforeunload", function (e) {
+        console.log("La page est sur le point de se recharger ou de se fermer.");
+    });
+}
+
+async function initializeDOMContent() {
+    if (document.readyState === 'loading') {
+        await new Promise(resolve => {
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log("DOMContentLoaded fired.");
+                resolve();
+            });
+        });
+    }
+}
+
 function ensureUserId() {
     let userId = localStorage.getItem('userId');
     if (!userId) {
-        userId = typeof crypto !== 'undefined' && crypto.randomUUID ? 
-            crypto.randomUUID() : 
-            uuidv4();
+        userId = generateUniqueId();
         localStorage.setItem('userId', userId);
     }
     return userId;
+}
+
+function generateUniqueId() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    return uuidv4();
+}
+
+function hideOverlay() {
+    const overlay = document.getElementById("overlay");
+    if (overlay) {
+        overlay.style.display = "none";
+        console.log("Overlay hidden.");
+    } else {
+        console.error("Element with ID 'overlay' not found.");
+    }
 }
 
 function handleUrlParameters() {

@@ -10,16 +10,20 @@ class GoogleMapManager {
 
     async initialize() {
         if (this.initialized) return;
-
+    
         try {
             this.loader = new Loader({
                 apiKey: googleMapsStore.apiKey,
                 version: "weekly",
                 libraries: []
             });
-
+    
             await this.loader.load();
             this.initialized = true;
+            
+            // Initialiser la carte principale
+            this.initializeMap("familyMap");
+            
             this.setupEventListeners();
             console.log('Google Maps API loaded successfully');
         } catch (error) {

@@ -28,7 +28,7 @@ class GoogleMapsStore {
             const defaultOptions = {
                 zoom: 6.2,
                 center: { lat: 46.2276, lng: 2.2137 },
-                styles: this.#getMapStyle(),
+                styles: this.getMapStyle(),
                 streetViewControl: false,
                 zoomControl: true,
                 zoomControlOptions: { 
@@ -150,90 +150,7 @@ class GoogleMapsStore {
         }
     }
 
-    // Private Methods
-    #setupMapListeners() {
-        this.map.addListener('zoom_changed', () => this.#recordState());
-        this.map.addListener('center_changed', () => this.#recordState());
-    }
-
-    #recordState() {
-        const currentState = {
-            zoom: this.map.getZoom(),
-            center: this.map.getCenter().toJSON()
-        };
-
-        const lastState = this.history[this.history.length - 1];
-        if (!this.#isSameState(lastState, currentState)) {
-            this.history.push(currentState);
-            this.redoStack = [];
-        }
-    }
-
-    #isSameState(state1, state2) {
-        if (!state1) return false;
-        return state1.zoom === state2.zoom && 
-               state1.center.lat === state2.center.lat && 
-               state1.center.lng === state2.center.lng;
-    }
-
-    #addMapControls() {
-        this.#addResetControl();
-        this.#addUndoRedoControls();
-    }
-
-    #addResetControl() {
-        const controlDiv = document.createElement('div');
-        controlDiv.style.margin = '10px';
-
-        const button = document.createElement('button');
-        this.#styleControlButton(button);
-        button.title = 'Reset map';
-        button.innerText = 'Reset Map';
-        button.addEventListener('click', () => this.clearMap());
-
-        controlDiv.appendChild(button);
-        this.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlDiv);
-    }
-
-    #addUndoRedoControls() {
-        const controlDiv = document.createElement('div');
-        controlDiv.style.margin = '10px';
-
-        const undoButton = document.createElement('button');
-        this.#styleControlButton(undoButton);
-        undoButton.title = 'Undo';
-        undoButton.innerText = 'Undo';
-        undoButton.addEventListener('click', () => this.undo());
-
-        const redoButton = document.createElement('button');
-        this.#styleControlButton(redoButton);
-        redoButton.title = 'Redo';
-        redoButton.innerText = 'Redo';
-        redoButton.addEventListener('click', () => this.redo());
-
-        controlDiv.appendChild(undoButton);
-        controlDiv.appendChild(redoButton);
-        this.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlDiv);
-    }
-
-    #styleControlButton(button) {
-        Object.assign(button.style, {
-            backgroundColor: '#fff',
-            border: '2px solid #fff',
-            borderRadius: '3px',
-            boxShadow: '0 2px 6px rgba(0,0,0,.3)',
-            cursor: 'pointer',
-            marginRight: '5px',
-            textAlign: 'center'
-        });
-    }
-
-    #applyState(state) {
-        this.map.setZoom(state.zoom);
-        this.map.setCenter(state.center);
-    }
-
-    #getMapStyle() {
+    getMapStyle() {
         return [
             {
                 "featureType": "all",
@@ -434,6 +351,89 @@ class GoogleMapsStore {
                 ]
             }
         ];
+    }
+
+    // Private Methods
+    #setupMapListeners() {
+        this.map.addListener('zoom_changed', () => this.#recordState());
+        this.map.addListener('center_changed', () => this.#recordState());
+    }
+
+    #recordState() {
+        const currentState = {
+            zoom: this.map.getZoom(),
+            center: this.map.getCenter().toJSON()
+        };
+
+        const lastState = this.history[this.history.length - 1];
+        if (!this.#isSameState(lastState, currentState)) {
+            this.history.push(currentState);
+            this.redoStack = [];
+        }
+    }
+
+    #isSameState(state1, state2) {
+        if (!state1) return false;
+        return state1.zoom === state2.zoom && 
+               state1.center.lat === state2.center.lat && 
+               state1.center.lng === state2.center.lng;
+    }
+
+    #addMapControls() {
+        this.#addResetControl();
+        this.#addUndoRedoControls();
+    }
+
+    #addResetControl() {
+        const controlDiv = document.createElement('div');
+        controlDiv.style.margin = '10px';
+
+        const button = document.createElement('button');
+        this.#styleControlButton(button);
+        button.title = 'Reset map';
+        button.innerText = 'Reset Map';
+        button.addEventListener('click', () => this.clearMap());
+
+        controlDiv.appendChild(button);
+        this.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlDiv);
+    }
+
+    #addUndoRedoControls() {
+        const controlDiv = document.createElement('div');
+        controlDiv.style.margin = '10px';
+
+        const undoButton = document.createElement('button');
+        this.#styleControlButton(undoButton);
+        undoButton.title = 'Undo';
+        undoButton.innerText = 'Undo';
+        undoButton.addEventListener('click', () => this.undo());
+
+        const redoButton = document.createElement('button');
+        this.#styleControlButton(redoButton);
+        redoButton.title = 'Redo';
+        redoButton.innerText = 'Redo';
+        redoButton.addEventListener('click', () => this.redo());
+
+        controlDiv.appendChild(undoButton);
+        controlDiv.appendChild(redoButton);
+        this.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlDiv);
+    }
+
+    #styleControlButton(button) {
+        Object.assign(button.style, {
+            backgroundColor: '#fff',
+            border: '2px solid #fff',
+            borderRadius: '3px',
+            boxShadow: '0 2px 6px rgba(0,0,0,.3)',
+            cursor: 'pointer',
+            marginRight: '5px',
+            textAlign: 'center'
+        });
+    }
+
+    #applyState(state) {
+        this.map.setZoom(state.zoom);
+        this.map.setCenter(state.center);
     }
 }
 

@@ -2,7 +2,6 @@
 import authStore from "./common/stores/authStore.js";
 import configStore from "./tabs/fanChart/fanConfigStore.js";
 import rootPersonStore from "./common/stores/rootPersonStore.js";
-import TimelineManager from "./tabs/timeline/timelineManager.js";
 import familyTownsStore from "./gedcom/familyTownsStore.js";
 import { googleMapsStore } from "./tabs/familyMap/googleMapsStore.js";
 
@@ -18,14 +17,10 @@ import { DownloadManager } from "./common/downloadManager.js";
 
 // Utility libraries
 import _ from "lodash"; // Utility functions
-import { v4 as uuidv4 } from "uuid"; // UUID generation
 
 // UI Libraries & Components
 // import svgPanZoom from "svg-pan-zoom"; // SVG pan and zoom functionality
 import { Offcanvas } from "bootstrap"; // Bootstrap components
-
-// Google Maps
-import { Loader } from "@googlemaps/js-api-loader"; // Google Maps loader
 
 // Event listeners
 import { setupAllEventListeners } from "./listeners/eventListeners.js";
@@ -33,9 +28,6 @@ import { setupAllEventListeners } from "./listeners/eventListeners.js";
 let config;
 let rootPersonName;
 
-window.addEventListener("beforeunload", function (e) {
-  console.log("La page est sur le point de se recharger ou de se fermer.");
-});
 
 document.addEventListener("DOMContentLoaded", async function () {
   console.log("DOMContentLoaded fired.");
@@ -401,86 +393,12 @@ document.querySelectorAll("input[type=number]").forEach(function (input) {
   });
 });
 
-function adjustMapHeight() {
-  const offCanvas = document.getElementById("individualMap");
-  const offCanvasHeader = document.querySelector(
-    "#individualMap .offcanvas-header"
-  );
-  const mapId = document.getElementById("mapid");
-
-  if (offCanvas && offCanvasHeader && mapId) {
-    const offCanvasHeight = offCanvas.clientHeight;
-    const headerHeight = offCanvasHeader.clientHeight;
-    const mapHeight = offCanvasHeight - headerHeight;
-    mapId.style.height = `${mapHeight}px`; // Ajuster la hauteur de la carte
-  }
-}
-
-function setupOffcanvasMapTrigger() {
-  var offcanvasElement = document.getElementById("individualMap");
-  if (offcanvasElement) {
-    offcanvasElement.addEventListener("shown.bs.offcanvas", function () {
-      googleMapsStore.initMap("individualMap");
-      adjustMapHeight();
-    });
-  }
-}
-
 export function initPage() {
   console.log("Initialisation de la page...");
   if (isReady) {
     document.getElementById("overlay").classList.add("overlay-hidden");
   }
 
-  let userId = localStorage.getItem("userId");
-  if (!userId) {
-    userId = generateUniqueId();
-    localStorage.setItem("userId", userId);
-  }
-
   new DownloadManager(rootPersonName);
-
-  const loader = new Loader({
-    apiKey: googleMapsStore.apiKey,
-    version: "weekly",
-    libraries: [],
-  });
-
-  loader
-    .load()
-    .then(() => {
-      if (!googleMapsStore.map) {
-        googleMapsStore.initMap("familyMap");
-      }
-      setupOffcanvasMapTrigger();
-    })
-    .catch((e) => {
-      console.error("Error loading Google Maps", e);
-    });
-
-  handleUrlParameters();
-
-  new TimelineManager();
 }
 
-function handleUrlParameters() {
-  var urlParams = new URLSearchParams(window.location.search);
-  var contexte = urlParams.get("contexte");
-
-  if (contexte === "demo") {
-    document.querySelector("#download-svg").style.display = "none";
-    document.querySelector("#download-png-transparency").style.display = "none";
-    document.querySelector("#download-png-background").style.display = "none";
-    // document.querySelector("#advanced-parameters").style.display = "none";
-    document.querySelector("#show-missing").closest(".col").style.display =
-      "none";
-  }
-}
-
-function generateUniqueId() {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return crypto.randomUUID();
-  } else {
-    return uuidv4();
-  }
-}
