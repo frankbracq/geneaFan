@@ -18,9 +18,18 @@ export class FanChartManager {
     }
 
     static setupEventListeners() {
+        // Gestion du bouton plein écran
         const fullscreenButton = document.getElementById('fullscreenButton');
         if (fullscreenButton) {
             fullscreenButton.addEventListener('click', this.handleFullscreen);
+        }
+
+        // Gestion de l'onglet Fan Chart
+        const tabFan = document.querySelector('[href="#tab1"]');
+        if (tabFan) {
+            tabFan.addEventListener("shown.bs.tab", () => {
+                configStore.handleSettingChange();
+            });
         }
     }
 

@@ -298,13 +298,6 @@ function setupTabAndUIEventListeners() {
         });
     });
 
-    const tabFan = document.querySelector('[href="#tab1"]');
-    if (tabFan) {
-        tabFan.addEventListener("shown.bs.tab", () => {
-            configStore.handleSettingChange();
-        });
-    }
-
     document
         .getElementById("fanParametersDisplay")
         .addEventListener("click", () => {
