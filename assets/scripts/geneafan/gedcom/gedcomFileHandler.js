@@ -3,10 +3,10 @@ import _ from 'lodash';
 import Uppy from '@uppy/core';
 import AwsS3 from '@uppy/aws-s3';
 import configStore from '../tabs/fanChart/fanConfigStore.js';
-import rootPersonStore from '../common/stores/rootPersonStore.js'; 
+import rootPersonStore from '../common/stores/rootPersonStore.js';
 import authStore from '../common/stores/authStore.js';
 import gedcomDataStore from './gedcomDataStore.js';
-import familyTownsStore from './familyTownsStore.js'; 
+import familyTownsStore from './familyTownsStore.js';
 import { FanChartManager } from '../tabs/fanChart/fanChartManager.js';
 import {
     clearAllStates,
@@ -522,12 +522,14 @@ async function onFileChange(data) {
         // Mise à jour du root et du nom
         const rootPerson = individuals.find((individual) => individual.id === rootId);
         if (rootPerson) {
-            rootPersonStore.setRoot(rootId); // Utiliser rootPersonStore
-            rootPersonStore.setRootPersonName({ // Utiliser rootPersonStore
+            // Éviter le premier dessin
+            rootPersonStore.setRoot(rootId, { skipDraw: true });
+            rootPersonStore.setRootPersonName({
                 name: rootPerson.name,
                 surname: rootPerson.surname,
             });
-            rootPersonStore.setTomSelectValue(rootId); // Utiliser rootPersonStore
+            // Le dessin sera déclenché ici une seule fois
+            rootPersonStore.setTomSelectValue(rootId);
         }
 
         [

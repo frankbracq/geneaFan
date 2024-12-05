@@ -164,9 +164,9 @@ export class SVGPanZoomManager {
         this.state.containerWidth = rect.width;
         this.state.containerHeight = rect.height;
     
-        console.log("=== handleResize ===");
-        console.log("Container dimensions:", rect.width, "x", rect.height);
-        console.trace("Trace of handleResize"); // Affiche la pile d'appels
+        // console.log("=== handleResize ===");
+        // console.log("Container dimensions:", rect.width, "x", rect.height);
+        // console.trace("Trace of handleResize"); // Affiche la pile d'appels
     
         this.centerAndFit();
     
@@ -206,8 +206,8 @@ export class SVGPanZoomManager {
         this.svg.style.transform = transform;
         this.svg.style.transformOrigin = '0 0';
     
-        console.log("=== updateTransform ===");
-        console.log("Applied transform:", transform);
+        // console.log("=== updateTransform ===");
+        // console.log("Applied transform:", transform);
     }
 
     centerAndFit() {
@@ -232,12 +232,12 @@ export class SVGPanZoomManager {
         this.state.pointX = offsetX;
         this.state.pointY = offsetY;
 
-        console.log("=== centerAndFit ===");
-        console.log("Container dimensions:", containerRect.width, "x", containerRect.height);
-        console.log("SVG viewBox:", viewBox.width, "x", viewBox.height);
-        console.log("Scaled dimensions:", scaledWidth, "x", scaledHeight);
-        console.log("Computed scale:", scale);
-        console.log("Offsets - X:", offsetX, "Y:", offsetY);
+        // console.log("=== centerAndFit ===");
+        // console.log("Container dimensions:", containerRect.width, "x", containerRect.height);
+        // console.log("SVG viewBox:", viewBox.width, "x", viewBox.height);
+        // console.log("Scaled dimensions:", scaledWidth, "x", scaledHeight);
+        // console.log("Computed scale:", scale);
+        // console.log("Offsets - X:", offsetX, "Y:", offsetY);
     }
 
     destroy() {

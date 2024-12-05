@@ -13,6 +13,7 @@ class RootPersonStore {
     configHistory = [];
     currentConfigIndex = -1;
     downloadManager = null;
+    _skipNextDraw = false; 
 
     constructor() {
         makeAutoObservable(this, {
@@ -39,16 +40,15 @@ class RootPersonStore {
                 if (newRoot === previousRoot) return;
                 
                 try {
-                    // Mise à jour de la visualisation
-                    await this.handleRootChange(newRoot);
-
-                    // Si le changement de root s'est bien passé, mettre à jour l'historique
+                    if (!this._skipNextDraw) {
+                        await this.handleRootChange(newRoot);
+                    }
                     this.updateHistory(newRoot);
-
-                    // Mettre à jour l'interface
                     document.getElementById('initial-group').style.display = 'none';
                 } catch (error) {
                     console.error("Error handling root change:", error);
+                } finally {
+                    this._skipNextDraw = false;  // Réinitialiser le flag
                 }
             },
             {
@@ -78,7 +78,10 @@ class RootPersonStore {
 
     }
 
-    setRoot = action((newRoot) => {
+    setRoot = action((newRoot, options = {}) => {
+        if (options.skipDraw) {
+            this._skipNextDraw = true;
+        }
         this.root = newRoot;
         this.updateHistory(newRoot);
     });
