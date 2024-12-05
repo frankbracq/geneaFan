@@ -1,4 +1,3 @@
-import { getSvgPanZoomInstance } from "../common/stores/state.js";
 import configStore from "../tabs/fanChart/fanConfigStore.js";
 import rootPersonStore from "../common/stores/rootPersonStore.js"; // Nouveau import
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
@@ -9,7 +8,6 @@ import {
 import { displayPersonDetailsUI } from "../tabs/fanChart/personDetailsDisplay.js";
 import { loadGedcomFile } from "../gedcom/gedcomFileHandler.js";
 import { Offcanvas, Tooltip } from "bootstrap";
-import screenfull from "screenfull";
 
 // WeakMap to store event listener references
 const eventListenersMap = new WeakMap();
@@ -215,61 +213,6 @@ function setupUndoRedoEventListeners() {
     eventListenersMap.set(document, keydownHandler);
 }
 
-// Setup fullscreen toggle
-function setupFullscreenToggle() {
-    const fullscreenButton = document.getElementById("fullscreenButton");
-    const fanContainer = document.getElementById("fanContainer");
-
-    const fullscreenHandler = () => {
-        if (screenfull.isEnabled) {
-            screenfull.toggle(fanContainer);
-        }
-    };
-
-    fullscreenButton.addEventListener("click", fullscreenHandler);
-
-    if (screenfull.isEnabled) {
-        screenfull.on("change", () => {
-            const panZoomInstance = getSvgPanZoomInstance();
-            panZoomInstance.updateBBox();
-            panZoomInstance.fit();
-            panZoomInstance.center();
-
-            const fan = document.getElementById("fan");
-
-            if (screenfull.isFullscreen) {
-                panZoomInstance.disableDblClickZoom(false);
-
-                const mousedownHandler = () => {
-                    fan.style.cursor = "grabbing";
-                };
-                const mouseupHandler = () => {
-                    fan.style.cursor = "grab";
-                };
-
-                fan.addEventListener("mousedown", mousedownHandler);
-                fan.addEventListener("mouseup", mouseupHandler);
-
-                // Store references in WeakMap
-                eventListenersMap.set(fan, { mousedownHandler, mouseupHandler });
-            } else {
-                panZoomInstance.enableDblClickZoom(true);
-                panZoomInstance.reset();
-                fan.style.cursor = "default";
-
-                const handlers = eventListenersMap.get(fan);
-                if (handlers) {
-                    fan.removeEventListener("mousedown", handlers.mousedownHandler);
-                    fan.removeEventListener("mouseup", handlers.mouseupHandler);
-                }
-            }
-        });
-    }
-
-    // Store reference in WeakMap
-    eventListenersMap.set(fullscreenButton, fullscreenHandler);
-}
-
 // Function to initialize file loading event listeners
 const setupFileLoadingEventListeners = () => {
     // Demo file loading
@@ -316,7 +259,6 @@ function setupTabAndUIEventListeners() {
             treeParametersOffcanvas.show();
         });
 
-    setupFullscreenToggle();
     setupTooltips();
 }
 

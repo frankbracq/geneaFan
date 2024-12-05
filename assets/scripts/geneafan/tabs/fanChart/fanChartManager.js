@@ -2,15 +2,14 @@ import { draw } from "./fan.js";
 import { 
     setSvgPanZoomInstance, 
     getSvgPanZoomInstance,
-    initSvgPanZoom,
     destroySvgPanZoom 
 } from "../../common/stores/state.js";
 import rootPersonStore from "../../common/stores/rootPersonStore.js";
 import configStore from "./fanConfigStore.js";
+import screenfull from "screenfull";
+import { SVGPanZoomManager } from "./SVGPanZoomManager.js";
 
 export class FanChartManager {
-    static instances = new Map();
-
     static initialize() {
         console.log("Initializing fan chart...");
         this.setupEventListeners();
@@ -18,10 +17,15 @@ export class FanChartManager {
     }
 
     static setupEventListeners() {
-        // Gestion du bouton plein écran
-        const fullscreenButton = document.getElementById('fullscreenButton');
-        if (fullscreenButton) {
-            fullscreenButton.addEventListener('click', this.handleFullscreen);
+        if (screenfull.isEnabled) {
+            // Gestion du bouton plein écran
+            const fullscreenButton = document.getElementById('fullscreenButton');
+            if (fullscreenButton) {
+                fullscreenButton.addEventListener('click', this.handleFullscreen);
+            }
+
+            // Écouteur pour les changements de mode plein écran
+            screenfull.on('change', () => this.handleFullscreenChange());
         }
 
         // Gestion de l'onglet Fan Chart
@@ -30,6 +34,36 @@ export class FanChartManager {
             tabFan.addEventListener("shown.bs.tab", () => {
                 configStore.handleSettingChange();
             });
+        }
+    }
+
+    static handleFullscreen = async () => {
+        const container = document.getElementById('fanContainer');
+        
+        if (screenfull.isEnabled) {
+            try {
+                await screenfull.toggle(container);
+            } catch (error) {
+                console.error('Error toggling fullscreen:', error);
+            }
+        }
+    }
+
+    static handleFullscreenChange() {
+        const panZoomInstance = getSvgPanZoomInstance();
+        const fan = document.getElementById("fan");
+        
+        if (!panZoomInstance || !fan) return;
+
+        if (screenfull.isFullscreen) {
+            // Configuration mode plein écran
+            panZoomInstance.handleResize();
+            panZoomInstance.centerAndFit();
+            fan.style.cursor = "grab";
+        } else {
+            // Retour mode normal
+            panZoomInstance.handleResize();
+            fan.style.cursor = "default";
         }
     }
 
@@ -45,9 +79,14 @@ export class FanChartManager {
         svg.style.opacity = '0';
 
         try {
-            // Créer l'instance SVG Pan Zoom avec les options appropriées
-            const instance = await this.initializePanZoom(svg);
-            this.instances.set('panZoom', instance);
+            // Créer l'instance SVGPanZoomManager avec les options appropriées
+            const instance = new SVGPanZoomManager(svg, {
+                minZoom: 0.1,
+                maxZoom: 10,
+                zoomScaleSensitivity: 0.2,
+                fitPadding: 20
+            });
+            setSvgPanZoomInstance(instance);
 
             // Animer l'apparition du fan
             requestAnimationFrame(() => {
@@ -57,39 +96,6 @@ export class FanChartManager {
 
         } catch (error) {
             console.error('Error displaying fan:', error);
-        }
-    }
-
-    static async initializePanZoom(svg) {
-        const instance = initSvgPanZoom(svg, {
-            minZoom: 0.1,
-            maxZoom: 10,
-            zoomScaleSensitivity: 0.2,
-            fitPadding: 20
-        });
-
-        setSvgPanZoomInstance(instance);
-        return instance;
-    }
-
-    static handleFullscreen = async () => {
-        const container = document.getElementById('fanContainer');
-        const instance = this.instances.get('panZoom');
-
-        if (!document.fullscreenElement) {
-            try {
-                await container.requestFullscreen();
-                if (instance) instance.handleResize();
-            } catch (error) {
-                console.error('Error attempting to enable fullscreen:', error);
-            }
-        } else {
-            try {
-                await document.exitFullscreen();
-                if (instance) instance.handleResize();
-            } catch (error) {
-                console.error('Error attempting to exit fullscreen:', error);
-            }
         }
     }
 
@@ -161,11 +167,9 @@ export class FanChartManager {
     }
 
     static reset() {
+        // Nettoyage de l'instance SVGPanZoomManager
         this.cleanupExistingInstance();
         
-        // Réinitialiser les instances stockées
-        this.instances.clear();
-
         // Réinitialiser l'état du fan
         const fanSvg = document.getElementById("fan");
         if (fanSvg) {
