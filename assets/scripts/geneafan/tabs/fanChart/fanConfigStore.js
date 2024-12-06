@@ -45,8 +45,8 @@ class ConfigStore {
     _batchUpdating = false;
     _queueTimeout = null;
     _updateQueued = false;
+    _pendingUpdates = new Set();
 
-    // Computed values
     get angle() {
         return (2 * Math.PI * this.config.fanAngle) / 360.0;
     }
@@ -60,14 +60,12 @@ class ConfigStore {
     }
 
     constructor() {
-        // Calculer les dimensions initiales avec les valeurs par défaut
         const initialDimensions = this.calculateDimensions(
             this.config.fanAngle,
             this.config.maxGenerations,
             this.config.showMarriages
         );
 
-        // Définir les dimensions initiales
         if (initialDimensions) {
             this.config.fanDimensions = initialDimensions.fanDimensionsInMm;
             this.config.frameDimensions = initialDimensions.frameDimensionsInMm;
@@ -79,27 +77,19 @@ class ConfigStore {
             handleSettingChange: action,
             handleSettingChangeInternal: action,
             setConfig: action,
-            setDimensions: action,
             setGedcomFileName: action,
-            setTomSelectValue: action,
-            undo: action,
-            redo: action,
-            resetConfigHistory: action,
             queueSettingChange: action,
             
-            // Computed values
             angle: computed,
             dimensions: computed,
             
-            // Non-observables
             _queueTimeout: false,
             _updateQueued: false,
             _batchUpdating: false,
-            tomSelect: false,
+            _pendingUpdates: false,
             configHistory: false
         });
 
-        // Une seule reaction pour tous les changements
         reaction(
             () => ({
                 fanAngle: this.config.fanAngle,
@@ -111,41 +101,38 @@ class ConfigStore {
             }),
             (params, previousParams) => {
                 if (this._batchUpdating) return;
-        
+
                 runInAction(() => {
-                    let hasChanges = false;
-        
-                    // Vérification des changements de paramètres
-                    if (params.fanAngle !== previousParams?.fanAngle ||
-                        params.maxGenerations !== previousParams?.maxGenerations ||
-                        params.showMarriages !== previousParams?.showMarriages ||
-                        params.invertTextArc !== previousParams?.invertTextArc ||
-                        params.coloringOption !== previousParams?.coloringOption ||
-                        params.showMissing !== previousParams?.showMissing) {
-                        hasChanges = true;
-                    }
-        
-                    // Mises à jour spécifiques
                     if (params.fanAngle !== previousParams?.fanAngle) {
                         this.config.titleMargin = params.fanAngle === 360 ? 0.35 : 0.25;
+                        this._pendingUpdates.add('fanAngle');
                     }
-        
+
                     if (params.coloringOption !== previousParams?.coloringOption) {
                         this.config.computeChildrenCount = params.coloringOption === "childrencount";
+                        this._pendingUpdates.add('coloringOption');
                     }
-        
-                    // Mise à jour des dimensions si nécessaire
+
                     if (params.fanAngle !== previousParams?.fanAngle ||
                         params.maxGenerations !== previousParams?.maxGenerations ||
                         params.showMarriages !== previousParams?.showMarriages) {
                         const dimensions = this.dimensions;
                         if (dimensions) {
-                            this.setDimensions(dimensions);
+                            this.config.fanDimensions = dimensions.fanDimensionsInMm;
+                            this.config.frameDimensions = dimensions.frameDimensionsInMm;
                         }
+                        this._pendingUpdates.add('dimensions');
                     }
-        
-                    if (hasChanges) {
-                        this.queueSettingChange();
+
+                    if (params.invertTextArc !== previousParams?.invertTextArc) {
+                        this._pendingUpdates.add('invertTextArc');
+                    }
+                    if (params.showMissing !== previousParams?.showMissing) {
+                        this._pendingUpdates.add('showMissing');
+                    }
+
+                    if (this._pendingUpdates.size > 0) {
+                        this.handleSettingChange();
                     }
                 });
             },
@@ -157,19 +144,17 @@ class ConfigStore {
     }
 
     queueSettingChange = action(() => {
-        console.log('queueSettingChange called');
-        
-        // Annuler le timeout existant pour le remplacer par un nouveau
         if (this._queueTimeout) {
-            clearTimeout(this._queueTimeout);
+            return; // Ignore multiple calls while a timeout is pending
         }
         
-        // Toujours programmer une nouvelle mise à jour
+        console.log('queueSettingChange called');
         this._queueTimeout = setTimeout(() => {
-            if (this._queueTimeout) {  // Vérifier que le timeout n'a pas été annulé
+            runInAction(() => {
                 this._queueTimeout = null;
+                this._pendingUpdates.clear();
                 this.handleSettingChangeInternal();
-            }
+            });
         }, 50);
     });
 
@@ -217,7 +202,7 @@ class ConfigStore {
         this.setConfig({ [paramName]: value });
     });
 
-    calculateDimensions = action((fanAngle, maxGenerations, showMarriages) => {
+    calculateDimensions(fanAngle, maxGenerations, showMarriages) {
         const dimensionsMap = {
             270: {
                 8: { fanDimensionsInMm: "301x257", frameDimensionsInMm: "331x287" },
@@ -243,14 +228,7 @@ class ConfigStore {
         if (!generationDimensions) return defaultDimensions;
 
         return generationDimensions[showMarriages] || generationDimensions;
-    });
-
-    setDimensions = action((dimensions) => {
-        if (dimensions && dimensions.fanDimensionsInMm && dimensions.frameDimensionsInMm) {
-            this.config.fanDimensions = dimensions.fanDimensionsInMm;
-            this.config.frameDimensions = dimensions.frameDimensionsInMm;
-        }
-    });
+    }
 
     setGedcomFileName = action((fileName) => {
         this.config.gedcomFileName = fileName;
