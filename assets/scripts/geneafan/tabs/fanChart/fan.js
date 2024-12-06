@@ -554,21 +554,22 @@ function adjustFanVerticalPosition(svg, fanHeight, frameHeight, scale) {
     applyTransform('boxes');
 }
 
-export function drawFan(currentRoot) {  // Accepter le root en paramètre
+export function drawFan(currentRoot) {
     console.log('starting drawFan with root:', currentRoot);
     console.time('starting drawFan');
+    
     const config = configStore.getConfig;
     const angle = configStore.angle;
 
-    const data = buildHierarchy(currentRoot);  // Passer le root à buildHierarchy
-    gedcomDataStore.setHierarchy(data);
-
+    // Utiliser la hiérarchie existante du store
+    const data = gedcomDataStore.getHierarchy();
+    
     if (data == null) {
         console.log("Data is null for drawFan. Exiting.");
         window.alert(__('geneafan.cannot_read_this_file'));
         return null;
     }
-
+    
     if (!config.fanDimensions) {
         console.error("Fan dimensions are undefined");
         return null;

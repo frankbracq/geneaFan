@@ -1,10 +1,11 @@
-import { makeAutoObservable, action, reaction, runInAction } from './mobx-config.js';
+import { makeAutoObservable, action, reaction, runInAction } from 'mobx';
 import TomSelect from 'tom-select';
 import { updateFilename } from "../downloadManager.js";
 import { DownloadManager } from "../downloadManager.js"; 
 import { draw } from "../../tabs/fanChart/fan.js";
-import { FanChartManager } from "../../tabs/fanChart/fanChartManager.js";
 import { getSvgPanZoomInstance, setSvgPanZoomInstance } from "./state.js";
+import { buildHierarchy } from '../../gedcom/parse.js';
+import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
 
 class RootPersonStore {
     root = null;
@@ -13,7 +14,7 @@ class RootPersonStore {
     configHistory = [];
     currentConfigIndex = -1;
     downloadManager = null;
-    _skipNextDraw = false; 
+    _skipNextDraw = false;
 
     constructor() {
         makeAutoObservable(this, {
@@ -25,7 +26,7 @@ class RootPersonStore {
             redo: action,
             resetHistory: action,
             handleRootChange: action,
-            
+
             // Non-observables
             tomSelect: false,
             configHistory: false,
@@ -33,47 +34,88 @@ class RootPersonStore {
         });
 
         // Réagir aux changements de root
-        // Reaction pour les changements de root
+        // Reaction pour le changement de root
         reaction(
-            () => this.root,
-            async (newRoot, previousRoot) => {
-                if (newRoot === previousRoot) return;
+            () => ({
+                root: this.root,
+                hasCache: gedcomDataStore.individualsCache.size > 0
+            }),
+            async ({ root, hasCache }) => {
+                if (!root || !hasCache) return;
                 
                 try {
+                    console.group('🔄 Root Change Reaction'); // Début d'un groupe de logs
+                    console.log('👉 Triggering buildHierarchy for root:', root);
+                    
+                    // 1. Mettre à jour la hiérarchie
+                    const newHierarchy = buildHierarchy(root);
+                    
+                    console.log('✅ Hierarchy built and stored');
+                    console.groupEnd(); // Fin du groupe de logs
+                    
+                    gedcomDataStore.setHierarchy(newHierarchy);
+        
+
+                    // 2. Mettre à jour l'affichage si nécessaire
                     if (!this._skipNextDraw) {
-                        await this.handleRootChange(newRoot);
+                        let svgElement = document.querySelector('#fan');
+                        let svgPanZoomInstance = getSvgPanZoomInstance();
+                        if (svgElement && svgPanZoomInstance) {
+                            svgPanZoomInstance.destroy();
+                            setSvgPanZoomInstance(null);
+                        }
+
+                        const drawResult = await draw(root);
+                        if (drawResult?.rootPersonName) {
+                            const formattedName = this.formatName(drawResult.rootPersonName);
+                            runInAction(() => {
+                                this.rootPersonName = formattedName;
+                            });
+                        }
                     }
-                    this.updateHistory(newRoot);
+
+                    // 3. Mettre à jour l'historique
+                    this.updateHistory(root);
                     document.getElementById('initial-group').style.display = 'none';
+
                 } catch (error) {
                     console.error("Error handling root change:", error);
+                    console.groupEnd(); // En cas d'erreur, fermer quand même le groupe
                 } finally {
-                    this._skipNextDraw = false;  // Réinitialiser le flag
+                    this._skipNextDraw = false;
                 }
             },
             {
-                name: 'RootPersonStore-RootChangeReaction'
+                name: 'RootPersonStore-MainReaction'
             }
         );
 
-        // Réaction qui met à jour automatiquement le DownloadManager
+        // Reaction pour le DownloadManager
         reaction(
             () => this.rootPersonName,
             (newRootPersonName) => {
-                if (newRootPersonName) {
-                    runInAction(() => {
-                        if (this.downloadManager) {
-                            this.downloadManager.updateRootPersonName(newRootPersonName);
-                        } else {
-                            this.downloadManager = new DownloadManager(newRootPersonName);
-                        }
-                    });
-                }
+                if (!newRootPersonName) return;
+
+                runInAction(() => {
+                    if (this.downloadManager) {
+                        this.downloadManager.updateRootPersonName(newRootPersonName);
+                    } else {
+                        this.downloadManager = new DownloadManager(newRootPersonName);
+                    }
+
+                    // Mettre à jour le nom de fichier
+                    const filename = (__("Éventail généalogique de ") +
+                        newRootPersonName +
+                        " créé sur genealog.ie"
+                    ).replace(/[|&;$%@"<>()+,]/g, "");
+                    updateFilename(filename);
+                });
             },
             {
-                name: 'RootPersonStore-DownloadManagerInitialization'
+                name: 'RootPersonStore-DownloadManagerUpdate'
             }
         );
+
 
 
     }
@@ -98,7 +140,7 @@ class RootPersonStore {
 
         try {
             console.log('Starting fan drawing process with new root:', newRoot);
-            
+
             // S'assurer que le root est mis à jour avant d'appeler draw
             this.root = newRoot;
 
@@ -122,8 +164,8 @@ class RootPersonStore {
             if (drawResult.rootPersonName) {
                 // Mise à jour du nom de fichier
                 const rootPersonName = this.formatName(drawResult.rootPersonName);
-                const filename = (__("Éventail généalogique de ") + 
-                    rootPersonName + 
+                const filename = (__("Éventail généalogique de ") +
+                    rootPersonName +
                     " créé sur genealog.ie"
                 ).replace(/[|&;$%@"<>()+,]/g, "");
 
