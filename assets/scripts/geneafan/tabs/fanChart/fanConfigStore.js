@@ -7,6 +7,7 @@ class ConfigStore {
     config = {
         fanAngle: 270,
         maxGenerations: 8,
+        availableGenerations: 8,
         showMarriages: true,
         invertTextArc: true,
         coloringOption: "none",
@@ -71,6 +72,28 @@ class ConfigStore {
             this.config.fanDimensions = initialDimensions.fanDimensionsInMm;
             this.config.frameDimensions = initialDimensions.frameDimensionsInMm;
         }
+
+        const style = document.createElement('style');
+        style.textContent = `
+            .btn-outline-primary.disabled,
+            .btn-outline-primary:disabled {
+                background-color: var(--bg-color-dark);
+                border-color: var(--color-light);
+                color: var(--color-light);
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
+            
+            .btn-check:disabled + .btn-outline-primary, 
+            .btn-check[disabled] + .btn-outline-primary {
+                background-color: var(--bg-color-dark);
+                border-color: var(--color-light);
+                color: var(--color-light);
+                opacity: 0.5;
+                pointer-events: none;
+            }
+        `;
+        document.head.appendChild(style);
 
         makeAutoObservable(this, {
             batchUpdate: action,
@@ -140,6 +163,58 @@ class ConfigStore {
             {
                 equals: comparer.structural,
                 name: 'ConfigStore-FanParametersReaction'
+            }
+        );
+
+        reaction(
+            () => this.config.availableGenerations,
+            (availableGens) => {
+                runInAction(() => {
+                    const gen8Radio = document.getElementById('max-generations-8');
+                    const gen8Label = document.querySelector('label[for="max-generations-8"]');
+                    const gen7Radio = document.getElementById('max-generations-7');
+                    
+                    if (gen8Radio && gen8Label && gen7Radio) {
+                        if (availableGens < 8) {
+                            // Désactiver l'option 8 générations
+                            gen8Radio.disabled = true;
+                            gen8Label.classList.add('disabled');
+                            
+                            // Ajouter l'événement click sur le label
+                            gen8Label.onclick = (e) => {
+                                e.preventDefault();
+                                const alertElement = document.getElementById('alert');
+                                const alertContent = document.getElementById('alert-content');
+                                if (alertElement && alertContent) {
+                                    alertContent.textContent = "Votre fichier Gedcom comporte moins de 8 générations";
+                                    alertElement.classList.remove('d-none');
+                                    alertElement.classList.add('show');
+                                    
+                                    // Cacher l'alerte après 3 secondes
+                                    setTimeout(() => {
+                                        alertElement.classList.remove('show');
+                                        alertElement.classList.add('d-none');
+                                    }, 3000);
+                                }
+                            };
+                            
+                            // Toujours passer à 7 générations
+                            this.setConfig({ maxGenerations: 7 });
+                            gen7Radio.checked = true;
+                            gen8Radio.checked = false;
+                        } else {
+                            // Réactiver l'option 8 générations
+                            gen8Radio.disabled = false;
+                            gen8Label.classList.remove('disabled');
+                            // Retirer l'événement click
+                            gen8Label.onclick = null;
+                        }
+                    }
+                });
+            },
+            {
+                name: 'ConfigStore-GenerationButtonsReaction',
+                fireImmediately: true
             }
         );
     }
@@ -237,6 +312,13 @@ class ConfigStore {
     get getConfig() {
         return this.config;
     }
+
+    // Méthode pour mettre à jour le nombre de générations disponibles
+    setAvailableGenerations = action((generations) => {
+        this.config.availableGenerations = generations;
+        // Logs pour le débogage
+        console.log(`Available generations set to: ${generations}`);
+    });
 }
 
 const configStore = new ConfigStore();

@@ -1257,14 +1257,63 @@ async function processTree(tree, parentNode) {
     }
 }
 
+function calculateMaxGenerations(individualsCache, allFamilies) {
+    let maxGen = 0;
+    const generationMap = new Map();
+
+    // Initialize with root individuals (those without parents)
+    const rootIndividuals = Array.from(individualsCache.keys()).filter(id => {
+        const individual = individualsCache.get(id);
+        return !individual.fatherId && !individual.motherId;
+    });
+
+    // Set generation 1 for root individuals
+    rootIndividuals.forEach(id => generationMap.set(id, 1));
+
+    // Process each family to calculate generations
+    let changed = true;
+    while (changed) {
+        changed = false;
+        allFamilies.forEach(family => {
+            // Get parents
+            const fatherId = family.tree.find(node => node.tag === 'HUSB')?.data;
+            const motherId = family.tree.find(node => node.tag === 'WIFE')?.data;
+            
+            // Get parent generation (max of both parents if they exist)
+            const parentGen = Math.max(
+                generationMap.get(fatherId) || 0,
+                generationMap.get(motherId) || 0
+            );
+
+            if (parentGen > 0) {
+                // Process children
+                const childNodes = family.tree.filter(node => node.tag === 'CHIL');
+                childNodes.forEach(childNode => {
+                    const childId = childNode.data;
+                    const currentChildGen = generationMap.get(childId) || 0;
+                    const newChildGen = parentGen + 1;
+                    
+                    if (newChildGen > currentChildGen) {
+                        generationMap.set(childId, newChildGen);
+                        maxGen = Math.max(maxGen, newChildGen);
+                        changed = true;
+                    }
+                });
+            }
+        });
+    }
+
+    return maxGen;
+}
+
 function prebuildindividualsCache() {
     console.time("prebuildindividualsCache");
-    const json = gedcomDataStore.getSourceData(); // Retrieve source data
+    const json = gedcomDataStore.getSourceData();
     const individualsCache = new Map();
 
-    // Filter individuals and families from source data
     const allIndividuals = _.filter(json, byTag(TAG_INDIVIDUAL));
     const allFamilies = _.filter(json, byTag(TAG_FAMILY));
+
 
     // Function to check if an individual is a parent in another family
     function isParentInOtherFamily(individualId) {
@@ -1325,10 +1374,19 @@ function prebuildindividualsCache() {
         individualsCache.set(individualJson.pointer, individual);
     });
 
+    // Calculate maximum generations
+    const maxGenerations = calculateMaxGenerations(individualsCache, allFamilies);
+    console.log("Maximum generations found:", maxGenerations);
+    
+    // Update config store with the calculated value
+    configStore.setConfig({ maxGenerations: Math.min(maxGenerations, 8) });
+    configStore.setAvailableGenerations(maxGenerations);
+
     console.log("statistics", getStatistics());
     console.timeEnd("prebuildindividualsCache");
     return individualsCache;
 }
+
 // Function to format data for FamilyTreeJS 
 function formatFamilyTreeData(individualsCache) {
     console.time("formatFamilyTreeData");
