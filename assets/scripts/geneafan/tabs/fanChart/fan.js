@@ -82,6 +82,7 @@ function generateFrame(svg, frameDimensions) {
 function createBoxes(g, descendants, showMarriages) {
     const config = configStore.getConfig;
     const weightRadiusMarriage = showMarriages ? 0.27 : 0;
+    const maxGen = config.maxGenerations;
 
     const individualBoxGenerator = arc()
         .startAngle(d => !isFirstLayer(d) ? d.x0 : 0)
@@ -124,10 +125,34 @@ function createBoxes(g, descendants, showMarriages) {
     }
 
     function generateAndStyleBoxes(nodeId, filter, boxGenerator, coloringOption) {
+        const showMissing = config.showMissing;
+        
         g.selectAll(`.${nodeId}`)
             .data(descendants)
             .enter()
-            .filter(filter)
+            .filter(d => {
+                // Ne pas afficher les nœuds au-delà de maxGen
+                if (d.depth >= maxGen) {
+                    return false;
+                }
+
+                // Pour les boîtes de mariage, vérifier aussi que les enfants ne dépassent pas maxGen
+                if (nodeId === 'marriage-boxes' && d.children) {
+                    const hasValidChildren = d.children.some(child => 
+                        child.depth < maxGen && 
+                        (showMissing || (child.data.name && child.data.surname))
+                    );
+                    if (!hasValidChildren) {
+                        return false;
+                    }
+                }
+
+                if (!showMissing && (!d.data.name || !d.data.surname)) {
+                    return false;
+                }
+
+                return filter(d);
+            })
             .append('path')
             .attr('d', boxGenerator)
             .attr('stroke', '#32273B')
@@ -138,8 +163,10 @@ function createBoxes(g, descendants, showMarriages) {
             .attr('data-id', d => d.data.id);
     }
 
-    generateAndStyleBoxes('individual-boxes', ignored => true, individualBoxGenerator, coloringOption);
+    // Boîtes individuelles 
+    generateAndStyleBoxes('individual-boxes', d => true, individualBoxGenerator, coloringOption);
 
+    // Boîtes de mariage
     if (showMarriages) {
         generateAndStyleBoxes('marriage-boxes', d => d.children, marriageBoxGenerator, coloringOption);
     }
@@ -151,7 +178,7 @@ function createTextElements(g, defs, descendants, showMarriages) {
     const weightRadiusFirst = config.weights.generations[0];
     const fixOrientations = true;
     const angleInterpolate = config.angle / Math.PI - 1;
-    let isMarriageFirst, isMarriageSecond;
+    const maxGen = config.maxGenerations;
 
     // Fonction auxiliaire pour générer un identifiant de chemin
     function pathId(sosa, line) {
@@ -169,7 +196,7 @@ function createTextElements(g, defs, descendants, showMarriages) {
 
     // Fonction auxiliaire pour fixer un générateur d'arc
     function fixArc(arcGenerator) {
-        return d => arcGenerator(d).split('A').slice(0, 2).join("A"); // Small hack to create a pure arc path (not filled)
+        return d => arcGenerator(d).split('A').slice(0, 2).join("A");
     }
 
     function meanAngle(arr) {
@@ -188,39 +215,46 @@ function createTextElements(g, defs, descendants, showMarriages) {
         meanAngles.set(d, meanAngle([d.x0, d.x1]));
     });
 
+    // Marriage text conditions
     // config.angle > 6 = fan angle = 360°
-    if (config.angle > 6) {
-        isMarriageFirst = d => between(0, fifthLevel)(d) && d.children;
-        isMarriageSecond = d => d.depth >= fifthLevel && d.children;
-    } else {
-        isMarriageFirst = d => between(0, fourthLevel)(d) && d.children;
-        isMarriageSecond = d => d.depth >= fourthLevel && d.children;
-    }
-
-    /** Text paths **/
-    // Pré-calcul des descendants par couche
-    const descendantsByLayer = {
-        firstLayer: descendants.filter(isFirstLayer),
-        secondLayer: descendants.filter(isSecondLayer),
-        thirdLayer: descendants.filter(isThirdLayer),
-        fourthLayer: descendants.filter(isFourthLayer),
-        fifthLayer: descendants.filter(isFifthLayer),
-        sixthLayer: descendants.filter(isSixthLayer),
-        seventhLayer: descendants.filter(isSeventhLayer),
-        eighthLayer: descendants.filter(isEightsLayer),
+    const isMarriageFirst = d => {
+        if (d.depth >= maxGen - 1) return false;
+        return config.angle > 6 
+            ? between(0, fifthLevel)(d) && d.children 
+            : between(0, fourthLevel)(d) && d.children;
     };
 
-    // Réutilisation des résultats des fonctions coûteuses
+    const isMarriageSecond = d => {
+        if (d.depth >= maxGen - 1) return false;
+        return config.angle > 6 
+            ? d.depth >= fifthLevel && d.children 
+            : d.depth >= fourthLevel && d.children;
+    };
+
+    /** Text paths **/
+    // Pré-calcul des descendants par couche et en respectant maxGen
+    const filteredDescendants = descendants.filter(d => d.depth < maxGen);
+    const descendantsByLayer = {
+        firstLayer: filteredDescendants.filter(isFirstLayer),
+        secondLayer: filteredDescendants.filter(isSecondLayer),
+        thirdLayer: filteredDescendants.filter(isThirdLayer),
+        fourthLayer: filteredDescendants.filter(isFourthLayer),
+        fifthLayer: filteredDescendants.filter(isFifthLayer),
+        sixthLayer: filteredDescendants.filter(isSixthLayer),
+        seventhLayer: filteredDescendants.filter(isSeventhLayer),
+        eighthLayer: filteredDescendants.filter(isEightsLayer)
+    };
 
     // First node
-    //const weightFirstLineSpacing = weightFontFirst 
-    const weightFirstLineSpacing = weightFontFirst + 0.05; //FB
+    const weightFirstLineSpacing = weightFontFirst + 0.05;
     const linesFirst = 4;
     const halfHeightFirst = (linesFirst - 1) * weightFirstLineSpacing / 2;
+    
+    // First node paths creation...
     for (let i = 0; i < linesFirst; i++) {
-        const y = i * weightFirstLineSpacing - halfHeightFirst,
-            yabs = Math.abs(y) + weightFirstLineSpacing / 2,
-            x = Math.sqrt(Math.max(weightRadiusFirst * weightRadiusFirst - yabs * yabs, 0));
+        const y = i * weightFirstLineSpacing - halfHeightFirst;
+        const yabs = Math.abs(y) + weightFirstLineSpacing / 2;
+        const x = Math.sqrt(Math.max(weightRadiusFirst * weightRadiusFirst - yabs * yabs, 0));
         defs.append('path')
             .attr('id', pathId(1, i))
             .attr('d', simpleLine(-2 * x, y, 2 * x, y));
@@ -228,24 +262,24 @@ function createTextElements(g, defs, descendants, showMarriages) {
 
     // Secondary nodes
     const weightSecondLineSpacing = weightFontOther + 0.03;
-    const linesSecond = 3; // Centre 3 lignes dans la boîte (au lieu de 4)
+    const linesSecond = 3;
     const halfHeightSecond = (linesSecond - 1) * weightSecondLineSpacing / 2;
 
     const invert = config.invertTextArc ? d => {
-    // Utilisez les angles moyens pré-calculés
         const angle = meanAngles.get(d);
         return angle < -Math.PI / 2 || angle > Math.PI / 2;
-    } : ignored => false;
+    } : () => false;
 
+    // Secondary nodes paths creation...
     for (let i = 0; i < linesSecond; i++) {
         const y = d => (invert(d) ? i : (linesSecond - 1 - i)) * weightSecondLineSpacing - halfHeightSecond;
         const radiusF = d => (d.y0 + d.y1) / 2 + y(d);
         const marginAngleF = d => weightTextMargin / radiusF(d) * (d.depth === 1 ? 1.5 : 1);
-        const minA = d => Math.min(d.x0, d.x1),
-            maxA = d => Math.max(d.x0, d.x1),
-            rangeA = d => Math.abs(d.x0 - d.x1) - 2 * marginAngleF(d);
-        const start = d => minA(d) + -0.5 * rangeA(d) + marginAngleF(d),
-            end = d => maxA(d) + 0.5 * rangeA(d) - marginAngleF(d);
+        const minA = d => Math.min(d.x0, d.x1);
+        const maxA = d => Math.max(d.x0, d.x1);
+        const rangeA = d => Math.abs(d.x0 - d.x1) - 2 * marginAngleF(d);
+        const start = d => minA(d) + -0.5 * rangeA(d) + marginAngleF(d);
+        const end = d => maxA(d) + 0.5 * rangeA(d) - marginAngleF(d);
 
         const arcGenerator = fixArc(arc()
             .startAngle(d => invert(d) ? end(d) : start(d))
@@ -253,7 +287,6 @@ function createTextElements(g, defs, descendants, showMarriages) {
             .innerRadius(radiusF)
             .outerRadius(radiusF));
 
-        // Utilisez les descendants pré-calculés pour cette couche
         descendantsByLayer.secondLayer.forEach(d => {
             defs.append('path')
                 .attr('id', pathId(d.data.sosa, i))
@@ -439,10 +472,17 @@ function createTextElements(g, defs, descendants, showMarriages) {
 
     // Optimized version of generateTexts. 
     const generateTexts = (filter, lines, alignment, special) => {
+        const showMissing = configStore.config.showMissing;
+        
         const anchor = g.selectAll('path')
             .data(descendants)
             .enter()
-            .filter(filter);
+            .filter(d => {
+                if (!showMissing && (!d.data.name || !d.data.surname)) {
+                    return false;
+                }
+                return filter(d);
+            });
 
         const group = createGroupElement(anchor, lines[0], alignment, special);
 
@@ -486,6 +526,7 @@ function createTextElements(g, defs, descendants, showMarriages) {
     const nameFirst = d => config.givenThenFamilyName ? givenName(d) : d.data.surname;
     const nameSecond = d => config.givenThenFamilyName ? d.data.surname : givenName(d);
 
+    // Text generation based on generations...
     const generations = [
         { condition: isFirstLayer, texts: [{ text: nameFirst, size: weightFontFirst, bold: true }, { text: nameSecond, size: weightFontFirst, bold: true }, { text: textBirth, size: weightFontOther }, { text: textDeath, size: weightFontOther }] },
         { condition: isSecondLayer, texts: [{ text: nameInline, size: weightFontOther, bold: true }, { text: textBirth, size: weightFontDate }, { text: textDeath, size: weightFontDate }] },
@@ -497,20 +538,20 @@ function createTextElements(g, defs, descendants, showMarriages) {
         { condition: isEightsLayer, texts: [{ text: nameInline, size: angleInterpolate * weightFontFar + (1 - angleInterpolate) * weightFontFurthest, bold: true }] }
     ];
 
+    // Apply generation conditions and create texts
     generations.forEach(generation => {
         if (generation.condition) {
-            generateTexts(generation.condition, generation.texts, "middle", false);
+            generateTexts(d => generation.condition(d) && d.depth < maxGen, 
+                        generation.texts, "middle", false);
         }
     });
 
+    // Marriage texts
     if (showMarriages) {
         const getMarriageText = (d, includePlace) => {
-            // Vérifiez si l'objet mariage n'est pas vide sans jQuery
             if (d.data.marriage && d.data.marriage.date && d.data.marriage.date.display) {
-                // Utilisez extractYear pour obtenir seulement l'année de la date
                 let text = extractYear(d.data.marriage.date.display);
                 if (includePlace && config.places.showPlaces && d.data.marriage.place && d.data.marriage.place.display) {
-                    // Ajoutez le lieu de mariage, si nécessaire
                     text += ' ' + d.data.marriage.place.display.split(/,| \(| \s\d/)[0];
                 }
                 return text;
@@ -695,7 +736,14 @@ export function drawFan(currentRoot) {
 
     // Calculate polar coordinates
     function calculateNodeProperties(node) {
-        const space = 2 * Math.PI - angle; // Utiliser angle au lieu de config.angle
+        const maxGen = configStore.config.maxGenerations; 
+        
+        // Ne pas traiter les nœuds au-delà de maxGenerations
+        if (node.depth >= maxGen) {
+            return;
+        }
+    
+        const space = 2 * Math.PI - angle;
         if (node.parent == null) {
             node.x0 = Math.PI - space / 2;
             node.x1 = -Math.PI + space / 2;
@@ -712,7 +760,22 @@ export function drawFan(currentRoot) {
     }
 
     let rootNode = hierarchy(data).each(calculateNodeProperties);
-    let descendants = rootNode.descendants();
+    let descendants = rootNode.descendants().filter(node => {
+        const maxGen = configStore.config.maxGenerations;
+        const showMissing = configStore.config.showMissing;
+        
+        // Filtre par génération
+        if (node.depth >= maxGen) {
+            return false;
+        }
+        
+        // Filtre des personnes manquantes
+        if (!showMissing && (!node.data.name || !node.data.surname)) {
+            return false;
+        }
+        
+        return true;
+    });
 
     const fanSvg = document.getElementById("fan");
     if (fanSvg) {
