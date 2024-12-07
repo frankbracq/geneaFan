@@ -1387,37 +1387,13 @@ function prebuildindividualsCache() {
     return individualsCache;
 }
 
-// Function to format data for FamilyTreeJS 
-function formatFamilyTreeData(individualsCache) {
-    console.time("formatFamilyTreeData");
-    const formattedData = Array.from(individualsCache.values()).map(data => ({
-        id: data.id,
-        fid: data.fatherId,
-        mid: data.motherId,
-        pids: data.spouseIds,
-        name: `${data.name} ${data.surname}`,
-        birthDate: data.birthDate,
-        deathDate: data.deathYear,
-        gender: data.gender,
-        display: true
-    }));
-    console.timeEnd("formatFamilyTreeData");
-    return formattedData;
-}
-
 function getIndividualsList() {
     // Build the cache of individuals with all their information
     const individualsCache = prebuildindividualsCache();
     gedcomDataStore.clearSourceData(); // Reset source data to avoid memory leaks
 
-    // Mettre à jour le cache des individus
+    // Mettre à jour le cache des individus 
     gedcomDataStore.setIndividualsCache(individualsCache);
-
-    // Créer les données formatées pour l'arbre familial
-    const familyTreeData = formatFamilyTreeData(individualsCache);
-    
-    // Mettre à jour les données de l'arbre dans le store
-    familyTreeDataStore.setFamilyTreeData(familyTreeData);
 
     // Maintenant que les données sont prêtes, initialiser l'arbre
     requestAnimationFrame(() => {

@@ -12,11 +12,12 @@ export function initializeFamilyTree() {
     console.log('Initializing family tree...');
     initializing = true;
 
-    const familyTreeData = familyTreeDataStore.getFamilyTreeData;
-    if (familyTreeData.length === 0) {
+    const formattedData = familyTreeDataStore.formatIndividualsForTree;
+    if (formattedData.length === 0) {
         console.error('Error: familyTreeData is empty.');
         return;
     }
+
 
     const initialRootId = rootPersonStore.root;
     let focusedNodeId = initialRootId;
@@ -99,9 +100,18 @@ export function initializeFamilyTree() {
         }
     );
 
-    family.load(familyTreeData);
+    family.load(formattedData);
     initializing = false;
 }
+
+reaction(
+    () => familyTreeDataStore.formatIndividualsForTree,
+    (newData) => {
+        if (!initializing && family && newData.length > 0) {
+            family.load(newData);
+        }
+    }
+);
 
 // Function implementations restent les mêmes
 function clearTags(nodes, tagsToClear) {

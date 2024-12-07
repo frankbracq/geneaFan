@@ -32,7 +32,8 @@ class FamilyTreeDataStore {
             getFamilyTreeData: computed,
             getGenealogyGraph: computed,
             getAncestorMapCache: computed,
-            getCommonAncestryGraphData: computed
+            getCommonAncestryGraphData: computed,
+            formatIndividualsForTree: computed
         });
 
         // Déplacer la réaction dans une méthode séparée
@@ -64,10 +65,9 @@ class FamilyTreeDataStore {
         this.familyTreeData = [...newData];
     }
 
-    updateFromIndividualsCache = (individuals) => {
-        if (!individuals) return;
-        
-        this.familyTreeData = individuals.map(data => ({
+    get formatIndividualsForTree() {
+        console.time("formatFamilyTreeData");
+        const formattedData = this.familyTreeData.map(data => ({
             id: data.id,
             fid: data.fatherId,
             mid: data.motherId,
@@ -78,6 +78,13 @@ class FamilyTreeDataStore {
             gender: data.gender,
             display: true
         }));
+        console.timeEnd("formatFamilyTreeData");
+        return formattedData;
+    }
+
+    updateFromIndividualsCache = (individuals) => {
+        if (!individuals) return;
+        this.familyTreeData = individuals;
     }
 
     clearFamilyTreeData = () => {
