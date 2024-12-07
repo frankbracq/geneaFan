@@ -19,24 +19,89 @@ export class FanChartManager {
 
     // Configuration des écouteurs d'événements pour le fan chart
     static setupEventListeners() {
+        this.setupFullscreenListeners();
+        this.setupTabListeners();
+        this.setupFanParameterListeners();
+    }
+
+    // Gestion des écouteurs pour le mode plein écran
+    static setupFullscreenListeners() {
         if (screenfull.isEnabled) {
-            // Gestion du bouton plein écran
             const fullscreenButton = document.getElementById('fullscreenButton');
             if (fullscreenButton) {
                 fullscreenButton.addEventListener('click', this.handleFullscreen);
             }
 
-            // Écouteur pour les changements de mode plein écran
             screenfull.on('change', () => this.handleFullscreenChange());
         }
+    }
 
-        // Gestion de l'onglet Fan Chart
+    // Gestion des écouteurs pour les onglets
+    static setupTabListeners() {
         const tabFan = document.querySelector('[href="#tab1"]');
         if (tabFan) {
             tabFan.addEventListener("shown.bs.tab", () => {
                 configStore.handleSettingChange();
             });
         }
+    }
+
+    // Gestion des écouteurs pour les paramètres du fan chart
+    static setupFanParameterListeners() {
+        const parameterMapping = {
+            showMarriages: "showMarriages",
+            "invert-text-arc": "invertTextArc",
+            showMissing: "showMissing",
+            fanAngle: "fanAngle",
+            "max-generations": "maxGenerations",
+            fanColor: "coloringOption"
+        };
+
+        const booleanParameters = [
+            "showMarriages",
+            "invert-text-arc",
+            "showMissing"
+        ];
+
+        // Gestion des paramètres du fan
+        document.querySelectorAll(".parameter").forEach((item) => {
+            const oldHandler = item._changeHandler;
+            if (oldHandler) {
+                item.removeEventListener("change", oldHandler);
+            }
+
+            const handleParameterChange = (event) => {
+                const input = event.target;
+                let value;
+
+                if (booleanParameters.includes(input.name)) {
+                    value = input.value === "true";
+                } else if (
+                    input.type === "number" ||
+                    ["fanAngle", "max-generations"].includes(input.name)
+                ) {
+                    value = parseInt(input.value, 10);
+                } else {
+                    value = input.value;
+                }
+
+                const storeParamName = parameterMapping[input.name];
+                if (!storeParamName) {
+                    console.warn("Unknown parameter:", input.name);
+                    return;
+                }
+
+                console.log(
+                    `Updating ${storeParamName} with value:`,
+                    value,
+                    `(type: ${typeof value})`
+                );
+                configStore.updateFanParameter(storeParamName, value);
+            };
+
+            item._changeHandler = handleParameterChange;
+            item.addEventListener("change", handleParameterChange);
+        });
     }
 
     // Gestion centralisée des erreurs avec feedback visuel

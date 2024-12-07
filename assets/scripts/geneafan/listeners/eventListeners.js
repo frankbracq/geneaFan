@@ -67,80 +67,6 @@ function closePopoverOnClickOutside(event) {
     }
 }
 
-// Setup fan parameter event listeners
-export function setupFanParameterEventListeners() {
-    document.querySelectorAll(".parameter").forEach((item) => {
-        // Supprimer l'ancien écouteur d'événements s'il existe
-        const oldHandler = item._changeHandler;
-        if (oldHandler) {
-            item.removeEventListener("change", oldHandler);
-        }
-
-        // Créer un nouveau gestionnaire d'événements
-        const handleParameterChange = (event) => {
-            const input = event.target;
-            console.log("Input type:", input.type);
-            console.log("Input name:", input.name);
-            console.log("Raw value:", input.value);
-
-            // Convertir les valeurs "true"/"false" en booléens pour certains paramètres
-            let value;
-            const booleanParameters = [
-                "showMarriages",
-                "invert-text-arc",
-                "showMissing",
-            ];
-
-            if (booleanParameters.includes(input.name)) {
-                value = input.value === "true";
-            } else if (
-                input.type === "number" ||
-                ["fanAngle", "max-generations"].includes(input.name)
-            ) {
-                value = parseInt(input.value, 10);
-            } else {
-                value = input.value;
-            }
-
-            // Mapping des noms de paramètres pour correspondre à ceux du store
-            const parameterMapping = {
-                showMarriages: "showMarriages",
-                "invert-text-arc": "invertTextArc",
-                showMissing: "showMissing",
-                fanAngle: "fanAngle",
-                "max-generations": "maxGenerations",
-                fanColor: "coloringOption",
-            };
-
-            const storeParamName = parameterMapping[input.name];
-            if (!storeParamName) {
-                console.warn("Unknown parameter:", input.name);
-                return;
-            }
-
-            console.log(
-                `Updating ${storeParamName} with value:`,
-                value,
-                `(type: ${typeof value})`
-            );
-            configStore.updateFanParameter(storeParamName, value);
-        };
-
-        // Sauvegarder la référence du gestionnaire et ajouter l'écouteur
-        item._changeHandler = handleParameterChange;
-        item.addEventListener("change", handleParameterChange);
-    });
-
-    // Gérer le sélecteur d'individu
-    const individualSelect = document.getElementById("individual-select");
-    if (individualSelect) {
-        individualSelect.addEventListener("change", () => {
-            const selectedRoot = individualSelect.value;
-            rootPersonStore.setRoot(selectedRoot); // Utiliser rootPersonStore au lieu de configStore
-        });
-    }
-}
-
 // Setup person link event listener with delegation
 export function setupPersonLinkEventListener() {
     const tomSelect = rootPersonStore.tomSelect; // Utiliser rootPersonStore
@@ -262,6 +188,17 @@ function setupTabAndUIEventListeners() {
     setupTooltips();
 }
 
+// Gestion du sélecteur d'individu
+export const setupIndividualSelectorListener = () => {
+    const individualSelect = document.getElementById("individual-select");
+    if (individualSelect) {
+        individualSelect.addEventListener("change", () => {
+            const selectedRoot = individualSelect.value;
+            rootPersonStore.setRoot(selectedRoot);
+        });
+    }
+};
+
 /**
  * Function to set up all event listeners.
  *
@@ -270,55 +207,43 @@ function setupTabAndUIEventListeners() {
 let eventListenersInitialized = false;
 
 export const setupAllEventListeners = (authStore) => {
-    // Check if event listeners have already been initialized
     if (eventListenersInitialized) {
         return;
     }
 
-    // Mark event listeners as initialized
     eventListenersInitialized = true;
 
-    // Function to initialize all event listeners
     const initializeEventListeners = () => {
-        // Add a click event listener to the document
         document.addEventListener("click", (event) => {
-            // handleCityLinkClick(event); // Handle city link clicks
-            closePopoverOnClickOutside(event); // Close popovers when clicking outside
+            closePopoverOnClickOutside(event);
         });
 
-        // Add a resize event listener to the window
         window.addEventListener("resize", () => {
             console.log("=== Browser Resize ===");
             console.log("Window dimensions:", window.innerWidth, "x", window.innerHeight);
         });
 
-        // Set up event listeners for fan parameters
-        setupFanParameterEventListeners();
-        // Set up event listeners for tabs and UI elements
+        // Configuration des écouteurs globaux
+        setupIndividualSelectorListener();
         setupTabAndUIEventListeners();
-        // Set up event listeners for file loading
         setupFileLoadingEventListeners();
-        // Set up event listeners for undo and redo actions
         setupUndoRedoEventListeners();
-        // Set up responsive tabs and tab resize listener after a short delay
+        
         setTimeout(() => {
             setupResponsiveTabs();
             setupTabResizeListener();
         }, 0);
 
-        // Call the function to set up event listeners for protected features using the MobX store
         setupProtectedFeatureEventListeners(authStore);
     };
 
-    // Check if the document is still loading
     if (document.readyState === "loading") {
-        // If the document is loading, set up event listeners after the DOM content is loaded
         document.addEventListener("DOMContentLoaded", initializeEventListeners);
     } else {
-        // If the document is already loaded, initialize event listeners immediately
         initializeEventListeners();
     }
 };
+
 
 /*
 // Setup advanced modal
