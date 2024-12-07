@@ -1,6 +1,7 @@
 import { makeAutoObservable, action, reaction, runInAction, computed, comparer } from '../../common/stores/mobx-config.js';
 import 'tom-select/dist/css/tom-select.css';
 import { FanChartManager } from "./fanChartManager.js";
+import _ from 'lodash';
 
 class ConfigStore {
     config = {
@@ -143,20 +144,13 @@ class ConfigStore {
         );
     }
 
-    queueSettingChange = action(() => {
-        if (this._queueTimeout) {
-            return; // Ignore multiple calls while a timeout is pending
-        }
+    queueSettingChange = _.debounce(action(() => {
+        if (this._batchUpdating) return;
         
-        console.log('queueSettingChange called');
-        this._queueTimeout = setTimeout(() => {
-            runInAction(() => {
-                this._queueTimeout = null;
-                this._pendingUpdates.clear();
-                this.handleSettingChangeInternal();
-            });
-        }, 50);
-    });
+        console.log('Processing queued settings changes');
+        this._pendingUpdates.clear();
+        this.handleSettingChangeInternal();
+    }), 50);
 
     handleSettingChange = action(() => {
         if (this._batchUpdating) return;
@@ -165,7 +159,13 @@ class ConfigStore {
 
     handleSettingChangeInternal = action(() => {
         if (!this.config.gedcomFileName) {
-            console.warn("No GEDCOM file loaded. Skipping handleSettingChange.");
+            console.warn('Skipping fan redraw: No GEDCOM file loaded');
+            return false;
+        }
+    
+        const fanContainer = document.getElementById("fanContainer");
+        if (!fanContainer || fanContainer.offsetParent === null) {
+            console.warn('Skipping fan redraw: Container not visible');
             return false;
         }
     

@@ -8,7 +8,6 @@ import { mmToPixels } from '../../utils/utils.js';
 import { extractYear } from '../../utils/dates.js';
 import configStore from './fanConfigStore.js';
 import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
-import { buildHierarchy } from '../../gedcom/parse.js';
 
 const weightFontFirst = 0.25,
     weightFontOther = 0.22,
@@ -556,7 +555,7 @@ function adjustFanVerticalPosition(svg, fanHeight, frameHeight, scale) {
 
 export function drawFan(currentRoot) {
     console.log('starting drawFan with root:', currentRoot);
-    console.time('starting drawFan');
+    console.log('Starting fan chart drawing');
     
     const config = configStore.getConfig;
     const angle = configStore.angle;
@@ -571,7 +570,7 @@ export function drawFan(currentRoot) {
     }
     
     if (!config.fanDimensions) {
-        console.error("Fan dimensions are undefined");
+        console.error("Fan chart configuration error: Dimensions not specified");
         return null;
     }
     
@@ -765,7 +764,7 @@ export function drawFan(currentRoot) {
 
     adjustFanVerticalPosition(svg, mmToPixels(fanHeightInMm), mmToPixels(frameHeightInMm), scale);
     
-    console.timeEnd('Ending drawFan');
+    console.log('Fan chart drawing completed');
     return {
         data: data,
         rootPersonName: { name: rootNode.data.name, surname: rootNode.data.surname }
