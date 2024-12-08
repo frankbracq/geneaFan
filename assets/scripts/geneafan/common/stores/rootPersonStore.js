@@ -1,11 +1,12 @@
 import { makeAutoObservable, action, reaction, runInAction } from 'mobx';
 import TomSelect from 'tom-select';
 import { updateFilename } from "../downloadManager.js";
-import { DownloadManager } from "../downloadManager.js"; 
+import { FanChartManager } from "../../tabs/fanChart/fanChartManager.js";
 import { draw } from "../../tabs/fanChart/fan.js";
 import { getSvgPanZoomInstance, setSvgPanZoomInstance } from "./state.js";
 import { buildHierarchy } from '../../gedcom/parse.js';
 import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
+import { DownloadManager } from "../downloadManager.js"; 
 
 class RootPersonStore {
     root = null;
@@ -44,28 +45,19 @@ class RootPersonStore {
                 if (!root || !hasCache) return;
                 
                 try {
-                    console.group('🔄 Root Change Reaction'); // Début d'un groupe de logs
+                    console.group('🔄 Root Change Reaction');
                     console.log('👉 Triggering buildHierarchy for root:', root);
                     
                     // 1. Mettre à jour la hiérarchie
                     const newHierarchy = buildHierarchy(root);
-                    
                     console.log('✅ Hierarchy built and stored');
-                    console.groupEnd(); // Fin du groupe de logs
+                    console.groupEnd();
                     
                     gedcomDataStore.setHierarchy(newHierarchy);
         
-
                     // 2. Mettre à jour l'affichage si nécessaire
                     if (!this._skipNextDraw) {
-                        let svgElement = document.querySelector('#fan');
-                        let svgPanZoomInstance = getSvgPanZoomInstance();
-                        if (svgElement && svgPanZoomInstance) {
-                            svgPanZoomInstance.destroy();
-                            setSvgPanZoomInstance(null);
-                        }
-
-                        const drawResult = await draw(root);
+                        const drawResult = await FanChartManager.drawFanForRoot(root, false);
                         if (drawResult?.rootPersonName) {
                             const formattedName = this.formatName(drawResult.rootPersonName);
                             runInAction(() => {
@@ -73,14 +65,14 @@ class RootPersonStore {
                             });
                         }
                     }
-
+        
                     // 3. Mettre à jour l'historique
                     this.updateHistory(root);
                     document.getElementById('initial-group').style.display = 'none';
-
+        
                 } catch (error) {
                     console.error("Error handling root change:", error);
-                    console.groupEnd(); // En cas d'erreur, fermer quand même le groupe
+                    console.groupEnd();
                 } finally {
                     this._skipNextDraw = false;
                 }
@@ -115,8 +107,6 @@ class RootPersonStore {
                 name: 'RootPersonStore-DownloadManagerUpdate'
             }
         );
-
-
 
     }
 

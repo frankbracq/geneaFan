@@ -48,6 +48,8 @@ class ConfigStore {
     _queueTimeout = null;
     _updateQueued = false;
     _pendingUpdates = new Set();
+    _drawInProgress = false;
+    _isRootChangeInProgress = false;
 
     get angle() {
         return (2 * Math.PI * this.config.fanAngle) / 360.0;
@@ -125,18 +127,32 @@ class ConfigStore {
             }),
             (params, previousParams) => {
                 if (this._batchUpdating) return;
-
+                
+                console.group('🔍 ConfigStore Reaction');
+                console.log('Current params:', params);
+                console.log('Previous params:', previousParams);
+                
+                if (previousParams && _.isEqual(params, previousParams)) {
+                    console.log('⏭️ Skipping - No real changes');
+                    console.groupEnd();
+                    return;
+                }
+        
                 runInAction(() => {
+                    let needsUpdate = false;
+        
                     if (params.fanAngle !== previousParams?.fanAngle) {
                         this.config.titleMargin = params.fanAngle === 360 ? 0.35 : 0.25;
                         this._pendingUpdates.add('fanAngle');
+                        needsUpdate = true;
                     }
-
+        
                     if (params.coloringOption !== previousParams?.coloringOption) {
                         this.config.computeChildrenCount = params.coloringOption === "childrencount";
                         this._pendingUpdates.add('coloringOption');
+                        needsUpdate = true;
                     }
-
+        
                     if (params.fanAngle !== previousParams?.fanAngle ||
                         params.maxGenerations !== previousParams?.maxGenerations ||
                         params.showMarriages !== previousParams?.showMarriages) {
@@ -146,16 +162,20 @@ class ConfigStore {
                             this.config.frameDimensions = dimensions.frameDimensionsInMm;
                         }
                         this._pendingUpdates.add('dimensions');
+                        needsUpdate = true;
                     }
-
+        
                     if (params.invertTextArc !== previousParams?.invertTextArc) {
                         this._pendingUpdates.add('invertTextArc');
+                        needsUpdate = true;
                     }
                     if (params.showMissing !== previousParams?.showMissing) {
                         this._pendingUpdates.add('showMissing');
+                        needsUpdate = true;
                     }
-
-                    if (this._pendingUpdates.size > 0) {
+        
+                    // Seulement appeler handleSettingChange si des changements réels ont eu lieu
+                    if (needsUpdate && this._pendingUpdates.size > 0) {
                         this.handleSettingChange();
                     }
                 });
@@ -163,6 +183,21 @@ class ConfigStore {
             {
                 equals: comparer.structural,
                 name: 'ConfigStore-FanParametersReaction'
+            }
+        );
+
+        reaction(
+            () => rootPersonStore.root,
+            () => {
+                this._isRootChangeInProgress = true;
+                try {
+                    // Ajout d'un délai minime pour laisser le changement de root se terminer
+                    setTimeout(() => {
+                        this._isRootChangeInProgress = false;
+                    }, 0);
+                } catch (error) {
+                    this._isRootChangeInProgress = false;
+                }
             }
         );
 
@@ -228,23 +263,32 @@ class ConfigStore {
     }), 50);
 
     handleSettingChange = action(() => {
-        if (this._batchUpdating) return;
+        console.log('🎯 handleSettingChange called');
+        if (this._batchUpdating) {
+            console.log('⏭️ Skipping - batch update in progress');
+            return;
+        }
         this.queueSettingChange();
     });
 
     handleSettingChangeInternal = action(() => {
+        console.group('🛠️ handleSettingChangeInternal');
+
+        if (this._isRootChangeInProgress) {
+            console.log('⏭️ Skipping - Root change in progress');
+            console.groupEnd();
+            return false;
+        }
+    
         if (!this.config.gedcomFileName) {
-            console.warn('Skipping fan redraw: No GEDCOM file loaded');
+            console.log('⏭️ Skipping config update: No GEDCOM file loaded');
+            console.groupEnd();
             return false;
         }
     
-        const fanContainer = document.getElementById("fanContainer");
-        if (!fanContainer || fanContainer.offsetParent === null) {
-            console.warn('Skipping fan redraw: Container not visible');
-            return false;
-        }
-    
-        return FanChartManager.redrawFan();
+        console.log('✨ Applying config changes');
+        console.groupEnd();
+        return FanChartManager.applyConfigChanges();
     });
 
     batchUpdate = action((updates) => {

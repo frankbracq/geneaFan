@@ -194,8 +194,11 @@ export class FanChartManager {
         }
     }
 
-    // Redessin complet du fan chart
-    static async redrawFan() {
+    static async drawFanForRoot(root, skipCleanup = false) {
+        console.group('🎨 FanChartManager.drawFanForRoot');
+        console.log('Root:', root);
+        console.log('skipCleanup:', skipCleanup);
+        
         try {
             // Validation des prérequis
             if (!configStore.config.gedcomFileName) {
@@ -207,28 +210,59 @@ export class FanChartManager {
                 throw new Error('Fan container not visible');
             }
 
-            // Nettoyage de l'instance existante
-            await this.cleanupExistingInstance();
+            // Nettoyage de l'instance existante si nécessaire
+            if (!skipCleanup) {
+                await this.cleanupExistingInstance();
+            }
 
-            // Dessin du nouveau fan
-            const currentRoot = rootPersonStore.root;
-            console.log('Drawing fan with current root:', currentRoot);
-            
-            const drawResult = draw(currentRoot);
+            console.log('Drawing fan with root:', root);
+            const drawResult = draw(root);
             if (!drawResult) {
                 throw new Error('Failed to draw fan');
             }
 
-            // Affichage et mise à jour de l'UI
             await this.displayFan();
             this.updateUIAfterRedraw();
 
-            return true;
+            console.groupEnd();
+            return drawResult;
 
         } catch (error) {
-            this.handleError(error, 'redraw');
-            return false;
+            this.handleError(error, 'draw');
+            console.groupEnd();
+            return null;
         }
+    }
+
+    static async applyConfigChanges() {
+        if (!rootPersonStore.root) return null;
+        
+        console.group('🔧 FanChartManager.applyConfigChanges');
+        try {
+            if (!configStore.config.gedcomFileName) {
+                console.log('No GEDCOM file loaded');
+                return null;
+            }
+
+            const fanContainer = document.getElementById('fanContainer');
+            if (!fanContainer || fanContainer.offsetParent === null) {
+                console.log('Fan container not visible');
+                return null;
+            }
+
+            console.log('Applying config changes');
+            return FanChartManager.drawFanForRoot(rootPersonStore.root);
+
+        } catch (error) {
+            FanChartManager.handleError(error, 'config-change');
+            return null;
+        } finally {
+            console.groupEnd();
+        }
+    }
+
+    static async redrawFan() {
+        return FanChartManager.drawFanForRoot(rootPersonStore.root);
     }
 
     // Nettoyage de l'instance existante du fan chart
