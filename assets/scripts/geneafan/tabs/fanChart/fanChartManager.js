@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import { draw } from "./fan.js";
 import { 
     setSvgPanZoomInstance, 
@@ -36,12 +37,17 @@ export class FanChartManager {
         }
     }
 
-    // Gestion des écouteurs pour les onglets
+    static debouncedDraw = _.debounce((root) => {
+        this.drawFanForRoot(root, false);
+    }, 50);
+    
     static setupTabListeners() {
         const tabFan = document.querySelector('[href="#tab1"]');
         if (tabFan) {
             tabFan.addEventListener("shown.bs.tab", () => {
-                configStore.handleSettingChange();
+                if (rootPersonStore.root) {
+                    this.debouncedDraw(rootPersonStore.root);
+                }
             });
         }
     }
@@ -204,10 +210,13 @@ export class FanChartManager {
             if (!configStore.config.gedcomFileName) {
                 throw new Error('No GEDCOM file loaded');
             }
-
+    
             const fanContainer = document.getElementById('fanContainer');
             if (!fanContainer || fanContainer.offsetParent === null) {
-                throw new Error('Fan container not visible');
+                // Le container n'est pas visible - c'est un cas normal quand l'onglet n'est pas actif
+                console.log('Fan container not visible - skipping draw');
+                console.groupEnd();
+                return null;
             }
 
             // Nettoyage de l'instance existante si nécessaire
