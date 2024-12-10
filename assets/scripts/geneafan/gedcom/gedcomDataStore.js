@@ -1,6 +1,5 @@
 import { makeObservable, observable, action, computed, runInAction } from 'mobx';
 import _ from 'lodash';
-import { clearAncestorMap } from '../common/stores/state.js';
 
 class GedcomDataStore {
     sourceData = [];
@@ -42,14 +41,12 @@ class GedcomDataStore {
     setSourceData = (newSourceData) => {
         runInAction(() => {
             this.sourceData = newSourceData;
-            clearAncestorMap();
         });
     }
 
     clearSourceData = () => {
         runInAction(() => {
             this.sourceData = [];
-            clearAncestorMap();
         });
     }
 
@@ -131,7 +128,6 @@ class GedcomDataStore {
             this._hierarchy = null;
             this.familyEvents = [];
             this.isFileUploaded = false;
-            clearAncestorMap();
         });
     }
 

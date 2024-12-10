@@ -38,6 +38,7 @@ function traceAncestors(id, ancestorMap) {
 export function getOldestAncestorOf(individualId, prioritize = "both") {
     let ancestorMap = familyTreeDataStore.getAncestorMapCache;
     if (ancestorMap.size === 0) {
+        // Utilisation directe du store au lieu du wrapper
         const genealogyGraph = familyTreeDataStore.getGenealogyGraph;
         ancestorMap = createAncestorMap(genealogyGraph.edges);
         familyTreeDataStore.setAncestorMapCache(ancestorMap);
@@ -133,19 +134,25 @@ function shortestPath(graph, start, end) {
 
 export function commonAncestryGraph(id1, id2) {
     console.time('commonAncestryGraph');
+    // Utilisation directe du store au lieu du wrapper
     const graph = familyTreeDataStore.getGenealogyGraph;
+    
     let commonAncestorId = closestAncestor(graph, id1, id2);
     if (!commonAncestorId) {
         console.log('No ancestors found for ' + id1 + ' ' + id2);
         return null;
     } else {
-        console.log('Closest ancestor is ' + graph.nodes.find(node => node.id === commonAncestorId).name + ' with id ' + commonAncestorId);
+        const ancestorNode = graph.nodes.find(node => node.id === commonAncestorId);
+        console.log('Closest ancestor is ' + ancestorNode.name + ' with id ' + commonAncestorId);
     }
 
     let edges1 = shortestPath(graph, commonAncestorId, id1);
     let edges2 = shortestPath(graph, commonAncestorId, id2);
     let commonAncestryGraph = _.union(edges1, edges2);
+    
+    // Utilisation directe du store au lieu du wrapper
     familyTreeDataStore.setCommonAncestryGraphData(commonAncestryGraph);
+    
     console.timeEnd('commonAncestryGraph');
-    return [...edges1, ...edges2];
+    return commonAncestryGraph;
 }

@@ -1,7 +1,7 @@
 import FamilyTree from '@balkangraph/familytree.js';
 import _ from 'lodash';
 import { reaction } from '../../common/stores/mobx-config.js';
-import { commonAncestryGraph, getOldestAncestorOf } from './ancestorUtils.js';
+import { getOldestAncestorOf } from './ancestorUtils.js';
 import rootPersonStore from '../../common/stores/rootPersonStore.js';
 import familyTreeDataStore from './familyTreeDataStore.js';
 
@@ -52,7 +52,7 @@ export function initializeFamilyTree() {
         }
     });
 
-    // Event handlers remain the same, just update data source references
+    // Event handlers
     family.onInit(() => {
         const rootNode = family.getNode(initialRootId);
         if (rootNode) {
@@ -230,6 +230,7 @@ function getFilteredFamilyTreeData(familyTreeData, genealogyGraph, roots) {
 
 // Handle common ancestor functionality
 document.getElementById("commonAncestor").addEventListener("click", () => {
+    // Utilisation directe du store au lieu du wrapper
     const genealogyGraph = familyTreeDataStore.getGenealogyGraph;
     const familyTreeData = familyTreeDataStore.getFamilyTreeData;
     const id1 = '@I789613205@';

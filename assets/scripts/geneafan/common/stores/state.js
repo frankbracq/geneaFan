@@ -15,10 +15,6 @@ export const clearAllStates = () => {
     destroySvgPanZoom();
 };
 
-export const getGenealogyGraph = () => familyTreeDataStore.getGenealogyGraph;
-export const clearAncestorMap = () => familyTreeDataStore.clearAncestorMap();
-export const getCommonAncestryGraphData = () => familyTreeDataStore.getCommonAncestryGraphData;
-
 export const clearAscendantEvents = () => timelineEventsStore.clearEvents();
 export const addToAscendantEvents = event => timelineEventsStore.addEvent(event);
 export const getAscendantEvents = () => timelineEventsStore.getAllEvents();
