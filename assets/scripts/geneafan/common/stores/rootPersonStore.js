@@ -116,6 +116,9 @@ class RootPersonStore {
         }
         this.root = newRoot;
         this.updateHistory(newRoot);
+        
+        // Émettre l'événement de changement de root
+        document.dispatchEvent(new Event('rootChange'));
     });
 
     setRootPersonName = action((name) => {

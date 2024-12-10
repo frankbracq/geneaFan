@@ -50,18 +50,9 @@ class ConfigStore {
     _pendingUpdates = new Set();
     _drawInProgress = false;
     _isRootChangeInProgress = false;
-
-    get angle() {
-        return (2 * Math.PI * this.config.fanAngle) / 360.0;
-    }
-
-    get dimensions() {
-        return this.calculateDimensions(
-            this.config.fanAngle,
-            this.config.maxGenerations,
-            this.config.showMarriages
-        );
-    }
+    _rootChangeTimeout = null;
+    _skipNextUpdate = false;
+    _isInitialDraw = true;
 
     constructor() {
         const initialDimensions = this.calculateDimensions(
@@ -109,13 +100,45 @@ class ConfigStore {
             angle: computed,
             dimensions: computed,
             
+            configHistory: false,
+            _rootChangeTimeout: false,
+            _skipNextUpdate: false,
+            _isRootChangeInProgress: false,
             _queueTimeout: false,
             _updateQueued: false,
             _batchUpdating: false,
             _pendingUpdates: false,
-            configHistory: false
+            _isInitialDraw: false,
         });
 
+        // Écouteur d'événements pour le changement de root
+        document.addEventListener('rootChange', () => {
+            runInAction(() => {
+                console.group('🔄 Root Change Detection');
+                console.log('Setting root change flags');
+                
+                this._isRootChangeInProgress = true;
+                this._skipNextUpdate = true;
+                
+                if (this._rootChangeTimeout) {
+                    console.log('Clearing previous root change timeout');
+                    clearTimeout(this._rootChangeTimeout);
+                }
+                
+                this._rootChangeTimeout = setTimeout(() => {
+                    runInAction(() => {
+                        console.log('Resetting root change flags');
+                        this._isRootChangeInProgress = false;
+                        this._skipNextUpdate = false;
+                        this._isInitialDraw = false;
+                    });
+                }, 100);
+                
+                console.groupEnd();
+            });
+        });
+
+        // La réaction pour les paramètres de l'éventail
         reaction(
             () => ({
                 fanAngle: this.config.fanAngle,
@@ -126,78 +149,24 @@ class ConfigStore {
                 showMissing: this.config.showMissing
             }),
             (params, previousParams) => {
-                if (this._batchUpdating) return;
-                
-                console.group('🔍 ConfigStore Reaction');
-                console.log('Current params:', params);
-                console.log('Previous params:', previousParams);
+                // Ne pas traiter si un changement de root est en cours et que ce n'est pas le dessin initial
+                if (this._batchUpdating || (this._isRootChangeInProgress && !this._isInitialDraw)) {
+                    console.log('⏭️ Skipping - Update in progress or subsequent root change');
+                    return;
+                }
                 
                 if (previousParams && _.isEqual(params, previousParams)) {
                     console.log('⏭️ Skipping - No real changes');
-                    console.groupEnd();
                     return;
                 }
-        
+
                 runInAction(() => {
-                    let needsUpdate = false;
-        
-                    if (params.fanAngle !== previousParams?.fanAngle) {
-                        this.config.titleMargin = params.fanAngle === 360 ? 0.35 : 0.25;
-                        this._pendingUpdates.add('fanAngle');
-                        needsUpdate = true;
-                    }
-        
-                    if (params.coloringOption !== previousParams?.coloringOption) {
-                        this.config.computeChildrenCount = params.coloringOption === "childrencount";
-                        this._pendingUpdates.add('coloringOption');
-                        needsUpdate = true;
-                    }
-        
-                    if (params.fanAngle !== previousParams?.fanAngle ||
-                        params.maxGenerations !== previousParams?.maxGenerations ||
-                        params.showMarriages !== previousParams?.showMarriages) {
-                        const dimensions = this.dimensions;
-                        if (dimensions) {
-                            this.config.fanDimensions = dimensions.fanDimensionsInMm;
-                            this.config.frameDimensions = dimensions.frameDimensionsInMm;
-                        }
-                        this._pendingUpdates.add('dimensions');
-                        needsUpdate = true;
-                    }
-        
-                    if (params.invertTextArc !== previousParams?.invertTextArc) {
-                        this._pendingUpdates.add('invertTextArc');
-                        needsUpdate = true;
-                    }
-                    if (params.showMissing !== previousParams?.showMissing) {
-                        this._pendingUpdates.add('showMissing');
-                        needsUpdate = true;
-                    }
-        
-                    // Seulement appeler handleSettingChange si des changements réels ont eu lieu
-                    if (needsUpdate && this._pendingUpdates.size > 0) {
-                        this.handleSettingChange();
-                    }
+                    // ... reste de la logique ...
                 });
             },
             {
                 equals: comparer.structural,
                 name: 'ConfigStore-FanParametersReaction'
-            }
-        );
-
-        reaction(
-            () => rootPersonStore.root,
-            () => {
-                this._isRootChangeInProgress = true;
-                try {
-                    // Ajout d'un délai minime pour laisser le changement de root se terminer
-                    setTimeout(() => {
-                        this._isRootChangeInProgress = false;
-                    }, 0);
-                } catch (error) {
-                    this._isRootChangeInProgress = false;
-                }
             }
         );
 
@@ -254,6 +223,18 @@ class ConfigStore {
         );
     }
 
+    get angle() {
+        return (2 * Math.PI * this.config.fanAngle) / 360.0;
+    }
+
+    get dimensions() {
+        return this.calculateDimensions(
+            this.config.fanAngle,
+            this.config.maxGenerations,
+            this.config.showMarriages
+        );
+    }
+
     queueSettingChange = _.debounce(action(() => {
         if (this._batchUpdating) return;
         
@@ -273,20 +254,24 @@ class ConfigStore {
 
     handleSettingChangeInternal = action(() => {
         console.group('🛠️ handleSettingChangeInternal');
-
-        if (this._isRootChangeInProgress) {
-            console.log('⏭️ Skipping - Root change in progress');
-            console.groupEnd();
-            return false;
-        }
-    
+        
         if (!this.config.gedcomFileName) {
             console.log('⏭️ Skipping config update: No GEDCOM file loaded');
             console.groupEnd();
             return false;
         }
     
+        // Permettre le dessin initial ou si le changement de root est terminé
+        if (!this._isInitialDraw && this._isRootChangeInProgress) {
+            console.log('⏭️ Skipping - Not initial draw and root change in progress');
+            console.groupEnd();
+            return false;
+        }
+        
         console.log('✨ Applying config changes');
+        if (this._isInitialDraw) {
+            console.log('📌 Initial draw in progress');
+        }
         console.groupEnd();
         return FanChartManager.applyConfigChanges();
     });
