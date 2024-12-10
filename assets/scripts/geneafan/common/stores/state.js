@@ -15,11 +15,6 @@ export const clearAllStates = () => {
     destroySvgPanZoom();
 };
 
-export const clearAscendantEvents = () => timelineEventsStore.clearEvents();
-export const addToAscendantEvents = event => timelineEventsStore.addEvent(event);
-export const getAscendantEvents = () => timelineEventsStore.getAllEvents();
-
-
 // SVG Pan Zoom instance state
 export let svgPanZoomInstance = null;
 export const getSvgPanZoomInstance = () => svgPanZoomInstance;

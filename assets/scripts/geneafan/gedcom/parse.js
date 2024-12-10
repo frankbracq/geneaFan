@@ -22,8 +22,6 @@ import {
 
 // State management
 import { 
-    addToAscendantEvents, 
-    clearAscendantEvents, 
     getStatistics, 
     updateTotalIndividuals, 
     updateGenderCount, 
@@ -36,8 +34,9 @@ import {
 } from "../common/stores/state.js";
 
 // Stores
-import configStore from '../tabs/fanChart/fanConfigStore.js';
 import gedcomDataStore from './gedcomDataStore.js';
+import configStore from '../tabs/fanChart/fanConfigStore.js';
+import timelineEventsStore from '../tabs/timeline/timelineEventsStore.js';
 import familyTreeDataStore from '../tabs/familyTree/familyTreeDataStore.js';
 import familyTownsStore from './familyTownsStore.js';
 
@@ -1008,7 +1007,7 @@ function buildHierarchy(currentRoot) {
     const config = configStore.getConfig;
     const maxHeight = config.maxGenerations - 1;
 
-    clearAscendantEvents();
+    timelineEventsStore.clearEvents();
 
     // Utiliser le cache des individus déjà construit
     const individualsCache = gedcomDataStore.getIndividualsCache()
@@ -1034,7 +1033,7 @@ function buildHierarchy(currentRoot) {
             individual.individualEvents.forEach((event) => {
                 const validTypes = ['death', 'birth', 'marriage'];
                 if (validTypes.includes(event.type)) {
-                    addToAscendantEvents({
+                    timelineEventsStore.addEvent({
                         ...event,
                         id: individualPointer,
                         sosa,
