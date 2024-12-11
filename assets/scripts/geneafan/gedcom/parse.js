@@ -26,7 +26,7 @@ import configStore from '../tabs/fanChart/fanConfigStore.js';
 import timelineEventsStore from '../tabs/timeline/timelineEventsStore.js';
 import familyTreeDataStore from '../tabs/familyTree/familyTreeDataStore.js';
 import familyTownsStore from './familyTownsStore.js';
-import statisticsStore from '../common/stores/statisticsStore.js';
+import statisticsStore from '../tabs/statistics/statisticsStore.js';
 
 const EMPTY = "";
 const TAG_HEAD = "HEAD",

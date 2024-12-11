@@ -10,6 +10,7 @@
     <meta name="robots" content="noindex, follow">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 </head>
+
 <body>
     <header>
         <!-- Header with tabs, tom-select element, dropdowns and fullscreen button -->
@@ -20,32 +21,55 @@
                     <ul class="nav nav-tabs" id="tab-nav">
                         <li class="nav-item">
                             <a class="nav-link active" href="#tab1" data-bs-toggle="tab">
-                                <span class="tab-label"><%= __('geneafan.view_fan_chart') %></span>
-                                <button class="btn btn-secondary btn-sm spacedS" id="fanParametersDisplay" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="<%= __('geneafan.tooltip_fan_parameters') %>">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="width: 1em; height: 1em; fill: currentColor;">
-                                        <path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/>
+                                <span class="tab-label">
+                                    <%= __('geneafan.view_fan_chart') %>
+                                </span>
+                                <button class="btn btn-secondary btn-sm spacedS" id="fanParametersDisplay" disabled
+                                    data-bs-toggle="tooltip" data-bs-placement="top"
+                                    title="<%= __('geneafan.tooltip_fan_parameters') %>">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
+                                        style="width: 1em; height: 1em; fill: currentColor;">
+                                        <path
+                                            d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z" />
                                     </svg>
                                 </button>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link disabled" href="#tab2" data-bs-toggle="tab">
-                                <span class="tab-label"><%= __('geneafan.view_family_map') %></span>
+                                <span class="tab-label">
+                                    <%= __('geneafan.view_family_map') %>
+                                </span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link disabled" href="#tab3" data-bs-toggle="tab">
-                                <span class="tab-label"><%= __('geneafan.view_family_tree') %></span>
-                                <button class="btn btn-secondary btn-sm spacedS" id="treeParametersDisplay" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="<%= __('geneafan.tooltip_tree_parameters') %>">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="width: 1em; height: 1em; fill: currentColor;">
-                                        <path d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z"/>
+                                <span class="tab-label">
+                                    <%= __('geneafan.view_family_tree') %>
+                                </span>
+                                <button class="btn btn-secondary btn-sm spacedS" id="treeParametersDisplay" disabled
+                                    data-bs-toggle="tooltip" data-bs-placement="top"
+                                    title="<%= __('geneafan.tooltip_tree_parameters') %>">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
+                                        style="width: 1em; height: 1em; fill: currentColor;">
+                                        <path
+                                            d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z" />
                                     </svg>
                                 </button>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link disabled" href="#tab4" data-bs-toggle="tab">
-                                <span class="tab-label"><%= __('geneafan.view_ascendant_timeline') %></span>
+                                <span class="tab-label">
+                                    <%= __('geneafan.view_ascendant_timeline') %>
+                                </span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link disabled" href="#tab5" data-bs-toggle="tab">
+                                <span class="tab-label">
+                                    <%= __('geneafan.view_statistics') %>
+                                </span>
                             </a>
                         </li>
                     </ul>
@@ -53,7 +77,9 @@
                 <div id="burger-menu" class="burger-menu">
                     <div type="button" id="more-tab-btn" class="more-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 4 18">
-                            <path fill="var(--color-dark)" fill-rule="evenodd" d="M0 2a2 2 0 1 0 4 0 2 2 0 0 0-4 0m2 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4m0 7a2 2 0 1 1 0-4 2 2 0 0 1 0 4" clip-rule="evenodd"/>
+                            <path fill="var(--color-dark)" fill-rule="evenodd"
+                                d="M0 2a2 2 0 1 0 4 0 2 2 0 0 0-4 0m2 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4m0 7a2 2 0 1 1 0-4 2 2 0 0 1 0 4"
+                                clip-rule="evenodd" />
                         </svg>
                     </div>
                     <ul id="more-drawer" class="nav-tabs more-content">
@@ -63,22 +89,26 @@
             <!-- Section with the tom-select element -->
             <div id="middle-container" class="col-4 d-flex justify-content-center mx-auto align-items-center">
                 <div id="undoButton" class="me-2" style="cursor: pointer; width: 1.5em; height: 1.5em;">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="width: 100%; height: 100%; fill: currentColor;">
-                        <path d="M125.7 160l50.3 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L48 224c-17.7 0-32-14.3-32-32L16 64c0-17.7 14.3-32 32-32s32 14.3 32 32l0 51.2L97.6 97.6c87.5-87.5 229.3-87.5 316.8 0s87.5 229.3 0 316.8s-229.3 87.5-316.8 0c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0c62.5 62.5 163.8 62.5 226.3 0s62.5-163.8 0-226.3s-163.8-62.5-226.3 0L125.7 160z"/>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
+                        style="width: 100%; height: 100%; fill: currentColor;">
+                        <path
+                            d="M125.7 160l50.3 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L48 224c-17.7 0-32-14.3-32-32L16 64c0-17.7 14.3-32 32-32s32 14.3 32 32l0 51.2L97.6 97.6c87.5-87.5 229.3-87.5 316.8 0s87.5 229.3 0 316.8s-229.3 87.5-316.8 0c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0c62.5 62.5 163.8 62.5 226.3 0s62.5-163.8 0-226.3s-163.8-62.5-226.3 0L125.7 160z" />
                     </svg>
                 </div>
                 <select id="individual-select" class="form-control disabled mx-3"></select>
                 <div id="redoButton" class="mx-2" style="cursor: pointer; width: 1.5em; height: 1.5em;">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" style="width: 100%; height: 100%; fill: currentColor;">
-                        <path d="M386.3 160L336 160c-17.7 0-32 14.3-32 32s14.3 32 32 32l128 0c17.7 0 32-14.3 32-32l0-128c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 51.2L414.4 97.6c-87.5-87.5-229.3-87.5-316.8 0s-87.5 229.3 0 316.8s229.3 87.5 316.8 0c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0c-62.5 62.5-163.8 62.5-226.3 0s-62.5-163.8 0-226.3s163.8-62.5 226.3 0L386.3 160z"/>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
+                        style="width: 100%; height: 100%; fill: currentColor;">
+                        <path
+                            d="M386.3 160L336 160c-17.7 0-32 14.3-32 32s14.3 32 32 32l128 0c17.7 0 32-14.3 32-32l0-128c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 51.2L414.4 97.6c-87.5-87.5-229.3-87.5-316.8 0s-87.5 229.3 0 316.8s229.3 87.5 316.8 0c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0c-62.5 62.5-163.8 62.5-226.3 0s-62.5-163.8 0-226.3s163.8-62.5 226.3 0L386.3 160z" />
                     </svg>
                 </div>
             </div>
             <!-- Section with dropdowns and the fullscreen button -->
             <div id="right-container" class="col-4 d-flex justify-content-end">
                 <div class="dropdown spacedS">
-                    <button class="btn btn-secondary dropdown-toggle w-100" type="button" id="gedcomMenu" data-bs-toggle="dropdown"
-                        aria-expanded="false">
+                    <button class="btn btn-secondary dropdown-toggle w-100" type="button" id="gedcomMenu"
+                        data-bs-toggle="dropdown" aria-expanded="false">
                         GEDCOM
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="gedcomMenu">
@@ -91,22 +121,24 @@
                                 </div>
                             </a>
                         </li>
-                
+
                         <!-- My GEDCOM Files -->
                         <li>
-                            <a class="dropdown-item protected-feature" data-action="fetchGedcomFiles" href="#" id="myGedcomFilesMenuItem">
+                            <a class="dropdown-item protected-feature" data-action="fetchGedcomFiles" href="#"
+                                id="myGedcomFilesMenuItem">
                                 Mes fichiers Gedcom enregistrés
                             </a>
                         </li>
-                
+
                         <!-- Separator -->
                         <li>
                             <hr class="dropdown-divider">
                         </li>
-                
+
                         <!-- Use the sample GEDCOM file -->
                         <li>
-                            <a class="dropdown-item remote-file" href="#" id="sample-toggle" data-link="https://files.genealog.ie/demo.ged">
+                            <a class="dropdown-item remote-file" href="#" id="sample-toggle"
+                                data-link="https://files.genealog.ie/demo.ged">
                                 <%= __('geneafan.or_try_sample') %>
                             </a>
                         </li>
@@ -114,8 +146,8 @@
                 </div>
 
                 <div class="dropdown spacedS">
-                    <button class="btn btn-secondary dropdown-toggle" type="button" id="download-menu" data-bs-toggle="dropdown"
-                            aria-haspopup="true" aria-expanded="false" disabled>
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="download-menu"
+                        data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" disabled>
                         <%= __('common.download') %>
                     </button>
                     <div class="dropdown-menu" aria-labelledby="download-menu">
@@ -137,19 +169,20 @@
                     </div>
                 </div>
                 <div style="display: flex;">
-                    <button class="btn btn-secondary" id="fullscreenButton" disabled data-bs-toggle="tooltip" data-bs-placement="top" title="<%= __('geneafan.tooltip_full_screen') %>">
+                    <button class="btn btn-secondary" id="fullscreenButton" disabled data-bs-toggle="tooltip"
+                        data-bs-placement="top" title="<%= __('geneafan.tooltip_full_screen') %>">
                         <i class="bi bi-arrows-fullscreen"></i>
                     </button>
                 </div>
-                
+
                 <!-- Element for the sign-in button or the user button -->
                 <div id="user-controls">
                     <button id="sign-in-button" class="btn btn-primary">Sign In</button>
                     <div id="user-button" style="display: none;"></div>
                 </div>
-                
-                
-                
+
+
+
                 <!--
                 <div class="dropdown">
                     <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="lang-menu" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -187,9 +220,9 @@
 
     </header>
     <main>
-        
+
         <div class="container">
-            
+
             <!-- Tab content -->
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="tab1">
@@ -208,7 +241,8 @@
                             <svg id="fan"></svg>
                         </div>
                         <!-- Offcanvas for fan settings -->
-                        <div class="offcanvas offcanvas-start" tabindex="-1" id="fanParameters" aria-labelledby="fanParametersLabel">
+                        <div class="offcanvas offcanvas-start" tabindex="-1" id="fanParameters"
+                            aria-labelledby="fanParametersLabel">
                             <div class="offcanvas-header">
                                 <h5 class="offcanvas-title" id="fanParametersLabel">Paramètres de l'éventail</h5>
                                 <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
@@ -221,11 +255,11 @@
                                         <div class="mb-3 parameter-row">
                                             <label class="form-label">Angle de l'éventail</label>
                                             <div class="btn-group" role="group" aria-label="Angle de l'éventail">
-                                                <input type="radio" class="btn-check parameter" name="fanAngle" id="fan-angle-270"
-                                                    value="270" checked>
+                                                <input type="radio" class="btn-check parameter" name="fanAngle"
+                                                    id="fan-angle-270" value="270" checked>
                                                 <label class="btn btn-outline-primary" for="fan-angle-270">270°</label>
-                                                <input type="radio" class="btn-check parameter" name="fanAngle" id="fan-angle-360"
-                                                    value="360">
+                                                <input type="radio" class="btn-check parameter" name="fanAngle"
+                                                    id="fan-angle-360" value="360">
                                                 <label class="btn btn-outline-primary" for="fan-angle-360">360°</label>
                                             </div>
                                         </div>
@@ -249,49 +283,58 @@
                                             <div class="btn-group" role="group" aria-label="Affichage des mariages">
                                                 <input type="radio" class="btn-check parameter" name="showMarriages"
                                                     id="showMarriages-true" value="true" checked>
-                                                <label class="btn btn-outline-primary" for="showMarriages-true">Oui</label>
+                                                <label class="btn btn-outline-primary"
+                                                    for="showMarriages-true">Oui</label>
                                                 <input type="radio" class="btn-check parameter" name="showMarriages"
                                                     id="showMarriages-false" value="false">
-                                                <label class="btn btn-outline-primary" for="showMarriages-false">Non</label>
+                                                <label class="btn btn-outline-primary"
+                                                    for="showMarriages-false">Non</label>
                                             </div>
                                         </div>
 
                                         <!-- Autres paramètres -->
                                         <div class="mb-3 parameter-row">
                                             <label class="form-label">Orientation dynamique du texte</label>
-                                            <div class="btn-group" role="group" aria-label="Orientation dynamique du texte">
+                                            <div class="btn-group" role="group"
+                                                aria-label="Orientation dynamique du texte">
                                                 <input type="radio" class="btn-check parameter" name="invert-text-arc"
                                                     id="invert-text-arc-true" value="true" checked>
-                                                <label class="btn btn-outline-primary" for="invert-text-arc-true">Oui</label>
+                                                <label class="btn btn-outline-primary"
+                                                    for="invert-text-arc-true">Oui</label>
                                                 <input type="radio" class="btn-check parameter" name="invert-text-arc"
                                                     id="invert-text-arc-false" value="false">
-                                                <label class="btn btn-outline-primary" for="invert-text-arc-false">Non</label>
+                                                <label class="btn btn-outline-primary"
+                                                    for="invert-text-arc-false">Non</label>
                                             </div>
                                         </div>
                                         <div class="mb-3 parameter-row">
                                             <label class="form-label">Affichage des cases vides</label>
                                             <div class="btn-group" role="group" aria-label="Affichage des cases vides">
-                                                <input type="radio" class="btn-check parameter" name="showMissing" id="showMissing-true"
-                                                    value="true" checked>
-                                                <label class="btn btn-outline-primary" for="showMissing-true">Oui</label>
+                                                <input type="radio" class="btn-check parameter" name="showMissing"
+                                                    id="showMissing-true" value="true" checked>
+                                                <label class="btn btn-outline-primary"
+                                                    for="showMissing-true">Oui</label>
                                                 <input type="radio" class="btn-check parameter" name="showMissing"
                                                     id="showMissing-false" value="false">
-                                                <label class="btn btn-outline-primary" for="showMissing-false">Non</label>
+                                                <label class="btn btn-outline-primary"
+                                                    for="showMissing-false">Non</label>
                                             </div>
                                         </div>
                                         <!-- Coloriage de l'éventail -->
                                         <div class="mb-3 parameter-row">
                                             <label class="form-label">Coloriage de l'éventail</label>
                                             <div class="btn-group" role="group" aria-label="Coloriage de l'éventail">
-                                                <input type="radio" class="btn-check parameter" name="fanColor" id="fan-color-none"
-                                                    value="none" checked>
+                                                <input type="radio" class="btn-check parameter" name="fanColor"
+                                                    id="fan-color-none" value="none" checked>
                                                 <label class="btn btn-outline-primary" for="fan-color-none">Non</label>
                                                 <input type="radio" class="btn-check parameter" name="fanColor"
                                                     id="fan-color-departement" value="departement">
-                                                <label class="btn btn-outline-primary" for="fan-color-departement">Géographique</label>
+                                                <label class="btn btn-outline-primary"
+                                                    for="fan-color-departement">Géographique</label>
                                                 <input type="radio" class="btn-check parameter" name="fanColor"
                                                     id="fan-color-individual" value="individual">
-                                                <label class="btn btn-outline-primary" for="fan-color-individual">Individuel</label>
+                                                <label class="btn btn-outline-primary"
+                                                    for="fan-color-individual">Individuel</label>
                                             </div>
                                         </div>
                                     </div>
@@ -307,12 +350,15 @@
                 <div class="tab-pane fade" id="tab3">
                     <div class="row position-relative" id="treeDisplay"></div>
                     <!-- Tree container -->
-                    <div class="col-12 container-fluid align-items-center mt-2" id="treeContainer" style="height: 95vh;"></div>
+                    <div class="col-12 container-fluid align-items-center mt-2" id="treeContainer"
+                        style="height: 95vh;"></div>
                     <!-- Offcanvas for tree settings -->
-                    <div class="offcanvas offcanvas-start" tabindex="-1" id="treeParameters" aria-labelledby="treeParametersLabel">
+                    <div class="offcanvas offcanvas-start" tabindex="-1" id="treeParameters"
+                        aria-labelledby="treeParametersLabel">
                         <div class="offcanvas-header">
                             <h5 class="offcanvas-title" id="treeParametersLabel">Paramètres de l'arbre</h5>
-                            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                                aria-label="Close"></button>
                         </div>
                         <div class="offcanvas-body">
                             <div class="container-fluid">
@@ -321,7 +367,8 @@
                                         <div class="mb-3 parameter-row">
                                             <label for="commonAncestor" class="form-label">Recherche</label>
                                             <div class="btn-group" role="group">
-                                                <button type="button" id="commonAncestor" class="btn btn-primary">Ancêtre
+                                                <button type="button" id="commonAncestor"
+                                                    class="btn btn-primary">Ancêtre
                                                     commun</button>
                                             </div>
                                         </div>
@@ -333,6 +380,83 @@
                 </div>
                 <div class="tab-pane fade" id="tab4">
                     <div class="horizontal-timeline" id="ascendantTimeline"></div>
+                </div>
+                <!-- Container for the Statistics tab -->
+                <div class="tab-pane fade" id="tab5">
+                    <div class="container mt-4">
+                        <div class="row">
+                            <!-- Overview Card -->
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5 class="card-title">Vue d'ensemble</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <ul class="list-group list-group-flush">
+                                            <li
+                                                class="list-group-item d-flex justify-content-between align-items-center">
+                                                Nombre total d'individus
+                                                <span id="total-individuals"
+                                                    class="badge bg-primary rounded-pill">-</span>
+                                            </li>
+                                            <li
+                                                class="list-group-item d-flex justify-content-between align-items-center">
+                                                Nombre de mariages
+                                                <span id="total-marriages"
+                                                    class="badge bg-primary rounded-pill">-</span>
+                                            </li>
+                                            <li
+                                                class="list-group-item d-flex justify-content-between align-items-center">
+                                                Moyenne d'enfants par couple
+                                                <span id="avg-children" class="badge bg-primary rounded-pill">-</span>
+                                            </li>
+                                            <li
+                                                class="list-group-item d-flex justify-content-between align-items-center">
+                                                Espérance de vie moyenne
+                                                <span id="avg-lifespan" class="badge bg-primary rounded-pill">-</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Gender Distribution Card -->
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5 class="card-title">Distribution par sexe</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="gender-chart" class="chart-container"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Age Distribution Card -->
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5 class="card-title">Distribution des âges au décès</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="age-chart" class="chart-container"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Birth Distribution Card -->
+                            <div class="col-md-6">
+                                <div class="card mb-4">
+                                    <div class="card-header">
+                                        <h5 class="card-title">Distribution des naissances par période</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="birth-chart" class="chart-container"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -359,8 +483,8 @@
             </div>
         </div>
 
-        <div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog" aria-labelledby="confirmationModalLabel"
-            aria-hidden="true">
+        <div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog"
+            aria-labelledby="confirmationModalLabel" aria-hidden="true">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -378,7 +502,7 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Modal de Connexion -->
         <div class="modal fade" id="signInModal" tabindex="-1" aria-labelledby="signInModalLabel" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
@@ -393,16 +517,17 @@
                 </div>
             </div>
         </div>
-        
-        
+
+
         <!-- Élément pour le contenu dynamique (formulaire de connexion, commutateur d'organisations, etc.) -->
-        
+
 
         <!-- Offcanvas for individuals -->
         <div class="offcanvas offcanvas-end" tabindex="-1" id="personDetails" aria-labelledby="personDetailsLabel">
             <div class="offcanvas-header">
                 <h5 id="personDetailsLabel">name</h5>
-                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                    aria-label="Close"></button>
             </div>
             <div id="offCanvasBody" class="text-start" style="overflow-y: auto;">
                 <div id="individualTimeline" class="text-start"></div>
@@ -413,7 +538,8 @@
             aria-labelledby="individualMapLabel">
             <div class="offcanvas-header">
                 <h5 id="individualMapLabel">Carte</h5>
-                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                    aria-label="Close"></button>
             </div>
             <div class="offcanvas-body">
                 <div class="row flex-nowrap" id="individualMap"></div>
@@ -430,7 +556,7 @@
             return false;
         };
     </script>
-  
+
 </body>
 
 </html>
