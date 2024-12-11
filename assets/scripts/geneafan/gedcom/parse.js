@@ -20,25 +20,13 @@ import {
     prefixedDate 
 } from "../utils/dates.js";
 
-// State management
-import { 
-    getStatistics, 
-    updateTotalIndividuals, 
-    updateGenderCount, 
-    addBirthYear, 
-    addDeathYear, 
-    addAgeAtDeath, 
-    updateMarriages, 
-    addChildrenPerCouple, 
-    addAgeAtFirstChild 
-} from "../common/stores/state.js";
-
 // Stores
 import gedcomDataStore from './gedcomDataStore.js';
 import configStore from '../tabs/fanChart/fanConfigStore.js';
 import timelineEventsStore from '../tabs/timeline/timelineEventsStore.js';
 import familyTreeDataStore from '../tabs/familyTree/familyTreeDataStore.js';
 import familyTownsStore from './familyTownsStore.js';
+import statisticsStore from '../common/stores/statisticsStore.js';
 
 const EMPTY = "";
 const TAG_HEAD = "HEAD",
@@ -790,6 +778,54 @@ function buildEventFallback(individualJson, tags, individualTowns) {
     return { eventDetails, updatedIndividualTowns };
 }
 
+/**
+ * Adds an event to the individual's events list and to the family events store if applicable
+ * @param {string} type - The type of event (birth, death, marriage, etc.)
+ * @param {string} name - Individual's name
+ * @param {string} surname - Individual's surname
+ * @param {string} date - Event date
+ * @param {string} town - Event location
+ * @param {string} description - Formatted event description
+ * @param {string} eventId - Unique event identifier
+ * @param {Array} eventAttendees - List of event participants
+ * @param {string} birthDate - Individual's birth date (for age calculation)
+ * @param {Array} individualEvents - Array to store the individual's events
+ * @returns {void}
+ */
+function addEvent(type, name, surname, date, town, description, eventId = '', eventAttendees = [], birthDate, individualEvents) {
+    if (!date) return;
+
+    // Calculate age at the time of the event if birthDate is known
+    let ageAtEvent = null;
+    if (birthDate) {
+        ageAtEvent = calculateAge(birthDate, date);
+    }
+
+    const formattedAttendees = eventAttendees.map(attendee => `${attendee.name}`).join(', ');
+    
+    const event = {
+        type,                   // Used for event grouping
+        name: `${name} ${surname}`, // Used in formatEvent
+        date,                   // Used in formatEvent
+        town: town || "lieu inconnu", // Used in formatEvent
+        townDisplay: town || "lieu inconnu",
+        description,
+        eventId: eventId || '',
+        eventAttendees: eventAttendees.join(', '),
+        age: ageAtEvent,        // Used in formatEvent for deaths
+        spouse: '',             // Should be filled for marriages
+        sosa: null              // Important for ancestor events
+    };
+
+    individualEvents.push(event);
+    
+    // Add to family events store unless it's a personal event
+    if (!["child-birth", "occupation", "today"].includes(type)) {
+        gedcomDataStore.addFamilyEvent(event);
+    }
+}
+
+
 function buildIndividual(individualJson, allIndividuals, allFamilies) {
     if (!individualJson) {
         return { id: null, name: "", surname: "", birth: {}, death: {} };
@@ -807,7 +843,7 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
     const birthData = buildEventFallback(individualJson, birthTags, individualTowns).eventDetails;
     const birthYear = birthData.date ? extractYear(birthData.date) : "";
     const formattedBirth = generateEventDescription("BIRT", birthData, gender, age);
-    addEvent("birth", name, surname, birthData.date, birthData.town, formattedBirth, "", [], birthData.date);
+    addEvent("birth", name, surname, birthData.date, birthData.town, formattedBirth, "", [], birthData.date, individualEvents);
 
     const deathData = buildEventFallback(individualJson, deathTags, individualTowns).eventDetails;
     const deathYear = deathData.date ? extractYear(deathData.date) : "";
@@ -816,7 +852,7 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
     if (!birthData.date) {
         deceased = true;
         formattedDeath = deathData.date ? generateEventDescription("DEAT", deathData, gender, null, true) : "Information on life and death unknown";
-        addEvent("death", name, surname, deathData.date || "date inconnue", deathData.town || "", formattedDeath, "", [], birthData.date);
+        addEvent("death", name, surname, deathData.date || "date inconnue", deathData.town || "", formattedDeath, "", [], birthData.date, individualEvents);
     } else {
         if (!deathData.date) {
             const today = moment().format("DD/MM/YYYY");
@@ -824,46 +860,17 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
                 age = calculateAge(birthData.date);
                 deceased = false;
                 formattedDeath = generateEventDescription("DEAT", { date: today, town: "" }, gender, age, false);
-                addEvent("today", name, surname, today, "", formattedDeath, "", [], birthData.date);
+                addEvent("today", name, surname, today, "", formattedDeath, "", [], birthData.date, individualEvents);
             } else {
                 deceased = true;
                 formattedDeath = generateEventDescription("DEAT", { date: today, town: "" }, gender, "", true);
-                addEvent("death", name, surname, "date inconnue", "", formattedDeath, "", [], birthData.date);
+                addEvent("death", name, surname, "date inconnue", "", formattedDeath, "", [], birthData.date, individualEvents);
             }
         } else {
             age = calculateAge(birthData.date, deathData.date);
             deceased = true;
             formattedDeath = generateEventDescription("DEAT", deathData, gender, age, true);
-            addEvent("death", name, surname, deathData.date, deathData.town, formattedDeath, "", [], birthData.date);
-        }
-    }
-
-    function addEvent(type, name, surname, date, town, description, eventId = '', eventAttendees = [], birthDate) {
-        if (date) {
-            // Calculate age at the time of the event if birthDate is known
-            let ageAtEvent = null;
-            if (birthDate) {
-                ageAtEvent = calculateAge(birthDate, date);
-            }
-
-            const formattedAttendees = eventAttendees.map(attendee => `${attendee.name}`).join(', ');
-            const event = {
-                type,                   // Utilisé pour grouper les événements
-                name: `${name} ${surname}`, // Utilisé dans formatEvent
-                date,                   // Utilisé dans formatEvent
-                town: town || "lieu inconnu", // Utilisé dans formatEvent
-                townDisplay: town || "lieu inconnu",
-                description,
-                eventId: eventId || '',
-                eventAttendees: eventAttendees.join(', '),
-                age: ageAtEvent,        // Utilisé dans formatEvent pour les décès
-                spouse: '',             // Devrait être rempli pour les mariages
-                sosa: null              // Important pour les événements d'ancêtres
-            };
-            individualEvents.push(event);
-            if (!["child-birth", "occupation", "today"].includes(type)) {
-                gedcomDataStore.addFamilyEvent(event);
-            }
+            addEvent("death", name, surname, deathData.date, deathData.town, formattedDeath, "", [], birthData.date, individualEvents);
         }
     }
 
@@ -922,7 +929,8 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
             marriage.formattedMarriage,
             marriage.eventDetails.eventId,
             marriage.couple ? [marriage.couple.husband, marriage.couple.wife] : [],
-            birthData.date
+            birthData.date,
+            individualEvents
         );
 
         marriage.children.forEach((child) => {
@@ -935,37 +943,18 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
                 formatChild(child),
                 "",
                 [],
-                birthData.date
+                birthData.date,
+                individualEvents
             );
-
-            // Collect age at first child
-            if (marriage.children.indexOf(child) === 0) {  // First child
-                const firstChildBirthYear = extractYear(child.birthDate);
-                const ageAtFirstChild = firstChildBirthYear - birthYear;
-                const period = Math.floor(firstChildBirthYear / 5) * 5;
-                addAgeAtFirstChild(period, ageAtFirstChild);
-            }
         });
     });
 
     const formattedOccupations = processOccupations(individualJson);
 
-    // Update Statistics
-    updateTotalIndividuals(1);
-    updateGenderCount(gender, 1);
-    if (birthYear) addBirthYear(birthYear);
-    if (deathYear) {
-        addDeathYear(deathYear);
-        if (age) addAgeAtDeath(age);
-    }
-    if (marriages.length > 0) {
-        updateMarriages(marriages.length);
-        marriages.forEach(marriage => {
-            addChildrenPerCouple(marriage.children.length);
-        });
-    }
+    // Note: La partie des statistiques a été retirée car elle est maintenant gérée
+    // dans le traitement par lots dans prebuildindividualsCache
 
-    const individual = {
+    return {
         id: individualJson.pointer,
         name,
         surname,
@@ -993,8 +982,6 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
         formattedSiblings,
         bgColor: birthData.departementColor ? birthData.departementColor : birthData.countryColor,
     };
-
-    return individual;
 }
 
 function buildHierarchy(currentRoot) {
@@ -1305,6 +1292,140 @@ function calculateMaxGenerations(individualsCache, allFamilies) {
     return maxGen;
 }
 
+/**
+ * Helper function to check if an individual is a parent in another family
+ * @param {string} individualId - The ID of the individual to check
+ * @param {Array} allFamilies - All families in the GEDCOM
+ * @returns {boolean} Whether the individual appears as a parent in another family
+ */
+function isParentInOtherFamily(individualId, allFamilies) {
+    return allFamilies.some(familyJson =>
+        familyJson.tree.some(node =>
+            node.tag === 'CHIL' && node.data === individualId
+        )
+    );
+}
+
+/**
+ * Determines whether an individual should be processed based on family relationships
+ * @param {Object} individualJson - The individual's GEDCOM record
+ * @param {Array} familiesWithIndividual - Families where the individual appears
+ * @param {Array} allFamilies - All families in the GEDCOM
+ * @returns {boolean} Whether the individual should be processed
+ */
+function shouldProcessIndividual(individualJson, familiesWithIndividual, allFamilies) {
+    // Skip individuals not appearing in any family
+    if (familiesWithIndividual.length === 0) return false;
+
+    // Special handling for individuals appearing in only one family
+    if (familiesWithIndividual.length === 1) {
+        const family = familiesWithIndividual[0];
+        const hasChildren = family.tree.some(byTag(TAG_CHILD));
+        
+        if (!hasChildren) {
+            const spouses = family.tree.filter(node => 
+                node.tag === 'HUSB' || node.tag === 'WIFE');
+
+            if (spouses.length === 2) {
+                const otherSpouse = spouses.find(node => 
+                    node.data !== individualJson.pointer);
+                const otherSpouseFamilies = allFamilies.filter(familyJson =>
+                    familyJson.tree.some(node =>
+                        node.data === otherSpouse.data &&
+                        (node.tag === 'HUSB' || node.tag === 'WIFE')
+                    )
+                );
+
+                // Skip if spouse only appears in this family and isn't a child in another family
+                if (otherSpouseFamilies.length === 1 && 
+                    !isParentInOtherFamily(otherSpouse.data, allFamilies)) {
+                    return false;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+/**
+ * Extracts birth and death years from an individual record
+ * @param {Object} individualJson - The individual's GEDCOM record
+ * @returns {Object} Object containing birthYear and deathYear
+ */
+function extractDatesFromIndividual(individualJson) {
+    const birthNode = individualJson.tree.find(node => 
+        [TAG_BIRTH, TAG_BAPTISM].includes(node.tag));
+    const deathNode = individualJson.tree.find(node => 
+        [TAG_DEATH, TAG_BURIAL].includes(node.tag));
+
+    const birthYear = birthNode ? 
+        extractYear(processDate(birthNode.tree.find(byTag(TAG_DATE))?.data)) : null;
+    const deathYear = deathNode ? 
+        extractYear(processDate(deathNode.tree.find(byTag(TAG_DATE))?.data)) : null;
+
+    return { birthYear, deathYear };
+}
+
+/**
+ * Updates the statistics store with accumulated batch statistics
+ * @param {Object} batchStatistics - Accumulated statistics from a batch of individuals
+ */
+function updateStatisticsStore(batchStatistics) {
+    statisticsStore.updateTotalIndividuals(
+        batchStatistics.genders.male + batchStatistics.genders.female
+    );
+    statisticsStore.updateGenderCount('male', batchStatistics.genders.male);
+    statisticsStore.updateGenderCount('female', batchStatistics.genders.female);
+    
+    batchStatistics.births.forEach(year => statisticsStore.addBirthYear(year));
+    batchStatistics.deaths.forEach(year => statisticsStore.addDeathYear(year));
+    batchStatistics.ages.forEach(age => statisticsStore.addAgeAtDeath(age));
+}
+
+/**
+ * Processes marriage and children statistics for an individual
+ * @param {Object} individualJson - The individual's GEDCOM record
+ * @param {Array} familiesWithIndividual - Families where the individual appears
+ * @param {Map} familyStatistics - Pre-computed family statistics
+ * @param {number} birthYear - Individual's birth year
+ * @param {Map} individualsCache - Cache of processed individuals
+ */
+function processMarriageAndChildrenStatistics(
+    individualJson, 
+    familiesWithIndividual, 
+    familyStatistics,
+    birthYear,
+    individualsCache
+) {
+    familiesWithIndividual.forEach(family => {
+        const stats = familyStatistics.get(family.pointer);
+        if (!stats) return;
+
+        statisticsStore.updateMarriages(1);
+
+        if (stats.childrenCount > 0) {
+            statisticsStore.addChildrenPerCouple(stats.childrenCount);
+
+            const firstChildBirth = _.min(family.tree
+                .filter(byTag(TAG_CHILD))
+                .map(child => {
+                    const childNode = individualsCache.get(child.data);
+                    return childNode ? extractYear(childNode.birthDate) : null;
+                })
+                .filter(Boolean));
+
+            if (firstChildBirth && birthYear) {
+                const ageAtFirstChild = firstChildBirth - birthYear;
+                if (ageAtFirstChild > 0 && ageAtFirstChild < 100) {
+                    const period = Math.floor(firstChildBirth / 5) * 5;
+                    statisticsStore.addAgeAtFirstChild(period, ageAtFirstChild);
+                }
+            }
+        }
+    });
+}
+
 function prebuildindividualsCache() {
     console.time("prebuildindividualsCache");
     const json = gedcomDataStore.getSourceData();
@@ -1313,75 +1434,77 @@ function prebuildindividualsCache() {
     const allIndividuals = _.filter(json, byTag(TAG_INDIVIDUAL));
     const allFamilies = _.filter(json, byTag(TAG_FAMILY));
 
+    // Pre-compute family statistics
+    const familyStatistics = new Map();
+    allFamilies.forEach(family => {
+        const childrenCount = family.tree.filter(byTag(TAG_CHILD)).length;
+        const marriageNode = family.tree.find(byTag(TAG_MARRIAGE));
+        const marriageDate = marriageNode ? 
+            extractYear(processDate(marriageNode.tree.find(byTag(TAG_DATE))?.data)) : null;
 
-    // Function to check if an individual is a parent in another family
-    function isParentInOtherFamily(individualId) {
-        return allFamilies.some(familyJson =>
-            familyJson.tree.some(node =>
-                node.tag === 'CHIL' && node.data === individualId
-            )
-        );
-    }
-
-    // Iterate through all individuals
-    _.forEach(allIndividuals, (individualJson) => {
-        // Find families where the individual appears as a child or spouse
-        const familiesWithIndividual = allFamilies.filter(familyJson =>
-            familyJson.tree.some(node =>
-                node.data === individualJson.pointer &&
-                (node.tag === 'CHIL' || node.tag === 'HUSB' || node.tag === 'WIFE')
-            )
-        );
-
-        // If the individual does not appear in any family, move to the next individual
-        if (familiesWithIndividual.length === 0) {
-            return;
-        }
-
-        // If the individual appears in only one family as a spouse, check if there are children
-        if (familiesWithIndividual.length === 1) {
-            const family = familiesWithIndividual[0];
-            const hasChildren = family.tree.some(node => byTag(TAG_CHILD)(node));
-
-            // If the family has no children, check the spouse
-            if (!hasChildren) {
-                const spouses = family.tree.filter(node => node.tag === 'HUSB' || node.tag === 'WIFE');
-
-                // If there are two spouses, check if the other spouse is only in this family
-                if (spouses.length === 2) {
-                    const otherSpouse = spouses.find(node => node.data !== individualJson.pointer);
-                    const otherSpouseFamilies = allFamilies.filter(familyJson =>
-                        familyJson.tree.some(node =>
-                            node.data === otherSpouse.data &&
-                            (node.tag === 'HUSB' || node.tag === 'WIFE')
-                        )
-                    );
-
-                    // Check if the other spouse has parents mentioned in another family
-                    const otherSpouseParents = isParentInOtherFamily(otherSpouse.data);
-
-                    // If the other spouse only appears in this family and does not have parents in other families, move to the next individual
-                    if (otherSpouseFamilies.length === 1 && !otherSpouseParents) {
-                        return;
-                    }
-                }
-            }
-        }
-
-        // Build the individual object and add it to the cache
-        const individual = buildIndividual(individualJson, allIndividuals, allFamilies);
-        individualsCache.set(individualJson.pointer, individual);
+        familyStatistics.set(family.pointer, {
+            childrenCount,
+            marriageDate
+        });
     });
 
-    // Calculate maximum generations
+    // Process individuals in batches
+    const batchSize = 1000;
+    const batches = _.chunk(allIndividuals, batchSize);
+
+    batches.forEach(batch => {
+        const batchStatistics = {
+            births: [],
+            deaths: [],
+            ages: [],
+            genders: { male: 0, female: 0 }
+        };
+
+        batch.forEach(individualJson => {
+            const familiesWithIndividual = allFamilies.filter(familyJson =>
+                familyJson.tree.some(node =>
+                    node.data === individualJson.pointer &&
+                    (node.tag === 'CHIL' || node.tag === 'HUSB' || node.tag === 'WIFE')
+                )
+            );
+
+            if (!shouldProcessIndividual(individualJson, familiesWithIndividual, allFamilies)) {
+                return;
+            }
+
+            const { birthYear, deathYear } = extractDatesFromIndividual(individualJson);
+            const gender = individualJson.tree.find(byTag(TAG_SEX))?.data;
+
+            if (birthYear) batchStatistics.births.push(birthYear);
+            if (deathYear) batchStatistics.deaths.push(deathYear);
+            if (birthYear && deathYear) {
+                const age = deathYear - birthYear;
+                if (age >= 0 && age <= 120) {
+                    batchStatistics.ages.push(age);
+                }
+            }
+            if (gender === 'M') batchStatistics.genders.male++;
+            if (gender === 'F') batchStatistics.genders.female++;
+
+            const individual = buildIndividual(individualJson, allIndividuals, allFamilies);
+            individualsCache.set(individualJson.pointer, individual);
+
+            processMarriageAndChildrenStatistics(
+                individualJson, 
+                familiesWithIndividual, 
+                familyStatistics, 
+                birthYear,
+                individualsCache
+            );
+        });
+
+        updateStatisticsStore(batchStatistics);
+    });
+
     const maxGenerations = calculateMaxGenerations(individualsCache, allFamilies);
-    console.log("Maximum generations found:", maxGenerations);
-    
-    // Update config store with the calculated value
     configStore.setConfig({ maxGenerations: Math.min(maxGenerations, 8) });
     configStore.setAvailableGenerations(maxGenerations);
 
-    console.log("statistics", getStatistics());
     console.timeEnd("prebuildindividualsCache");
     return individualsCache;
 }
