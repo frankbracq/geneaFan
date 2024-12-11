@@ -1,31 +1,34 @@
 import _ from 'lodash';
+import screenfull from "screenfull";
 import { draw } from "./fan.js";
-import { 
-    setSvgPanZoomInstance, 
-    getSvgPanZoomInstance,
-    destroySvgPanZoom 
-} from "../../common/stores/state.js";
 import rootPersonStore from "../../common/stores/rootPersonStore.js";
 import configStore from "./fanConfigStore.js";
-import screenfull from "screenfull";
 import { SVGPanZoomManager } from "./SVGPanZoomManager.js";
 
 export class FanChartManager {
-    // Initialisation du gestionnaire de fan chart
+    static panZoomInstance = null;
+
+    /**
+     * Initialize the fan chart manager
+     */
     static initialize() {
         console.log("Initializing fan chart...");
         this.setupEventListeners();
         return this;
     }
 
-    // Configuration des écouteurs d'événements pour le fan chart
+    /**
+     * Set up event listeners for the fan chart
+     */
     static setupEventListeners() {
         this.setupFullscreenListeners();
         this.setupTabListeners();
         this.setupFanParameterListeners();
     }
 
-    // Gestion des écouteurs pour le mode plein écran
+    /**
+     * Set up listeners for fullscreen mode
+     */
     static setupFullscreenListeners() {
         if (screenfull.isEnabled) {
             const fullscreenButton = document.getElementById('fullscreenButton');
@@ -41,6 +44,9 @@ export class FanChartManager {
         this.drawFanForRoot(root, false);
     }, 50);
     
+    /**
+     * Set up tab listeners for the fan chart
+     */
     static setupTabListeners() {
         const tabFan = document.querySelector('[href="#tab1"]');
         if (tabFan) {
@@ -52,7 +58,9 @@ export class FanChartManager {
         }
     }
 
-    // Gestion des écouteurs pour les paramètres du fan chart
+    /**
+     * Set up listeners for fan chart parameters
+     */
     static setupFanParameterListeners() {
         const parameterMapping = {
             showMarriages: "showMarriages",
@@ -69,7 +77,7 @@ export class FanChartManager {
             "showMissing"
         ];
 
-        // Gestion des paramètres du fan
+        // Handle fan parameters
         document.querySelectorAll(".parameter").forEach((item) => {
             const oldHandler = item._changeHandler;
             if (oldHandler) {
@@ -110,11 +118,12 @@ export class FanChartManager {
         });
     }
 
-    // Gestion centralisée des erreurs avec feedback visuel
+    /**
+     * Centralized error handling with visual feedback
+     */
     static handleError(error, context) {
         console.error(`Fan chart error ${context ? `(${context})` : ''}: `, error);
 
-        // Mise à jour de l'UI pour indiquer l'erreur
         const loadingElement = document.getElementById('loading');
         const overlayElement = document.getElementById('overlay');
         
@@ -124,14 +133,15 @@ export class FanChartManager {
         
         if (overlayElement) {
             overlayElement.classList.add('overlay-error');
-            // Retirer l'état d'erreur après 3 secondes
             setTimeout(() => {
                 overlayElement.classList.remove('overlay-error');
             }, 3000);
         }
     }
 
-    // Gestion du mode plein écran
+    /**
+     * Handle fullscreen mode toggle
+     */
     static handleFullscreen = async () => {
         try {
             const container = document.getElementById('fanContainer');
@@ -143,22 +153,22 @@ export class FanChartManager {
         }
     }
 
-    // Gestion des changements d'état du mode plein écran
+    /**
+     * Handle fullscreen state changes
+     */
     static handleFullscreenChange() {
         try {
-            const panZoomInstance = getSvgPanZoomInstance();
+            if (!this.panZoomInstance) return;
+
             const fan = document.getElementById("fan");
-            
-            if (!panZoomInstance || !fan) return;
+            if (!fan) return;
 
             if (screenfull.isFullscreen) {
-                // Configuration mode plein écran
-                panZoomInstance.handleResize();
-                panZoomInstance.centerAndFit();
+                this.panZoomInstance.handleResize();
+                this.panZoomInstance.centerAndFit();
                 fan.style.cursor = "grab";
             } else {
-                // Retour mode normal
-                panZoomInstance.handleResize();
+                this.panZoomInstance.handleResize();
                 fan.style.cursor = "default";
             }
         } catch (error) {
@@ -166,7 +176,9 @@ export class FanChartManager {
         }
     }
 
-    // Affichage du fan chart avec animation de transition
+    /**
+     * Display fan chart with transition animation
+     */
     static async displayFan() {
         try {
             const svg = document.querySelector('#fan');
@@ -176,19 +188,18 @@ export class FanChartManager {
                 throw new Error('Required elements not found');
             }
 
-            // Transition d'apparition
+            // Appearance transition
             svg.style.opacity = '0';
 
-            // Configuration du pan/zoom
-            const instance = new SVGPanZoomManager(svg, {
+            // Set up pan/zoom
+            this.panZoomInstance = new SVGPanZoomManager(svg, {
                 minZoom: 0.1,
                 maxZoom: 10,
                 zoomScaleSensitivity: 0.2,
                 fitPadding: 20
             });
-            setSvgPanZoomInstance(instance);
 
-            // Animation d'apparition
+            // Appearance animation
             requestAnimationFrame(() => {
                 svg.style.transition = 'opacity 0.3s ease-in-out';
                 svg.style.opacity = '1';
@@ -200,26 +211,27 @@ export class FanChartManager {
         }
     }
 
+    /**
+     * Draw fan chart for a given root person
+     */
     static async drawFanForRoot(root, skipCleanup = false) {
         console.group('🎨 FanChartManager.drawFanForRoot');
         console.log('Root:', root);
         console.log('skipCleanup:', skipCleanup);
         
         try {
-            // Validation des prérequis
+            // Prerequisites validation
             if (!configStore.config.gedcomFileName) {
                 throw new Error('No GEDCOM file loaded');
             }
     
             const fanContainer = document.getElementById('fanContainer');
             if (!fanContainer || fanContainer.offsetParent === null) {
-                // Le container n'est pas visible - c'est un cas normal quand l'onglet n'est pas actif
                 console.log('Fan container not visible - skipping draw');
                 console.groupEnd();
                 return null;
             }
 
-            // Nettoyage de l'instance existante si nécessaire
             if (!skipCleanup) {
                 await this.cleanupExistingInstance();
             }
@@ -243,6 +255,9 @@ export class FanChartManager {
         }
     }
 
+    /**
+     * Apply configuration changes to the fan chart
+     */
     static async applyConfigChanges() {
         if (!rootPersonStore.root) return null;
         
@@ -270,35 +285,37 @@ export class FanChartManager {
         }
     }
 
+    /**
+     * Redraw the fan chart
+     */
     static async redrawFan() {
         return FanChartManager.drawFanForRoot(rootPersonStore.root);
     }
 
-    // Nettoyage de l'instance existante du fan chart
+    /**
+     * Clean up existing fan chart instance
+     */
     static async cleanupExistingInstance() {
         try {
             const svgElement = document.querySelector('#fan');
-            const instance = getSvgPanZoomInstance();
 
-            // Nettoyage de l'instance pan/zoom
-            if (instance) {
-                instance.destroy();
-                setSvgPanZoomInstance(null);
+            if (this.panZoomInstance) {
+                this.panZoomInstance.destroy();
+                this.panZoomInstance = null;
             }
 
-            // Nettoyage du SVG
             if (svgElement) {
                 svgElement.innerHTML = '';
             }
-
-            destroySvgPanZoom();
         } catch (error) {
             this.handleError(error, 'cleanup');
             throw error;
         }
     }
 
-    // Mise à jour de l'UI après le redessin
+    /**
+     * Update UI elements after redrawing the fan
+     */
     static updateUIAfterRedraw() {
         const loadingElement = document.getElementById("loading");
         const overlayElement = document.getElementById("overlay");
@@ -312,10 +329,11 @@ export class FanChartManager {
         }
     }
 
-    // Réinitialisation complète du fan chart
+    /**
+     * Complete reset of the fan chart
+     */
     static reset() {
         try {
-            // Nettoyage complet
             this.cleanupExistingInstance();
             
             const fanSvg = document.getElementById("fan");
@@ -323,7 +341,6 @@ export class FanChartManager {
                 fanSvg.innerHTML = "";
             }
 
-            // Réinitialisation des écouteurs
             this.setupEventListeners();
         } catch (error) {
             this.handleError(error, 'reset');

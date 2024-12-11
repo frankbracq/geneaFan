@@ -3,7 +3,6 @@ import TomSelect from 'tom-select';
 import { updateFilename } from "../downloadManager.js";
 import { FanChartManager } from "../../tabs/fanChart/fanChartManager.js";
 import { draw } from "../../tabs/fanChart/fan.js";
-import { getSvgPanZoomInstance, setSvgPanZoomInstance } from "./state.js";
 import { buildHierarchy } from '../../gedcom/parse.js';
 import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
 import { DownloadManager } from "../downloadManager.js"; 
@@ -137,11 +136,10 @@ class RootPersonStore {
             // S'assurer que le root est mis à jour avant d'appeler draw
             this.root = newRoot;
 
-            let svgElement = document.querySelector('#fan');
-            let svgPanZoomInstance = getSvgPanZoomInstance();
-            if (svgElement && svgPanZoomInstance) {
-                svgPanZoomInstance.destroy();
-                setSvgPanZoomInstance(null);
+            const svgElement = document.querySelector('#fan');
+            if (svgElement && FanChartManager.panZoomInstance) {
+                FanChartManager.panZoomInstance.destroy();
+                FanChartManager.panZoomInstance = null;
             }
 
             // Passer le root en paramètre à draw()

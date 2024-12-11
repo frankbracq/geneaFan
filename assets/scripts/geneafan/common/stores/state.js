@@ -1,39 +1,16 @@
 import _ from 'lodash';
 import timelineEventsStore from '../../tabs/timeline/timelineEventsStore.js';
-import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
 import familyTreeDataStore from '../../tabs/familyTree/familyTreeDataStore.js';
 import familyTownsStore from '../../gedcom/familyTownsStore.js';
-import { SVGPanZoomManager } from '../../tabs/fanChart/SVGPanZoomManager.js'; 
 
-export const getIndividualsCache = () => gedcomDataStore.getIndividualsCache();
-
+/**
+ * Resets all states from different stores
+ */
 export const clearAllStates = () => {
     familyTreeDataStore.clearGenealogyGraph();
     timelineEventsStore.clearEvents();
     familyTownsStore.setTownsData({});
     clearStatistics();
-    destroySvgPanZoom();
-};
-
-// SVG Pan Zoom instance state
-export let svgPanZoomInstance = null;
-export const getSvgPanZoomInstance = () => svgPanZoomInstance;
-export const setSvgPanZoomInstance = newInstance => svgPanZoomInstance = newInstance;
-
-// Nouvelles fonctions pour une meilleure gestion du cycle de vie
-export const initSvgPanZoom = (svg, options) => {
-    if (svgPanZoomInstance) {
-        svgPanZoomInstance.destroy();
-    }
-    svgPanZoomInstance = new SVGPanZoomManager(svg, options);
-    return svgPanZoomInstance;
-};
-
-export const destroySvgPanZoom = () => {
-    if (svgPanZoomInstance) {
-        svgPanZoomInstance.destroy();
-        svgPanZoomInstance = null;
-    }
 };
 
 // Statistics state
@@ -64,6 +41,9 @@ export const addAgeAtFirstChild = (period, age) => {
     statistics.ageAtFirstChild[period].push(age);
 };
 
+/**
+ * Resets statistics to their default values
+ */
 const clearStatistics = () => {
     statistics = {
         totalIndividuals: 0,
