@@ -20,6 +20,8 @@ import {
     prefixedDate 
 } from "../utils/dates.js";
 
+import { statisticsService } from '../tabs/statistics/services/statisticsService.js';
+
 // Stores
 import gedcomDataStore from './gedcomDataStore.js';
 import configStore from '../tabs/fanChart/fanConfigStore.js';
@@ -27,103 +29,16 @@ import timelineEventsStore from '../tabs/timeline/timelineEventsStore.js';
 import familyTreeDataStore from '../tabs/familyTree/familyTreeDataStore.js';
 import familyTownsStore from './familyTownsStore.js';
 import statisticsStore from '../tabs/statistics/statisticsStore.js';
+import gedcomConstantsStore from './gedcomConstantsStore.js';
 
 const EMPTY = "";
-const TAG_HEAD = "HEAD",
-    TAG_ENCODING = "CHAR",
-    TAG_FORMAT = "FORM",
-    TAG_INDIVIDUAL = "INDI",
-    TAG_FAMILY = "FAM",
-    TAG_CHILD = "CHIL",
-    TAG_HUSBAND = "HUSB",
-    TAG_WIFE = "WIFE",
-    TAG_NAME = "NAME",
-    TAG_GIVEN_NAME = "GIVN",
-    TAG_SURNAME = "SURN",
-    TAG_SURNAME_PREFIX = "SPFX",
-    TAG_BIRTH = "BIRT",
-    TAG_BAPTISM = "CHR",
-    TAG_DEATH = "DEAT",
-    TAG_BURIAL = "BURI",
-    TAG_SEX = "SEX",
-    TAG_DATE = "DATE",
-    TAG_PLACE = "PLAC",
-    TAG_MARRIAGE = "MARR",
-    TAG_SIGNATURE = "SIGN",
-    TAG_EVENT = "EVEN",
-    TAG_TYPE = "TYPE",
-    TAG_NOTE = "NOTE",
-    TAG_OCCUPATION = "OCCU";
-const TAG_YES = "YES",
-    TAG_ANSI = "ANSI";
-const TAG_ABOUT = "ABT",
-    TAG_BEFORE = "BEF",
-    TAG_AFTER = "AFT";
-
-const TAG_GREGORIAN = "@#DGREGORIAN@",
-    TAG_REPUBLICAN = "@#DFRENCH R@";
-
-const TAGS_MONTH = [
-    "JAN",
-    "FEB",
-    "MAR",
-    "APR",
-    "MAY",
-    "JUN",
-    "JUL",
-    "AUG",
-    "SEP",
-    "OCT",
-    "NOV",
-    "DEC",
-];
-const TAGS_MONTH_REPUBLICAN = [
-    "VEND",
-    "BRUM",
-    "FRIM",
-    "NIVO",
-    "PLUV",
-    "VENT",
-    "GERM",
-    "FLOR",
-    "PRAI",
-    "MESS",
-    "THER",
-    "FRUC",
-    "COMP",
-];
-
-// Transformation des tableaux en objets pour une recherche plus rapide
-const MONTHS = TAGS_MONTH.reduce((obj, month, index) => {
-    obj[month] = index + 1;
-    return obj;
-}, {});
-
-const MONTHS_REPUBLICAN = TAGS_MONTH_REPUBLICAN.reduce((obj, month, index) => {
-    obj[month] = index + 1;
-    return obj;
-}, {});
 
 const VALUE_OCCUPATION = "Occupation";
 
-const republicanConversion = [
-    "I",
-    "II",
-    "III",
-    "IV",
-    "V",
-    "VI",
-    "VII",
-    "VIII",
-    "IX",
-    "X",
-    "XI",
-    "XII",
-    "XIII",
-];
+const { TAGS, VALUES, CALENDARS, MONTHS_MAP } = gedcomConstantsStore;
 
 function byTag(tag) {
-    return (obj) => obj.tag === tag;
+    return gedcomConstantsStore.byTag(tag);
 }
 
 function getFirst(array, def) {
@@ -164,18 +79,18 @@ function formatOccupation(occupation) {
 
 function processOccupations(individualJson) {
     // Direct retrieval of occupations
-    const directOccupations = jsonpointer.get(individualJson, '/tree').filter(byTag(TAG_OCCUPATION))
+    const directOccupations = jsonpointer.get(individualJson, '/tree').filter(byTag(TAGS.OCCUPATION))
         .map((occ) => ({
             occupation: formatOccupation(occ.data),
         }));
 
     // Retrieval of occupation details in marked events
     const detailOccupations = jsonpointer.get(individualJson, '/tree').filter(
-        (node) => node.tag === TAG_EVENT &&
+        (node) => node.tag === TAGS.EVENT &&
             jsonpointer.get(node, '/tree').some(
-                (subNode) => subNode.tag === TAG_TYPE && subNode.data === VALUE_OCCUPATION
+                (subNode) => subNode.tag === TAGS.TYPE && subNode.data === VALUE_OCCUPATION
             )
-    ).flatMap((node) => jsonpointer.get(node, '/tree').filter((subNode) => subNode.tag === TAG_NOTE))
+    ).flatMap((node) => jsonpointer.get(node, '/tree').filter((subNode) => subNode.tag === TAGS.NOTE))
         .map((note) => ({
             occupation: note.data, // Assume these details as additional occupations
         }));
@@ -219,7 +134,7 @@ function formatChild(child) {
 }
 
 function extractBasicInfo(individualJson) {
-    const names = individualJson.tree.filter(byTag(TAG_NAME));
+    const names = individualJson.tree.filter(byTag(TAGS.NAME));
     const nameInfo = names.map((o) =>
         o.data.split("/").map((s) => s.trim().replace(/_/, " "))
     );
@@ -238,10 +153,10 @@ function extractBasicInfo(individualJson) {
     const genderMap = { 'M': 'male', 'F': 'female' };
 
     const result = individualJson.tree.reduce((acc, curr) => {
-        if (byTag(TAG_SEX)(curr)) {
+        if (byTag(TAGS.SEX)(curr)) {
             acc.gender = genderMap[curr.data] || 'unknown';
-        } else if (byTag(TAG_SIGNATURE)(curr)) {
-            acc.canSign = curr.data === TAG_YES;
+        } else if (byTag(TAGS.SIGNATURE)(curr)) {
+            acc.canSign = curr.data === TAGS.YES;
         }
         return acc;
     }, { gender: 'male', canSign: false });
@@ -590,17 +505,16 @@ async function processPlace({ data: original, tree } = {}) {
 
 function processDate(s) {
     if (typeof s !== "string") {
-        // console.error("Error: Input is not a string.", s);
         return "";
     }
 
     let trimmed = s.trim().toUpperCase();
 
-    const isRepublican = trimmed.startsWith(TAG_REPUBLICAN);
+    const isRepublican = gedcomConstantsStore.isRepublicanCalendar(trimmed);
     if (isRepublican) {
-        trimmed = trimmed.substring(TAG_REPUBLICAN.length).trim();
-    } else if (trimmed.startsWith(TAG_GREGORIAN)) {
-        trimmed = trimmed.substring(TAG_GREGORIAN.length).trim();
+        trimmed = trimmed.substring(CALENDARS.REPUBLICAN.length).trim();
+    } else if (gedcomConstantsStore.isGregorianCalendar(trimmed)) {
+        trimmed = trimmed.substring(CALENDARS.GREGORIAN.length).trim();
     }
 
     const split = trimmed.split(/\s+/);
@@ -612,12 +526,14 @@ function processDate(s) {
     let day, month, year;
     if (split.length === 3) {
         day = parseInt(split[0], 10);
-        month =
-            (isRepublican ? MONTHS_REPUBLICAN[split[1]] : MONTHS[split[1]]) || 0;
+        month = (isRepublican ? 
+            MONTHS_MAP.REPUBLICAN[split[1]] : 
+            MONTHS_MAP.GREGORIAN[split[1]]) || 0;
         year = parseInt(split[2], 10);
     } else if (split.length === 2) {
-        month =
-            (isRepublican ? MONTHS_REPUBLICAN[split[0]] : MONTHS[split[0]]) || 0;
+        month = (isRepublican ? 
+            MONTHS_MAP.REPUBLICAN[split[1]] : 
+            MONTHS_MAP.GREGORIAN[split[1]]) || 0;
         year = parseInt(split[1], 10);
     } else if (split.length === 1) {
         year = parseInt(split[0], 10);
@@ -684,11 +600,11 @@ function processEventDatePlace(event, individualTowns) {
 // Optimized version of buildIndividual
 function handleEventTags() {
     const config = configStore.getConfig;
-    let birthTags = [TAG_BIRTH],
-        deathTags = [TAG_DEATH];
+    let birthTags = [TAGS.BIRTH],
+        deathTags = [TAGS.DEATH];
     if (config.substituteEvents) {
-        birthTags = birthTags.concat([TAG_BAPTISM]);
-        deathTags = deathTags.concat([TAG_BURIAL]);
+        birthTags = birthTags.concat([TAGS.BAPTISM]);
+        deathTags = deathTags.concat([TAGS.BURIAL]);
     }
     return { birthTags, deathTags };
 }
@@ -1140,13 +1056,12 @@ function toJson(data) {
     const parsed = parseGedcom.parse(text);
 
     const isLikelyAnsi = new RegExp(triggers).test(text);
-    const isAnsi =
-        getFirst(
-            parsed
-                .filter(byTag(TAG_HEAD))
-                .flatMap((a) => a.tree.filter(byTag(TAG_ENCODING)).map((a) => a.data)),
-            null
-        ) === TAG_ANSI;
+    const isAnsi = getFirst(
+        parsed
+            .filter(byTag(TAGS.HEAD))  // ✅ Utilise la constante du store
+            .flatMap((a) => a.tree.filter(byTag(TAGS.ENCODING)).map((a) => a.data)),
+        null
+    ) === VALUES.ANSI;  // ✅ Utilise la constante du store
 
     let result;
 
@@ -1320,11 +1235,11 @@ function shouldProcessIndividual(individualJson, familiesWithIndividual, allFami
     // Special handling for individuals appearing in only one family
     if (familiesWithIndividual.length === 1) {
         const family = familiesWithIndividual[0];
-        const hasChildren = family.tree.some(byTag(TAG_CHILD));
+        const hasChildren = family.tree.some(byTag(TAGS.CHILD));  // Utiliser TAGS.CHILD au lieu de TAG_CHILD
         
         if (!hasChildren) {
             const spouses = family.tree.filter(node => 
-                node.tag === 'HUSB' || node.tag === 'WIFE');
+                node.tag === TAGS.HUSBAND || node.tag === TAGS.WIFE);  // TAGS.HUSBAND et TAGS.WIFE
 
             if (spouses.length === 2) {
                 const otherSpouse = spouses.find(node => 
@@ -1332,11 +1247,10 @@ function shouldProcessIndividual(individualJson, familiesWithIndividual, allFami
                 const otherSpouseFamilies = allFamilies.filter(familyJson =>
                     familyJson.tree.some(node =>
                         node.data === otherSpouse.data &&
-                        (node.tag === 'HUSB' || node.tag === 'WIFE')
+                        (node.tag === TAGS.HUSBAND || node.tag === TAGS.WIFE)  // TAGS.HUSBAND et TAGS.WIFE
                     )
                 );
 
-                // Skip if spouse only appears in this family and isn't a child in another family
                 if (otherSpouseFamilies.length === 1 && 
                     !isParentInOtherFamily(otherSpouse.data, allFamilies)) {
                     return false;
@@ -1355,14 +1269,14 @@ function shouldProcessIndividual(individualJson, familiesWithIndividual, allFami
  */
 function extractDatesFromIndividual(individualJson) {
     const birthNode = individualJson.tree.find(node => 
-        [TAG_BIRTH, TAG_BAPTISM].includes(node.tag));
+        [TAGS.BIRTH, TAGS.BAPTISM].includes(node.tag));
     const deathNode = individualJson.tree.find(node => 
-        [TAG_DEATH, TAG_BURIAL].includes(node.tag));
+        [TAGS.DEATH, TAGS.BURIAL].includes(node.tag));
 
     const birthYear = birthNode ? 
-        extractYear(processDate(birthNode.tree.find(byTag(TAG_DATE))?.data)) : null;
+        extractYear(processDate(birthNode.tree.find(byTag(TAGS.DATE))?.data)) : null;
     const deathYear = deathNode ? 
-        extractYear(processDate(deathNode.tree.find(byTag(TAG_DATE))?.data)) : null;
+        extractYear(processDate(deathNode.tree.find(byTag(TAGS.DATE))?.data)) : null;
 
     return { birthYear, deathYear };
 }
@@ -1408,7 +1322,7 @@ function processMarriageAndChildrenStatistics(
             statisticsStore.addChildrenPerCouple(stats.childrenCount);
 
             const firstChildBirth = _.min(family.tree
-                .filter(byTag(TAG_CHILD))
+                .filter(byTag(TAGS.CHILD))
                 .map(child => {
                     const childNode = individualsCache.get(child.data);
                     return childNode ? extractYear(childNode.birthDate) : null;
@@ -1431,93 +1345,46 @@ function prebuildindividualsCache() {
     const json = gedcomDataStore.getSourceData();
     const individualsCache = new Map();
 
-    const allIndividuals = _.filter(json, byTag(TAG_INDIVIDUAL));
-    const allFamilies = _.filter(json, byTag(TAG_FAMILY));
+    const allIndividuals = _.filter(json, byTag(TAGS.INDIVIDUAL));
+    const allFamilies = _.filter(json, byTag(TAGS.FAMILY));
 
-    // Pre-compute family statistics
-    const familyStatistics = new Map();
-    allFamilies.forEach(family => {
-        const childrenCount = family.tree.filter(byTag(TAG_CHILD)).length;
-        const marriageNode = family.tree.find(byTag(TAG_MARRIAGE));
-        const marriageDate = marriageNode ? 
-            extractYear(processDate(marriageNode.tree.find(byTag(TAG_DATE))?.data)) : null;
-
-        familyStatistics.set(family.pointer, {
-            childrenCount,
-            marriageDate
-        });
+    // Traiter les individus pour le cache
+    allIndividuals.forEach(individualJson => {
+        const individual = buildIndividual(individualJson, allIndividuals, allFamilies);
+        individualsCache.set(individualJson.pointer, individual);
     });
 
-    // Process individuals in batches
-    const batchSize = 1000;
-    const batches = _.chunk(allIndividuals, batchSize);
-
-    batches.forEach(batch => {
-        const batchStatistics = {
-            births: [],
-            deaths: [],
-            ages: [],
-            genders: { male: 0, female: 0 }
-        };
-
-        batch.forEach(individualJson => {
-            const familiesWithIndividual = allFamilies.filter(familyJson =>
-                familyJson.tree.some(node =>
-                    node.data === individualJson.pointer &&
-                    (node.tag === 'CHIL' || node.tag === 'HUSB' || node.tag === 'WIFE')
-                )
-            );
-
-            if (!shouldProcessIndividual(individualJson, familiesWithIndividual, allFamilies)) {
-                return;
-            }
-
-            const { birthYear, deathYear } = extractDatesFromIndividual(individualJson);
-            const gender = individualJson.tree.find(byTag(TAG_SEX))?.data;
-
-            if (birthYear) batchStatistics.births.push(birthYear);
-            if (deathYear) batchStatistics.deaths.push(deathYear);
-            if (birthYear && deathYear) {
-                const age = deathYear - birthYear;
-                if (age >= 0 && age <= 120) {
-                    batchStatistics.ages.push(age);
-                }
-            }
-            if (gender === 'M') batchStatistics.genders.male++;
-            if (gender === 'F') batchStatistics.genders.female++;
-
-            const individual = buildIndividual(individualJson, allIndividuals, allFamilies);
-            individualsCache.set(individualJson.pointer, individual);
-
-            processMarriageAndChildrenStatistics(
-                individualJson, 
-                familiesWithIndividual, 
-                familyStatistics, 
-                birthYear,
-                individualsCache
-            );
-        });
-
-        updateStatisticsStore(batchStatistics);
-    });
-
+    // Calculer le nombre max de générations
     const maxGenerations = calculateMaxGenerations(individualsCache, allFamilies);
     configStore.setConfig({ maxGenerations: Math.min(maxGenerations, 8) });
     configStore.setAvailableGenerations(maxGenerations);
 
+    // Retirer l'appel aux statistiques d'ici
     console.timeEnd("prebuildindividualsCache");
     return individualsCache;
 }
 
-function getIndividualsList() {
-    // Build the cache of individuals with all their information
-    const individualsCache = prebuildindividualsCache();
-    gedcomDataStore.clearSourceData(); // Reset source data to avoid memory leaks
 
-    // Mettre à jour le cache des individus 
+function getIndividualsList() {
+    const json = gedcomDataStore.getSourceData();
+    const allIndividuals = _.filter(json, byTag(TAGS.INDIVIDUAL));
+    const allFamilies = _.filter(json, byTag(TAGS.FAMILY));
+
+    // Initialiser le service avant de l'utiliser
+    statisticsService.initialize();  // ✅ Ajouter cette ligne
+
+    // Configurer l'écoute du progrès
+    statisticsService.onProgress((progress) => {
+        console.log(`Processing statistics: ${progress}%`);
+    });
+
+    // Lancer le traitement des statistiques en parallèle
+    statisticsService.processData(allIndividuals, allFamilies);
+    // Le reste du traitement continue normalement
+    const individualsCache = prebuildindividualsCache();
+    gedcomDataStore.clearSourceData();
     gedcomDataStore.setIndividualsCache(individualsCache);
 
-    // Maintenant que les données sont prêtes, initialiser l'arbre
     requestAnimationFrame(() => {
         import(/* webpackChunkName: "treeUI" */ '../tabs/familyTree/treeUI.js')
             .then(module => {
@@ -1529,7 +1396,6 @@ function getIndividualsList() {
             });
     });
 
-    // Convert the map to a list
     const individualsList = Array.from(individualsCache.values());
     return { individualsList };
 }
