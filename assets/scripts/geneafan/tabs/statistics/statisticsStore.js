@@ -1,5 +1,3 @@
-import _ from 'lodash';
-
 class StatisticsStore {
     constructor() {
         this.resetStatistics();
@@ -7,133 +5,138 @@ class StatisticsStore {
 
     resetStatistics() {
         this.statistics = {
-            totalIndividuals: 0,
-            genderCount: { male: 0, female: 0 },
-            birthYears: [],
-            deathYears: [],
-            agesAtDeath: [],
-            marriages: 0,
-            childrenPerCouple: [],
-            ageAtFirstChild: {}
+            demography: {
+                total: 0,
+                gender: { male: 0, female: 0, unknown: 0 },
+                generations: new Map(),
+                lifeExpectancy: {
+                    byDecade: {},
+                    average: 0
+                },
+                ageDistribution: {
+                    "0-10": 0, "11-20": 0, "21-30": 0, "31-40": 0,
+                    "41-50": 0, "51-60": 0, "61-70": 0, "71-80": 0,
+                    "81-90": 0, "91+": 0
+                }
+            },
+            geography: {
+                birthPlaces: {},
+                deathPlaces: {},
+                migrations: {
+                    count: 0,
+                    paths: {},
+                    distances: [],
+                    averageDistance: 0
+                },
+                byGeneration: {}
+            },
+            occupations: {
+                total: 0,
+                byType: {},
+                byGeneration: {},
+                evolution: {},
+                mobility: {
+                    parentChild: {},
+                    count: 0
+                }
+            },
+            family: {
+                marriages: {
+                    total: 0,
+                    ageAtMarriage: [],
+                    byDecade: {}
+                },
+                children: {
+                    average: 0,
+                    distribution: {},
+                    byGeneration: {}
+                },
+                siblings: {
+                    average: 0,
+                    distribution: {}
+                }
+            },
+            names: {
+                firstNames: {
+                    male: {},
+                    female: {}
+                },
+                transmission: {
+                    fromParents: 0,
+                    total: 0,
+                    rate: 0
+                },
+                byDecade: {}
+            }
         };
     }
 
-    // Getters
+    updateStatistics(newStats) {
+        // Mise à jour simple de toutes les statistiques
+        Object.assign(this.statistics, newStats);
+    }
+
+    // Getters existants
     getStatistics() {
         return this.statistics;
     }
 
+    // Méthodes spécifiques pour accéder aux différentes catégories
+    getDemographyStats() {
+        return this.statistics.demography;
+    }
+
+    getGeographyStats() {
+        return this.statistics.geography;
+    }
+
+    getOccupationStats() {
+        return this.statistics.occupations;
+    }
+
+    getFamilyStats() {
+        return this.statistics.family;
+    }
+
+    getNameStats() {
+        return this.statistics.names;
+    }
+
+    // Méthodes utilitaires pour obtenir des statistiques spécifiques
     getAverageLifespan() {
-        return this.statistics.agesAtDeath.length > 0
-            ? _.mean(this.statistics.agesAtDeath).toFixed(1)
-            : 0;
-    }
-
-    getAverageChildrenPerCouple() {
-        return this.statistics.childrenPerCouple.length > 0
-            ? _.mean(this.statistics.childrenPerCouple).toFixed(1)
-            : 0;
-    }
-
-    getAverageAgeAtFirstChildByPeriod(period) {
-        const ages = this.statistics.ageAtFirstChild[period];
-        return ages && ages.length > 0 ? _.mean(ages).toFixed(1) : 0;
-    }
-
-    getDateRange() {
-        const earliestBirth = _.min(this.statistics.birthYears);
-        const latestDeath = _.max(this.statistics.deathYears);
-        return {
-            start: earliestBirth || 0,
-            end: latestDeath || new Date().getFullYear()
-        };
+        return this.statistics.demography.lifeExpectancy.average;
     }
 
     getGenderDistribution() {
-        const total = this.statistics.genderCount.male + this.statistics.genderCount.female;
+        const total = Object.values(this.statistics.demography.gender).reduce((a, b) => a + b, 0);
         return {
-            male: total > 0 ? (this.statistics.genderCount.male / total * 100).toFixed(1) : 0,
-            female: total > 0 ? (this.statistics.genderCount.female / total * 100).toFixed(1) : 0
+            male: (this.statistics.demography.gender.male / total * 100).toFixed(1),
+            female: (this.statistics.demography.gender.female / total * 100).toFixed(1)
         };
     }
 
-    // Setters and updaters
-    updateTotalIndividuals(count) {
-        this.statistics.totalIndividuals += count;
+    getAverageChildrenPerCouple() {
+        return this.statistics.family.children.average.toFixed(1);
     }
 
-    updateGenderCount(gender, count) {
-        if (gender === 'male' || gender === 'female') {
-            this.statistics.genderCount[gender] += count;
-        }
+    getMostCommonBirthPlaces(limit = 10) {
+        return Object.entries(this.statistics.geography.birthPlaces)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, limit);
     }
 
-    addBirthYear(year) {
-        if (year && !isNaN(year)) {
-            this.statistics.birthYears.push(parseInt(year));
-        }
+    getMostCommonOccupations(limit = 10) {
+        return Object.entries(this.statistics.occupations.byType)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, limit);
     }
 
-    addDeathYear(year) {
-        if (year && !isNaN(year)) {
-            this.statistics.deathYears.push(parseInt(year));
-        }
-    }
-
-    addAgeAtDeath(age) {
-        if (age && !isNaN(age)) {
-            this.statistics.agesAtDeath.push(parseInt(age));
-        }
-    }
-
-    updateMarriages(count) {
-        this.statistics.marriages += count;
-    }
-
-    addChildrenPerCouple(count) {
-        if (!isNaN(count)) {
-            this.statistics.childrenPerCouple.push(parseInt(count));
-        }
-    }
-
-    addAgeAtFirstChild(period, age) {
-        if (!isNaN(period) && !isNaN(age)) {
-            if (!this.statistics.ageAtFirstChild[period]) {
-                this.statistics.ageAtFirstChild[period] = [];
-            }
-            this.statistics.ageAtFirstChild[period].push(parseInt(age));
-        }
-    }
-
-    // Analytics methods
-    getAgeDistribution() {
-        return {
-            under20: this.statistics.agesAtDeath.filter(age => age < 20).length,
-            '20to40': this.statistics.agesAtDeath.filter(age => age >= 20 && age < 40).length,
-            '40to60': this.statistics.agesAtDeath.filter(age => age >= 40 && age < 60).length,
-            '60to80': this.statistics.agesAtDeath.filter(age => age >= 60 && age < 80).length,
-            over80: this.statistics.agesAtDeath.filter(age => age >= 80).length
-        };
-    }
-
-    getBirthDistributionByPeriod(periodLength = 50) {
-        const birthYears = _.compact(this.statistics.birthYears);
-        if (birthYears.length === 0) return {};
-
-        const minYear = _.min(birthYears);
-        const maxYear = _.max(birthYears);
-        const distribution = {};
-
-        for (let year = minYear; year <= maxYear; year += periodLength) {
-            const periodEnd = year + periodLength - 1;
-            const count = birthYears.filter(y => y >= year && y <= periodEnd).length;
-            distribution[`${year}-${periodEnd}`] = count;
-        }
-
-        return distribution;
+    getMostCommonFirstNames(gender, limit = 10) {
+        return Object.entries(this.statistics.names.firstNames[gender])
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, limit);
     }
 }
 
-// Create and export a singleton instance
 const statisticsStore = new StatisticsStore();
 export default statisticsStore;

@@ -385,7 +385,7 @@
                 <div class="tab-pane fade" id="tab5">
                     <div class="container mt-4">
                         <div class="row">
-                            <!-- Overview Card -->
+                            <!-- Vue d'ensemble -->
                             <div class="col-md-6">
                                 <div class="card mb-4">
                                     <div class="card-header">
@@ -393,25 +393,19 @@
                                     </div>
                                     <div class="card-body">
                                         <ul class="list-group list-group-flush">
-                                            <li
-                                                class="list-group-item d-flex justify-content-between align-items-center">
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
                                                 Nombre total d'individus
-                                                <span id="total-individuals"
-                                                    class="badge bg-primary rounded-pill">-</span>
+                                                <span id="total-individuals" class="badge bg-primary rounded-pill">-</span>
                                             </li>
-                                            <li
-                                                class="list-group-item d-flex justify-content-between align-items-center">
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
                                                 Nombre de mariages
-                                                <span id="total-marriages"
-                                                    class="badge bg-primary rounded-pill">-</span>
+                                                <span id="total-marriages" class="badge bg-primary rounded-pill">-</span>
                                             </li>
-                                            <li
-                                                class="list-group-item d-flex justify-content-between align-items-center">
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
                                                 Moyenne d'enfants par couple
                                                 <span id="avg-children" class="badge bg-primary rounded-pill">-</span>
                                             </li>
-                                            <li
-                                                class="list-group-item d-flex justify-content-between align-items-center">
+                                            <li class="list-group-item d-flex justify-content-between align-items-center">
                                                 Espérance de vie moyenne
                                                 <span id="avg-lifespan" class="badge bg-primary rounded-pill">-</span>
                                             </li>
@@ -419,8 +413,8 @@
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- Gender Distribution Card -->
+                
+                            <!-- Distribution par sexe -->
                             <div class="col-md-6">
                                 <div class="card mb-4">
                                     <div class="card-header">
@@ -431,8 +425,8 @@
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- Age Distribution Card -->
+                
+                            <!-- Distribution des âges -->
                             <div class="col-md-6">
                                 <div class="card mb-4">
                                     <div class="card-header">
@@ -443,18 +437,25 @@
                                     </div>
                                 </div>
                             </div>
-
-                            <!-- Birth Distribution Card -->
+                
+                            <!-- Évolution de l'espérance de vie -->
                             <div class="col-md-6">
                                 <div class="card mb-4">
                                     <div class="card-header">
-                                        <h5 class="card-title">Distribution des naissances par période</h5>
+                                        <h5 class="card-title">Évolution de l'espérance de vie</h5>
                                     </div>
                                     <div class="card-body">
-                                        <div id="birth-chart" class="chart-container"></div>
+                                        <div id="lifespan-chart" class="chart-container"></div>
                                     </div>
                                 </div>
                             </div>
+                
+                            <!-- On pourra ajouter ici d'autres sections pour :
+                                 - Géographie (migrations, lieux fréquents)
+                                 - Professions
+                                 - Structure familiale
+                                 - Prénoms et transmission
+                            -->
                         </div>
                     </div>
                 </div>

@@ -1,9 +1,10 @@
 import statisticsStore from '../statisticsStore.js';
+import gedcomDataStore from '../../../gedcom/gedcomDataStore.js';
 
 class StatisticsService {
     constructor() {
         this.worker = null;
-        this.onProgressCallback = null;  // ✅ Défini dans le constructeur
+        this.onProgressCallback = null;
     }
 
     initialize() {
@@ -30,83 +31,98 @@ class StatisticsService {
         });
     }
 
-    // La méthode onProgress doit être publique
-    onProgress(callback) {  // ✅ Méthode pour définir le callback
+    onProgress(callback) {
         this.onProgressCallback = callback;
     }
 
-    processData(individuals, families) {
+    processData() {
         if (!this.worker) {
             this.initialize();
         }
     
-        // Préparer les données en conservant la structure nécessaire
-        const simplifiedData = {
-            individuals: individuals.map(individual => ({
-                pointer: individual.pointer,
-                tree: individual.tree.map(node => {
-                    const result = {
-                        tag: node.tag,
-                        data: node.data
-                    };
-                    if (node.tree) {
-                        result.tree = node.tree.map(subNode => ({
-                            tag: subNode.tag,
-                            data: subNode.data,
-                            tree: subNode.tree ? subNode.tree.map(leaf => ({
-                                tag: leaf.tag,
-                                data: leaf.data
-                            })) : undefined
-                        }));
+        // Récupérer les données du cache
+        const individuals = Array.from(gedcomDataStore.getIndividualsCache().values());
+        
+        // Nettoyer les données pour le worker
+        const sanitizedData = individuals.map(individual => {
+            // On ne garde que les données nécessaires et sérialisables
+            return {
+                stats: {
+                    demography: {
+                        birthInfo: {
+                            date: individual.stats.demography.birthInfo.date,
+                            year: individual.stats.demography.birthInfo.year,
+                            place: {
+                                town: individual.stats.demography.birthInfo.place.town,
+                                departement: individual.stats.demography.birthInfo.place.departement,
+                                country: individual.stats.demography.birthInfo.place.country,
+                                coordinates: {
+                                    latitude: individual.stats.demography.birthInfo.place.coordinates?.latitude,
+                                    longitude: individual.stats.demography.birthInfo.place.coordinates?.longitude
+                                }
+                            }
+                        },
+                        deathInfo: {
+                            date: individual.stats.demography.deathInfo.date,
+                            year: individual.stats.demography.deathInfo.year,
+                            place: {
+                                town: individual.stats.demography.deathInfo.place.town,
+                                departement: individual.stats.demography.deathInfo.place.departement,
+                                country: individual.stats.demography.deathInfo.place.country,
+                                coordinates: {
+                                    latitude: individual.stats.demography.deathInfo.place.coordinates?.latitude,
+                                    longitude: individual.stats.demography.deathInfo.place.coordinates?.longitude
+                                }
+                            },
+                            ageAtDeath: individual.stats.demography.deathInfo.ageAtDeath
+                        },
+                        generation: individual.stats.demography.generation
+                    },
+                    family: {
+                        parentalFamily: {
+                            fatherId: individual.stats.family.parentalFamily.fatherId,
+                            motherId: individual.stats.family.parentalFamily.motherId,
+                            siblingCount: individual.stats.family.parentalFamily.siblingCount
+                        },
+                        marriages: individual.stats.family.marriages.map(m => ({
+                            date: m.date,
+                            place: {
+                                town: m.place.town,
+                                departement: m.place.departement,
+                                country: m.place.country
+                            },
+                            spouseId: m.spouseId,
+                            childrenCount: m.childrenCount
+                        })),
+                        totalChildren: individual.stats.family.totalChildren
+                    },
+                    identity: {
+                        firstName: individual.stats.identity.firstName,
+                        lastName: individual.stats.identity.lastName,
+                        gender: individual.stats.identity.gender,
+                        occupations: individual.stats.identity.occupations.map(o => ({
+                            value: o.value,
+                            date: o.date,
+                            year: o.year,
+                            type: o.type
+                        }))
                     }
-                    return result;
-                })
-            })),
-            families: families.map(family => ({
-                pointer: family.pointer,
-                tree: family.tree.map(node => {
-                    const result = {
-                        tag: node.tag,
-                        data: node.data
-                    };
-                    if (node.tree) {
-                        result.tree = node.tree.map(subNode => ({
-                            tag: subNode.tag,
-                            data: subNode.data
-                        }));
-                    }
-                    return result;
-                })
-            }))
-        };
-    
-        statisticsStore.resetStatistics();
+                }
+            };
+        });
+        
+        // Envoyer les données nettoyées au worker
         this.worker.postMessage({
             type: 'process',
-            data: simplifiedData
+            data: { individuals: sanitizedData }
         });
     }
 
     updateStatisticsStore(statistics) {
+        // La mise à jour du store avec les nouvelles statistiques structurées
         statisticsStore.resetStatistics();
-        
-        // Update all statistics
-        statisticsStore.updateTotalIndividuals(statistics.totalIndividuals);
-        statisticsStore.updateGenderCount('male', statistics.genderCount.male);
-        statisticsStore.updateGenderCount('female', statistics.genderCount.female);
-        
-        statistics.birthYears.forEach(year => statisticsStore.addBirthYear(year));
-        statistics.deathYears.forEach(year => statisticsStore.addDeathYear(year));
-        statistics.agesAtDeath.forEach(age => statisticsStore.addAgeAtDeath(age));
-        
-        statisticsStore.updateMarriages(statistics.marriages);
-        statistics.childrenPerCouple.forEach(count => statisticsStore.addChildrenPerCouple(count));
-        
-        Object.entries(statistics.ageAtFirstChild).forEach(([period, ages]) => {
-            ages.forEach(age => statisticsStore.addAgeAtFirstChild(parseInt(period), age));
-        });
+        statisticsStore.updateStatistics(statistics);
     
-        // Ajouter le log ici après toutes les mises à jour
         console.log('Statistics updated:', statisticsStore.getStatistics());
     }
 

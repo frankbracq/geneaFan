@@ -5,19 +5,19 @@ import parseGedcom from "parse-gedcom";
 import jsonpointer from 'jsonpointer';
 
 // Utility functions
-import { 
-    normalizeGeoString, 
-    formatTownName 
+import {
+    normalizeGeoString,
+    formatTownName
 } from "../utils/geo.js";
 
-import { 
-    padTwoDigits 
+import {
+    padTwoDigits
 } from "../utils/utils.js";
 
-import { 
-    extractYear, 
-    calculateAge, 
-    prefixedDate 
+import {
+    extractYear,
+    calculateAge,
+    prefixedDate
 } from "../utils/dates.js";
 
 import { statisticsService } from '../tabs/statistics/services/statisticsService.js';
@@ -69,6 +69,48 @@ export function formatName(str, isSurname) {
     }
 
     return str;
+}
+
+function processDetailedOccupations(individualJson) {
+    const occupations = [];
+
+    // Traiter les occupations directes
+    individualJson.tree
+        .filter(byTag(TAGS.OCCUPATION))
+        .forEach(occNode => {
+            const dateNode = occNode.tree?.find(node => node.tag === TAGS.DATE);
+            occupations.push({
+                value: formatOccupation(occNode.data),
+                date: dateNode ? processDate(dateNode.data) : null,
+                year: dateNode ? extractYear(processDate(dateNode.data)) : null,
+                type: 'direct'
+            });
+        });
+
+    // Ajouter les occupations des événements
+    individualJson.tree
+        .filter(node =>
+            node.tag === TAGS.EVENT &&
+            node.tree.some(subNode =>
+                subNode.tag === TAGS.TYPE &&
+                subNode.data === VALUE_OCCUPATION
+            )
+        )
+        .forEach(eventNode => {
+            const dateNode = eventNode.tree?.find(node => node.tag === TAGS.DATE);
+            const noteNode = eventNode.tree?.find(node => node.tag === TAGS.NOTE);
+
+            if (noteNode) {
+                occupations.push({
+                    value: formatOccupation(noteNode.data),
+                    date: dateNode ? processDate(dateNode.data) : null,
+                    year: dateNode ? extractYear(processDate(dateNode.data)) : null,
+                    type: 'event'
+                });
+            }
+        });
+
+    return _.orderBy(occupations, ['year', 'date'], ['asc', 'asc']);
 }
 
 // Fonction pour formater l'occupation
@@ -194,6 +236,45 @@ function getRelativeDetails(individualID, allIndividuals) {
         birthDate: birthDate,
         deathDate: deathDate,
     };
+}
+
+function calculateGeneration(individualPointer, allFamilies, cache = new Map()) {
+    // Si déjà calculé, retourner la valeur du cache
+    if (cache.has(individualPointer)) {
+        return cache.get(individualPointer);
+    }
+
+    // Trouver la famille où l'individu est un enfant
+    const parentFamily = allFamilies.find(family =>
+        family.tree.some(node =>
+            node.tag === TAGS.CHILD && node.data === individualPointer
+        )
+    );
+
+    // Si pas de famille parentale, c'est la génération 1
+    if (!parentFamily) {
+        cache.set(individualPointer, 1);
+        return 1;
+    }
+
+    // Trouver l'ID d'un parent
+    const parentId = parentFamily.tree.find(node =>
+        node.tag === TAGS.HUSBAND || node.tag === TAGS.WIFE
+    )?.data;
+
+    // Si pas de parent, c'est la génération 1
+    if (!parentId) {
+        cache.set(individualPointer, 1);
+        return 1;
+    }
+
+    // Calculer récursivement la génération du parent et ajouter 1
+    const parentGeneration = calculateGeneration(parentId, allFamilies, cache);
+    const generation = parentGeneration + 1;
+
+    // Mettre en cache avant de retourner
+    cache.set(individualPointer, generation);
+    return generation;
 }
 
 /* Parental Family Members */
@@ -526,13 +607,13 @@ function processDate(s) {
     let day, month, year;
     if (split.length === 3) {
         day = parseInt(split[0], 10);
-        month = (isRepublican ? 
-            MONTHS_MAP.REPUBLICAN[split[1]] : 
+        month = (isRepublican ?
+            MONTHS_MAP.REPUBLICAN[split[1]] :
             MONTHS_MAP.GREGORIAN[split[1]]) || 0;
         year = parseInt(split[2], 10);
     } else if (split.length === 2) {
-        month = (isRepublican ? 
-            MONTHS_MAP.REPUBLICAN[split[1]] : 
+        month = (isRepublican ?
+            MONTHS_MAP.REPUBLICAN[split[1]] :
             MONTHS_MAP.GREGORIAN[split[1]]) || 0;
         year = parseInt(split[1], 10);
     } else if (split.length === 1) {
@@ -718,7 +799,7 @@ function addEvent(type, name, surname, date, town, description, eventId = '', ev
     }
 
     const formattedAttendees = eventAttendees.map(attendee => `${attendee.name}`).join(', ');
-    
+
     const event = {
         type,                   // Used for event grouping
         name: `${name} ${surname}`, // Used in formatEvent
@@ -734,7 +815,7 @@ function addEvent(type, name, surname, date, town, description, eventId = '', ev
     };
 
     individualEvents.push(event);
-    
+
     // Add to family events store unless it's a personal event
     if (!["child-birth", "occupation", "today"].includes(type)) {
         gedcomDataStore.addFamilyEvent(event);
@@ -867,8 +948,65 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
 
     const formattedOccupations = processOccupations(individualJson);
 
-    // Note: La partie des statistiques a été retirée car elle est maintenant gérée
-    // dans le traitement par lots dans prebuildindividualsCache
+    const stats = {
+        demography: {
+            birthInfo: {
+                date: birthData.date,
+                year: birthYear,
+                place: {
+                    town: birthData.town || "",
+                    departement: birthData.departement || "",
+                    country: birthData.country || "",
+                    coordinates: {
+                        latitude: birthData.latitude || null,
+                        longitude: birthData.longitude || null
+                    }
+                }
+            },
+            deathInfo: {
+                date: deathData.date,
+                year: deathYear,
+                place: {
+                    town: deathData.town || "",
+                    departement: deathData.departement || "",
+                    country: deathData.country || "",
+                    coordinates: {
+                        latitude: deathData.latitude || null,
+                        longitude: deathData.longitude || null
+                    }
+                },
+                ageAtDeath: age
+            },
+            generation: calculateGeneration(individualJson.pointer, allFamilies)
+        },
+        family: {
+            parentalFamily: {
+                fatherId: parentalFamily.fatherId,
+                motherId: parentalFamily.motherId,
+                siblings: parentalFamily.siblings,
+                siblingCount: parentalFamily.siblings.length
+            },
+            marriages: marriages.map(marriage => ({
+                date: marriage.eventDetails.date,
+                place: {
+                    town: marriage.eventDetails.town,
+                    departement: marriage.eventDetails.departement,
+                    country: marriage.eventDetails.country
+                },
+                spouseId: marriage.eventDetails.spouseId,
+                childrenCount: marriage.children.length
+            })),
+            totalChildren: Object.values(individualFamily.children).length
+        },
+        identity: {
+            firstName: name.split(" ")[0],
+            lastName: surname,
+            gender: gender,
+            occupations: processDetailedOccupations(individualJson)
+        }
+    };
+
+    // console.log(stats);
 
     return {
         id: individualJson.pointer,
@@ -897,6 +1035,7 @@ function buildIndividual(individualJson, allIndividuals, allFamilies) {
         formattedMarriages: marriages.map((marriage) => marriage.formattedMarriage).join("\n"),
         formattedSiblings,
         bgColor: birthData.departementColor ? birthData.departementColor : birthData.countryColor,
+        stats
     };
 }
 
@@ -1087,15 +1226,15 @@ export async function getAllPlaces(json) {
     try {
         const dbTowns = await getAllRecords();
         familyTownsStore.setTownsData(dbTowns);
-        
+
         // Process each individual for places
         for (const individual of json) {
             await processTree(individual.tree, null);
         }
-        
+
         // Update geocoding after all places are collected
         await familyTownsStore.updateTownsViaProxy();
-        
+
         return { json };
     } catch (error) {
         console.error("Error in getAllPlaces: ", error);
@@ -1131,9 +1270,9 @@ async function processTree(tree, parentNode) {
             let placeInfo = await processPlace({ data: node.data, tree: node.tree });
             let normalizedKey = normalizeGeoString(placeInfo.town);
             if (!normalizedKey) continue;
-            
+
             parentNode.key = normalizedKey;
-            
+
             familyTownsStore.addTown(normalizedKey, {
                 town: placeInfo.town,
                 departement: placeInfo.departement,
@@ -1143,12 +1282,12 @@ async function processTree(tree, parentNode) {
                 countryColor: placeInfo.countryColor,
                 latitude: placeInfo.latitude,
                 longitude: placeInfo.longitude,
-                townDisplay: placeInfo.departement ? 
-                    `${placeInfo.town} (${placeInfo.departement})` : 
+                townDisplay: placeInfo.departement ?
+                    `${placeInfo.town} (${placeInfo.departement})` :
                     placeInfo.town
             });
         }
-        
+
         if (node.tree && node.tree.length > 0) {
             await processTree(
                 node.tree,
@@ -1179,7 +1318,7 @@ function calculateMaxGenerations(individualsCache, allFamilies) {
             // Get parents
             const fatherId = family.tree.find(node => node.tag === 'HUSB')?.data;
             const motherId = family.tree.find(node => node.tag === 'WIFE')?.data;
-            
+
             // Get parent generation (max of both parents if they exist)
             const parentGen = Math.max(
                 generationMap.get(fatherId) || 0,
@@ -1193,7 +1332,7 @@ function calculateMaxGenerations(individualsCache, allFamilies) {
                     const childId = childNode.data;
                     const currentChildGen = generationMap.get(childId) || 0;
                     const newChildGen = parentGen + 1;
-                    
+
                     if (newChildGen > currentChildGen) {
                         generationMap.set(childId, newChildGen);
                         maxGen = Math.max(maxGen, newChildGen);
@@ -1236,13 +1375,13 @@ function shouldProcessIndividual(individualJson, familiesWithIndividual, allFami
     if (familiesWithIndividual.length === 1) {
         const family = familiesWithIndividual[0];
         const hasChildren = family.tree.some(byTag(TAGS.CHILD));  // Utiliser TAGS.CHILD au lieu de TAG_CHILD
-        
+
         if (!hasChildren) {
-            const spouses = family.tree.filter(node => 
+            const spouses = family.tree.filter(node =>
                 node.tag === TAGS.HUSBAND || node.tag === TAGS.WIFE);  // TAGS.HUSBAND et TAGS.WIFE
 
             if (spouses.length === 2) {
-                const otherSpouse = spouses.find(node => 
+                const otherSpouse = spouses.find(node =>
                     node.data !== individualJson.pointer);
                 const otherSpouseFamilies = allFamilies.filter(familyJson =>
                     familyJson.tree.some(node =>
@@ -1251,7 +1390,7 @@ function shouldProcessIndividual(individualJson, familiesWithIndividual, allFami
                     )
                 );
 
-                if (otherSpouseFamilies.length === 1 && 
+                if (otherSpouseFamilies.length === 1 &&
                     !isParentInOtherFamily(otherSpouse.data, allFamilies)) {
                     return false;
                 }
@@ -1268,14 +1407,14 @@ function shouldProcessIndividual(individualJson, familiesWithIndividual, allFami
  * @returns {Object} Object containing birthYear and deathYear
  */
 function extractDatesFromIndividual(individualJson) {
-    const birthNode = individualJson.tree.find(node => 
+    const birthNode = individualJson.tree.find(node =>
         [TAGS.BIRTH, TAGS.BAPTISM].includes(node.tag));
-    const deathNode = individualJson.tree.find(node => 
+    const deathNode = individualJson.tree.find(node =>
         [TAGS.DEATH, TAGS.BURIAL].includes(node.tag));
 
-    const birthYear = birthNode ? 
+    const birthYear = birthNode ?
         extractYear(processDate(birthNode.tree.find(byTag(TAGS.DATE))?.data)) : null;
-    const deathYear = deathNode ? 
+    const deathYear = deathNode ?
         extractYear(processDate(deathNode.tree.find(byTag(TAGS.DATE))?.data)) : null;
 
     return { birthYear, deathYear };
@@ -1291,7 +1430,7 @@ function updateStatisticsStore(batchStatistics) {
     );
     statisticsStore.updateGenderCount('male', batchStatistics.genders.male);
     statisticsStore.updateGenderCount('female', batchStatistics.genders.female);
-    
+
     batchStatistics.births.forEach(year => statisticsStore.addBirthYear(year));
     batchStatistics.deaths.forEach(year => statisticsStore.addDeathYear(year));
     batchStatistics.ages.forEach(age => statisticsStore.addAgeAtDeath(age));
@@ -1306,8 +1445,8 @@ function updateStatisticsStore(batchStatistics) {
  * @param {Map} individualsCache - Cache of processed individuals
  */
 function processMarriageAndChildrenStatistics(
-    individualJson, 
-    familiesWithIndividual, 
+    individualJson,
+    familiesWithIndividual,
     familyStatistics,
     birthYear,
     individualsCache
@@ -1371,19 +1510,20 @@ function getIndividualsList() {
     const allFamilies = _.filter(json, byTag(TAGS.FAMILY));
 
     // Initialiser le service avant de l'utiliser
-    statisticsService.initialize();  // ✅ Ajouter cette ligne
+    statisticsService.initialize();
 
     // Configurer l'écoute du progrès
     statisticsService.onProgress((progress) => {
         console.log(`Processing statistics: ${progress}%`);
     });
 
-    // Lancer le traitement des statistiques en parallèle
-    statisticsService.processData(allIndividuals, allFamilies);
-    // Le reste du traitement continue normalement
+    // Construire d'abord le cache des individus
     const individualsCache = prebuildindividualsCache();
     gedcomDataStore.clearSourceData();
     gedcomDataStore.setIndividualsCache(individualsCache);
+
+    // Puis lancer le traitement des statistiques
+    statisticsService.processData();
 
     requestAnimationFrame(() => {
         import(/* webpackChunkName: "treeUI" */ '../tabs/familyTree/treeUI.js')
