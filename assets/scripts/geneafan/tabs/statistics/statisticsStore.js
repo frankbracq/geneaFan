@@ -1,6 +1,24 @@
 class StatisticsStore {
     constructor() {
+        this.subscribers = new Set();
+    }
+
+    subscribeToUpdates(callback) {
+        this.subscribers.add(callback);
+    }
+
+    updateStatistics(newStats) {
         this.resetStatistics();
+        this.statistics = newStats;
+        
+        // Notifier tous les abonnés
+        this.subscribers.forEach(callback => {
+            try {
+                callback(this.statistics);
+            } catch (error) {
+                console.error('Error in statistics subscriber:', error);
+            }
+        });
     }
 
     resetStatistics() {
@@ -69,11 +87,6 @@ class StatisticsStore {
                 byDecade: {}
             }
         };
-    }
-
-    updateStatistics(newStats) {
-        // Mise à jour simple de toutes les statistiques
-        Object.assign(this.statistics, newStats);
     }
 
     // Getters existants
