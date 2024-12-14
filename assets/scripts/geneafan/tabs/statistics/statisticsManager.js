@@ -20,57 +20,29 @@ class StatisticsManager {
     }
 
     initialize() {
-        // Attendre que la page soit complètement chargée
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', this.initialize);
             return;
         }
-
-        const containers = [
-            '#gender-chart',
-            '#age-chart',
-            '#lifespan-chart'
-        ];
-
-        // Vérifier que tous les conteneurs sont présents
-        if (!containers.every(id => document.querySelector(id))) {
-            console.warn('Some chart containers are not yet available');
-            // Réessayer plus tard
-            setTimeout(this.initialize, 100);
+    
+        const containers = ['#gender-chart', '#age-chart', '#lifespan-chart'];
+        
+        // Vérifier que les conteneurs et les données sont disponibles
+        const stats = statisticsStore.getStatistics();
+        if (!containers.every(id => document.querySelector(id)) || !stats?.demography) {
+            setTimeout(this.initialize, 500); // Augmenter le délai
             return;
         }
-
+    
         try {
-            // Nettoyer les conteneurs existants
-            containers.forEach(id => {
-                const container = d3.select(id);
-                container.selectAll('*').remove();
-                container
-                    .style('min-height', `${this.minChartHeight}px`)
-                    .style('min-width', `${this.minChartWidth}px`);
-            });
-
-            // Mettre à jour les statistiques de base
+            this.cleanupContainers();
             this.updateBasicStats();
-
-            // S'assurer que les données sont disponibles
-            const stats = statisticsStore.getStatistics();
-            if (!stats || !stats.demography) {
-                console.warn('Statistics not yet available');
-                setTimeout(this.initialize, 100);
-                return;
-            }
-
-            // Créer les graphiques
             this.createDemographyCharts();
-
-            // Gestionnaire de redimensionnement
+            
             if (!this.initialized) {
                 window.addEventListener('resize', this.resize);
+                this.initialized = true;
             }
-
-            this.initialized = true;
-            console.log('Statistics manager initialized successfully');
         } catch (error) {
             console.error('Error initializing statistics manager:', error);
         }
@@ -115,9 +87,24 @@ class StatisticsManager {
     }
 
     createDemographyCharts() {
-        this.createGenderDistributionChart();
-        this.createAgeDistributionChart();
-        this.createLifeExpectancyChart();
+        const stats = statisticsStore.getStatistics();
+        if (!stats?.demography) {
+            console.warn('No demography statistics available');
+            return;
+        }
+        
+        if (stats.demography.gender) {
+            this.createGenderDistributionChart();
+        }
+        if (stats.demography.ageDistribution) {
+            this.createAgeDistributionChart();
+        }
+        if (stats.demography.lifeExpectancy) {
+            this.createLifeExpectancyChart();
+        }
+        if (stats.geography) {
+            this.createBirthDeathPlacesChart();  // Ajout de l'appel au nouveau graphique
+        }
     }
 
     createGenderDistributionChart() {
@@ -347,6 +334,164 @@ class StatisticsManager {
         this.addLegend(svg, data, color, radius);
     }
 
+    createBirthDeathPlacesChart() {
+        const stats = statisticsStore.getStatistics()?.geography;
+        if (!stats?.birthPlaces) {
+            console.warn('No geographic statistics available');
+            return;
+        }
+    
+        const container = d3.select('#birth-death-places-chart');
+        
+        // Préparer les données
+        const data = Object.entries(stats.birthPlaces)
+            .map(([place, stats]) => ({
+                place,
+                stayedCount: stats.stayedCount,
+                movedCount: stats.movedCount,
+                total: stats.total
+            }))
+            // Trier par nombre total de naissances
+            .sort((a, b) => b.total - a.total)
+            // Limiter aux 15 premiers lieux
+            .slice(0, 15);
+    
+        // Calculer la hauteur en fonction du nombre de lieux
+        const height = Math.max(this.minChartHeight, data.length * 30);
+        const width = this.getContainerWidth(container);
+    
+        const margins = {
+            top: 30,
+            right: 120,  // Pour la légende
+            bottom: 40,
+            left: 200    // Pour les noms de lieux
+        };
+    
+        // Créer le SVG avec les marges
+        const svg = container.append('svg')
+            .attr('width', width + margins.left + margins.right)
+            .attr('height', height + margins.top + margins.bottom)
+            .append('g')
+            .attr('transform', `translate(${margins.left},${margins.top})`);
+    
+        // Échelles
+        const y = d3.scaleBand()
+            .domain(data.map(d => d.place))
+            .range([0, height])
+            .padding(0.1);
+    
+        const x = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.total)])
+            .range([0, width]);
+    
+        // Axes
+        svg.append('g')
+            .attr('class', 'x-axis')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x))
+            .append('text')
+            .attr('x', width / 2)
+            .attr('y', 35)
+            .attr('fill', 'currentColor')
+            .attr('text-anchor', 'middle')
+            .text('Nombre d\'individus');
+    
+        svg.append('g')
+            .attr('class', 'y-axis')
+            .call(d3.axisLeft(y))
+            .selectAll('text')
+            .style('text-anchor', 'end')
+            .attr('dx', '-0.5em')
+            .attr('dy', '0.3em');
+    
+        // Barres empilées
+        const bars = svg.append('g').attr('class', 'bars');
+    
+        // Personnes restées sur place (en vert)
+        bars.selectAll('.bar-stayed')
+            .data(data)
+            .enter()
+            .append('rect')
+            .attr('class', 'bar-stayed')
+            .attr('y', d => y(d.place))
+            .attr('x', 0)
+            .attr('height', y.bandwidth())
+            .attr('width', d => x(d.stayedCount))
+            .attr('fill', '#4ade80');
+    
+        // Personnes ayant migré (en rouge)
+        bars.selectAll('.bar-moved')
+            .data(data)
+            .enter()
+            .append('rect')
+            .attr('class', 'bar-moved')
+            .attr('y', d => y(d.place))
+            .attr('x', d => x(d.stayedCount))
+            .attr('height', y.bandwidth())
+            .attr('width', d => x(d.movedCount))
+            .attr('fill', '#f87171');
+    
+        // Tooltip
+        const tooltip = d3.select('body').append('div')
+            .attr('class', 'tooltip')
+            .style('opacity', 0)
+            .style('position', 'absolute')
+            .style('background-color', 'white')
+            .style('border', '1px solid #ddd')
+            .style('padding', '10px')
+            .style('border-radius', '5px');
+    
+        bars.selectAll('rect')
+            .on('mouseover', (event, d) => {
+                const isStayed = event.target.classList.contains('bar-stayed');
+                const value = isStayed ? d.stayedCount : d.movedCount;
+                const percentage = ((value / d.total) * 100).toFixed(1);
+                
+                tooltip.transition()
+                    .duration(200)
+                    .style('opacity', .9);
+                tooltip.html(`
+                    <strong>${d.place}</strong><br/>
+                    Total des naissances: ${d.total}<br/>
+                    ${isStayed ? 'Nés et décédés ici' : 'Nés ici, décédés ailleurs'}: 
+                    ${value} (${percentage}%)
+                `)
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 28) + 'px');
+            })
+            .on('mouseout', () => {
+                tooltip.transition()
+                    .duration(500)
+                    .style('opacity', 0);
+            });
+    
+        // Légende
+        const legend = svg.append('g')
+            .attr('class', 'legend')
+            .attr('transform', `translate(${width + 10}, 0)`);
+    
+        legend.append('rect')
+            .attr('width', 15)
+            .attr('height', 15)
+            .attr('fill', '#4ade80');
+    
+        legend.append('text')
+            .attr('x', 25)
+            .attr('y', 12)
+            .text('Nés et décédés ici');
+    
+        legend.append('rect')
+            .attr('y', 25)
+            .attr('width', 15)
+            .attr('height', 15)
+            .attr('fill', '#f87171');
+    
+        legend.append('text')
+            .attr('x', 25)
+            .attr('y', 37)
+            .text('Nés ici, décédés ailleurs');
+    }
+
     addLegend(svg, data, color, radius) {
         const legend = svg.append('g')
             .attr('font-family', 'sans-serif')
@@ -388,16 +533,24 @@ class StatisticsManager {
             return Math.max(this.minChartHeight, calculatedHeight);
         }    
 
-    cleanupContainers() {
-        ['gender-chart', 'age-chart', 'lifespan-chart'].forEach(id => {
-            const container = d3.select(`#${id}`);
-            container.selectAll('*').remove();
-            container
-                .style('min-height', `${this.minChartHeight}px`)
-                .style('min-width', `${this.minChartWidth}px`);
-        });
-    }
-    
+        cleanupContainers() {
+            const containers = {
+                gender: '#gender-chart',
+                age: '#age-chart',
+                lifespan: '#lifespan-chart'
+            };
+        
+            Object.values(containers).forEach(id => {
+                const container = d3.select(id);
+                if (container.node()) {
+                    container.selectAll('*').remove();
+                    container
+                        .style('min-height', `${this.minChartHeight}px`)
+                        .style('min-width', `${this.minChartWidth}px`);
+                }
+            });
+        }
+
     createSvg(container, width, height, center = false) {
         // Nettoyer le conteneur d'abord
         container.selectAll('svg').remove();
@@ -425,15 +578,13 @@ class StatisticsManager {
     resize() {
         if (!this.initialized) return;
         
-        this.cleanupContainers(); // Nettoyer avant le redimensionnement
+        this.cleanupContainers();
         
-        Object.entries(this.charts).forEach(([key, chart]) => {
-            const container = d3.select(`#${key}-chart`);
-            const width = this.getContainerWidth(container);
-            const height = width * (key === 'gender' ? 0.6 : 0.5);
-
-            this[`create${key.charAt(0).toUpperCase() + key.slice(1)}Chart`]();
-        });
+        // Appeler directement les méthodes de création de graphiques
+        this.createGenderDistributionChart();
+        this.createAgeDistributionChart(); 
+        this.createLifeExpectancyChart();
+        this.createBirthDeathPlacesChart();  // <- Correction ici
     }
 
     destroy() {

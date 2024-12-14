@@ -20,12 +20,13 @@ function processStatistics(data) {
 
         // Géographie
         geography: {
-            birthPlaces: new Map(), // Comptage par lieu de naissance
-            deathPlaces: new Map(), // Comptage par lieu de décès
+            birthPlaces: new Map(), // Sera un Map de {total, stayedCount, movedCount}
+            deathPlaces: new Map(), // Sera un Map de {total, fromHere, fromElsewhere}
             migrations: {
                 count: 0,
-                paths: new Map(), // De -> Vers
-                distances: [] // Pour moyenne/médiane
+                paths: new Map(), // De -> Vers avec comptage
+                distances: [], // Pour moyenne/médiane
+                averageDistance: 0
             },
             byGeneration: new Map() // Distribution géographique par génération
         },
@@ -111,10 +112,74 @@ function processStatistics(data) {
         // Géographie
         if (demography.birthInfo.place.town) {
             const birthPlace = `${demography.birthInfo.place.town}, ${demography.birthInfo.place.departement}`;
-            statistics.geography.birthPlaces.set(
-                birthPlace,
-                (statistics.geography.birthPlaces.get(birthPlace) || 0) + 1
-            );
+            const deathPlace = demography.deathInfo.place.town ? 
+                `${demography.deathInfo.place.town}, ${demography.deathInfo.place.departement}` : null;
+
+            // Obtenir ou initialiser les compteurs pour ce lieu de naissance
+            let birthStats = statistics.geography.birthPlaces.get(birthPlace) || {
+                total: 0,     // Nombre total de naissances
+                stayedCount: 0, // Nombre de personnes nées et décédées ici
+                movedCount: 0   // Nombre de personnes nées ici mais décédées ailleurs
+            };
+
+            birthStats.total++;
+
+            if (deathPlace) {
+                // Mettre à jour le compteur des lieux de décès
+                let deathStats = statistics.geography.deathPlaces.get(deathPlace) || {
+                    total: 0,  // Nombre total de décès dans ce lieu
+                    fromHere: 0, // Nombre de personnes nées et décédées ici
+                    fromElsewhere: 0 // Nombre de personnes nées ailleurs mais décédées ici
+                };
+                deathStats.total++;
+
+                if (birthPlace === deathPlace) {
+                    // Personne décédée dans sa ville de naissance
+                    birthStats.stayedCount++;
+                    deathStats.fromHere++;
+                } else {
+                    // Migration
+                    birthStats.movedCount++;
+                    deathStats.fromElsewhere++;
+                    statistics.geography.migrations.count++;
+
+                    // Enregistrer le chemin de migration
+                    const pathKey = `${birthPlace}=>${deathPlace}`;
+                    statistics.geography.migrations.paths.set(
+                        pathKey,
+                        (statistics.geography.migrations.paths.get(pathKey) || 0) + 1
+                    );
+
+                    // Calculer la distance si les coordonnées sont disponibles
+                    if (demography.birthInfo.place.coordinates.latitude && 
+                        demography.deathInfo.place.coordinates.latitude) {
+                        const distance = calculateDistance(
+                            demography.birthInfo.place.coordinates,
+                            demography.deathInfo.place.coordinates
+                        );
+                        if (distance) {
+                            statistics.geography.migrations.distances.push(distance);
+                        }
+                    }
+                }
+
+                // Mettre à jour les statistiques des lieux de décès
+                statistics.geography.deathPlaces.set(deathPlace, deathStats);
+            } else {
+                // Cas où le lieu de décès est inconnu
+                birthStats.movedCount++;  // On considère que la personne n'est pas décédée dans sa ville de naissance
+            }
+
+            // Mettre à jour les statistiques des lieux de naissance
+            statistics.geography.birthPlaces.set(birthPlace, birthStats);
+
+            // Mettre à jour les statistiques par génération si nécessaire
+            if (generation) {
+                const genStats = statistics.geography.byGeneration.get(generation) || new Map();
+                const genCount = genStats.get(birthPlace) || 0;
+                genStats.set(birthPlace, genCount + 1);
+                statistics.geography.byGeneration.set(generation, genStats);
+            }
         }
 
         // Migration
@@ -252,10 +317,9 @@ function finalizeDemographyStats(statistics) {
 
 function finalizeGeographyStats(statistics) {
     // Convertir les Maps en objets pour la sérialisation
-    statistics.geography.birthPlaces = 
-        Object.fromEntries(statistics.geography.birthPlaces);
-    statistics.geography.deathPlaces = 
-        Object.fromEntries(statistics.geography.deathPlaces);
+    statistics.geography.birthPlaces = Object.fromEntries(statistics.geography.birthPlaces);
+    statistics.geography.deathPlaces = Object.fromEntries(statistics.geography.deathPlaces);
+    statistics.geography.migrations.paths = Object.fromEntries(statistics.geography.migrations.paths);
     
     // Calculer la distance moyenne de migration
     if (statistics.geography.migrations.distances.length > 0) {
@@ -263,6 +327,12 @@ function finalizeGeographyStats(statistics) {
             statistics.geography.migrations.distances.reduce((a, b) => a + b, 0) / 
             statistics.geography.migrations.distances.length;
     }
+
+    // Convertir les statistiques par génération
+    statistics.geography.byGeneration = Object.fromEntries(
+        Array.from(statistics.geography.byGeneration.entries())
+            .map(([gen, places]) => [gen, Object.fromEntries(places)])
+    );
 }
 
 function finalizeFamilyStats(statistics) {
