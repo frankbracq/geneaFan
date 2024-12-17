@@ -24,21 +24,22 @@ class StatisticsManager {
             document.addEventListener('DOMContentLoaded', this.initialize);
             return;
         }
-    
+
         const containers = ['#gender-chart', '#age-chart', '#lifespan-chart'];
-        
+
         // Vérifier que les conteneurs et les données sont disponibles
         const stats = statisticsStore.getStatistics();
         if (!containers.every(id => document.querySelector(id)) || !stats?.demography) {
-            setTimeout(this.initialize, 500); // Augmenter le délai
+            setTimeout(this.initialize, 500);
             return;
         }
-    
+
         try {
             this.cleanupContainers();
             this.updateBasicStats();
             this.createDemographyCharts();
-            
+            this.initializeNavigation(); // Ajout de cette ligne
+
             if (!this.initialized) {
                 window.addEventListener('resize', this.resize);
                 this.initialized = true;
@@ -46,6 +47,40 @@ class StatisticsManager {
         } catch (error) {
             console.error('Error initializing statistics manager:', error);
         }
+    }
+
+    initializeNavigation() {
+        // Cibler spécifiquement les liens dans la navigation en pilules
+        const navLinks = document.querySelectorAll('.statistics-container .nav.nav-pills .nav-link');
+    
+        if (!navLinks.length) {
+            console.warn('Navigation links not found');
+            return;
+        }
+    
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const targetId = this.getAttribute('href');
+                const targetSection = document.querySelector(targetId);
+                
+                if (targetSection) {
+                    const headerOffset = 100; // Hauteur du header + marge supplémentaire pour la navigation sticky
+                    const elementPosition = targetSection.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                    
+                    // Utiliser la conteneur scrollable plutôt que window
+                    const statisticsContainer = document.querySelector('.statistics-container');
+                    if (statisticsContainer) {
+                        statisticsContainer.scrollTo({
+                            top: offsetPosition,
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            });
+        });
     }
 
     updateBasicStats(stats = null) {
@@ -58,7 +93,7 @@ class StatisticsManager {
         };
 
         // Calcul correct de la moyenne d'espérance de vie
-        const avgLifeExpectancy = stats.demography.lifeExpectancy.average || 
+        const avgLifeExpectancy = stats.demography.lifeExpectancy.average ||
             this.calculateAverageLifeExpectancy(stats.demography.lifeExpectancy.byDecade);
 
         d3.select('#total-individuals').text(stats.demography.total || 0);
@@ -69,13 +104,13 @@ class StatisticsManager {
 
     updateCharts(newStats) {
         console.log('Updating charts with new statistics');
-        
+
         if (!newStats || !this.initialized) return;
 
         try {
             // Nettoyer les conteneurs existants
             this.cleanupContainers();
-            
+
             // Mettre à jour les statistiques de base
             this.updateBasicStats(newStats);
 
@@ -92,7 +127,7 @@ class StatisticsManager {
             console.warn('No demography statistics available');
             return;
         }
-        
+
         if (stats.demography.gender) {
             this.createGenderDistributionChart();
         }
@@ -195,10 +230,10 @@ class StatisticsManager {
         if (!byDecade) return 0;
         const values = Object.values(byDecade);
         if (values.length === 0) return 0;
-        
+
         const validValues = values.filter(v => !isNaN(v));
         if (validValues.length === 0) return 0;
-        
+
         return validValues.reduce((sum, val) => sum + val, 0) / validValues.length;
     }
 
@@ -235,7 +270,7 @@ class StatisticsManager {
 
         if (options.xLabel) {
             svg.append('text')
-                .attr('transform', `translate(${width/2},${height + 25})`)
+                .attr('transform', `translate(${width / 2},${height + 25})`)
                 .style('text-anchor', 'middle')
                 .text(options.xLabel);
         }
@@ -244,7 +279,7 @@ class StatisticsManager {
             svg.append('text')
                 .attr('transform', 'rotate(-90)')
                 .attr('y', -40)
-                .attr('x', -height/2)
+                .attr('x', -height / 2)
                 .style('text-anchor', 'middle')
                 .text(options.yLabel);
         }
@@ -282,7 +317,7 @@ class StatisticsManager {
 
         if (options.xLabel) {
             svg.append('text')
-                .attr('transform', `translate(${width/2},${height + 25})`)
+                .attr('transform', `translate(${width / 2},${height + 25})`)
                 .style('text-anchor', 'middle')
                 .text(options.xLabel);
         }
@@ -291,7 +326,7 @@ class StatisticsManager {
             svg.append('text')
                 .attr('transform', 'rotate(-90)')
                 .attr('y', -40)
-                .attr('x', -height/2)
+                .attr('x', -height / 2)
                 .style('text-anchor', 'middle')
                 .text(options.yLabel);
         }
@@ -329,7 +364,7 @@ class StatisticsManager {
             .attr('dy', '.35em')
             .style('text-anchor', 'middle')
             .style('fill', 'white')
-            .text(d => `${((d.data.value/total)*100).toFixed(1)}%`);
+            .text(d => `${((d.data.value / total) * 100).toFixed(1)}%`);
 
         this.addLegend(svg, data, color, radius);
     }
@@ -340,10 +375,10 @@ class StatisticsManager {
             console.warn('No geographic statistics available');
             return;
         }
-    
+
         const container = d3.select('#birth-death-places-chart');
         container.selectAll('*').remove();
-        
+
         // Préparer les données : filtrer les lieux avec plus d'une naissance
         const data = Object.entries(stats.birthPlaces)
             .map(([place, stats]) => ({
@@ -358,7 +393,7 @@ class StatisticsManager {
             .filter(d => d.total > 1) // Filtrer les lieux avec plus d'une naissance
             .sort((a, b) => b.total - a.total)
             .slice(0, 15); // Limiter aux 15 premières villes
-    
+
         // Dimensions ajustées pour plus de places
         const margins = {
             top: 30,
@@ -366,28 +401,28 @@ class StatisticsManager {
             bottom: 40,
             left: 240
         };
-    
+
         // Augmentation de la hauteur pour accommoder plus de villes
-        const width = Math.max(800, container.node().getBoundingClientRect().width * (8/12) - margins.left - margins.right);
+        const width = Math.max(800, container.node().getBoundingClientRect().width * (8 / 12) - margins.left - margins.right);
         const height = Math.max(500, data.length * 35); // Hauteur ajustée: 35px par ville
-    
+
         // Create SVG
         const svg = container.append('svg')
             .attr('width', width + margins.left + margins.right)
             .attr('height', height + margins.top + margins.bottom)
             .append('g')
             .attr('transform', `translate(${margins.left},${margins.top})`);
-    
+
         // Scales
         const y = d3.scaleBand()
             .domain(data.map(d => d.place))
             .range([0, height])
             .padding(0.2);
-    
+
         const x = d3.scaleLinear()
             .domain([0, d3.max(data, d => d.total)])
             .range([0, width]);
-    
+
         // Axes
         svg.append('g')
             .attr('class', 'x-axis')
@@ -395,7 +430,7 @@ class StatisticsManager {
             .call(d3.axisBottom(x).ticks(10).tickFormat(d3.format('d')))
             .selectAll('text')
             .style('font-size', '12px');
-    
+
         svg.append('g')
             .attr('class', 'y-axis')
             .call(d3.axisLeft(y))
@@ -404,7 +439,7 @@ class StatisticsManager {
             .style('text-anchor', 'end')
             .attr('dx', '-0.5em')
             .attr('dy', '0.3em');
-    
+
         // Barres empilées
         const barGroups = svg.append('g')
             .selectAll('g')
@@ -412,7 +447,7 @@ class StatisticsManager {
             .enter()
             .append('g')
             .attr('transform', d => `translate(0,${y(d.place)})`);
-    
+
         // Configuration des couleurs
         const colors = {
             stayed: '#4ade80',      // vert
@@ -420,10 +455,10 @@ class StatisticsManager {
             moved: '#f87171',       // rouge
             unknown: '#94a3b8'      // gris
         };
-    
+
         // Fonction pour calculer la position x de chaque segment
         function getXPosition(d, segment) {
-            switch(segment) {
+            switch (segment) {
                 case 'stayed': return 0;
                 case 'localMove': return x(d.stayedCount);
                 case 'moved': return x(d.stayedCount + d.localMoveCount);
@@ -431,10 +466,10 @@ class StatisticsManager {
                 default: return 0;
             }
         }
-    
+
         // Fonction pour calculer la largeur de chaque segment
         function getWidth(d, segment) {
-            switch(segment) {
+            switch (segment) {
                 case 'stayed': return x(d.stayedCount);
                 case 'localMove': return x(d.localMoveCount);
                 case 'moved': return x(d.movedCount);
@@ -442,7 +477,7 @@ class StatisticsManager {
                 default: return 0;
             }
         }
-    
+
         // Créer les segments de barres
         const segments = ['stayed', 'localMove', 'moved', 'unknown'];
         segments.forEach(segment => {
@@ -456,7 +491,7 @@ class StatisticsManager {
                 .attr('fill', colors[segment])
                 .attr('rx', 2)
                 .attr('ry', 2);
-    
+
             // Texte dans les barres
             barGroups.append('text')
                 .attr('x', d => getXPosition(d, segment) + getWidth(d, segment) / 2)
@@ -475,7 +510,7 @@ class StatisticsManager {
                     return value > 0 ? value : '';
                 });
         });
-    
+
         // Total values
         barGroups.append('text')
             .attr('x', d => x(d.total) + 5)
@@ -483,19 +518,19 @@ class StatisticsManager {
             .attr('dy', '0.35em')
             .style('font-size', '12px')
             .text(d => d.total);
-    
+
         // Légende
         const legend = svg.append('g')
             .attr('class', 'legend')
             .attr('transform', `translate(${width + 20}, 0)`);
-    
+
         legend.append('text')
             .attr('x', 0)
             .attr('y', -10)
             .style('font-size', '14px')
             .style('font-weight', 'bold')
             .text('Légende');
-    
+
         // Items de légende
         const legendItems = [
             { key: 'stayed', text: 'Nés et décédés ici (<10km)' },
@@ -503,21 +538,21 @@ class StatisticsManager {
             { key: 'moved', text: 'Migration (>20km)' },
             { key: 'unknown', text: 'Lieu de décès inconnu' }
         ];
-    
+
         legendItems.forEach((item, i) => {
             legend.append('rect')
                 .attr('y', i * 25)
                 .attr('width', 15)
                 .attr('height', 15)
                 .attr('fill', colors[item.key]);
-    
+
             legend.append('text')
                 .attr('x', 25)
                 .attr('y', i * 25 + 12)
                 .style('font-size', '12px')
                 .text(item.text);
         });
-    
+
         // Titre mis à jour pour refléter le nouveau critère
         svg.append('text')
             .attr('x', width / 2)
@@ -537,7 +572,7 @@ class StatisticsManager {
             .data(data)
             .enter()
             .append('g')
-            .attr('transform', (d, i) => 
+            .attr('transform', (d, i) =>
                 `translate(${radius + 10},${i * 20 - radius + 20})`);
 
         legend.append('rect')
@@ -553,44 +588,44 @@ class StatisticsManager {
     }
 
     getContainerWidth(container) {
-            const node = container.node();
-            if (!node) {
-                console.warn('Container not found:', container);
-                return this.minChartWidth;
+        const node = container.node();
+        if (!node) {
+            console.warn('Container not found:', container);
+            return this.minChartWidth;
+        }
+        const width = node.getBoundingClientRect().width;
+        // Utiliser la largeur du conteneur ou la largeur minimale
+        return Math.max(this.minChartWidth, width - this.margins.left - this.margins.right);
+    }
+
+    getContainerHeight(width, isGenderChart = false) {
+        // Calculer la hauteur en fonction de la largeur, avec une hauteur minimale
+        const calculatedHeight = width * (isGenderChart ? 0.6 : 0.5);
+        return Math.max(this.minChartHeight, calculatedHeight);
+    }
+
+    cleanupContainers() {
+        const containers = {
+            gender: '#gender-chart',
+            age: '#age-chart',
+            lifespan: '#lifespan-chart'
+        };
+
+        Object.values(containers).forEach(id => {
+            const container = d3.select(id);
+            if (container.node()) {
+                container.selectAll('*').remove();
+                container
+                    .style('min-height', `${this.minChartHeight}px`)
+                    .style('min-width', `${this.minChartWidth}px`);
             }
-            const width = node.getBoundingClientRect().width;
-            // Utiliser la largeur du conteneur ou la largeur minimale
-            return Math.max(this.minChartWidth, width - this.margins.left - this.margins.right);
-        }
-
-        getContainerHeight(width, isGenderChart = false) {
-            // Calculer la hauteur en fonction de la largeur, avec une hauteur minimale
-            const calculatedHeight = width * (isGenderChart ? 0.6 : 0.5);
-            return Math.max(this.minChartHeight, calculatedHeight);
-        }    
-
-        cleanupContainers() {
-            const containers = {
-                gender: '#gender-chart',
-                age: '#age-chart',
-                lifespan: '#lifespan-chart'
-            };
-        
-            Object.values(containers).forEach(id => {
-                const container = d3.select(id);
-                if (container.node()) {
-                    container.selectAll('*').remove();
-                    container
-                        .style('min-height', `${this.minChartHeight}px`)
-                        .style('min-width', `${this.minChartWidth}px`);
-                }
-            });
-        }
+        });
+    }
 
     createSvg(container, width, height, center = false) {
         // Nettoyer le conteneur d'abord
         container.selectAll('svg').remove();
-        
+
         // S'assurer que le conteneur a une taille minimale
         container
             .style('min-height', `${this.minChartHeight}px`)
@@ -602,7 +637,7 @@ class StatisticsManager {
             .append('g');
 
         if (center) {
-            svg.attr('transform', `translate(${width/2},${height/2})`);
+            svg.attr('transform', `translate(${width / 2},${height / 2})`);
         } else {
             svg.attr('transform', `translate(${this.margins.left},${this.margins.top})`);
         }
@@ -613,12 +648,12 @@ class StatisticsManager {
 
     resize() {
         if (!this.initialized) return;
-        
+
         this.cleanupContainers();
-        
+
         // Appeler directement les méthodes de création de graphiques
         this.createGenderDistributionChart();
-        this.createAgeDistributionChart(); 
+        this.createAgeDistributionChart();
         this.createLifeExpectancyChart();
         this.createBirthDeathPlacesChart();  // <- Correction ici
     }

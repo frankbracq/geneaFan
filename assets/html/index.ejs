@@ -382,88 +382,176 @@
                     <div class="horizontal-timeline" id="ascendantTimeline"></div>
                 </div>
                 <!-- Container for the Statistics tab -->
-                <div class="tab-pane fade" id="tab5" role="tabpanel">
-                    <div class="container mt-4">
-                        <div class="row">
-                            <!-- Vue d'ensemble -->
-                            <div class="col-md-4">
-                                <div class="card mb-4">
-                                    <div class="card-header">
-                                        <h5 class="card-title">Vue d'ensemble</h5>
+                <div class="tab-pane fade statistics-container" id="tab5" role="tabpanel">
+                    <!-- Wrapper pour le contenu scrollable -->
+                    <div class="statistics-content">
+                        <!-- Sticky Overview Section -->
+                        <div class="sticky-top bg-white py-2 mb-4">
+                            <div class="container-fluid">
+                                <!-- Quick Navigation -->
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <nav class="nav nav-pills nav-fill small">
+                                            <a class="nav-link" href="#overview-section">Vue d'ensemble</a>
+                                            <a class="nav-link" href="#demography-section">Démographie</a>
+                                            <a class="nav-link" href="#geography-section">Géographie</a>
+                                            <a class="nav-link" href="#family-section">Relations Familiales</a>
+                                            <a class="nav-link" href="#timeline-section">Chronologie</a>
+                                        </nav>
                                     </div>
-                                    <div class="card-body">
-                                        <ul class="list-group list-group-flush">
-                                            <li
-                                                class="list-group-item d-flex justify-content-between align-items-center">
-                                                Nombre total d'individus
-                                                <span id="total-individuals"
-                                                    class="badge bg-primary rounded-pill">-</span>
-                                            </li>
-                                            <li
-                                                class="list-group-item d-flex justify-content-between align-items-center">
-                                                Nombre de mariages
-                                                <span id="total-marriages"
-                                                    class="badge bg-primary rounded-pill">-</span>
-                                            </li>
-                                            <li
-                                                class="list-group-item d-flex justify-content-between align-items-center">
-                                                Moyenne d'enfants par couple
-                                                <span id="avg-children" class="badge bg-primary rounded-pill">-</span>
-                                            </li>
-                                            <li
-                                                class="list-group-item d-flex justify-content-between align-items-center">
-                                                Espérance de vie moyenne
-                                                <span id="avg-lifespan" class="badge bg-primary rounded-pill">-</span>
-                                            </li>
-                                        </ul>
+                                </div>
+
+                                <!-- Overview Cards -->
+                                <div class="row" id="overview-section">
+                                    <div class="col-md-3">
+                                        <div class="card mb-3">
+                                            <div class="card-body">
+                                                <h6 class="card-title text-muted mb-0">Nombre total d'individus</h6>
+                                                <h2 class="display-6 fw-bold mb-0" id="total-individuals">-</h2>
+                                                <small class="text-muted">personnes recensées</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card mb-3">
+                                            <div class="card-body">
+                                                <h6 class="card-title text-muted mb-0">Nombre de mariages</h6>
+                                                <h2 class="display-6 fw-bold mb-0" id="total-marriages">-</h2>
+                                                <small class="text-muted">unions enregistrées</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card mb-3">
+                                            <div class="card-body">
+                                                <h6 class="card-title text-muted mb-0">Moyenne d'enfants</h6>
+                                                <h2 class="display-6 fw-bold mb-0" id="avg-children">-</h2>
+                                                <small class="text-muted">par couple marié</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="card mb-3">
+                                            <div class="card-body">
+                                                <h6 class="card-title text-muted mb-0">Espérance de vie</h6>
+                                                <h2 class="display-6 fw-bold mb-0" id="avg-lifespan">-</h2>
+                                                <small class="text-muted">moyenne globale</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Scrollable Content -->
+                        <div class="container-fluid">
+                            <!-- Demography Section -->
+                            <div class="row mb-5" id="demography-section">
+                                <div class="col-12">
+                                    <h4 class="section-title">
+                                        <i class="bi bi-people-fill me-2"></i>
+                                        Démographie
+                                    </h4>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">Distribution par sexe</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="gender-chart" class="chart-container"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">Distribution des âges au décès</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="age-chart" class="chart-container"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">Évolution de l'espérance de vie</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="lifespan-chart" class="chart-container"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Distribution par sexe -->
-                            <div class="col-md-4">
-                                <div class="card mb-4">
-                                    <div class="card-header">
-                                        <h5 class="card-title">Distribution par sexe</h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <div id="gender-chart" class="chart-container"></div>
+                            <!-- Geography Section -->
+                            <div class="row mb-5" id="geography-section">
+                                <div class="col-12">
+                                    <h4 class="section-title">
+                                        <i class="bi bi-geo-alt-fill me-2"></i>
+                                        Géographie
+                                    </h4>
+                                </div>
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">Distribution géographique des naissances et
+                                                migrations</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="birth-death-places-chart" class="chart-container"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Distribution des âges -->
-                            <div class="col-md-4">
-                                <div class="card mb-4">
-                                    <div class="card-header">
-                                        <h5 class="card-title">Distribution des âges au décès</h5>
+                            <!-- Family Relations Section -->
+                            <div class="row mb-5" id="family-section">
+                                <div class="col-12">
+                                    <h4 class="section-title">
+                                        <i class="bi bi-diagram-3-fill me-2"></i>
+                                        Relations Familiales
+                                    </h4>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">Distribution des mariages par décennie</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="marriages-timeline-chart" class="chart-container"></div>
+                                        </div>
                                     </div>
-                                    <div class="card-body">
-                                        <div id="age-chart" class="chart-container"></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">Taille des familles</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="family-size-chart" class="chart-container"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Évolution de l'espérance de vie -->
-                            <div class="col-md-4">
-                                <div class="card mb-4">
-                                    <div class="card-header">
-                                        <h5 class="card-title">Évolution de l'espérance de vie</h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <div id="lifespan-chart" class="chart-container"></div>
-                                    </div>
+                            <!-- Timeline Section -->
+                            <div class="row mb-5" id="timeline-section">
+                                <div class="col-12">
+                                    <h4 class="section-title">
+                                        <i class="bi bi-calendar-event-fill me-2"></i>
+                                        Chronologie
+                                    </h4>
                                 </div>
-                            </div>
-
-                            <!-- Distribution des lieux de naissance et décès -->
-                            <div class="col-md-8">
-                                <div class="card mb-4">
-                                    <div class="card-header">
-                                        <h5 class="card-title">Distribution géographique des naissances et migrations</h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <div id="birth-death-places-chart" class="chart-container"></div>
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">Distribution temporelle des événements</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="events-timeline-chart" class="chart-container"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -471,92 +559,93 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <!-- Modals -->
-        <div class="modal fade" id="emailModal" tabindex="-1" role="dialog" aria-labelledby="emailModalLabel"
-            aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="emailModalLabel">Saisissez l'adresse à laquelle vous souhaitez
-                            recevoir le PDF de l'éventail sans filigrane.</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+            <!-- Modals -->
+            <div class="modal fade" id="emailModal" tabindex="-1" role="dialog" aria-labelledby="emailModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="emailModalLabel">Saisissez l'adresse à laquelle vous souhaitez
+                                recevoir le PDF de l'éventail sans filigrane.</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
 
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        <input type="email" class="form-control" id="userEmailInput"
-                            placeholder="Votre adresse de courriel">
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" id="email">Valider</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog"
-            aria-labelledby="confirmationModalLabel" aria-hidden="true">
-            <div class="modal-dialog" role="document">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="confirmationModalLabel">Confirmation</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-
-                        </button>
-                    </div>
-                    <div class="modal-body">
-                        Le fichier PDF de votre éventail sera envoyé dans quelques minutes à l'adresse indiquée.
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <input type="email" class="form-control" id="userEmailInput"
+                                placeholder="Votre adresse de courriel">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" id="email">Valider</button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Modal de Connexion -->
-        <div class="modal fade" id="signInModal" tabindex="-1" aria-labelledby="signInModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="signInModalLabel">Se Connecter</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div id="sign-in"></div> <!-- Conteneur pour le formulaire de connexion -->
+            <div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog"
+                aria-labelledby="confirmationModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="confirmationModalLabel">Confirmation</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            Le fichier PDF de votre éventail sera envoyé dans quelques minutes à l'adresse indiquée.
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-
-        <!-- Élément pour le contenu dynamique (formulaire de connexion, commutateur d'organisations, etc.) -->
-
-
-        <!-- Offcanvas for individuals -->
-        <div class="offcanvas offcanvas-end" tabindex="-1" id="personDetails" aria-labelledby="personDetailsLabel">
-            <div class="offcanvas-header">
-                <h5 id="personDetailsLabel">name</h5>
-                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                    aria-label="Close"></button>
+            <!-- Modal de Connexion -->
+            <div class="modal fade" id="signInModal" tabindex="-1" aria-labelledby="signInModalLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="signInModalLabel">Se Connecter</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="Fermer"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div id="sign-in"></div> <!-- Conteneur pour le formulaire de connexion -->
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div id="offCanvasBody" class="text-start" style="overflow-y: auto;">
-                <div id="individualTimeline" class="text-start"></div>
-            </div>
-        </div>
 
-        <div class="offcanvas offcanvas-start map-width" tabindex="-1" id="individualMapContainer"
-            aria-labelledby="individualMapLabel">
-            <div class="offcanvas-header">
-                <h5 id="individualMapLabel">Carte</h5>
-                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                    aria-label="Close"></button>
+
+            <!-- Élément pour le contenu dynamique (formulaire de connexion, commutateur d'organisations, etc.) -->
+
+
+            <!-- Offcanvas for individuals -->
+            <div class="offcanvas offcanvas-end" tabindex="-1" id="personDetails" aria-labelledby="personDetailsLabel">
+                <div class="offcanvas-header">
+                    <h5 id="personDetailsLabel">name</h5>
+                    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                        aria-label="Close"></button>
+                </div>
+                <div id="offCanvasBody" class="text-start" style="overflow-y: auto;">
+                    <div id="individualTimeline" class="text-start"></div>
+                </div>
             </div>
-            <div class="offcanvas-body">
-                <div class="row flex-nowrap" id="individualMap"></div>
+
+            <div class="offcanvas offcanvas-start map-width" tabindex="-1" id="individualMapContainer"
+                aria-labelledby="individualMapLabel">
+                <div class="offcanvas-header">
+                    <h5 id="individualMapLabel">Carte</h5>
+                    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                        aria-label="Close"></button>
+                </div>
+                <div class="offcanvas-body">
+                    <div class="row flex-nowrap" id="individualMap"></div>
+                </div>
             </div>
-        </div>
     </main>
     <!-- Scripts -->
     <script>
