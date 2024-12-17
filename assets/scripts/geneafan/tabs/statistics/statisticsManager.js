@@ -50,34 +50,40 @@ class StatisticsManager {
     }
 
     initializeNavigation() {
-        // Cibler spécifiquement les liens dans la navigation en pilules
         const navLinks = document.querySelectorAll('.statistics-container .nav.nav-pills .nav-link');
-    
+        
         if (!navLinks.length) {
             console.warn('Navigation links not found');
             return;
         }
-    
+        
         navLinks.forEach(link => {
             link.addEventListener('click', function(e) {
                 e.preventDefault();
                 
                 const targetId = this.getAttribute('href');
                 const targetSection = document.querySelector(targetId);
+                const container = document.querySelector('.tab-pane.statistics-container');
+                const stickyOverview = document.querySelector('.sticky-overview');
                 
-                if (targetSection) {
-                    const headerOffset = 100; // Hauteur du header + marge supplémentaire pour la navigation sticky
-                    const elementPosition = targetSection.getBoundingClientRect().top;
-                    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                if (targetSection && container && stickyOverview) {
+                    // Hauteur totale du header (sticky overview + marge de sécurité)
+                    const headerHeight = stickyOverview.offsetHeight + 20; // 20px de marge
                     
-                    // Utiliser la conteneur scrollable plutôt que window
-                    const statisticsContainer = document.querySelector('.statistics-container');
-                    if (statisticsContainer) {
-                        statisticsContainer.scrollTo({
-                            top: offsetPosition,
-                            behavior: 'smooth'
-                        });
-                    }
+                    // Calculer la position de la section par rapport au haut du conteneur
+                    const containerRect = container.getBoundingClientRect();
+                    const sectionRect = targetSection.getBoundingClientRect();
+                    const scrollTop = container.scrollTop + (sectionRect.top - containerRect.top) - headerHeight;
+                    
+                    // Scroll vers la position calculée
+                    container.scrollTo({
+                        top: scrollTop,
+                        behavior: 'smooth'
+                    });
+                    
+                    // Mettre à jour la classe active
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    this.classList.add('active');
                 }
             });
         });

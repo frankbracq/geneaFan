@@ -524,81 +524,84 @@ svg.tommy .node.female>rect {
   margin-top: 20px;
 }
 
-// Staistics styles
-// Staistics styles
-.statistics-container {
-  /* Hauteur totale moins la hauteur du header */
-  padding-top: var(--tab-header-height); /* Ajouter cette ligne */
-  height: 100vh;
-  position: relative;
+// Statistics styles
+.tab-pane.statistics-container {
   overflow-y: auto;
+  height: 100%;
+  padding-bottom: 2rem;
+  scroll-padding-top: var(--header-height, 160px); // Valeur de sécurité par défaut
 }
 
-.statistics-content {
-  height: auto; /* Modifier cette ligne */
-  padding: 1rem 0;
-}
-
-/* Gestion du sticky header */
-.sticky-top {
+// Sticky header avec overview
+.sticky-overview {
   position: sticky;
   top: 0;
   z-index: 1020;
   background-color: rgba(255, 255, 255, 0.95);
   border-bottom: 1px solid #dee2e6;
   box-shadow: 0 2px 4px rgba(0,0,0,.05);
+  padding: 1rem 0;
 }
 
-.section-title {
-  padding: 0.5rem 0;
-  margin-bottom: 1.5rem;
-  border-bottom: 2px solid #f0f0f0;
-  color: #495057;
-}
 
-.card {
-  border: none;
-  box-shadow: 0 0 10px rgba(0,0,0,.05);
-  transition: transform 0.2s ease-in-out;
-}
-
-.card:hover {
-  transform: translateY(-2px);
-}
-
-.chart-container {
-  min-height: 300px;
-  position: relative;
-}
-
-.nav-pills .nav-link {
-  color: #495057;
-  background-color: #f8f9fa;
-  border: 1px solid #dee2e6;
-  margin: 0 2px;
-}
-
-.nav-pills .nav-link:hover {
-  background-color: #e9ecef;
-}
-
-.nav-pills .nav-link.active {
-  background-color: #0d6efd;
-  color: white;
-}
-
-.display-6 {
-  font-size: 1.5rem;
-}
-
-@media (max-width: 768px) {
-  .nav-pills {
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      padding-bottom: 5px;
+// Zone de contenu
+.statistics-content {
+  padding: 1rem 0;
+  
+  // Sections
+  .section-title {
+    padding: 1rem 0; // Augmenté pour plus d'espace
+    margin-bottom: 1.5rem;
+    border-bottom: 2px solid #f0f0f0;
+    color: #495057;
   }
   
-  .nav-pills .nav-link {
+  // Cards
+  .card {
+    border: none;
+    box-shadow: 0 0 10px rgba(0,0,0,.05);
+    transition: transform 0.2s ease-in-out;
+    margin-bottom: 1.5rem;
+    
+    &:hover {
+      transform: translateY(-2px);
+    }
+  }
+  
+  .chart-container {
+    min-height: 300px;
+    position: relative;
+  }
+}
+
+// Navigation pills
+.nav-pills {
+  .nav-link {
+    color: #495057;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    margin: 0 2px;
+    
+    &:hover {
+      background-color: #e9ecef;
+    }
+    
+    &.active {
+      background-color: #0d6efd;
+      color: white;
+    }
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .nav-pills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 5px;
+    
+    .nav-link {
       white-space: nowrap;
+    }
   }
 }

@@ -383,67 +383,64 @@
                 </div>
                 <!-- Container for the Statistics tab -->
                 <div class="tab-pane fade statistics-container" id="tab5" role="tabpanel">
-                    <!-- Wrapper pour le contenu scrollable -->
-                    <div class="statistics-content">
-                        <!-- Sticky Overview Section -->
-                        <div class="sticky-top bg-white py-2 mb-4">
-                            <div class="container-fluid">
-                                <!-- Quick Navigation -->
-                                <div class="row mb-3">
-                                    <div class="col-12">
-                                        <nav class="nav nav-pills nav-fill small">
-                                            <a class="nav-link" href="#overview-section">Vue d'ensemble</a>
-                                            <a class="nav-link" href="#demography-section">Démographie</a>
-                                            <a class="nav-link" href="#geography-section">Géographie</a>
-                                            <a class="nav-link" href="#family-section">Relations Familiales</a>
-                                            <a class="nav-link" href="#timeline-section">Chronologie</a>
-                                        </nav>
+                    <!-- Sticky Overview Section -->
+                    <div class="sticky-overview">
+                        <div class="container-fluid">
+                            <!-- Quick Navigation -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <nav class="nav nav-pills nav-fill small">
+                                        <a class="nav-link" href="#demography-section">Démographie</a>
+                                        <a class="nav-link" href="#geography-section">Géographie</a>
+                                        <a class="nav-link" href="#family-section">Relations Familiales</a>
+                                        <a class="nav-link" href="#timeline-section">Chronologie</a>
+                                    </nav>
+                                </div>
+                            </div>
+                
+                            <!-- Overview Cards -->
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-muted mb-0">Nombre total d'individus</h6>
+                                            <h2 class="display-6 fw-bold mb-0" id="total-individuals">-</h2>
+                                            <small class="text-muted">personnes recensées</small>
+                                        </div>
                                     </div>
                                 </div>
-
-                                <!-- Overview Cards -->
-                                <div class="row" id="overview-section">
-                                    <div class="col-md-3">
-                                        <div class="card mb-3">
-                                            <div class="card-body">
-                                                <h6 class="card-title text-muted mb-0">Nombre total d'individus</h6>
-                                                <h2 class="display-6 fw-bold mb-0" id="total-individuals">-</h2>
-                                                <small class="text-muted">personnes recensées</small>
-                                            </div>
+                                <div class="col-md-3">
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-muted mb-0">Nombre de mariages</h6>
+                                            <h2 class="display-6 fw-bold mb-0" id="total-marriages">-</h2>
+                                            <small class="text-muted">unions enregistrées</small>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <div class="card mb-3">
-                                            <div class="card-body">
-                                                <h6 class="card-title text-muted mb-0">Nombre de mariages</h6>
-                                                <h2 class="display-6 fw-bold mb-0" id="total-marriages">-</h2>
-                                                <small class="text-muted">unions enregistrées</small>
-                                            </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-muted mb-0">Moyenne d'enfants</h6>
+                                            <h2 class="display-6 fw-bold mb-0" id="avg-children">-</h2>
+                                            <small class="text-muted">par couple marié</small>
                                         </div>
                                     </div>
-                                    <div class="col-md-3">
-                                        <div class="card mb-3">
-                                            <div class="card-body">
-                                                <h6 class="card-title text-muted mb-0">Moyenne d'enfants</h6>
-                                                <h2 class="display-6 fw-bold mb-0" id="avg-children">-</h2>
-                                                <small class="text-muted">par couple marié</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="card mb-3">
-                                            <div class="card-body">
-                                                <h6 class="card-title text-muted mb-0">Espérance de vie</h6>
-                                                <h2 class="display-6 fw-bold mb-0" id="avg-lifespan">-</h2>
-                                                <small class="text-muted">moyenne globale</small>
-                                            </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-muted mb-0">Espérance de vie</h6>
+                                            <h2 class="display-6 fw-bold mb-0" id="avg-lifespan">-</h2>
+                                            <small class="text-muted">moyenne globale</small>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Scrollable Content -->
+                    </div>
+                    <!-- Scrollable Content -->
+                    <div class="statistics-content">
                         <div class="container-fluid">
                             <!-- Demography Section -->
                             <div class="row mb-5" id="demography-section">
@@ -558,94 +555,95 @@
                         </div>
                     </div>
                 </div>
-            </div>
-            <!-- Modals -->
-            <div class="modal fade" id="emailModal" tabindex="-1" role="dialog" aria-labelledby="emailModalLabel"
-                aria-hidden="true">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="emailModalLabel">Saisissez l'adresse à laquelle vous souhaitez
-                                recevoir le PDF de l'éventail sans filigrane.</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                <!-- Modals -->
+                <div class="modal fade" id="emailModal" tabindex="-1" role="dialog" aria-labelledby="emailModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="emailModalLabel">Saisissez l'adresse à laquelle vous
+                                    souhaitez
+                                    recevoir le PDF de l'éventail sans filigrane.</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
 
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <input type="email" class="form-control" id="userEmailInput"
-                                placeholder="Votre adresse de courriel">
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-primary" id="email">Valider</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog"
-                aria-labelledby="confirmationModalLabel" aria-hidden="true">
-                <div class="modal-dialog" role="document">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="confirmationModalLabel">Confirmation</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
-
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            Le fichier PDF de votre éventail sera envoyé dans quelques minutes à l'adresse indiquée.
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <input type="email" class="form-control" id="userEmailInput"
+                                    placeholder="Votre adresse de courriel">
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-primary" id="email">Valider</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Modal de Connexion -->
-            <div class="modal fade" id="signInModal" tabindex="-1" aria-labelledby="signInModalLabel"
-                aria-hidden="true">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="signInModalLabel">Se Connecter</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                aria-label="Fermer"></button>
-                        </div>
-                        <div class="modal-body">
-                            <div id="sign-in"></div> <!-- Conteneur pour le formulaire de connexion -->
+                <div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog"
+                    aria-labelledby="confirmationModalLabel" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="confirmationModalLabel">Confirmation</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                Le fichier PDF de votre éventail sera envoyé dans quelques minutes à l'adresse indiquée.
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-
-            <!-- Élément pour le contenu dynamique (formulaire de connexion, commutateur d'organisations, etc.) -->
-
-
-            <!-- Offcanvas for individuals -->
-            <div class="offcanvas offcanvas-end" tabindex="-1" id="personDetails" aria-labelledby="personDetailsLabel">
-                <div class="offcanvas-header">
-                    <h5 id="personDetailsLabel">name</h5>
-                    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                        aria-label="Close"></button>
+                <!-- Modal de Connexion -->
+                <div class="modal fade" id="signInModal" tabindex="-1" aria-labelledby="signInModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="signInModalLabel">Se Connecter</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Fermer"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="sign-in"></div> <!-- Conteneur pour le formulaire de connexion -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div id="offCanvasBody" class="text-start" style="overflow-y: auto;">
-                    <div id="individualTimeline" class="text-start"></div>
-                </div>
-            </div>
 
-            <div class="offcanvas offcanvas-start map-width" tabindex="-1" id="individualMapContainer"
-                aria-labelledby="individualMapLabel">
-                <div class="offcanvas-header">
-                    <h5 id="individualMapLabel">Carte</h5>
-                    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                        aria-label="Close"></button>
+
+                <!-- Élément pour le contenu dynamique (formulaire de connexion, commutateur d'organisations, etc.) -->
+
+
+                <!-- Offcanvas for individuals -->
+                <div class="offcanvas offcanvas-end" tabindex="-1" id="personDetails"
+                    aria-labelledby="personDetailsLabel">
+                    <div class="offcanvas-header">
+                        <h5 id="personDetailsLabel">name</h5>
+                        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                            aria-label="Close"></button>
+                    </div>
+                    <div id="offCanvasBody" class="text-start" style="overflow-y: auto;">
+                        <div id="individualTimeline" class="text-start"></div>
+                    </div>
                 </div>
-                <div class="offcanvas-body">
-                    <div class="row flex-nowrap" id="individualMap"></div>
+
+                <div class="offcanvas offcanvas-start map-width" tabindex="-1" id="individualMapContainer"
+                    aria-labelledby="individualMapLabel">
+                    <div class="offcanvas-header">
+                        <h5 id="individualMapLabel">Carte</h5>
+                        <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                            aria-label="Close"></button>
+                    </div>
+                    <div class="offcanvas-body">
+                        <div class="row flex-nowrap" id="individualMap"></div>
+                    </div>
                 </div>
-            </div>
     </main>
     <!-- Scripts -->
     <script>
