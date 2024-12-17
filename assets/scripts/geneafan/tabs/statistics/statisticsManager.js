@@ -342,43 +342,47 @@ class StatisticsManager {
         }
     
         const container = d3.select('#birth-death-places-chart');
+        container.selectAll('*').remove();
         
-        // Préparer les données
+        // Préparer les données : filtrer les lieux avec plus d'une naissance
         const data = Object.entries(stats.birthPlaces)
             .map(([place, stats]) => ({
                 place,
-                stayedCount: stats.stayedCount,
-                movedCount: stats.movedCount,
-                total: stats.total
+                stayedCount: stats.stayedCount || 0,
+                localMoveCount: stats.localMoveCount || 0,
+                movedCount: stats.movedCount || 0,
+                unknownCount: stats.unknownCount || 0,
+                total: stats.total || 0,
+                percentages: stats.percentages || {}
             }))
-            // Trier par nombre total de naissances
+            .filter(d => d.total > 1) // Filtrer les lieux avec plus d'une naissance
             .sort((a, b) => b.total - a.total)
-            // Limiter aux 15 premiers lieux
-            .slice(0, 15);
+            .slice(0, 15); // Limiter aux 15 premières villes
     
-        // Calculer la hauteur en fonction du nombre de lieux
-        const height = Math.max(this.minChartHeight, data.length * 30);
-        const width = this.getContainerWidth(container);
-    
+        // Dimensions ajustées pour plus de places
         const margins = {
             top: 30,
-            right: 120,  // Pour la légende
+            right: 240,
             bottom: 40,
-            left: 200    // Pour les noms de lieux
+            left: 240
         };
     
-        // Créer le SVG avec les marges
+        // Augmentation de la hauteur pour accommoder plus de villes
+        const width = Math.max(800, container.node().getBoundingClientRect().width * (8/12) - margins.left - margins.right);
+        const height = Math.max(500, data.length * 35); // Hauteur ajustée: 35px par ville
+    
+        // Create SVG
         const svg = container.append('svg')
             .attr('width', width + margins.left + margins.right)
             .attr('height', height + margins.top + margins.bottom)
             .append('g')
             .attr('transform', `translate(${margins.left},${margins.top})`);
     
-        // Échelles
+        // Scales
         const y = d3.scaleBand()
             .domain(data.map(d => d.place))
             .range([0, height])
-            .padding(0.1);
+            .padding(0.2);
     
         const x = d3.scaleLinear()
             .domain([0, d3.max(data, d => d.total)])
@@ -388,108 +392,140 @@ class StatisticsManager {
         svg.append('g')
             .attr('class', 'x-axis')
             .attr('transform', `translate(0,${height})`)
-            .call(d3.axisBottom(x))
-            .append('text')
-            .attr('x', width / 2)
-            .attr('y', 35)
-            .attr('fill', 'currentColor')
-            .attr('text-anchor', 'middle')
-            .text('Nombre d\'individus');
+            .call(d3.axisBottom(x).ticks(10).tickFormat(d3.format('d')))
+            .selectAll('text')
+            .style('font-size', '12px');
     
         svg.append('g')
             .attr('class', 'y-axis')
             .call(d3.axisLeft(y))
             .selectAll('text')
+            .style('font-size', '12px')
             .style('text-anchor', 'end')
             .attr('dx', '-0.5em')
             .attr('dy', '0.3em');
     
         // Barres empilées
-        const bars = svg.append('g').attr('class', 'bars');
-    
-        // Personnes restées sur place (en vert)
-        bars.selectAll('.bar-stayed')
+        const barGroups = svg.append('g')
+            .selectAll('g')
             .data(data)
             .enter()
-            .append('rect')
-            .attr('class', 'bar-stayed')
-            .attr('y', d => y(d.place))
-            .attr('x', 0)
-            .attr('height', y.bandwidth())
-            .attr('width', d => x(d.stayedCount))
-            .attr('fill', '#4ade80');
+            .append('g')
+            .attr('transform', d => `translate(0,${y(d.place)})`);
     
-        // Personnes ayant migré (en rouge)
-        bars.selectAll('.bar-moved')
-            .data(data)
-            .enter()
-            .append('rect')
-            .attr('class', 'bar-moved')
-            .attr('y', d => y(d.place))
-            .attr('x', d => x(d.stayedCount))
-            .attr('height', y.bandwidth())
-            .attr('width', d => x(d.movedCount))
-            .attr('fill', '#f87171');
+        // Configuration des couleurs
+        const colors = {
+            stayed: '#4ade80',      // vert
+            localMove: '#facc15',   // jaune
+            moved: '#f87171',       // rouge
+            unknown: '#94a3b8'      // gris
+        };
     
-        // Tooltip
-        const tooltip = d3.select('body').append('div')
-            .attr('class', 'tooltip')
-            .style('opacity', 0)
-            .style('position', 'absolute')
-            .style('background-color', 'white')
-            .style('border', '1px solid #ddd')
-            .style('padding', '10px')
-            .style('border-radius', '5px');
+        // Fonction pour calculer la position x de chaque segment
+        function getXPosition(d, segment) {
+            switch(segment) {
+                case 'stayed': return 0;
+                case 'localMove': return x(d.stayedCount);
+                case 'moved': return x(d.stayedCount + d.localMoveCount);
+                case 'unknown': return x(d.stayedCount + d.localMoveCount + d.movedCount);
+                default: return 0;
+            }
+        }
     
-        bars.selectAll('rect')
-            .on('mouseover', (event, d) => {
-                const isStayed = event.target.classList.contains('bar-stayed');
-                const value = isStayed ? d.stayedCount : d.movedCount;
-                const percentage = ((value / d.total) * 100).toFixed(1);
-                
-                tooltip.transition()
-                    .duration(200)
-                    .style('opacity', .9);
-                tooltip.html(`
-                    <strong>${d.place}</strong><br/>
-                    Total des naissances: ${d.total}<br/>
-                    ${isStayed ? 'Nés et décédés ici' : 'Nés ici, décédés ailleurs'}: 
-                    ${value} (${percentage}%)
-                `)
-                    .style('left', (event.pageX + 10) + 'px')
-                    .style('top', (event.pageY - 28) + 'px');
-            })
-            .on('mouseout', () => {
-                tooltip.transition()
-                    .duration(500)
-                    .style('opacity', 0);
-            });
+        // Fonction pour calculer la largeur de chaque segment
+        function getWidth(d, segment) {
+            switch(segment) {
+                case 'stayed': return x(d.stayedCount);
+                case 'localMove': return x(d.localMoveCount);
+                case 'moved': return x(d.movedCount);
+                case 'unknown': return x(d.unknownCount);
+                default: return 0;
+            }
+        }
+    
+        // Créer les segments de barres
+        const segments = ['stayed', 'localMove', 'moved', 'unknown'];
+        segments.forEach(segment => {
+            // Barres
+            barGroups.append('rect')
+                .attr('class', `bar-${segment}`)
+                .attr('x', d => getXPosition(d, segment))
+                .attr('y', 0)
+                .attr('height', y.bandwidth())
+                .attr('width', d => getWidth(d, segment))
+                .attr('fill', colors[segment])
+                .attr('rx', 2)
+                .attr('ry', 2);
+    
+            // Texte dans les barres
+            barGroups.append('text')
+                .attr('x', d => getXPosition(d, segment) + getWidth(d, segment) / 2)
+                .attr('y', y.bandwidth() / 2)
+                .attr('dy', '0.35em')
+                .attr('text-anchor', 'middle')
+                .style('fill', 'white')
+                .style('font-size', '11px')  // Taille légèrement réduite pour mieux s'adapter
+                .text(d => {
+                    const value = {
+                        'stayed': d.stayedCount,
+                        'localMove': d.localMoveCount,
+                        'moved': d.movedCount,
+                        'unknown': d.unknownCount
+                    }[segment];
+                    return value > 0 ? value : '';
+                });
+        });
+    
+        // Total values
+        barGroups.append('text')
+            .attr('x', d => x(d.total) + 5)
+            .attr('y', y.bandwidth() / 2)
+            .attr('dy', '0.35em')
+            .style('font-size', '12px')
+            .text(d => d.total);
     
         // Légende
         const legend = svg.append('g')
             .attr('class', 'legend')
-            .attr('transform', `translate(${width + 10}, 0)`);
-    
-        legend.append('rect')
-            .attr('width', 15)
-            .attr('height', 15)
-            .attr('fill', '#4ade80');
+            .attr('transform', `translate(${width + 20}, 0)`);
     
         legend.append('text')
-            .attr('x', 25)
-            .attr('y', 12)
-            .text('Nés et décédés ici');
+            .attr('x', 0)
+            .attr('y', -10)
+            .style('font-size', '14px')
+            .style('font-weight', 'bold')
+            .text('Légende');
     
-        legend.append('rect')
-            .attr('y', 25)
-            .attr('width', 15)
-            .attr('height', 15)
-            .attr('fill', '#f87171');
+        // Items de légende
+        const legendItems = [
+            { key: 'stayed', text: 'Nés et décédés ici (<10km)' },
+            { key: 'localMove', text: 'Migration locale (10-20km)' },
+            { key: 'moved', text: 'Migration (>20km)' },
+            { key: 'unknown', text: 'Lieu de décès inconnu' }
+        ];
     
-        legend.append('text')
-            .attr('x', 25)
-            .attr('y', 37)
-            .text('Nés ici, décédés ailleurs');
+        legendItems.forEach((item, i) => {
+            legend.append('rect')
+                .attr('y', i * 25)
+                .attr('width', 15)
+                .attr('height', 15)
+                .attr('fill', colors[item.key]);
+    
+            legend.append('text')
+                .attr('x', 25)
+                .attr('y', i * 25 + 12)
+                .style('font-size', '12px')
+                .text(item.text);
+        });
+    
+        // Titre mis à jour pour refléter le nouveau critère
+        svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', -10)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '16px')
+            .style('font-weight', 'bold')
+            .text('Lieux de naissance (>1 naissance) et migrations');
     }
 
     addLegend(svg, data, color, radius) {
