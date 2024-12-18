@@ -28,7 +28,7 @@ class StatisticsManager {
         const containers = ['#gender-chart', '#age-chart', '#lifespan-chart'];
 
         // Vérifier que les conteneurs et les données sont disponibles
-        const stats = statisticsStore.getStatistics();
+        const stats = statisticsStore.getStatistics('family');
         if (!containers.every(id => document.querySelector(id)) || !stats?.demography) {
             setTimeout(this.initialize, 500);
             return;
@@ -38,7 +38,7 @@ class StatisticsManager {
             this.cleanupContainers();
             this.updateBasicStats();
             this.createDemographyCharts();
-            this.initializeNavigation(); // Ajout de cette ligne
+            this.initializeNavigation();
 
             if (!this.initialized) {
                 window.addEventListener('resize', this.resize);
@@ -67,21 +67,16 @@ class StatisticsManager {
                 const stickyOverview = document.querySelector('.sticky-overview');
                 
                 if (targetSection && container && stickyOverview) {
-                    // Hauteur totale du header (sticky overview + marge de sécurité)
-                    const headerHeight = stickyOverview.offsetHeight + 20; // 20px de marge
-                    
-                    // Calculer la position de la section par rapport au haut du conteneur
+                    const headerHeight = stickyOverview.offsetHeight + 20;
                     const containerRect = container.getBoundingClientRect();
                     const sectionRect = targetSection.getBoundingClientRect();
                     const scrollTop = container.scrollTop + (sectionRect.top - containerRect.top) - headerHeight;
                     
-                    // Scroll vers la position calculée
                     container.scrollTo({
                         top: scrollTop,
                         behavior: 'smooth'
                     });
                     
-                    // Mettre à jour la classe active
                     navLinks.forEach(l => l.classList.remove('active'));
                     this.classList.add('active');
                 }
@@ -90,7 +85,7 @@ class StatisticsManager {
     }
 
     updateBasicStats(stats = null) {
-        stats = stats || statisticsStore.getStatistics();
+        stats = stats || statisticsStore.getStatistics('family');
         if (!stats?.demography) return;
 
         const format = (value, decimals = 1) => {
@@ -98,7 +93,6 @@ class StatisticsManager {
             return parseFloat(value).toFixed(decimals);
         };
 
-        // Calcul correct de la moyenne d'espérance de vie
         const avgLifeExpectancy = stats.demography.lifeExpectancy.average ||
             this.calculateAverageLifeExpectancy(stats.demography.lifeExpectancy.byDecade);
 
@@ -109,18 +103,11 @@ class StatisticsManager {
     }
 
     updateCharts(newStats) {
-        console.log('Updating charts with new statistics');
-
-        if (!newStats || !this.initialized) return;
+        if (!this.initialized || newStats?.scope !== 'family') return;
 
         try {
-            // Nettoyer les conteneurs existants
             this.cleanupContainers();
-
-            // Mettre à jour les statistiques de base
             this.updateBasicStats(newStats);
-
-            // Recréer les graphiques avec les nouvelles données
             this.createDemographyCharts();
         } catch (error) {
             console.error('Error updating charts:', error);
@@ -128,9 +115,9 @@ class StatisticsManager {
     }
 
     createDemographyCharts() {
-        const stats = statisticsStore.getStatistics();
+        const stats = statisticsStore.getStatistics('family');
         if (!stats?.demography) {
-            console.warn('No demography statistics available');
+            console.warn('No family demography statistics available');
             return;
         }
 
@@ -144,16 +131,13 @@ class StatisticsManager {
             this.createLifeExpectancyChart();
         }
         if (stats.geography) {
-            this.createBirthDeathPlacesChart();  // Ajout de l'appel au nouveau graphique
+            this.createBirthDeathPlacesChart();
         }
     }
 
     createGenderDistributionChart() {
-        const stats = statisticsStore.getStatistics()?.demography?.gender;
-        if (!stats) {
-            console.warn('No gender statistics available');
-            return;
-        }
+        const stats = statisticsStore.getStatistics('family')?.demography?.gender;
+        if (!stats) return;
 
         const container = d3.select('#gender-chart');
         const width = this.getContainerWidth(container);
@@ -172,7 +156,6 @@ class StatisticsManager {
             this.charts.gender = { svg, width, height };
         }
     }
-
 
     createAgeDistributionChart() {
         const stats = statisticsStore.getStatistics()?.demography?.ageDistribution;

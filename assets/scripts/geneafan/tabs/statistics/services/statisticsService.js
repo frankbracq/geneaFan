@@ -20,7 +20,7 @@ class StatisticsService {
         this.worker.addEventListener('message', (e) => {
             switch (e.data.type) {
                 case 'statistics':
-                    this.updateStatisticsStore(e.data.data);
+                    this.updateStatisticsStore(e.data.data, e.data.scope);
                     break;
                 case 'progress':
                     if (this.onProgressCallback) {
@@ -35,17 +35,48 @@ class StatisticsService {
         this.onProgressCallback = callback;
     }
 
-    processData() {
+    processFamilyData() {
         if (!this.worker) {
             this.initialize();
         }
     
-        // Récupérer les données du cache
         const individuals = Array.from(gedcomDataStore.getIndividualsCache().values());
+        const sanitizedData = this.sanitizeIndividuals(individuals);
         
-        // Nettoyer les données pour le worker
-        const sanitizedData = individuals.map(individual => {
-            // On ne garde que les données nécessaires et sérialisables
+        this.worker.postMessage({
+            type: 'process',
+            data: { 
+                individuals: sanitizedData,
+                scope: 'family'
+            }
+        });
+    }
+
+    processIndividualData(rootId, hierarchy) {
+        if (!this.worker || !rootId || !hierarchy) {
+            return;
+        }
+
+        const ancestorIds = new Set(hierarchy.map(person => person.id));
+        const relevantIndividuals = Array.from(gedcomDataStore.getIndividualsCache().values())
+            .filter(individual => ancestorIds.has(individual.id));
+        
+        const sanitizedData = this.sanitizeIndividuals(relevantIndividuals);
+
+        this.worker.postMessage({
+            type: 'process',
+            data: {
+                individuals: sanitizedData,
+                scope: {
+                    type: 'individual',
+                    rootId: rootId
+                }
+            }
+        });
+    }
+
+    sanitizeIndividuals(individuals) {
+        return individuals.map(individual => {
             return {
                 stats: {
                     demography: {
@@ -110,20 +141,14 @@ class StatisticsService {
                 }
             };
         });
-        
-        // Envoyer les données nettoyées au worker
-        this.worker.postMessage({
-            type: 'process',
-            data: { individuals: sanitizedData }
-        });
     }
 
-    updateStatisticsStore(statistics) {
-        // La mise à jour du store avec les nouvelles statistiques structurées
-        statisticsStore.resetStatistics();
-        statisticsStore.updateStatistics(statistics);
-    
-        console.log('Statistics updated:', statisticsStore.getStatistics());
+    updateStatisticsStore(statistics, scope) {
+        if (scope === 'family') {
+            statisticsStore.updateFamilyStatistics(statistics);
+        } else if (scope?.type === 'individual') {
+            statisticsStore.updateIndividualStatistics(scope.rootId, statistics);
+        }
     }
 
     destroy() {

@@ -1522,8 +1522,8 @@ function getIndividualsList() {
     gedcomDataStore.clearSourceData();
     gedcomDataStore.setIndividualsCache(individualsCache);
 
-    // Puis lancer le traitement des statistiques
-    statisticsService.processData();
+    // Puis lancer le traitement des statistiques pour la famille
+    statisticsService.processFamilyData();
 
     requestAnimationFrame(() => {
         import(/* webpackChunkName: "treeUI" */ '../tabs/familyTree/treeUI.js')

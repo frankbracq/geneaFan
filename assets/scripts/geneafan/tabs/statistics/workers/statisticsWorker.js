@@ -1,5 +1,5 @@
 function processStatistics(data) {
-    const { individuals } = data;
+    const { individuals, scope } = data;
     
     const statistics = {
         // Démographie générale
@@ -20,8 +20,8 @@ function processStatistics(data) {
 
         // Géographie - structure mise à jour
         geography: {
-            birthPlaces: new Map(), // Sera un Map avec les nouveaux compteurs
-            deathPlaces: new Map(), // Sera un Map avec la nouvelle structure
+            birthPlaces: new Map(),
+            deathPlaces: new Map(),
             migrations: {
                 count: 0,
                 localCount: 0,
@@ -74,8 +74,15 @@ function processStatistics(data) {
         }
     };
 
+    // Signaler le début du traitement
+    const totalIndividuals = individuals.length;
+    self.postMessage({
+        type: 'progress',
+        data: 0
+    });
+
     // Parcourir tous les individus
-    individuals.forEach(individual => {
+    individuals.forEach((individual, index) => {
         const { demography: demoStats, family, identity } = individual.stats;
         
         statistics.demography.total++;
@@ -162,11 +169,11 @@ function processStatistics(data) {
             );
         }
 
-        // Signaler la progression
-        if (individuals.indexOf(individual) % 100 === 0) {
+        // Signaler la progression tous les 100 individus
+        if (index % 100 === 0) {
             self.postMessage({
                 type: 'progress',
-                data: Math.round((individuals.indexOf(individual) / individuals.length) * 100)
+                data: Math.round((index / totalIndividuals) * 100)
             });
         }
     });
@@ -177,9 +184,11 @@ function processStatistics(data) {
     finalizeFamilyStats(statistics);
     finalizeNameStats(statistics);
 
+    // Signaler la fin du traitement avec le scope approprié
     self.postMessage({
         type: 'statistics',
-        data: statistics
+        data: statistics,
+        scope: scope
     });
 }
 
