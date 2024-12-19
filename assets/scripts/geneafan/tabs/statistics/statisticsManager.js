@@ -158,29 +158,106 @@ class StatisticsManager {
     }
 
     createAgeDistributionChart() {
-        const stats = statisticsStore.getStatistics()?.demography?.ageDistribution;
-        if (!stats) {
-            console.warn('No age distribution statistics available');
+        const stats = statisticsStore.getStatistics();
+        if (!stats?.demography?.ageDistribution) {
+            console.warn('No age distribution data available');
             return;
         }
-
+    
         const container = d3.select('#age-chart');
+        if (!container.node()) {
+            console.warn('Age chart container not found');
+            return;
+        }
+    
+        // Nettoyer le conteneur existant
+        container.selectAll('*').remove();
+    
         const width = this.getContainerWidth(container);
         const height = this.getContainerHeight(width);
-
-        const svg = this.createSvg(container, width, height);
-
-        const data = Object.entries(stats)
-            .map(([range, value]) => ({ range, value }))
-            .filter(d => d.value > 0);
-
-        if (data.length > 0) {
-            this.createBarChart(svg, data, width, height, {
-                xLabel: 'Âge',
-                yLabel: 'Nombre d\'individus'
-            });
-            this.charts.age = { svg, width, height };
+    
+        // Préparer les données
+        const data = Object.entries(stats.demography.ageDistribution)
+            .map(([range, count]) => ({ range, count }))
+            .filter(d => d.count > 0);
+    
+        if (data.length === 0) {
+            console.warn('No age distribution data to display');
+            return;
         }
+    
+        // Créer le SVG avec les marges
+        const svg = container.append('svg')
+            .attr('width', width + this.margins.left + this.margins.right)
+            .attr('height', height + this.margins.top + this.margins.bottom)
+            .append('g')
+            .attr('transform', `translate(${this.margins.left},${this.margins.top})`);
+    
+        // Créer les échelles
+        const x = d3.scaleBand()
+            .range([0, width])
+            .domain(data.map(d => d.range))
+            .padding(0.1);
+    
+        const y = d3.scaleLinear()
+            .range([height, 0])
+            .domain([0, d3.max(data, d => d.count) * 1.1]);
+    
+        // Ajouter les axes
+        svg.append('g')
+            .attr('class', 'x-axis')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x))
+            .selectAll('text')
+            .style('text-anchor', 'end')
+            .attr('dx', '-.8em')
+            .attr('dy', '.15em')
+            .attr('transform', 'rotate(-45)');
+    
+        svg.append('g')
+            .attr('class', 'y-axis')
+            .call(d3.axisLeft(y));
+    
+        // Ajouter les barres
+        svg.selectAll('.bar')
+            .data(data)
+            .enter()
+            .append('rect')
+            .attr('class', 'bar')
+            .attr('x', d => x(d.range))
+            .attr('width', x.bandwidth())
+            .attr('y', d => y(d.count))
+            .attr('height', d => height - y(d.count))
+            .attr('fill', '#36A2EB');
+    
+        // Ajouter les étiquettes de valeur
+        svg.selectAll('.bar-label')
+            .data(data)
+            .enter()
+            .append('text')
+            .attr('class', 'bar-label')
+            .attr('x', d => x(d.range) + x.bandwidth() / 2)
+            .attr('y', d => y(d.count) - 5)
+            .attr('text-anchor', 'middle')
+            .text(d => d.count);
+    
+        // Ajouter les titres des axes
+        svg.append('text')
+            .attr('class', 'x-label')
+            .attr('text-anchor', 'middle')
+            .attr('x', width / 2)
+            .attr('y', height + this.margins.bottom - 5)
+            .text('Âge au décès');
+    
+        svg.append('text')
+            .attr('class', 'y-label')
+            .attr('text-anchor', 'middle')
+            .attr('transform', 'rotate(-90)')
+            .attr('x', -height / 2)
+            .attr('y', -this.margins.left + 15)
+            .text('Nombre de personnes');
+    
+        return { svg, width, height };
     }
 
     createLifeExpectancyChart() {

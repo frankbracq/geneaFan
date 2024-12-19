@@ -34,6 +34,15 @@ class StatisticsStore {
 
     updateFamilyStatistics(newStats) {
         runInAction(() => {
+            // Log unique lors de la mise à jour
+            console.group('Updating Family Statistics');
+            console.log('Main metrics:', {
+                total: newStats?.demography?.total,
+                marriages: newStats?.family?.marriages?.total,
+                averageChildren: newStats?.family?.children?.average
+            });
+            console.groupEnd();
+    
             this.familyStatistics = newStats;
             this.notifySubscribers('family');
         });
@@ -41,6 +50,15 @@ class StatisticsStore {
 
     updateIndividualStatistics(rootId, newStats) {
         runInAction(() => {
+            console.group('Updating Individual Statistics');
+            console.log('Root ID:', rootId);
+            console.log('Individual statistics:', {
+                total: newStats?.demography?.total,
+                gender: newStats?.demography?.gender,
+                ageDistribution: newStats?.demography?.ageDistribution
+            });
+            console.groupEnd();
+
             this.individualStatistics = newStats;
             this.notifySubscribers('individual');
         });
@@ -55,15 +73,32 @@ class StatisticsStore {
 
     // Obtenir les statistiques selon le scope désiré
     getStatistics(scope = 'current') {
-        switch (scope) {
-            case 'family':
-                return this.familyStatistics;
-            case 'individual':
-                return this.individualStatistics;
-            case 'current':
-            default:
-                return this.individualStatistics || this.familyStatistics;
+        const stats = (() => {
+            switch (scope) {
+                case 'family':
+                    return this.familyStatistics;
+                case 'individual':
+                    return this.individualStatistics;
+                case 'current':
+                default:
+                    return this.individualStatistics || this.familyStatistics;
+            }
+        })();
+    
+        // Ne logger que lors des mises à jour majeures
+        if (scope === 'family' && stats?.demography?.ageDistribution) {
+            const nonEmptyRanges = Object.entries(stats.demography.ageDistribution)
+                .filter(([, count]) => count > 0)
+                .map(([range, count]) => ({range, count}));
+    
+            if (nonEmptyRanges.length > 0) {
+                console.group('Age Distribution Summary');
+                console.table(nonEmptyRanges);
+                console.groupEnd();
+            }
         }
+    
+        return stats;
     }
 
     getDemographyStats(scope = 'current') {
@@ -137,6 +172,7 @@ class StatisticsStore {
     }
 
     notifySubscribers(scope) {
+        console.log(`Notifying ${this.subscribers.size} subscribers for scope: ${scope}`);
         this.subscribers.forEach(callback => {
             try {
                 callback(this.getStatistics(scope), scope);

@@ -1,6 +1,6 @@
 function processStatistics(data) {
     const { individuals, scope } = data;
-    
+
     const statistics = {
         // Démographie générale
         demography: {
@@ -15,7 +15,9 @@ function processStatistics(data) {
                 "0-10": 0, "11-20": 0, "21-30": 0, "31-40": 0,
                 "41-50": 0, "51-60": 0, "61-70": 0, "71-80": 0,
                 "81-90": 0, "91+": 0
-            }
+            },
+            // Nouvelle structure pour la distribution par décennie
+            ageDistributionByDecade: {}
         },
 
         // Géographie - structure mise à jour
@@ -31,7 +33,7 @@ function processStatistics(data) {
             },
             byGeneration: new Map()
         },
-        
+
         // Reste des statistiques inchangé
         occupations: {
             total: 0,
@@ -74,44 +76,55 @@ function processStatistics(data) {
         }
     };
 
-    // Signaler le début du traitement
-    const totalIndividuals = individuals.length;
     self.postMessage({
         type: 'progress',
         data: 0
     });
 
-    // Parcourir tous les individus
+    console.log('Initial age distribution:', statistics.demography.ageDistribution);
+
     individuals.forEach((individual, index) => {
         const { demography: demoStats, family, identity } = individual.stats;
-        
+
         statistics.demography.total++;
-        
-        // Genre
         statistics.demography.gender[identity.gender]++;
-        
-        // Génération
-        const generation = demoStats.generation;
-        if (generation) {
+
+        if (demoStats.generation) {
             statistics.demography.generations.set(
-                generation,
-                (statistics.demography.generations.get(generation) || 0) + 1
+                demoStats.generation,
+                (statistics.demography.generations.get(demoStats.generation) || 0) + 1
             );
         }
 
-        // Calcul âge au décès et espérance de vie
+        // Calcul amélioré de l'âge au décès et distribution par décennie
         if (demoStats.birthInfo.year && demoStats.deathInfo.year) {
-            const decade = Math.floor(demoStats.birthInfo.year / 10) * 10;
+            const birthDecade = Math.floor(demoStats.birthInfo.year / 10) * 10;
             const age = demoStats.deathInfo.ageAtDeath;
             
             if (age) {
                 const ageRange = getAgeRange(age);
-                statistics.demography.ageDistribution[ageRange]++;
-
-                if (!statistics.demography.lifeExpectancy.byDecade[decade]) {
-                    statistics.demography.lifeExpectancy.byDecade[decade] = [];
+                
+                // S'assurer que la valeur existe avant l'incrémentation
+                if (statistics.demography.ageDistribution[ageRange] === undefined) {
+                    statistics.demography.ageDistribution[ageRange] = 0;
                 }
-                statistics.demography.lifeExpectancy.byDecade[decade].push(age);
+                statistics.demography.ageDistribution[ageRange]++;
+        
+                // Distribution par décennie de naissance
+                if (!statistics.demography.ageDistributionByDecade[birthDecade]) {
+                    statistics.demography.ageDistributionByDecade[birthDecade] = {
+                        "0-10": 0, "11-20": 0, "21-30": 0, "31-40": 0,
+                        "41-50": 0, "51-60": 0, "61-70": 0, "71-80": 0,
+                        "81-90": 0, "91+": 0
+                    };
+                }
+                statistics.demography.ageDistributionByDecade[birthDecade][ageRange]++;
+        
+                // Espérance de vie par décennie
+                if (!statistics.demography.lifeExpectancy.byDecade[birthDecade]) {
+                    statistics.demography.lifeExpectancy.byDecade[birthDecade] = [];
+                }
+                statistics.demography.lifeExpectancy.byDecade[birthDecade].push(age);
             }
         }
 
@@ -126,7 +139,7 @@ function processStatistics(data) {
                     occ.value,
                     (statistics.occupations.byType.get(occ.value) || 0) + 1
                 );
-                
+
                 if (occ.year) {
                     const decade = Math.floor(occ.year / 10) * 10;
                     if (!statistics.occupations.evolution.has(decade)) {
@@ -141,6 +154,15 @@ function processStatistics(data) {
         // Statistiques familiales
         if (family.marriages && family.marriages.length > 0) {
             statistics.family.marriages.total++;
+            family.marriages.forEach(marriage => {
+                if (marriage.date) {
+                    const decade = Math.floor(marriage.date.year / 10) * 10;
+                    statistics.family.marriages.byDecade.set(
+                        decade,
+                        (statistics.family.marriages.byDecade.get(decade) || 0) + 1
+                    );
+                }
+            });
         }
 
         if (family.totalChildren > 0) {
@@ -157,23 +179,22 @@ function processStatistics(data) {
             );
         }
 
-        // Prénoms
+        // Statistiques des prénoms
         if (identity.firstName) {
-            const genderMap = identity.gender === 'male' ? 
-                statistics.names.firstNames.male : 
+            const genderMap = identity.gender === 'male' ?
+                statistics.names.firstNames.male :
                 statistics.names.firstNames.female;
-            
+
             genderMap.set(
                 identity.firstName,
                 (genderMap.get(identity.firstName) || 0) + 1
             );
         }
 
-        // Signaler la progression tous les 100 individus
         if (index % 100 === 0) {
             self.postMessage({
                 type: 'progress',
-                data: Math.round((index / totalIndividuals) * 100)
+                data: Math.round((index / individuals.length) * 100)
             });
         }
     });
@@ -184,7 +205,8 @@ function processStatistics(data) {
     finalizeFamilyStats(statistics);
     finalizeNameStats(statistics);
 
-    // Signaler la fin du traitement avec le scope approprié
+    console.log('Final age distribution:', statistics.demography.ageDistribution);
+
     self.postMessage({
         type: 'statistics',
         data: statistics,
@@ -194,10 +216,10 @@ function processStatistics(data) {
 
 function processGeographyStats(individual, statistics) {
     const { demography } = individual.stats;
-    
+
     if (demography.birthInfo.place.town) {
         const birthPlace = `${demography.birthInfo.place.town}, ${demography.birthInfo.place.departement}`;
-        const deathPlace = demography.deathInfo.place.town ? 
+        const deathPlace = demography.deathInfo.place.town ?
             `${demography.deathInfo.place.town}, ${demography.deathInfo.place.departement}` : null;
 
         // Initialiser ou obtenir les stats pour ce lieu de naissance
@@ -248,14 +270,14 @@ function processGeographyStats(individual, statistics) {
                     birthStats.stayedCount++;
                     deathStats.fromHere++;
                     break;
-                    
+
                 case 'local':
                     birthStats.localMoveCount++;
                     deathStats.fromLocal++;
-                    statistics.geography.migrations.localCount = 
+                    statistics.geography.migrations.localCount =
                         (statistics.geography.migrations.localCount || 0) + 1;
                     break;
-                    
+
                 case 'moved':
                     birthStats.movedCount++;
                     deathStats.fromElsewhere++;
@@ -288,11 +310,11 @@ function processGeographyStats(individual, statistics) {
         }
 
         // Vérification de l'égalité des totaux
-        const computedTotal = birthStats.stayedCount + 
-                            birthStats.localMoveCount + 
-                            birthStats.movedCount + 
-                            birthStats.unknownCount;
-        
+        const computedTotal = birthStats.stayedCount +
+            birthStats.localMoveCount +
+            birthStats.movedCount +
+            birthStats.unknownCount;
+
         if (computedTotal !== birthStats.total) {
             console.error(`Incohérence dans les totaux pour ${birthPlace}: 
                 Total=${birthStats.total}, 
@@ -317,16 +339,22 @@ function processGeographyStats(individual, statistics) {
 }
 
 function getAgeRange(age) {
+    // console.log('Getting range for age:', age);
     const ranges = [10, 20, 30, 40, 50, 60, 70, 80, 90];
     for (let range of ranges) {
-        if (age <= range) return `${range-10}-${range}`;
+        if (age <= range) {
+            const result = `${range - 10}-${range}`;
+            // console.log('Found range:', result);
+            return result;
+        }
     }
+    console.log('Age > 90, returning 91+');
     return "91+";
 }
 
 function calculateDistance(coord1, coord2) {
     if (!coord1 || !coord2) return null;
-    
+
     const R = 6371; // Rayon de la Terre en km
     const lat1 = parseFloat(coord1.latitude) * Math.PI / 180;
     const lat2 = parseFloat(coord2.latitude) * Math.PI / 180;
@@ -336,26 +364,31 @@ function calculateDistance(coord1, coord2) {
     const dLat = lat2 - lat1;
     const dLon = lon2 - lon1;
 
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos(lat1) * Math.cos(lat2) *
-        Math.sin(dLon/2) * Math.sin(dLon/2);
-    
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
     return R * c;
 }
 
 function finalizeDemographyStats(statistics) {
+    console.log('Final age distribution:', {
+        distribution: { ...statistics.demography.ageDistribution },
+        total: Object.values(statistics.demography.ageDistribution)
+            .reduce((sum, count) => sum + count, 0)
+    });
     // Calculer l'espérance de vie moyenne par décennie
     Object.entries(statistics.demography.lifeExpectancy.byDecade).forEach(([decade, ages]) => {
-        statistics.demography.lifeExpectancy.byDecade[decade] = 
+        statistics.demography.lifeExpectancy.byDecade[decade] =
             ages.reduce((a, b) => a + b, 0) / ages.length;
     });
-    
+
     // Calculer l'espérance de vie moyenne globale
     const allAges = Object.values(statistics.demography.ageDistribution)
         .reduce((a, b) => a + b, 0);
-    statistics.demography.lifeExpectancy.average = allAges / 
+    statistics.demography.lifeExpectancy.average = allAges /
         statistics.demography.total;
 }
 
@@ -375,11 +408,11 @@ function finalizeGeographyStats(statistics) {
     );
     statistics.geography.deathPlaces = Object.fromEntries(statistics.geography.deathPlaces);
     statistics.geography.migrations.paths = Object.fromEntries(statistics.geography.migrations.paths);
-    
+
     // Calculer la distance moyenne de migration
     if (statistics.geography.migrations.distances.length > 0) {
-        statistics.geography.migrations.averageDistance = 
-            statistics.geography.migrations.distances.reduce((a, b) => a + b, 0) / 
+        statistics.geography.migrations.averageDistance =
+            statistics.geography.migrations.distances.reduce((a, b) => a + b, 0) /
             statistics.geography.migrations.distances.length;
     }
 
@@ -398,27 +431,27 @@ function finalizeFamilyStats(statistics) {
         totalChildren += size * count;
         totalFamilies += count;
     });
-    statistics.family.children.average = 
+    statistics.family.children.average =
         totalFamilies > 0 ? totalChildren / totalFamilies : 0;
-    
+
     // Convertir les Maps en objets
-    statistics.family.children.distribution = 
+    statistics.family.children.distribution =
         Object.fromEntries(statistics.family.children.distribution);
-    statistics.family.siblings.distribution = 
+    statistics.family.siblings.distribution =
         Object.fromEntries(statistics.family.siblings.distribution);
 }
 
 function finalizeNameStats(statistics) {
     // Convertir les Maps de prénoms en objets
-    statistics.names.firstNames.male = 
+    statistics.names.firstNames.male =
         Object.fromEntries(statistics.names.firstNames.male);
-    statistics.names.firstNames.female = 
+    statistics.names.firstNames.female =
         Object.fromEntries(statistics.names.firstNames.female);
-    
+
     // Calculer le taux de transmission des prénoms
     if (statistics.names.transmission.total > 0) {
-        statistics.names.transmission.rate = 
-            statistics.names.transmission.fromParents / 
+        statistics.names.transmission.rate =
+            statistics.names.transmission.fromParents /
             statistics.names.transmission.total;
     }
 }
