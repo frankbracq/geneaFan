@@ -2,6 +2,11 @@ import { makeAutoObservable, runInAction, reaction } from 'mobx';
 import gedcomDataStore from '../../gedcom/gedcomDataStore';
 import { statisticsService } from './services/statisticsService';
 
+const AGE_RANGE_ORDER = [
+    "0-10", "11-20", "21-30", "31-40", "41-50",
+    "51-60", "61-70", "71-80", "81-90", "91+"
+];
+
 class StatisticsStore {
     familyStatistics = null;
     individualStatistics = null;
@@ -87,18 +92,28 @@ class StatisticsStore {
     
         // Ne logger que lors des mises à jour majeures
         if (scope === 'family' && stats?.demography?.ageDistribution) {
-            const nonEmptyRanges = Object.entries(stats.demography.ageDistribution)
-                .filter(([, count]) => count > 0)
-                .map(([range, count]) => ({range, count}));
+            // Utiliser l'ordre prédéfini pour créer le tableau complet
+            const orderedRanges = AGE_RANGE_ORDER.map(range => ({
+                range,
+                count: stats.demography.ageDistribution[range] || 0
+            }));
     
-            if (nonEmptyRanges.length > 0) {
-                console.group('Age Distribution Summary');
-                console.table(nonEmptyRanges);
-                console.groupEnd();
-            }
+            console.group('Age Distribution Summary');
+            console.table(orderedRanges);
+            console.groupEnd();
         }
     
         return stats;
+    }
+
+    getOrderedAgeDistribution(scope = 'current') {
+        const stats = this.getStatistics(scope);
+        if (!stats?.demography?.ageDistribution) return [];
+        
+        return AGE_RANGE_ORDER.map(range => ({
+            range,
+            count: stats.demography.ageDistribution[range] || 0
+        }));
     }
 
     getDemographyStats(scope = 'current') {

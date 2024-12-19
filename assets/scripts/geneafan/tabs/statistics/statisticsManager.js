@@ -158,8 +158,8 @@ class StatisticsManager {
     }
 
     createAgeDistributionChart() {
-        const stats = statisticsStore.getStatistics();
-        if (!stats?.demography?.ageDistribution) {
+        const stats = statisticsStore.getOrderedAgeDistribution('family');
+        if (!stats || stats.length === 0) {
             console.warn('No age distribution data available');
             return;
         }
@@ -173,96 +173,165 @@ class StatisticsManager {
         // Nettoyer le conteneur existant
         container.selectAll('*').remove();
     
+        // Dimensions et marges ajustées pour correspondre au style existant
+        const margins = {
+            top: 20,
+            right: 30,
+            bottom: 60,  // Plus d'espace pour les labels en rotation
+            left: 50
+        };
+    
         const width = this.getContainerWidth(container);
         const height = this.getContainerHeight(width);
     
-        // Préparer les données
-        const data = Object.entries(stats.demography.ageDistribution)
-            .map(([range, count]) => ({ range, count }))
-            .filter(d => d.count > 0);
-    
-        if (data.length === 0) {
-            console.warn('No age distribution data to display');
-            return;
-        }
-    
-        // Créer le SVG avec les marges
+        // Créer le SVG
         const svg = container.append('svg')
-            .attr('width', width + this.margins.left + this.margins.right)
-            .attr('height', height + this.margins.top + this.margins.bottom)
+            .attr('width', width + margins.left + margins.right)
+            .attr('height', height + margins.top + margins.bottom)
             .append('g')
-            .attr('transform', `translate(${this.margins.left},${this.margins.top})`);
+            .attr('transform', `translate(${margins.left},${margins.top})`);
     
-        // Créer les échelles
+        // Échelles adaptées
         const x = d3.scaleBand()
+            .domain(stats.map(d => d.range))
             .range([0, width])
-            .domain(data.map(d => d.range))
-            .padding(0.1);
+            .padding(0.2);
     
         const y = d3.scaleLinear()
-            .range([height, 0])
-            .domain([0, d3.max(data, d => d.count) * 1.1]);
+            .domain([0, d3.max(stats, d => d.count) * 1.1])
+            .range([height, 0]);
     
-        // Ajouter les axes
+        // Grille horizontale légère
         svg.append('g')
+            .attr('class', 'grid')
+            .selectAll('line')
+            .data(y.ticks())
+            .enter()
+            .append('line')
+            .attr('x1', 0)
+            .attr('x2', width)
+            .attr('y1', d => y(d))
+            .attr('y2', d => y(d))
+            .attr('stroke', '#e5e7eb')
+            .attr('stroke-width', 1);
+    
+        // Axe X avec rotation des labels
+        const xAxis = svg.append('g')
             .attr('class', 'x-axis')
             .attr('transform', `translate(0,${height})`)
-            .call(d3.axisBottom(x))
-            .selectAll('text')
-            .style('text-anchor', 'end')
+            .call(d3.axisBottom(x));
+    
+        xAxis.selectAll('text')
+            .attr('transform', 'rotate(-45)')
+            .attr('text-anchor', 'end')
             .attr('dx', '-.8em')
             .attr('dy', '.15em')
-            .attr('transform', 'rotate(-45)');
+            .style('font-size', '12px')
+            .style('fill', '#666');
     
+        // Axe Y avec formatage des nombres
         svg.append('g')
             .attr('class', 'y-axis')
-            .call(d3.axisLeft(y));
+            .call(d3.axisLeft(y)
+                .ticks(8)
+                .tickFormat(d3.format('d')))
+            .selectAll('text')
+            .style('font-size', '12px')
+            .style('fill', '#666');
     
-        // Ajouter les barres
-        svg.selectAll('.bar')
-            .data(data)
+        // Barres avec style cohérent
+        const bars = svg.selectAll('.bar')
+            .data(stats)
             .enter()
             .append('rect')
             .attr('class', 'bar')
             .attr('x', d => x(d.range))
             .attr('width', x.bandwidth())
-            .attr('y', d => y(d.count))
-            .attr('height', d => height - y(d.count))
-            .attr('fill', '#36A2EB');
+            .attr('y', height)
+            .attr('height', 0)
+            .attr('fill', '#36A2EB')
+            .attr('rx', 3);
     
-        // Ajouter les étiquettes de valeur
-        svg.selectAll('.bar-label')
-            .data(data)
+        // Animation fluide des barres
+        bars.transition()
+            .duration(800)
+            .delay((d, i) => i * 50)
+            .attr('y', d => y(d.count))
+            .attr('height', d => height - y(d.count));
+    
+        // Labels des valeurs
+        svg.selectAll('.value-label')
+            .data(stats)
             .enter()
             .append('text')
-            .attr('class', 'bar-label')
+            .attr('class', 'value-label')
             .attr('x', d => x(d.range) + x.bandwidth() / 2)
             .attr('y', d => y(d.count) - 5)
             .attr('text-anchor', 'middle')
-            .text(d => d.count);
+            .style('font-size', '11px')
+            .style('fill', '#4B5563')
+            .style('opacity', 0)
+            .text(d => d.count)
+            .transition()
+            .duration(800)
+            .delay((d, i) => i * 50)
+            .style('opacity', 1);
     
-        // Ajouter les titres des axes
+        // Axes labels
         svg.append('text')
-            .attr('class', 'x-label')
-            .attr('text-anchor', 'middle')
+            .attr('class', 'axis-label')
             .attr('x', width / 2)
-            .attr('y', height + this.margins.bottom - 5)
+            .attr('y', height + margins.bottom - 10)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '12px')
+            .style('fill', '#4B5563')
             .text('Âge au décès');
     
         svg.append('text')
-            .attr('class', 'y-label')
-            .attr('text-anchor', 'middle')
+            .attr('class', 'axis-label')
             .attr('transform', 'rotate(-90)')
             .attr('x', -height / 2)
-            .attr('y', -this.margins.left + 15)
+            .attr('y', -margins.left + 15)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '12px')
+            .style('fill', '#4B5563')
             .text('Nombre de personnes');
+    
+        // Interactivité
+        bars.on('mouseover', function(event, d) {
+            d3.select(this)
+                .transition()
+                .duration(200)
+                .attr('fill', '#60A5FA');
+    
+            // Mise en évidence du label
+            svg.selectAll('.value-label')
+                .filter(label => label === d)
+                .transition()
+                .duration(200)
+                .style('font-weight', 'bold')
+                .style('fill', '#2563EB');
+        })
+        .on('mouseout', function() {
+            d3.select(this)
+                .transition()
+                .duration(200)
+                .attr('fill', '#36A2EB');
+    
+            // Retour à normal du label
+            svg.selectAll('.value-label')
+                .transition()
+                .duration(200)
+                .style('font-weight', 'normal')
+                .style('fill', '#4B5563');
+        });
     
         return { svg, width, height };
     }
 
     createLifeExpectancyChart() {
-        const stats = statisticsStore.getStatistics()?.demography?.lifeExpectancy?.byDecade;
-        if (!stats) {
+        const stats = statisticsStore.getStatistics()?.demography?.lifeExpectancy;
+        if (!stats?.byDecade) {
             console.warn('No life expectancy statistics available');
             return;
         }
@@ -271,9 +340,17 @@ class StatisticsManager {
         const width = this.getContainerWidth(container);
         const height = this.getContainerHeight(width);
 
-        const svg = this.createSvg(container, width, height);
+        // Nettoyer le conteneur existant
+        container.selectAll('*').remove();
 
-        const data = Object.entries(stats)
+        const svg = container.append('svg')
+            .attr('width', width + this.margins.left + this.margins.right)
+            .attr('height', height + this.margins.top + this.margins.bottom)
+            .append('g')
+            .attr('transform', `translate(${this.margins.left},${this.margins.top})`);
+
+        // Préparer les données
+        const data = Object.entries(stats.byDecade)
             .map(([decade, value]) => ({
                 decade: parseInt(decade),
                 value: value || 0
@@ -281,15 +358,69 @@ class StatisticsManager {
             .filter(d => !isNaN(d.decade) && d.value > 0)
             .sort((a, b) => a.decade - b.decade);
 
-        if (data.length > 0) {
-            this.createLineChart(svg, data, width, height, {
-                xLabel: 'Décennie',
-                yLabel: 'Espérance de vie (années)',
-                lineColor: '#36A2EB'
-            });
-
-            this.charts.lifespan = { svg, width, height };
+        if (data.length === 0) {
+            console.warn('No data to display for life expectancy chart');
+            return;
         }
+
+        // Échelles
+        const x = d3.scaleLinear()
+            .domain(d3.extent(data, d => d.decade))
+            .range([0, width]);
+
+        const y = d3.scaleLinear()
+            .domain([0, d3.max(data, d => d.value) * 1.1])
+            .range([height, 0]);
+
+        // Ligne
+        const line = d3.line()
+            .x(d => x(d.decade))
+            .y(d => y(d.value));
+
+        // Axes
+        svg.append('g')
+            .attr('class', 'x-axis')
+            .attr('transform', `translate(0,${height})`)
+            .call(d3.axisBottom(x).tickFormat(d => d));
+
+        svg.append('g')
+            .attr('class', 'y-axis')
+            .call(d3.axisLeft(y));
+
+        // Tracer la ligne
+        svg.append('path')
+            .datum(data)
+            .attr('fill', 'none')
+            .attr('stroke', '#36A2EB')
+            .attr('stroke-width', 2)
+            .attr('d', line);
+
+        // Ajouter des points
+        svg.selectAll('.dot')
+            .data(data)
+            .enter()
+            .append('circle')
+            .attr('class', 'dot')
+            .attr('cx', d => x(d.decade))
+            .attr('cy', d => y(d.value))
+            .attr('r', 4)
+            .attr('fill', '#36A2EB');
+
+        // Ajouter les labels
+        svg.append('text')
+            .attr('x', width / 2)
+            .attr('y', height + this.margins.bottom - 5)
+            .attr('text-anchor', 'middle')
+            .text('Décennie');
+
+        svg.append('text')
+            .attr('transform', 'rotate(-90)')
+            .attr('y', -this.margins.left + 15)
+            .attr('x', -height / 2)
+            .attr('text-anchor', 'middle')
+            .text('Espérance de vie (années)');
+
+        return { svg, width, height };
     }
 
     calculateAverageLifeExpectancy(byDecade) {
