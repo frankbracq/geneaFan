@@ -51,32 +51,32 @@ class StatisticsManager {
 
     initializeNavigation() {
         const navLinks = document.querySelectorAll('.statistics-container .nav.nav-pills .nav-link');
-        
+
         if (!navLinks.length) {
             console.warn('Navigation links not found');
             return;
         }
-        
+
         navLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
+            link.addEventListener('click', function (e) {
                 e.preventDefault();
-                
+
                 const targetId = this.getAttribute('href');
                 const targetSection = document.querySelector(targetId);
                 const container = document.querySelector('.tab-pane.statistics-container');
                 const stickyOverview = document.querySelector('.sticky-overview');
-                
+
                 if (targetSection && container && stickyOverview) {
                     const headerHeight = stickyOverview.offsetHeight + 20;
                     const containerRect = container.getBoundingClientRect();
                     const sectionRect = targetSection.getBoundingClientRect();
                     const scrollTop = container.scrollTop + (sectionRect.top - containerRect.top) - headerHeight;
-                    
+
                     container.scrollTo({
                         top: scrollTop,
                         behavior: 'smooth'
                     });
-                    
+
                     navLinks.forEach(l => l.classList.remove('active'));
                     this.classList.add('active');
                 }
@@ -158,50 +158,112 @@ class StatisticsManager {
     }
 
     createAgeDistributionChart() {
-        const stats = statisticsStore.getOrderedAgeDistribution('family');
-        if (!stats || stats.length === 0) {
-            console.warn('No age distribution data available');
-            return;
-        }
+        const stats = statisticsStore.getStatistics('family');
+        if (!stats?.demography?.mortality?.byPeriod) return;
     
         const container = d3.select('#age-chart');
-        if (!container.node()) {
-            console.warn('Age chart container not found');
-            return;
-        }
+        if (!container.node()) return;
     
-        // Nettoyer le conteneur existant
+        // Nettoyer le conteneur
         container.selectAll('*').remove();
     
-        // Dimensions et marges ajustées pour correspondre au style existant
         const margins = {
             top: 20,
-            right: 30,
-            bottom: 60,  // Plus d'espace pour les labels en rotation
-            left: 50
+            right: 160,  // Réduit car moins de légendes
+            bottom: 80,
+            left: 60
         };
     
         const width = this.getContainerWidth(container);
         const height = this.getContainerHeight(width);
     
-        // Créer le SVG
+        // Création du SVG principal
         const svg = container.append('svg')
             .attr('width', width + margins.left + margins.right)
             .attr('height', height + margins.top + margins.bottom)
             .append('g')
             .attr('transform', `translate(${margins.left},${margins.top})`);
     
-        // Échelles adaptées
+        // Définition des tranches d'âge et des siècles
+        const ageRanges = ["0-1", "1-5", "6-10", "11-20", "21-30", "31-40",
+                          "41-50", "51-60", "61-70", "71-80", "81-90", "91+"];
+        
+        const centuries = ['before1800', 's18', 's19', 's20', 's21'];
+        const centuryLabels = {
+            'before1800': 'Avant 1800',
+            's18': '18ème siècle',
+            's19': '19ème siècle',
+            's20': '20ème siècle',
+            's21': '21ème siècle'
+        };
+    
+        // Couleurs pour les siècles (du plus ancien au plus récent)
+        const colors = {
+            'before1800': '#082f49',
+            's18': '#0369a1',
+            's19': '#0891b2',
+            's20': '#22d3ee',
+            's21': '#67e8f9'
+        };
+    
+        // Préparation des données pour les barres empilées
+        const data = ageRanges.map(range => {
+            const rangeData = { range };
+            centuries.forEach(century => {
+                rangeData[century] = 0;
+            });
+            return rangeData;
+        });
+    
+        // Regroupement des données par siècle
+        Object.entries(stats.demography.mortality.byPeriod).forEach(([period, periodStats]) => {
+            const year = parseInt(period);
+            const century = year < 1800 ? 'before1800' :
+                           year < 1900 ? 's18' :
+                           year < 2000 ? 's19' :
+                           year < 2100 ? 's20' : 's21';
+            
+            Object.entries(periodStats.ageRanges).forEach(([range, count]) => {
+                const rangeData = data.find(d => d.range === range);
+                if (rangeData) {
+                    rangeData[century] += count;
+                }
+            });
+        });
+    
+        // Configuration des échelles
         const x = d3.scaleBand()
-            .domain(stats.map(d => d.range))
+            .domain(ageRanges)
             .range([0, width])
-            .padding(0.2);
+            .padding(0.1);
     
         const y = d3.scaleLinear()
-            .domain([0, d3.max(stats, d => d.count) * 1.1])
+            .domain([0, d3.max(data, d => 
+                d3.sum(centuries, c => d[c])
+            )])
+            .nice()
             .range([height, 0]);
     
-        // Grille horizontale légère
+        // Création du stack generator
+        const stack = d3.stack()
+            .keys(centuries)
+            .order(d3.stackOrderNone)
+            .offset(d3.stackOffsetNone);
+    
+        const stackedData = stack(data);
+    
+        // Création du tooltip
+        const tooltip = container.append('div')
+            .attr('class', 'tooltip')
+            .style('position', 'absolute')
+            .style('visibility', 'hidden')
+            .style('background-color', 'white')
+            .style('border', '1px solid #ddd')
+            .style('padding', '10px')
+            .style('border-radius', '4px')
+            .style('box-shadow', '0 2px 4px rgba(0,0,0,0.1)');
+    
+        // Grille
         svg.append('g')
             .attr('class', 'grid')
             .selectAll('line')
@@ -215,211 +277,112 @@ class StatisticsManager {
             .attr('stroke', '#e5e7eb')
             .attr('stroke-width', 1);
     
-        // Axe X avec rotation des labels
-        const xAxis = svg.append('g')
-            .attr('class', 'x-axis')
-            .attr('transform', `translate(0,${height})`)
-            .call(d3.axisBottom(x));
-    
-        xAxis.selectAll('text')
-            .attr('transform', 'rotate(-45)')
-            .attr('text-anchor', 'end')
-            .attr('dx', '-.8em')
-            .attr('dy', '.15em')
-            .style('font-size', '12px')
-            .style('fill', '#666');
-    
-        // Axe Y avec formatage des nombres
-        svg.append('g')
-            .attr('class', 'y-axis')
-            .call(d3.axisLeft(y)
-                .ticks(8)
-                .tickFormat(d3.format('d')))
-            .selectAll('text')
-            .style('font-size', '12px')
-            .style('fill', '#666');
-    
-        // Barres avec style cohérent
-        const bars = svg.selectAll('.bar')
-            .data(stats)
+        // Création des barres empilées
+        svg.selectAll('g.century')
+            .data(stackedData)
+            .enter()
+            .append('g')
+            .attr('class', 'century')
+            .attr('fill', d => colors[d.key])
+            .selectAll('rect')
+            .data(d => d)
             .enter()
             .append('rect')
-            .attr('class', 'bar')
-            .attr('x', d => x(d.range))
+            .attr('x', d => x(d.data.range))
+            .attr('y', d => y(d[1]))
+            .attr('height', d => y(d[0]) - y(d[1]))
             .attr('width', x.bandwidth())
-            .attr('y', height)
-            .attr('height', 0)
-            .attr('fill', '#36A2EB')
-            .attr('rx', 3);
+            .on('mouseover', function(event, d) {
+                const century = d3.select(this.parentNode).datum().key;
+                const count = d[1] - d[0];
+                const total = d3.sum(centuries, c => d.data[c]);
+                const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
     
-        // Animation fluide des barres
-        bars.transition()
-            .duration(800)
-            .delay((d, i) => i * 50)
-            .attr('y', d => y(d.count))
-            .attr('height', d => height - y(d.count));
+                tooltip
+                    .style('visibility', 'visible')
+                    .style('left', (event.pageX + 10) + 'px')
+                    .style('top', (event.pageY - 10) + 'px')
+                    .html(`
+                        <div style="font-weight: bold">${centuryLabels[century]}</div>
+                        <div>Âge: ${d.data.range}</div>
+                        <div>Nombre: ${count}</div>
+                        <div>Pourcentage: ${percentage}%</div>
+                        <div>Total tranche: ${total}</div>
+                    `);
     
-        // Labels des valeurs
-        svg.selectAll('.value-label')
-            .data(stats)
-            .enter()
-            .append('text')
-            .attr('class', 'value-label')
-            .attr('x', d => x(d.range) + x.bandwidth() / 2)
-            .attr('y', d => y(d.count) - 5)
-            .attr('text-anchor', 'middle')
-            .style('font-size', '11px')
-            .style('fill', '#4B5563')
-            .style('opacity', 0)
-            .text(d => d.count)
-            .transition()
-            .duration(800)
-            .delay((d, i) => i * 50)
-            .style('opacity', 1);
+                d3.select(this)
+                    .attr('fill-opacity', 0.8);
+            })
+            .on('mouseout', function() {
+                tooltip.style('visibility', 'hidden');
+                d3.select(this)
+                    .attr('fill-opacity', 1);
+            });
     
-        // Axes labels
-        svg.append('text')
-            .attr('class', 'axis-label')
-            .attr('x', width / 2)
-            .attr('y', height + margins.bottom - 10)
-            .attr('text-anchor', 'middle')
-            .style('font-size', '12px')
-            .style('fill', '#4B5563')
-            .text('Âge au décès');
-    
-        svg.append('text')
-            .attr('class', 'axis-label')
-            .attr('transform', 'rotate(-90)')
-            .attr('x', -height / 2)
-            .attr('y', -margins.left + 15)
-            .attr('text-anchor', 'middle')
-            .style('font-size', '12px')
-            .style('fill', '#4B5563')
-            .text('Nombre de personnes');
-    
-        // Interactivité
-        bars.on('mouseover', function(event, d) {
-            d3.select(this)
-                .transition()
-                .duration(200)
-                .attr('fill', '#60A5FA');
-    
-            // Mise en évidence du label
-            svg.selectAll('.value-label')
-                .filter(label => label === d)
-                .transition()
-                .duration(200)
-                .style('font-weight', 'bold')
-                .style('fill', '#2563EB');
-        })
-        .on('mouseout', function() {
-            d3.select(this)
-                .transition()
-                .duration(200)
-                .attr('fill', '#36A2EB');
-    
-            // Retour à normal du label
-            svg.selectAll('.value-label')
-                .transition()
-                .duration(200)
-                .style('font-weight', 'normal')
-                .style('fill', '#4B5563');
-        });
-    
-        return { svg, width, height };
-    }
-
-    createLifeExpectancyChart() {
-        const stats = statisticsStore.getStatistics()?.demography?.lifeExpectancy;
-        if (!stats?.byDecade) {
-            console.warn('No life expectancy statistics available');
-            return;
-        }
-
-        const container = d3.select('#lifespan-chart');
-        const width = this.getContainerWidth(container);
-        const height = this.getContainerHeight(width);
-
-        // Nettoyer le conteneur existant
-        container.selectAll('*').remove();
-
-        const svg = container.append('svg')
-            .attr('width', width + this.margins.left + this.margins.right)
-            .attr('height', height + this.margins.top + this.margins.bottom)
-            .append('g')
-            .attr('transform', `translate(${this.margins.left},${this.margins.top})`);
-
-        // Préparer les données
-        const data = Object.entries(stats.byDecade)
-            .map(([decade, value]) => ({
-                decade: parseInt(decade),
-                value: value || 0
-            }))
-            .filter(d => !isNaN(d.decade) && d.value > 0)
-            .sort((a, b) => a.decade - b.decade);
-
-        if (data.length === 0) {
-            console.warn('No data to display for life expectancy chart');
-            return;
-        }
-
-        // Échelles
-        const x = d3.scaleLinear()
-            .domain(d3.extent(data, d => d.decade))
-            .range([0, width]);
-
-        const y = d3.scaleLinear()
-            .domain([0, d3.max(data, d => d.value) * 1.1])
-            .range([height, 0]);
-
-        // Ligne
-        const line = d3.line()
-            .x(d => x(d.decade))
-            .y(d => y(d.value));
-
         // Axes
         svg.append('g')
             .attr('class', 'x-axis')
             .attr('transform', `translate(0,${height})`)
-            .call(d3.axisBottom(x).tickFormat(d => d));
-
+            .call(d3.axisBottom(x))
+            .selectAll('text')
+            .attr('transform', 'rotate(-45)')
+            .style('text-anchor', 'end')
+            .attr('dx', '-.8em')
+            .attr('dy', '.15em');
+    
         svg.append('g')
             .attr('class', 'y-axis')
             .call(d3.axisLeft(y));
-
-        // Tracer la ligne
-        svg.append('path')
-            .datum(data)
-            .attr('fill', 'none')
-            .attr('stroke', '#36A2EB')
-            .attr('stroke-width', 2)
-            .attr('d', line);
-
-        // Ajouter des points
-        svg.selectAll('.dot')
-            .data(data)
-            .enter()
-            .append('circle')
-            .attr('class', 'dot')
-            .attr('cx', d => x(d.decade))
-            .attr('cy', d => y(d.value))
-            .attr('r', 4)
-            .attr('fill', '#36A2EB');
-
-        // Ajouter les labels
+    
+        // Labels
         svg.append('text')
             .attr('x', width / 2)
-            .attr('y', height + this.margins.bottom - 5)
+            .attr('y', height + margins.bottom - 10)
             .attr('text-anchor', 'middle')
-            .text('Décennie');
-
+            .text('Âge au décès (années)');
+    
         svg.append('text')
             .attr('transform', 'rotate(-90)')
-            .attr('y', -this.margins.left + 15)
+            .attr('y', -margins.left + 15)
             .attr('x', -height / 2)
             .attr('text-anchor', 'middle')
-            .text('Espérance de vie (années)');
-
+            .text('Nombre de personnes');
+    
+        // Légende
+        const legend = svg.append('g')
+            .attr('class', 'legend')
+            .attr('transform', `translate(${width + 20}, 0)`);
+    
+        centuries.forEach((century, i) => {
+            const legendGroup = legend.append('g')
+                .attr('transform', `translate(0, ${i * 25})`);
+    
+            legendGroup.append('rect')
+                .attr('width', 18)
+                .attr('height', 18)
+                .attr('fill', colors[century]);
+    
+            legendGroup.append('text')
+                .attr('x', 24)
+                .attr('y', 14)
+                .style('font-size', '12px')
+                .text(centuryLabels[century]);
+        });
+    
+        // Total
+        const totalPersons = d3.sum(data, d => 
+            d3.sum(centuries, c => d[c])
+        );
+    
+        svg.append('text')
+            .attr('class', 'total-label')
+            .attr('text-anchor', 'middle')
+            .attr('x', width / 2)
+            .attr('y', height + margins.bottom - 35)
+            .style('font-size', '12px')
+            .style('fill', '#666')
+            .text(`Total : ${totalPersons.toLocaleString()} personnes`);
+    
         return { svg, width, height };
     }
 

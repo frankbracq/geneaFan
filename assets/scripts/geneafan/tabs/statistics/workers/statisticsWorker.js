@@ -1,6 +1,93 @@
+// Fonctions utilitaires au niveau global
+function getPeriod(year) {
+    if (!year) return null;
+    const baseYear = Math.floor(year / 25) * 25;
+    return `${baseYear}-${baseYear + 24}`;
+}
+
+function calculateMedian(ages) {
+    if (!ages.length) return null;
+    const sorted = [...ages].sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+    if (sorted.length % 2 === 0) {
+        return (sorted[middle - 1] + sorted[middle]) / 2;
+    }
+    return sorted[middle];
+}
+
+function processAgeStats(individual, statistics) {
+    const { demography: demoStats, identity } = individual.stats;
+    
+    if (!demoStats.birthInfo.year || !demoStats.deathInfo.year || !demoStats.deathInfo.ageAtDeath) {
+        return;
+    }
+
+    const age = demoStats.deathInfo.ageAtDeath;
+    const birthYear = demoStats.birthInfo.year;
+    const period = getPeriod(birthYear);
+    
+    if (!period) return;
+
+    // Découpage des tranches d'âge
+    const ageRange = age <= 1 ? "0-1" :
+                    age <= 5 ? "1-5" :
+                    age <= 10 ? "6-10" : getAgeRange(age);
+
+    // Distribution globale
+    if (statistics.demography.ageDistribution[ageRange] !== undefined) {
+        statistics.demography.ageDistribution[ageRange]++;
+    }
+
+    // Initialisation de la période si nécessaire
+    if (!statistics.demography.mortality.byPeriod[period]) {
+        statistics.demography.mortality.byPeriod[period] = {
+            total: 0,
+            ages: [],
+            ageRanges: {
+                "0-1": 0, "1-5": 0, "6-10": 0, "11-20": 0,
+                "21-30": 0, "31-40": 0, "41-50": 0, "51-60": 0,
+                "61-70": 0, "71-80": 0, "81-90": 0, "91+": 0
+            },
+            byGender: {
+                male: { total: 0, ages: [] },
+                female: { total: 0, ages: [] }
+            }
+        };
+    }
+
+    // Mise à jour des statistiques de la période
+    const periodStats = statistics.demography.mortality.byPeriod[period];
+    periodStats.total++;
+    periodStats.ages.push(age);
+    
+    if (ageRange in periodStats.ageRanges) {
+        periodStats.ageRanges[ageRange]++;
+    }
+
+    if (identity.gender in periodStats.byGender) {
+        periodStats.byGender[identity.gender].total++;
+        periodStats.byGender[identity.gender].ages.push(age);
+    }
+
+    // Statistiques espérance de vie par décennie
+    const birthDecade = Math.floor(birthYear / 10) * 10;
+    if (!statistics.demography.lifeExpectancy.byDecade[birthDecade]) {
+        statistics.demography.lifeExpectancy.byDecade[birthDecade] = [];
+    }
+    statistics.demography.lifeExpectancy.byDecade[birthDecade].push(age);
+
+    // Mortalité infantile
+    if (age <= 1) {
+        if (!statistics.demography.mortality.infantMortality[period]) {
+            statistics.demography.mortality.infantMortality[period] = 0;
+        }
+        statistics.demography.mortality.infantMortality[period]++;
+    }
+}
+
 function processStatistics(data) {
     const { individuals, scope } = data;
-
+    
     const statistics = {
         demography: {
             total: 0,
@@ -11,11 +98,20 @@ function processStatistics(data) {
                 average: 0
             },
             ageDistribution: {
-                "0-10": 0, "11-20": 0, "21-30": 0, "31-40": 0,
-                "41-50": 0, "51-60": 0, "61-70": 0, "71-80": 0,
-                "81-90": 0, "91+": 0
+                "0-1": 0, "1-5": 0, "6-10": 0, 
+                "11-20": 0, "21-30": 0, "31-40": 0,
+                "41-50": 0, "51-60": 0, "61-70": 0, 
+                "71-80": 0, "81-90": 0, "91+": 0
             },
-            ageDistributionByDecade: {}
+            mortality: {
+                byPeriod: {},
+                infantMortality: {},
+                medianAge: {},
+                byGender: {
+                    male: {},
+                    female: {}
+                }
+            }
         },
 
         // Géographie - structure mise à jour
@@ -82,45 +178,15 @@ function processStatistics(data) {
     console.log('Initial age distribution:', statistics.demography.ageDistribution);
 
     individuals.forEach((individual, index) => {
-        const { demography: demoStats, family, identity } = individual.stats;
+        const { family, identity } = individual.stats;
 
+        // Compteurs globaux
         statistics.demography.total++;
         statistics.demography.gender[identity.gender]++;
 
-        // Traitement amélioré de l'âge au décès
-        if (demoStats.birthInfo.year && demoStats.deathInfo.year) {
-            const age = demoStats.deathInfo.ageAtDeath;
-            
-            if (age) {
-                const ageRange = getAgeRange(age);
-                console.log(`Processing age ${age} -> range ${ageRange}`); // Debug log
-                
-                // Incrémentation sûre
-                if (statistics.demography.ageDistribution[ageRange] !== undefined) {
-                    statistics.demography.ageDistribution[ageRange]++;
-                } else {
-                    console.warn(`Invalid age range: ${ageRange} for age: ${age}`);
-                }
-                
-                // Distribution par décennie de naissance
-                const birthDecade = Math.floor(demoStats.birthInfo.year / 10) * 10;
-                if (!statistics.demography.ageDistributionByDecade[birthDecade]) {
-                    statistics.demography.ageDistributionByDecade[birthDecade] = {
-                        "0-10": 0, "11-20": 0, "21-30": 0, "31-40": 0,
-                        "41-50": 0, "51-60": 0, "61-70": 0, "71-80": 0,
-                        "81-90": 0, "91+": 0
-                    };
-                }
-                statistics.demography.ageDistributionByDecade[birthDecade][ageRange]++;
-                
-                // Espérance de vie par décennie
-                if (!statistics.demography.lifeExpectancy.byDecade[birthDecade]) {
-                    statistics.demography.lifeExpectancy.byDecade[birthDecade] = [];
-                }
-                statistics.demography.lifeExpectancy.byDecade[birthDecade].push(age);
-            }
-        }
-
+        // Traitement des statistiques d'âge et mortalité
+        processAgeStats(individual, statistics);;
+    
         // Traitement des statistiques géographiques
         processGeographyStats(individual, statistics);
 
@@ -184,6 +250,7 @@ function processStatistics(data) {
             );
         }
 
+        // Progression
         if (index % 100 === 0) {
             self.postMessage({
                 type: 'progress',
@@ -192,7 +259,7 @@ function processStatistics(data) {
         }
     });
 
-    // Calculs finaux
+    // Finalisation
     finalizeDemographyStats(statistics);
     finalizeGeographyStats(statistics);
     finalizeFamilyStats(statistics);
