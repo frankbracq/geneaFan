@@ -7,6 +7,13 @@ const AGE_RANGE_ORDER = [
     "51-60", "61-70", "71-80", "81-90", "91+"
 ];
 
+const CENTURY_LABELS = {
+    's18': '18ème siècle et avant',
+    's19': '19ème siècle',
+    's20': '20ème siècle',
+    's21': '21ème siècle'
+};
+
 class StatisticsStore {
     familyStatistics = null;
     individualStatistics = null;
@@ -20,7 +27,6 @@ class StatisticsStore {
             subscribers: false
         });
 
-        // Réagir aux changements de hiérarchie
         reaction(
             () => gedcomDataStore.hierarchy,
             (hierarchy) => {
@@ -39,12 +45,90 @@ class StatisticsStore {
 
     updateFamilyStatistics(newStats) {
         runInAction(() => {
-            // Log unique lors de la mise à jour
-            console.group('Updating Family Statistics');
-            console.log('Main metrics:', {
-                total: newStats?.demography?.total,
-                marriages: newStats?.family?.marriages?.total,
-                averageChildren: newStats?.family?.children?.average
+            // Log détaillé des statistiques par siècle
+            if (newStats?.demography?.mortality?.byCentury) {
+                console.group('Statistiques détaillées par siècle de naissance');
+                
+                // Calcul du total des décès par siècle
+                const totalDeathsByCentury = Object.values(newStats.demography.mortality.byCentury)
+                    .reduce((sum, century) => sum + century.total, 0);
+                
+                // Vérification de cohérence
+                console.group('Vérification de cohérence des données');
+                console.log('Total des individus:', newStats.demography.total);
+                console.log('Total des décès par siècle:', totalDeathsByCentury);
+                
+                // Compter les individus avec dates de naissance et décès connues
+                const individualsWithKnownDates = Object.values(newStats.demography.mortality.byCentury)
+                    .reduce((total, century) => {
+                        return total + Object.values(century.ageRanges)
+                            .reduce((sum, count) => sum + count, 0);
+                    }, 0);
+                
+                console.log('Total des individus avec dates connues:', individualsWithKnownDates);
+                
+                if (totalDeathsByCentury !== individualsWithKnownDates) {
+                    console.warn('⚠️ Incohérence dans les totaux de la distribution par âge !');
+                    console.log('Différence:', Math.abs(totalDeathsByCentury - individualsWithKnownDates));
+                }
+                
+                const percentageWithDates = ((individualsWithKnownDates / newStats.demography.total) * 100).toFixed(1);
+                console.log(`Pourcentage d'individus avec dates connues: ${percentageWithDates}%`);
+                console.groupEnd();
+                
+                const totalIndividuals = newStats.demography.total;
+                
+                Object.entries(newStats.demography.mortality.byCentury)
+                    .sort(([a], [b]) => {
+                        const order = ['s18', 's19', 's20', 's21'];
+                        return order.indexOf(a) - order.indexOf(b);
+                    })
+                    .forEach(([century, stats]) => {
+                        const percentage = ((stats.total / totalIndividuals) * 100).toFixed(1);
+                        console.group(`${CENTURY_LABELS[century]} (${stats.total} personnes, ${percentage}%)`);
+                        
+                        // Distribution des âges pour ce siècle
+                        if (stats.ageRanges) {
+                            const sortedRanges = Object.entries(stats.ageRanges)
+                                .filter(([, count]) => count > 0)
+                                .sort((a, b) => {
+                                    // Tri personnalisé pour les tranches d'âge
+                                    const getOrder = range => {
+                                        if (range === "0-1") return -1;
+                                        if (range === "1-5") return -0.5;
+                                        if (range === "6-10") return 0;
+                                        return parseInt(range.split('-')[0]);
+                                    };
+                                    return getOrder(a[0]) - getOrder(b[0]);
+                                });
+
+                            // Calculer les statistiques pour ce siècle
+                            const totalForCentury = stats.total;
+                            const averageAge = stats.ages ? 
+                                (stats.ages.reduce((sum, age) => sum + age, 0) / stats.ages.length).toFixed(1) : 
+                                'N/A';
+
+                            console.log(`Âge moyen au décès: ${averageAge} ans`);
+                            console.log('Distribution des âges au décès:');
+                            
+                            sortedRanges.forEach(([range, count]) => {
+                                const rangePercentage = ((count / totalForCentury) * 100).toFixed(1);
+                                console.log(`  ${range} ans: ${count} personnes (${rangePercentage}%)`);
+                            });
+                        }
+                        
+                        console.groupEnd();
+                    });
+
+                console.groupEnd();
+            }
+
+            // Log des métriques principales
+            console.group('Métriques principales');
+            console.log({
+                'Total des individus': newStats?.demography?.total,
+                'Mariages': newStats?.family?.marriages?.total,
+                'Moyenne d\'enfants': newStats?.family?.children?.average?.toFixed(1)
             });
             console.groupEnd();
     

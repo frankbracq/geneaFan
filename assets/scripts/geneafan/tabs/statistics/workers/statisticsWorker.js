@@ -1,4 +1,3 @@
-// Fonctions utilitaires au niveau global
 function getPeriod(year) {
     if (!year) return null;
     const baseYear = Math.floor(year / 25) * 25;
@@ -15,6 +14,20 @@ function calculateMedian(ages) {
     return sorted[middle];
 }
 
+function getCentury(year) {
+    if (!year) return null;
+    
+    // Convert to number if string
+    year = parseInt(year);
+    
+    // Get century using Math.floor((year-1)/100) + 1
+    const century = Math.floor((year - 1) / 100) + 1;
+    
+    // Map to our coding scheme - tout ce qui est 18e siècle et avant est regroupé
+    if (century <= 18) return 's18';
+    return `s${century}`;
+}
+
 function processAgeStats(individual, statistics) {
     const { demography: demoStats, identity } = individual.stats;
     
@@ -24,9 +37,9 @@ function processAgeStats(individual, statistics) {
 
     const age = demoStats.deathInfo.ageAtDeath;
     const birthYear = demoStats.birthInfo.year;
-    const period = getPeriod(birthYear);
     
-    if (!period) return;
+    // Déterminer le siècle de naissance selon la convention standard (00-99)
+    const birthCentury = getCentury(birthYear);
 
     // Découpage des tranches d'âge
     const ageRange = age <= 1 ? "0-1" :
@@ -38,35 +51,30 @@ function processAgeStats(individual, statistics) {
         statistics.demography.ageDistribution[ageRange]++;
     }
 
-    // Initialisation de la période si nécessaire
-    if (!statistics.demography.mortality.byPeriod[period]) {
-        statistics.demography.mortality.byPeriod[period] = {
+    // Initialisation des statistiques par siècle si nécessaire
+    if (!statistics.demography.mortality.byCentury) {
+        statistics.demography.mortality.byCentury = {};
+    }
+
+    if (!statistics.demography.mortality.byCentury[birthCentury]) {
+        statistics.demography.mortality.byCentury[birthCentury] = {
             total: 0,
             ages: [],
             ageRanges: {
                 "0-1": 0, "1-5": 0, "6-10": 0, "11-20": 0,
                 "21-30": 0, "31-40": 0, "41-50": 0, "51-60": 0,
                 "61-70": 0, "71-80": 0, "81-90": 0, "91+": 0
-            },
-            byGender: {
-                male: { total: 0, ages: [] },
-                female: { total: 0, ages: [] }
             }
         };
     }
 
-    // Mise à jour des statistiques de la période
-    const periodStats = statistics.demography.mortality.byPeriod[period];
-    periodStats.total++;
-    periodStats.ages.push(age);
+    // Mise à jour des statistiques du siècle
+    const centuryStats = statistics.demography.mortality.byCentury[birthCentury];
+    centuryStats.total++;
+    centuryStats.ages.push(age);
     
-    if (ageRange in periodStats.ageRanges) {
-        periodStats.ageRanges[ageRange]++;
-    }
-
-    if (identity.gender in periodStats.byGender) {
-        periodStats.byGender[identity.gender].total++;
-        periodStats.byGender[identity.gender].ages.push(age);
+    if (ageRange in centuryStats.ageRanges) {
+        centuryStats.ageRanges[ageRange]++;
     }
 
     // Statistiques espérance de vie par décennie
@@ -75,14 +83,6 @@ function processAgeStats(individual, statistics) {
         statistics.demography.lifeExpectancy.byDecade[birthDecade] = [];
     }
     statistics.demography.lifeExpectancy.byDecade[birthDecade].push(age);
-
-    // Mortalité infantile
-    if (age <= 1) {
-        if (!statistics.demography.mortality.infantMortality[period]) {
-            statistics.demography.mortality.infantMortality[period] = 0;
-        }
-        statistics.demography.mortality.infantMortality[period]++;
-    }
 }
 
 function processStatistics(data) {
@@ -434,11 +434,46 @@ function calculateDistance(coord1, coord2) {
 }
 
 function finalizeDemographyStats(statistics) {
+    // Log de la distribution globale des âges
     console.log('Final age distribution:', {
         distribution: { ...statistics.demography.ageDistribution },
         total: Object.values(statistics.demography.ageDistribution)
             .reduce((sum, count) => sum + count, 0)
     });
+
+    // Log de la distribution par siècle de naissance avec labels corrects
+    if (statistics.demography.mortality.byCentury) {
+        console.group('Distribution par siècle de naissance:');
+        const centuryLabels = {
+            's18': '18ème siècle et avant',
+            's19': '19ème siècle (1800-1899)',
+            's20': '20ème siècle (1900-1999)',
+            's21': '21ème siècle (2000-2099)'
+        };
+
+        Object.entries(statistics.demography.mortality.byCentury)
+            .sort(([a], [b]) => {
+                // Tri des siècles dans l'ordre chronologique
+                const order = ['s18', 's19', 's20', 's21'];
+                return order.indexOf(a) - order.indexOf(b);
+            })
+            .forEach(([century, stats]) => {
+                const percentage = ((stats.total / statistics.demography.total) * 100).toFixed(1);
+                console.log(`${centuryLabels[century]}: ${stats.total} personnes (${percentage}%)`);
+                
+                // Log détaillé de la distribution des âges pour ce siècle
+                console.group('Distribution des âges:');
+                Object.entries(stats.ageRanges)
+                    .filter(([, count]) => count > 0)  // Ne montrer que les tranches d'âge non vides
+                    .forEach(([range, count]) => {
+                        const rangePercentage = ((count / stats.total) * 100).toFixed(1);
+                        console.log(`${range} ans: ${count} personnes (${rangePercentage}%)`);
+                    });
+                console.groupEnd();
+            });
+        console.groupEnd();
+    }
+
     // Calculer l'espérance de vie moyenne par décennie
     Object.entries(statistics.demography.lifeExpectancy.byDecade).forEach(([decade, ages]) => {
         statistics.demography.lifeExpectancy.byDecade[decade] =
