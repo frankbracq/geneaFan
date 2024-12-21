@@ -1,5 +1,6 @@
 import * as d3 from 'd3';
 import statisticsStore from './statisticsStore.js';
+import { Tooltip } from 'bootstrap';
 
 class StatisticsManager {
     constructor() {
@@ -155,33 +156,24 @@ class StatisticsManager {
     }
 
     createAgeDistributionChart() {
+        console.log('Initializing age distribution chart...');
+        console.log('Bootstrap availability:', typeof bootstrap !== 'undefined' ? 'Yes' : 'No');
+    
         const stats = statisticsStore.getStatistics('family');
-        if (!stats?.demography?.mortality?.byCentury) return;
+        if (!stats?.demography?.mortality?.byCentury) {
+            console.log('No mortality data available');
+            return;
+        }
     
         const container = d3.select('#age-chart');
-        if (!container.node()) return;
+        if (!container.node()) {
+            console.log('Container #age-chart not found');
+            return;
+        }
     
         // Nettoyer le conteneur
         container.selectAll('*').remove();
     
-        // [Configuration du tooltip et des marges reste identique]
-        const tooltip = d3.select('body')
-            .selectAll('.tooltip')
-            .data([null])
-            .join('div')
-            .attr('class', 'tooltip')
-            .style('position', 'absolute')
-            .style('visibility', 'hidden')
-            .style('background-color', 'white')
-            .style('border', '1px solid #ddd')
-            .style('padding', '10px')
-            .style('border-radius', '4px')
-            .style('font-size', '12px')
-            .style('pointer-events', 'none')
-            .style('box-shadow', '0 2px 4px rgba(0,0,0,0.1)')
-            .style('z-index', 1000);
-    
-        // [Configuration des dimensions reste identique]
         const margins = {
             top: 20,
             right: 160,
@@ -205,9 +197,9 @@ class StatisticsManager {
         const centuries = ['s18', 's19', 's20', 's21'];
         const centuryLabels = {
             's18': '18ème siècle et avant',
-            's19': '19ème siècle (1800-1899)',
-            's20': '20ème siècle (1900-1999)',
-            's21': '21ème siècle (2000-2099)'
+            's19': '19ème siècle',
+            's20': '20ème siècle',
+            's21': '21ème siècle'
         };
     
         const colors = {
@@ -217,14 +209,13 @@ class StatisticsManager {
             's21': '#67e8f9'
         };
     
-        // Nouvelle préparation des données avec pourcentages
+        // Préparation des données avec pourcentages
         const data = ageRanges.map(range => {
             const rangeData = { range };
             centuries.forEach(century => {
                 const centuryData = stats.demography.mortality.byCentury[century];
                 const count = centuryData?.ageRanges[range] || 0;
                 const total = centuryData?.total || 0;
-                // Stocker à la fois le pourcentage et la valeur absolue
                 rangeData[century] = total > 0 ? (count / total) * 100 : 0;
                 rangeData[`${century}_count`] = count;
             });
@@ -236,7 +227,6 @@ class StatisticsManager {
             .range([0, width])
             .padding(0.1);
     
-        // Nouvelle échelle Y en pourcentage
         const y = d3.scaleLinear()
             .domain([0, 100])
             .nice()
@@ -264,46 +254,51 @@ class StatisticsManager {
             .attr('stroke-width', 1);
     
         // Barres empilées
-        svg.selectAll('g.century')
-            .data(stackedData)
-            .enter()
-            .append('g')
-            .attr('class', 'century')
-            .attr('fill', d => colors[d.key])
-            .selectAll('rect')
-            .data(d => d)
-            .enter()
-            .append('rect')
-            .attr('x', d => x(d.data.range))
-            .attr('y', d => y(d[1]))
-            .attr('height', d => y(d[0]) - y(d[1]))
-            .attr('width', x.bandwidth())
-            .on('mouseover', function (event, d) {
-                const century = d3.select(this.parentNode).datum().key;
-                const percentage = (d[1] - d[0]).toFixed(1);
-                const count = d.data[`${century}_count`];
+        const bars = svg.selectAll('g.century')
+        .data(stackedData)
+        .enter()
+        .append('g')
+        .attr('class', 'century')
+        .attr('fill', d => colors[d.key])
+        .selectAll('rect')
+        .data(d => d)
+        .enter()
+        .append('rect')
+        .attr('x', d => x(d.data.range))
+        .attr('y', d => y(d[1]))
+        .attr('height', d => y(d[0]) - y(d[1]))
+        .attr('width', x.bandwidth())
+        .attr('data-bs-toggle', 'tooltip')
+        .attr('data-bs-placement', 'top')
+        .attr('data-bs-html', 'true');
+
+    console.log('Number of bars created:', bars.size());
+
+    bars.attr('data-bs-title', function(d) {
+        const century = d3.select(this.parentNode).datum().key;
+        const percentage = (d[1] - d[0]).toFixed(1);
+        const count = d.data[`${century}_count`];
+        const tooltipContent = `
+            <div style="text-align: left;">
+                <strong>${centuryLabels[century]}</strong><br>
+                Tranche d'âge : ${d.data.range}<br>
+                ${count} personnes<br>
+                ${percentage}%
+            </div>
+        `;
+        // console.log('Setting tooltip content for bar:', {century, range: d.data.range, content: tooltipContent});
+        return tooltipContent;
+    })
+    .on('mouseenter', function(event) {
+        // console.log('Mouse enter event on bar');
+        d3.select(this).attr('fill-opacity', 0.8);
+    })
+    .on('mouseleave', function(event) {
+        // console.log('Mouse leave event on bar');
+        d3.select(this).attr('fill-opacity', 1);
+    });
     
-                tooltip
-                    .style('visibility', 'visible')
-                    .style('left', (event.pageX + 10) + 'px')
-                    .style('top', (event.pageY - 10) + 'px')
-                    .html(`
-                        <div style="font-weight: bold">${centuryLabels[century]}</div>
-                        <div>Âge: ${d.data.range}</div>
-                        <div>Nombre: ${count}</div>
-                        <div>Pourcentage: ${percentage}%</div>
-                    `);
-    
-                d3.select(this)
-                    .attr('fill-opacity', 0.8);
-            })
-            .on('mouseout', function () {
-                tooltip.style('visibility', 'hidden');
-                d3.select(this)
-                    .attr('fill-opacity', 1);
-            });
-    
-        // Axes avec nouveau format pour Y
+        // Axes
         svg.append('g')
             .attr('class', 'x-axis')
             .attr('transform', `translate(0,${height})`)
@@ -318,7 +313,7 @@ class StatisticsManager {
             .attr('class', 'y-axis')
             .call(d3.axisLeft(y).tickFormat(d => d + '%'));
     
-        // Labels mis à jour
+        // Labels
         svg.append('text')
             .attr('x', width / 2)
             .attr('y', height + margins.bottom - 10)
@@ -332,7 +327,7 @@ class StatisticsManager {
             .attr('text-anchor', 'middle')
             .text('Pourcentage de personnes par siècle');
     
-        // Légende [reste identique]
+        // Légende
         const legend = svg.append('g')
             .attr('class', 'legend')
             .attr('transform', `translate(${width + 20}, 0)`);
@@ -353,8 +348,28 @@ class StatisticsManager {
                 .text(centuryLabels[century]);
         });
     
-        return { svg, width, height };
+        // Initialiser les tooltips Bootstrap
+        // console.log('Attempting to initialize tooltips...');
+    try {
+        const tooltipElements = svg.selectAll('[data-bs-toggle="tooltip"]').nodes();
+        // console.log('Found tooltip elements:', tooltipElements.length);
+
+        tooltipElements.forEach((el) => {
+            try {
+            new Tooltip(el, {
+                container: 'body',
+                html: true
+            });
+            } catch (error) {
+            console.error('Failed to initialize tooltip:', error);
+            }
+        });
+    } catch (error) {
+        console.error('Error during tooltip initialization:', error);
     }
+
+    return { svg, width, height };
+}
 
     createLifeExpectancyChart() {
         const stats = statisticsStore.getStatistics('family');
