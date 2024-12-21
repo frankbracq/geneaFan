@@ -7,25 +7,32 @@ export async function initializeTabs() {
     console.log('Tab initialization started');
 
     try {
-        // Initialize FanChart
+        // Initialisation de l'onglet Éventail
         await FanChartManager.initialize();
 
-        // Initialize Google Maps
+        // Initialisation de Google Maps
         await googleMapManager.initialize();
 
-
-        // Note: FamilyTree initialization is handled in parse.js after GEDCOM data loading
-        // as it requires the rootId and processed genealogical data to be available.
-        // The FamilyTree is initialized once:
-        // 1. The individuals cache is built
-        // 2. Data is formatted for FamilyTree.js
-        // 3. A rootId is defined
-
-        // Initialize Timeline
+        // Initialisation de la Timeline
         new TimelineManager();
 
-        // Initialize Statistics
-        statisticsManager.initialize();
+        // Initialisation des statistiques une fois l'onglet visible
+        const statisticsTab = document.querySelector('#tab5'); // Sélecteur de l'onglet des statistiques
+        if (statisticsTab) {
+            // Utilisation d'IntersectionObserver pour détecter la visibilité de l'onglet
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        console.log('Statistics tab is visible. Initializing statistics...');
+                        statisticsManager.initialize(); // Initialisation des statistiques
+                        observer.disconnect(); // Arrêter l'observation une fois initialisé
+                    }
+                });
+            });
+
+            // Commence à observer l'onglet des statistiques
+            observer.observe(statisticsTab);
+        }
 
     } catch (error) {
         console.error("Error initializing tabs:", error);
