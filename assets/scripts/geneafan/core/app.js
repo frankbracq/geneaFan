@@ -1,6 +1,5 @@
 import { setupCore } from './setup.js';
 import { handleInitializationError } from './errorHandler.js';
-import { initializeTabs } from '../tabs/tabManager.js';
 
 export async function initializeApplication() {
     // Set up global error handler
@@ -9,9 +8,6 @@ export async function initializeApplication() {
     try {
         // Core initialization
         await setupCore();
-        
-        // Initialize tabs
-        await initializeTabs();
         
         // Mark as ready and hide overlay
         window.isReady = true;

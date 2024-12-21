@@ -11,7 +11,10 @@ export async function setupCore() {
         await initializeDOMContent();
         ensureUserId();
         await initializeAuth();
+
+        // Unique call to initializeTabs
         await initializeTabs();
+        
         setupEventListeners();
         handleUrlParameters();
         hideOverlay();

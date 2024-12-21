@@ -25,7 +25,7 @@ class StatisticsManager {
             return;
         }
 
-        const containers = ['#gender-chart', '#age-chart', '#lifespan-chart'];
+        const containers = ['#age-chart', '#lifespan-chart'];
 
         // Vérifier que les conteneurs et les données sont disponibles
         const stats = statisticsStore.getStatistics('family');
@@ -121,9 +121,6 @@ class StatisticsManager {
             return;
         }
 
-        if (stats.demography.gender) {
-            this.createGenderDistributionChart();
-        }
         if (stats.demography.ageDistribution) {
             this.createAgeDistributionChart();
         }
@@ -160,14 +157,14 @@ class StatisticsManager {
     createAgeDistributionChart() {
         const stats = statisticsStore.getStatistics('family');
         if (!stats?.demography?.mortality?.byCentury) return;
-
+    
         const container = d3.select('#age-chart');
         if (!container.node()) return;
-
+    
         // Nettoyer le conteneur
         container.selectAll('*').remove();
-
-        // Créer le tooltip
+    
+        // [Configuration du tooltip et des marges reste identique]
         const tooltip = d3.select('body')
             .selectAll('.tooltip')
             .data([null])
@@ -183,30 +180,28 @@ class StatisticsManager {
             .style('pointer-events', 'none')
             .style('box-shadow', '0 2px 4px rgba(0,0,0,0.1)')
             .style('z-index', 1000);
-
+    
+        // [Configuration des dimensions reste identique]
         const margins = {
             top: 20,
             right: 160,
             bottom: 80,
             left: 50
         };
-
-        // Utiliser plus d'espace horizontal
+    
         const containerWidth = container.node().getBoundingClientRect().width;
         const width = Math.max(this.minChartWidth, containerWidth - margins.left - margins.right);
         const height = Math.max(this.getContainerHeight(width), 400);
-
-        // Création du SVG principal
+    
         const svg = container.append('svg')
             .attr('width', width + margins.left + margins.right)
             .attr('height', height + margins.top + margins.bottom)
             .append('g')
             .attr('transform', `translate(${margins.left},${margins.top})`);
-
-        // Définition des tranches d'âge et des siècles
+    
         const ageRanges = ["0-1", "1-5", "6-10", "11-20", "21-30", "31-40",
             "41-50", "51-60", "61-70", "71-80", "81-90", "91+"];
-
+    
         const centuries = ['s18', 's19', 's20', 's21'];
         const centuryLabels = {
             's18': '18ème siècle et avant',
@@ -214,76 +209,47 @@ class StatisticsManager {
             's20': '20ème siècle (1900-1999)',
             's21': '21ème siècle (2000-2099)'
         };
-
-        // Couleurs pour les siècles
+    
         const colors = {
-            's18': '#082f49',   // 18e siècle et avant
-            's19': '#0891b2',   // 19e siècle
-            's20': '#22d3ee',   // 20e siècle
-            's21': '#67e8f9'    // 21e siècle
+            's18': '#082f49',
+            's19': '#0891b2',
+            's20': '#22d3ee',
+            's21': '#67e8f9'
         };
-
-        // Préparation des données pour les barres empilées
+    
+        // Nouvelle préparation des données avec pourcentages
         const data = ageRanges.map(range => {
             const rangeData = { range };
             centuries.forEach(century => {
-                rangeData[century] = stats.demography.mortality.byCentury[century]?.ageRanges[range] || 0;
+                const centuryData = stats.demography.mortality.byCentury[century];
+                const count = centuryData?.ageRanges[range] || 0;
+                const total = centuryData?.total || 0;
+                // Stocker à la fois le pourcentage et la valeur absolue
+                rangeData[century] = total > 0 ? (count / total) * 100 : 0;
+                rangeData[`${century}_count`] = count;
             });
             return rangeData;
         });
-
-        const centuryTotals = centuries.map(century => ({
-            century: centuryLabels[century],
-            total: d3.sum(data, d => d[century])
-        }));
-
-
-
-        // Configuration des échelles
+    
         const x = d3.scaleBand()
             .domain(ageRanges)
             .range([0, width])
             .padding(0.1);
-
+    
+        // Nouvelle échelle Y en pourcentage
         const y = d3.scaleLinear()
-            .domain([0, d3.max(data, d => d3.sum(centuries, c => d[c]))])
+            .domain([0, 100])
             .nice()
             .range([height, 0]);
-
-        // Création du stack generator
+    
         const stack = d3.stack()
             .keys(centuries)
             .order(d3.stackOrderNone)
             .offset(d3.stackOffsetNone);
-
+    
         const stackedData = stack(data);
-
-        // Ajout du nombre total de personnes
-        const totalPersons = d3.sum(data, d => d3.sum(centuries, c => d[c]));
-
-        console.group('Données affichées dans le graphique par siècle :');
-        centuryTotals.forEach(({ century, total }) => {
-            const percentage = ((total / totalPersons) * 100).toFixed(1);
-            console.log(`${century}: ${total} personnes (${percentage}%)`);
-        });
-        console.groupEnd();
-
-        // Vérification de cohérence
-        const totalGraph = d3.sum(centuryTotals, d => d.total);
-        console.log(`Total global: ${totalGraph} personnes`);
-        if (totalPersons !== totalGraph) {
-            console.warn(`⚠️ Incohérence dans les totaux: totalPersons=${totalPersons}, somme du graphique=${totalGraph}`);
-        }
-
-        svg.append('text')
-            .attr('x', 0)
-            .attr('y', -5)
-            .attr('text-anchor', 'start')
-            .style('font-size', '12px')
-            .style('fill', '#666')
-            .text(`${totalPersons.toLocaleString()} personnes`);
-
-        // Grille
+    
+        // Grille horizontale
         svg.append('g')
             .attr('class', 'grid')
             .selectAll('line')
@@ -296,8 +262,8 @@ class StatisticsManager {
             .attr('y2', d => y(d))
             .attr('stroke', '#e5e7eb')
             .attr('stroke-width', 1);
-
-        // Création des barres empilées
+    
+        // Barres empilées
         svg.selectAll('g.century')
             .data(stackedData)
             .enter()
@@ -314,10 +280,9 @@ class StatisticsManager {
             .attr('width', x.bandwidth())
             .on('mouseover', function (event, d) {
                 const century = d3.select(this.parentNode).datum().key;
-                const count = d[1] - d[0];
-                const total = d3.sum(centuries, c => d.data[c]);
-                const percentage = total > 0 ? ((count / total) * 100).toFixed(1) : '0.0';
-
+                const percentage = (d[1] - d[0]).toFixed(1);
+                const count = d.data[`${century}_count`];
+    
                 tooltip
                     .style('visibility', 'visible')
                     .style('left', (event.pageX + 10) + 'px')
@@ -327,9 +292,8 @@ class StatisticsManager {
                         <div>Âge: ${d.data.range}</div>
                         <div>Nombre: ${count}</div>
                         <div>Pourcentage: ${percentage}%</div>
-                        <div>Total tranche: ${total}</div>
                     `);
-
+    
                 d3.select(this)
                     .attr('fill-opacity', 0.8);
             })
@@ -338,8 +302,8 @@ class StatisticsManager {
                 d3.select(this)
                     .attr('fill-opacity', 1);
             });
-
-        // Axes
+    
+        // Axes avec nouveau format pour Y
         svg.append('g')
             .attr('class', 'x-axis')
             .attr('transform', `translate(0,${height})`)
@@ -349,48 +313,46 @@ class StatisticsManager {
             .style('text-anchor', 'end')
             .attr('dx', '-.8em')
             .attr('dy', '.15em');
-
+    
         svg.append('g')
             .attr('class', 'y-axis')
-            .call(d3.axisLeft(y));
-
-        // Labels
+            .call(d3.axisLeft(y).tickFormat(d => d + '%'));
+    
+        // Labels mis à jour
         svg.append('text')
             .attr('x', width / 2)
             .attr('y', height + margins.bottom - 10)
             .attr('text-anchor', 'middle')
             .text('Âge au décès (années)');
-
+    
         svg.append('text')
             .attr('transform', 'rotate(-90)')
             .attr('y', -margins.left + 15)
             .attr('x', -height / 2)
             .attr('text-anchor', 'middle')
-            .text('Nombre de personnes');
-
-        // Suppression du titre redondant
-
-        // Légende
+            .text('Pourcentage de personnes par siècle');
+    
+        // Légende [reste identique]
         const legend = svg.append('g')
             .attr('class', 'legend')
             .attr('transform', `translate(${width + 20}, 0)`);
-
+    
         centuries.forEach((century, i) => {
             const legendGroup = legend.append('g')
                 .attr('transform', `translate(0, ${i * 25})`);
-
+    
             legendGroup.append('rect')
                 .attr('width', 18)
                 .attr('height', 18)
                 .attr('fill', colors[century]);
-
+    
             legendGroup.append('text')
                 .attr('x', 24)
                 .attr('y', 14)
                 .style('font-size', '12px')
                 .text(centuryLabels[century]);
         });
-
+    
         return { svg, width, height };
     }
 
@@ -804,7 +766,6 @@ class StatisticsManager {
 
     cleanupContainers() {
         const containers = {
-            gender: '#gender-chart',
             age: '#age-chart',
             lifespan: '#lifespan-chart'
         };
@@ -850,7 +811,6 @@ class StatisticsManager {
         this.cleanupContainers();
 
         // Appeler directement les méthodes de création de graphiques
-        this.createGenderDistributionChart();
         this.createAgeDistributionChart();
         this.createLifeExpectancyChart();
         this.createBirthDeathPlacesChart();  // <- Correction ici
