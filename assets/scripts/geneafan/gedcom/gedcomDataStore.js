@@ -1,4 +1,4 @@
-import { makeObservable, observable, action, computed, runInAction } from 'mobx';
+import { makeObservable, observable, action, computed, runInAction, reaction } from '../common/stores/mobx-config.js';
 import _ from 'lodash';
 
 class GedcomDataStore {
@@ -7,6 +7,7 @@ class GedcomDataStore {
     _hierarchy = null;
     familyEvents = [];
     isFileUploaded = false;
+    reactionDisposers = new Map();  // Nouveau: stockage des réactions
 
     constructor() {
         makeObservable(this, {
@@ -15,6 +16,7 @@ class GedcomDataStore {
             _hierarchy: observable.ref,
             familyEvents: observable,
             isFileUploaded: observable,
+            reactionDisposers: observable, // Nouveau
             
             // Actions
             setSourceData: action,
@@ -25,6 +27,9 @@ class GedcomDataStore {
             setFamilyEvents: action,
             setFileUploaded: action,
             clearAllState: action,
+            addReactionDisposer: action, // Nouveau
+            removeReactionDisposer: action, // Nouveau
+            clearReactions: action, // Nouveau
             
             // Computed
             totalIndividuals: computed,
@@ -77,13 +82,22 @@ class GedcomDataStore {
 
     // Hierarchy Methods
     setHierarchy = (newHierarchy) => {
+        console.log('📊 setHierarchy appelé avec:', newHierarchy);
         runInAction(() => {
+            const oldHierarchy = this._hierarchy;
             this._hierarchy = newHierarchy;
+            console.log('✨ Hiérarchie mise à jour:', {
+                old: oldHierarchy ? 'présent' : 'null',
+                new: newHierarchy ? 'présent' : 'null',
+                changed: oldHierarchy !== newHierarchy
+            });
         });
     }
 
     getHierarchy = () => {
-        return this._hierarchy;
+        const hierarchy = this._hierarchy;
+        console.log('🔍 getHierarchy appelé, retourne:', hierarchy ? 'présent' : 'null');
+        return hierarchy;
     }
 
     // Family Events Methods
@@ -120,6 +134,74 @@ class GedcomDataStore {
         return this.isFileUploaded;
     }
 
+    // Nouvelles méthodes pour la gestion des réactions
+    addReactionDisposer = (id, trackedFn, effectFn, options = {}) => {
+        console.log('📝 Ajout d\'une réaction:', id);
+        runInAction(() => {
+            // Nettoyer une réaction existante
+            if (this.reactionDisposers.has(id)) {
+                console.log('🧹 Nettoyage de l\'ancienne réaction:', id);
+                this.reactionDisposers.get(id)();
+                this.reactionDisposers.delete(id);
+            }
+    
+            // Vérifications
+            if (typeof trackedFn !== 'function' || typeof effectFn !== 'function') {
+                console.error('❌ trackedFn et effectFn doivent être des fonctions');
+                return;
+            }
+    
+            try {
+                // Wrapper le trackedFn pour le debugging
+                const wrappedTrackedFn = () => {
+                    const result = trackedFn();
+                    console.log(`🔍 trackedFn ${id} retourne:`, result);
+                    return result;
+                };
+    
+                // Wrapper le effectFn pour le debugging
+                const wrappedEffectFn = (value) => {
+                    console.log(`🎯 effectFn ${id} appelé avec:`, value);
+                    return effectFn(value);
+                };
+    
+                // Créer la réaction avec les wrappers
+                const disposer = reaction(
+                    wrappedTrackedFn,
+                    wrappedEffectFn,
+                    {
+                        ...options,
+                        onError: (error) => {
+                            console.error(`🚨 Erreur dans la réaction ${id}:`, error);
+                            if (options.onError) options.onError(error);
+                        }
+                    }
+                );
+    
+                this.reactionDisposers.set(id, disposer);
+                console.log('✅ Réaction ajoutée avec succès:', id);
+            } catch (error) {
+                console.error('❌ Erreur lors de la création de la réaction:', error);
+            }
+        });
+    }
+
+    removeReactionDisposer = (id) => {
+        runInAction(() => {
+            if (this.reactionDisposers.has(id)) {
+                this.reactionDisposers.get(id)();
+                this.reactionDisposers.delete(id);
+            }
+        });
+    }
+
+    clearReactions = () => {
+        runInAction(() => {
+            this.reactionDisposers.forEach(disposer => disposer());
+            this.reactionDisposers.clear();
+        });
+    }
+
     // Reset State
     clearAllState = () => {
         runInAction(() => {
@@ -128,6 +210,7 @@ class GedcomDataStore {
             this._hierarchy = null;
             this.familyEvents = [];
             this.isFileUploaded = false;
+            this.clearReactions(); // Nettoyer aussi les réactions
         });
     }
 

@@ -17,25 +17,28 @@ export async function initializeTabs() {
         new TimelineManager();
 
         // Initialisation des statistiques une fois l'onglet visible
-        const statisticsTab = document.querySelector('#tab5'); // Sélecteur de l'onglet des statistiques
-        if (statisticsTab) {
-            // Utilisation d'IntersectionObserver pour détecter la visibilité de l'onglet
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        console.log('Statistics tab is visible. Initializing statistics...');
-                        statisticsManager.initialize(); // Initialisation des statistiques
-                        observer.disconnect(); // Arrêter l'observation une fois initialisé
-                    }
-                });
-            });
-
-            // Commence à observer l'onglet des statistiques
-            observer.observe(statisticsTab);
-        }
+        initializeTabOnVisible('#tab5', () => {
+            console.log('Statistics tab is visible. Initializing statistics...');
+            statisticsManager.initialize();
+        });
 
     } catch (error) {
         console.error("Error initializing tabs:", error);
         throw error;
+    }
+}
+
+function initializeTabOnVisible(tabSelector, initCallback) {
+    const tab = document.querySelector(tabSelector);
+    if (tab) {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    initCallback();
+                    observer.disconnect();
+                }
+            });
+        });
+        observer.observe(tab);
     }
 }

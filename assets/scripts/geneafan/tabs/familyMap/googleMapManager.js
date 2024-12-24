@@ -1,30 +1,64 @@
 import { Loader } from "@googlemaps/js-api-loader";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { googleMapsStore } from './googleMapsStore.js';
+import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
+import { autorun } from 'mobx';
 
 class GoogleMapManager {
     constructor() {
         this.initialized = false;
         this.loader = null;
+        this.disposers = new Set();
+
+        console.log('🔍 GoogleMapManager: Initialisation du constructor');
+
+        // Utiliser autorun au lieu de reaction
+        const disposer = autorun(() => {
+            const hierarchy = gedcomDataStore.getHierarchy();
+            console.log('🔄 Autorun déclenché, hiérarchie:', hierarchy ? 'présente' : 'null');
+
+            if (hierarchy) {
+                console.log('✨ Structure de la hiérarchie:', {
+                    type: typeof hierarchy,
+                    keys: Object.keys(hierarchy),
+                    hasChildren: !!hierarchy.children,
+                    childrenCount: hierarchy.children?.length || 0
+                });
+
+                try {
+                    console.log('🎯 Tentative de traitement de la hiérarchie');
+                    googleMapsStore.processHierarchy(hierarchy);
+                    console.log('✅ Traitement terminé avec succès');
+                } catch (error) {
+                    console.error('❌ Erreur lors du traitement de la hiérarchie:', error);
+                }
+            }
+        }, {
+            name: 'HierarchyAutorun',
+            onError: (error) => {
+                console.error('🚨 Erreur dans l\'autorun:', error);
+            }
+        });
+
+        this.disposers.add(disposer);
     }
 
     async initialize() {
         if (this.initialized) return;
-    
+
         try {
             this.loader = new Loader({
                 apiKey: googleMapsStore.apiKey,
                 version: "weekly",
                 libraries: []
             });
-    
+
             await this.loader.load();
             this.initialized = true;
-            
-            // Initialiser la carte principale
-            this.initializeMap("familyMap");
-            
+
+            await this.initializeMap("familyMap");
             this.setupEventListeners();
+
             console.log('Google Maps API loaded successfully');
         } catch (error) {
             console.error("Failed to initialize Google Maps:", error);
@@ -32,7 +66,7 @@ class GoogleMapManager {
         }
     }
 
-    initializeMap(containerId, options = {}) {
+    async initializeMap(containerId, options = {}) {
         if (!this.initialized) {
             console.error("Google Maps not initialized. Call initialize() first");
             return;
@@ -61,16 +95,13 @@ class GoogleMapManager {
 
         const mapOptions = { ...defaultOptions, ...options };
         googleMapsStore.map = new google.maps.Map(container, mapOptions);
-        googleMapsStore.markerCluster = new MarkerClusterer({ 
-            map: googleMapsStore.map 
-        });
+        googleMapsStore.markerCluster = new MarkerClusterer({ map: googleMapsStore.map });
 
-        this.setupMapControls();
         return googleMapsStore.map;
     }
 
     setupEventListeners() {
-        // Handle individual map display
+        // Gestion de la carte individuelle
         const offcanvasElement = document.getElementById("individualMap");
         if (offcanvasElement) {
             offcanvasElement.addEventListener("shown.bs.offcanvas", () => {
@@ -79,23 +110,47 @@ class GoogleMapManager {
             });
         }
 
-        // Handle family map tab
+        // Gestion de l'onglet de carte familiale
         const tabFamilyMap = document.querySelector('[href="#tab2"]');
         if (tabFamilyMap) {
-            tabFamilyMap.addEventListener("show.bs.tab", () => {
+            tabFamilyMap.addEventListener("show.bs.tab", async () => {
                 if (googleMapsStore.map) {
-                    googleMapsStore.moveMapToContainer("tab2");
-                    googleMapsStore.activateMapMarkers();
-                    google.maps.event.trigger(googleMapsStore.map, "resize");
-                    googleMapsStore.map.setCenter({ lat: 46.2276, lng: 2.2137 });
+                    try {
+                        // S'assurer que la carte est dans le bon conteneur
+                        if (!document.getElementById("familyMap").contains(googleMapsStore.map.getDiv())) {
+                            await googleMapsStore.moveMapToContainer("familyMap");
+                        }
+
+                        googleMapsStore.activateMapMarkers();
+                        google.maps.event.trigger(googleMapsStore.map, "resize");
+                        googleMapsStore.map.setCenter({ lat: 46.2276, lng: 2.2137 });
+                    } catch (error) {
+                        console.error('Error handling family map tab:', error);
+                    }
+                } else {
+                    // Si la carte n'existe pas encore, l'initialiser
+                    await this.initializeMap("familyMap");
                 }
             });
         }
-    }
 
-    setupMapControls() {
-        this.addResetControl();
-        this.addUndoRedoControls();
+        // Gestion des modes de carte
+        const standardModeBtn = document.getElementById('map-mode-standard');
+        const timelineModeBtn = document.getElementById('map-mode-timeline');
+
+        if (standardModeBtn && timelineModeBtn) {
+            standardModeBtn.addEventListener('click', () => {
+                googleMapsStore.toggleTimeline(false);
+                standardModeBtn.classList.add('active');
+                timelineModeBtn.classList.remove('active');
+            });
+
+            timelineModeBtn.addEventListener('click', () => {
+                googleMapsStore.toggleTimeline(true);
+                timelineModeBtn.classList.add('active');
+                standardModeBtn.classList.remove('active');
+            });
+        }
     }
 
     adjustMapHeight() {
@@ -109,11 +164,13 @@ class GoogleMapManager {
             const mapHeight = offCanvasHeight - headerHeight;
             mapId.style.height = `${mapHeight}px`;
         }
+    }    
+    
+    cleanup() {
+        // Nettoyage des autoruns lors de la destruction
+        this.disposers.forEach(disposer => disposer());
+        this.disposers.clear();
     }
-
-    // Autres méthodes de contrôle reprises de googleMapsStore...
-    addResetControl() { /* ... */ }
-    addUndoRedoControls() { /* ... */ }
 }
 
 export const googleMapManager = new GoogleMapManager();

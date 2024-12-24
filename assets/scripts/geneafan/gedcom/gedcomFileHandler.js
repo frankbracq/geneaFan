@@ -552,7 +552,7 @@ async function onFileChange(data) {
 }
 
 function handleTabsAndOverlay(shouldShowLoading) {
-    const tabsToDisable = ["tab2", "tab3", "tab4", "tab5"];
+    const tabsToDisable = ["tab2", "tab3", "tab4", "tab5", "tab6"];
     tabsToDisable.forEach(tabId => {
         const tabLink = document.querySelector(`a[href="#${tabId}"]`);
         if (tabLink) {
