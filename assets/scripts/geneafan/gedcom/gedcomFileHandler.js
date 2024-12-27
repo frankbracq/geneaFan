@@ -485,11 +485,8 @@ async function onFileChange(data) {
             console.error("Error updating geolocation:", error);
         }
 
-        Object.entries(familyTownsStore.getAllTowns()).forEach(([key, town]) => {
-            if (googleMapsStore.isValidCoordinate(town.latitude) && googleMapsStore.isValidCoordinate(town.longitude)) {
-                googleMapsStore.addMarker(key, town);
-            }
-        });
+        // Retirer la partie d'ajout des marqueurs car nous n'utilisons plus que la vue temporelle
+        // qui est gérée par googleMapsStore.processHierarchy()
 
         const selectElement = document.getElementById("individual-select");
         selectElement.innerHTML = "";
@@ -497,9 +494,9 @@ async function onFileChange(data) {
         placeholderOption.disabled = true;
         selectElement.appendChild(placeholderOption);
 
-        let tomSelect = rootPersonStore.tomSelect; // Utiliser rootPersonStore
+        let tomSelect = rootPersonStore.tomSelect;
         if (!tomSelect) {
-            rootPersonStore.initializeTomSelect(); // Utiliser rootPersonStore
+            rootPersonStore.initializeTomSelect();
             tomSelect = rootPersonStore.tomSelect;
         }
 
@@ -510,8 +507,7 @@ async function onFileChange(data) {
         individuals.forEach((individual) => {
             tomSelect.addOption({
                 value: individual.id,
-                text: `${individual.surname} ${individual.name} ${individual.id} ${individual.birthYear ? individual.birthYear : "?"
-                    }-${individual.deathYear ? individual.deathYear : ""}`,
+                text: `${individual.surname} ${individual.name} ${individual.id} ${individual.birthYear ? individual.birthYear : "?"}-${individual.deathYear ? individual.deathYear : ""}`
             });
         });
 
@@ -522,13 +518,11 @@ async function onFileChange(data) {
         // Mise à jour du root et du nom
         const rootPerson = individuals.find((individual) => individual.id === rootId);
         if (rootPerson) {
-            // Éviter le premier dessin
             rootPersonStore.setRoot(rootId, { skipDraw: true });
             rootPersonStore.setRootPersonName({
                 name: rootPerson.name,
                 surname: rootPerson.surname,
             });
-            // Le dessin sera déclenché ici une seule fois
             rootPersonStore.setTomSelectValue(rootId);
         }
 

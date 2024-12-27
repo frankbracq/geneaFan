@@ -96,12 +96,13 @@ class GoogleMapManager {
         const mapOptions = { ...defaultOptions, ...options };
         googleMapsStore.map = new google.maps.Map(container, mapOptions);
         googleMapsStore.markerCluster = new MarkerClusterer({ map: googleMapsStore.map });
+        googleMapsStore.initializeAncestorsMap();
 
         return googleMapsStore.map;
     }
 
     setupEventListeners() {
-        // Gestion de la carte individuelle
+        // Gestion de la carte individuelle uniquement
         const offcanvasElement = document.getElementById("individualMap");
         if (offcanvasElement) {
             offcanvasElement.addEventListener("shown.bs.offcanvas", () => {
@@ -110,45 +111,14 @@ class GoogleMapManager {
             });
         }
 
-        // Gestion de l'onglet de carte familiale
-        const tabFamilyMap = document.querySelector('[href="#tab2"]');
-        if (tabFamilyMap) {
-            tabFamilyMap.addEventListener("show.bs.tab", async () => {
+        // Gérer la réinitialisation de la carte lors du changement d'onglet
+        const tabElement = document.querySelector('a[href="#tab2"]');
+        if (tabElement) {
+            tabElement.addEventListener('shown.bs.tab', () => {
                 if (googleMapsStore.map) {
-                    try {
-                        // S'assurer que la carte est dans le bon conteneur
-                        if (!document.getElementById("familyMap").contains(googleMapsStore.map.getDiv())) {
-                            await googleMapsStore.moveMapToContainer("familyMap");
-                        }
-
-                        googleMapsStore.activateMapMarkers();
-                        google.maps.event.trigger(googleMapsStore.map, "resize");
-                        googleMapsStore.map.setCenter({ lat: 46.2276, lng: 2.2137 });
-                    } catch (error) {
-                        console.error('Error handling family map tab:', error);
-                    }
-                } else {
-                    // Si la carte n'existe pas encore, l'initialiser
-                    await this.initializeMap("familyMap");
+                    google.maps.event.trigger(googleMapsStore.map, 'resize');
+                    googleMapsStore.centerMapOnMarkers();
                 }
-            });
-        }
-
-        // Gestion des modes de carte
-        const standardModeBtn = document.getElementById('map-mode-standard');
-        const timelineModeBtn = document.getElementById('map-mode-timeline');
-
-        if (standardModeBtn && timelineModeBtn) {
-            standardModeBtn.addEventListener('click', () => {
-                googleMapsStore.toggleTimeline(false);
-                standardModeBtn.classList.add('active');
-                timelineModeBtn.classList.remove('active');
-            });
-
-            timelineModeBtn.addEventListener('click', () => {
-                googleMapsStore.toggleTimeline(true);
-                timelineModeBtn.classList.add('active');
-                standardModeBtn.classList.remove('active');
             });
         }
     }
@@ -167,7 +137,6 @@ class GoogleMapManager {
     }    
     
     cleanup() {
-        // Nettoyage des autoruns lors de la destruction
         this.disposers.forEach(disposer => disposer());
         this.disposers.clear();
     }

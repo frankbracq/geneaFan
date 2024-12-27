@@ -10,8 +10,11 @@ export async function initializeTabs() {
         // Initialisation de l'onglet Éventail
         await FanChartManager.initialize();
 
-        // Initialisation de Google Maps
-        await googleMapManager.initialize();
+        // Initialisation de la carte une fois l'onglet visible
+        initializeTabOnVisible('#tab2', () => {
+            console.log('Map tab is visible. Initializing Google Maps...');
+            googleMapManager.initialize();
+        });
 
         // Initialisation de la Timeline
         new TimelineManager();

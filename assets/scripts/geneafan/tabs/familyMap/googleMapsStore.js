@@ -1,26 +1,27 @@
 class GoogleMapsStore {
     constructor() {
         this.map = null;
-        this.allMarkers = {};
         this.activeMarkers = {};
         this.markerCluster = null;
         this.infoWindow = null;
-        this.currentYear = null;  // Ajout de l'initialisation
-        this.isTimelineActive = false;
+        this.currentYear = null;
+        this.birthData = [];
+        // La timeline est activée par défaut et ne sera pas redéfinie plus tard
+        this.isTimelineActive = true;
+
         this.apiKey = "AIzaSyDu9Qz5YXRF6CTJ4vf-0s89BaVq_eh13YE";
 
-        // Initialiser les statistiques dans le constructeur
         this.statistics = {
             total: 0,
             withLocation: 0,
             withoutLocation: 0,
-            emptyNames: 0,
             generations: {},
-            reasons: {
-                noData: 0,
+            categories: {
+                withCoordinates: 0,
+                noPlace: 0,
                 noCoordinates: 0,
-                emptyLocation: 0,
-                invalidData: 0
+                emptyName: 0,
+                unknownParent: 0
             }
         };
 
@@ -32,10 +33,6 @@ class GoogleMapsStore {
             3: '#93c5fd',
             4: '#bfdbfe'
         };
-
-        this.currentYear = null;
-        this.birthData = [];
-        this.isTimelineActive = false;
 
         // Collection de logs pour le debug
         this.logsCollection = {
@@ -53,7 +50,7 @@ class GoogleMapsStore {
 
     async initMap(elementId, options = {}) {
         if (this.map) return;
-
+    
         try {
             const defaultOptions = {
                 zoom: 6.2,
@@ -65,20 +62,20 @@ class GoogleMapsStore {
                 fullscreenControl: true,
                 fullscreenControlOptions: { position: google.maps.ControlPosition.TOP_CENTER }
             };
-
+    
             const mapElement = document.getElementById(elementId);
             if (!mapElement) {
                 throw new Error(`Element with id ${elementId} not found`);
             }
-
+    
             // Initialiser la carte
             this.map = new google.maps.Map(mapElement, { ...defaultOptions, ...options });
-
+    
             // Initialiser l'InfoWindow maintenant que Google Maps est chargé
             this.infoWindow = new google.maps.InfoWindow({
                 maxWidth: 300
             });
-
+    
             // Initialiser le cluster
             this.markerCluster = new google.maps.MarkerClusterer({ 
                 map: this.map,
@@ -115,11 +112,11 @@ class GoogleMapsStore {
                     }
                 }
             });
-
+    
             this.#addMapControls();
             this.#setupMapListeners();
             this.#recordState();
-
+    
             console.log('✅ Map and components initialized successfully');
             return this.map;
         } catch (error) {
@@ -128,222 +125,225 @@ class GoogleMapsStore {
         }
     }
 
-    processHierarchy(hierarchy) {
-        if (!hierarchy) {
-            console.error('❌ Pas de hiérarchie disponible');
+processHierarchy(hierarchy) {
+    if (!hierarchy) {
+        console.error('❌ Pas de hiérarchie disponible');
+        return;
+    }
+
+    // Réinitialiser les données
+    this.birthData = [];
+    this.statistics = {
+        total: 0,
+        withLocation: 0,
+        withoutLocation: 0,
+        generations: {},
+        categories: {
+            withCoordinates: 0,
+            noPlace: 0,
+            noCoordinates: 0,
+            emptyName: 0,
+            unknownParent: 0
+        }
+    };
+
+    const processNode = (node, depth = 0) => {
+        if (!node) {
+            console.warn(`⚠️ Nœud invalide au niveau ${depth}`);
             return;
         }
 
-        // Réinitialiser les données
-        this.birthData = [];
-        this.statistics = {
-            total: 0,
-            withLocation: 0,
-            withoutLocation: 0,
-            generations: {},
-            categories: {
-                withCoordinates: 0,
-                noPlace: 0,
-                noCoordinates: 0,
-                emptyName: 0,
-                unknownParent: 0
-            }
-        };
+        const indent = '  '.repeat(depth);
 
-        const processNode = (node, depth = 0) => {
-            if (!node) {
-                console.warn(`⚠️ Nœud invalide au niveau ${depth}`);
-                return;
+        // Si on a des coordonnées de naissance
+        const demography = node.stats?.demography;
+        const birthInfo = demography?.birthInfo;
+
+        if (birthInfo?.place?.coordinates?.latitude) {
+            // Logs de débogage spécifiques pour Marie Alliaume
+            if (node.name === 'Marie' && node.surname === 'Alliaume') {
+                console.group('🔍 Débogage Sosa pour Marie Alliaume');
+                console.log('Valeur brute du Sosa:', node.sosa);
+                console.log('Type du Sosa:', typeof node.sosa);
+                console.log('Sosa après parseInt:', parseInt(node.sosa, 10));
+                console.log('Nœud complet:', node);
+                console.groupEnd();
             }
-        
-            const indent = '  '.repeat(depth);
-        
-            // Si on a des coordonnées de naissance
-            const demography = node.stats?.demography;
-            const birthInfo = demography?.birthInfo;
-        
-            if (birthInfo?.place?.coordinates?.latitude) {
-                // Logs de débogage spécifiques pour Marie Alliaume
-                if (node.name === 'Marie' && node.surname === 'Alliaume') {
-                    console.group('🔍 Débogage Sosa pour Marie Alliaume');
-                    console.log('Valeur brute du Sosa:', node.sosa);
-                    console.log('Type du Sosa:', typeof node.sosa);
-                    console.log('Sosa après parseInt:', parseInt(node.sosa, 10));
-                    console.log('Nœud complet:', node);
-                    console.groupEnd();
+
+            this.birthData.push({
+                id: node.id,
+                name: `${node.name} ${node.surname}`,
+                birthYear: node.birthYear,
+                generation: node.generation || 0,
+                sosa: node.sosa || 1,
+                line: node.sosa % 2 === 0 ? 'paternal' : 'maternal',
+                location: {
+                    lat: birthInfo.place.coordinates.latitude,
+                    lng: birthInfo.place.coordinates.longitude,
+                    name: node.fanBirthPlace,
+                    departement: birthInfo.place.departement
                 }
-        
-                this.birthData.push({
-                    id: node.id,
-                    name: `${node.name} ${node.surname}`,
-                    birthYear: node.birthYear,
-                    generation: node.generation || 0,
-                    sosa: node.sosa || 1,
-                    line: node.sosa % 2 === 0 ? 'paternal' : 'maternal',
-                    location: {
-                        lat: birthInfo.place.coordinates.latitude,
-                        lng: birthInfo.place.coordinates.longitude,
-                        name: node.fanBirthPlace,
-                        departement: birthInfo.place.departement
-                    }
-                });
-            } else {
-                console.warn(`${indent}⚠️ Pas de coordonnées pour:`, {
-                    name: `${node.name} ${node.surname}`,
-                    birthPlace: node.fanBirthPlace,
-                    birthInfo: birthInfo
-                });
-            }
-        
-            // Traiter récursivement les enfants
-            if (node.children && Array.isArray(node.children)) {
-                node.children.forEach(child => processNode(child, depth + 1));
-            }
-        };
+            });
+        } else {
+            console.warn(`${indent}⚠️ Pas de coordonnées pour:`, {
+                name: `${node.name} ${node.surname}`,
+                birthPlace: node.fanBirthPlace,
+                birthInfo: birthInfo
+            });
+        }
 
-        // Traiter la hiérarchie
-        processNode(hierarchy);
-        this.statistics.withoutLocation = this.statistics.total - this.statistics.withLocation;
+        // Traiter récursivement les enfants
+        if (node.children && Array.isArray(node.children)) {
+            node.children.forEach(child => processNode(child, depth + 1));
+        }
 
-        console.group('📊 Analyse des données généalogiques');
+    };
 
-        // Afficher les statistiques globales
-        console.table({
-            'Total des individus': this.statistics.total,
-            'Lieux identifiés': this.statistics.withLocation,
-            'Lieux manquants': this.statistics.withoutLocation,
-            'Couverture de géocodage': `${((this.statistics.withLocation / this.statistics.total) * 100).toFixed(1)}%`
+    // Traiter la hiérarchie
+    processNode(hierarchy);
+    this.statistics.withoutLocation = this.statistics.total - this.statistics.withLocation;
+
+    console.group('📊 Analyse des données généalogiques');
+
+    // Afficher les statistiques globales
+    console.table({
+        'Total des individus': this.statistics.total,
+        'Lieux identifiés': this.statistics.withLocation,
+        'Lieux manquants': this.statistics.withoutLocation,
+        'Couverture de géocodage': `${((this.statistics.withLocation / this.statistics.total) * 100).toFixed(1)}%`
+    });
+
+    // Afficher la répartition par catégorie
+    console.group('Répartition des données manquantes');
+    console.table({
+        'Lieux avec coordonnées': this.statistics.categories.withCoordinates,
+        'Lieux sans coordonnées': this.statistics.categories.noCoordinates,
+        'Sans lieu défini': this.statistics.categories.noPlace,
+        'Parents inconnus': this.statistics.categories.unknownParent,
+        'Noms vides': this.statistics.categories.emptyName
+    });
+    console.groupEnd();
+
+    // Afficher la répartition par génération
+    console.group('Répartition par génération');
+    console.table(
+        Object.entries(this.statistics.generations)
+            .sort(([a], [b]) => parseInt(a) - parseInt(b))
+            .reduce((acc, [gen, count]) => {
+                acc[`Génération ${gen}`] = count;
+                return acc;
+            }, {})
+    );
+    console.groupEnd();
+
+    console.groupEnd();
+
+    this.initializeAncestorsMap();
+}
+
+// Gestion des marqueurs standard
+addMarker(key, town) {
+    const latitude = parseFloat(town.latitude);
+    const longitude = parseFloat(town.longitude);
+
+    if (this.isValidCoordinate(latitude) && this.isValidCoordinate(longitude)) {
+        const marker = new google.maps.Marker({
+            position: { lat: latitude, lng: longitude },
+            title: `${town.townDisplay || town.town || "Unknown"}, ${town.country || "Unknown"}`,
         });
 
-        // Afficher la répartition par catégorie
-        console.group('Répartition des données manquantes');
-        console.table({
-            'Lieux avec coordonnées': this.statistics.categories.withCoordinates,
-            'Lieux sans coordonnées': this.statistics.categories.noCoordinates,
-            'Sans lieu défini': this.statistics.categories.noPlace,
-            'Parents inconnus': this.statistics.categories.unknownParent,
-            'Noms vides': this.statistics.categories.emptyName
+        marker.addListener('click', () => {
+            this.map.setZoom(9);
+            this.map.setCenter(marker.getPosition());
         });
-        console.groupEnd();
 
-        // Afficher la répartition par génération
-        console.group('Répartition par génération');
-        console.table(
-            Object.entries(this.statistics.generations)
-                .sort(([a], [b]) => parseInt(a) - parseInt(b))
-                .reduce((acc, [gen, count]) => {
-                    acc[`Génération ${gen}`] = count;
-                    return acc;
-                }, {})
-        );
-        console.groupEnd();
+        this.allMarkers[key] = marker;
+        marker.location = town;
+    }
+}
 
-        console.groupEnd();
+// Méthode pour créer un marqueur d'ancêtre
+createAncestorMarker(location, births, generations) {
+    this.collectLog('marker', { location, births, generations });
+
+    const lat = parseFloat(location.lat);
+    const lng = parseFloat(location.lng);
+
+    if (isNaN(lat) || isNaN(lng)) {
+        this.collectLog('error', {
+            isMarker: true,
+            message: 'Coordonnées invalides',
+            details: { lat, lng, location }
+        });
+        return null;
     }
 
-    // Gestion des marqueurs standard
-    addMarker(key, town) {
-        const latitude = parseFloat(town.latitude);
-        const longitude = parseFloat(town.longitude);
+    try {
+        const marker = new google.maps.Marker({
+            position: { lat, lng },
+            map: this.map,
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                fillColor: this.#getBranchColor(births),
+                fillOpacity: 1,
+                strokeWeight: 1,
+                strokeColor: '#1e40af',
+                scale: births.length === 1 ? 8 : Math.min(8 + (births.length * 0.5), 12)
+            }
+        });
 
-        if (this.isValidCoordinate(latitude) && this.isValidCoordinate(longitude)) {
-            const marker = new google.maps.Marker({
-                position: { lat: latitude, lng: longitude },
-                title: `${town.townDisplay || town.town || "Unknown"}, ${town.country || "Unknown"}`,
-            });
+        marker.addListener('click', () => {
+            if (!this.infoWindow) {
+                this.collectLog('warning', {
+                    message: 'InfoWindow non initialisée',
+                    details: 'Création d\'une nouvelle instance'
+                });
+                this.infoWindow = new google.maps.InfoWindow({
+                    maxWidth: 400
+                });
+            }
+            this.showAncestorInfoWindow(marker, location, births, generations);
+        });
 
-            marker.addListener('click', () => {
-                this.map.setZoom(9);
-                this.map.setCenter(marker.getPosition());
-            });
-
-            this.allMarkers[key] = marker;
-            marker.location = town;
-        }
+        this.collectLog('success', { isMarker: true });
+        return marker;
+    } catch (error) {
+        this.collectLog('error', {
+            isMarker: true,
+            message: 'Erreur création marqueur',
+            details: error.toString()
+        });
+        return null;
     }
+}
 
-    // Méthode pour créer un marqueur d'ancêtre
-    createAncestorMarker(location, births, generations) {
-        this.collectLog('marker', { location, births, generations });
-
-        const lat = parseFloat(location.lat);
-        const lng = parseFloat(location.lng);
-
-        if (isNaN(lat) || isNaN(lng)) {
-            this.collectLog('error', {
-                isMarker: true,
-                message: 'Coordonnées invalides',
-                details: { lat, lng, location }
-            });
-            return null;
-        }
-
-        try {
-            const marker = new google.maps.Marker({
-                position: { lat, lng },
-                map: this.map,
-                icon: {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    fillColor: this.#getBranchColor(births),
-                    fillOpacity: 1,
-                    strokeWeight: 1,
-                    strokeColor: '#1e40af',
-                    scale: births.length === 1 ? 8 : Math.min(8 + (births.length * 0.5), 12)
-                }
-            });
-
-            marker.addListener('click', () => {
-                if (!this.infoWindow) {
-                    this.collectLog('warning', {
-                        message: 'InfoWindow non initialisée',
-                        details: 'Création d\'une nouvelle instance'
-                    });
-                    this.infoWindow = new google.maps.InfoWindow({
-                        maxWidth: 400
-                    });
-                }
-                this.showAncestorInfoWindow(marker, location, births, generations);
-            });
-
-            this.collectLog('success', { isMarker: true });
-            return marker;
-        } catch (error) {
-            this.collectLog('error', {
-                isMarker: true,
-                message: 'Erreur création marqueur',
-                details: error.toString()
-            });
-            return null;
-        }
-    }
-
-    generateInfoWindowContent(data) {
-        const { location, births, generations } = data;
-        return `
+generateInfoWindowContent(data) {
+    const { location, births, generations } = data;
+    return `
             <div class="info-window">
                 <h3>${location.name}</h3>
                 ${location.departement ? `<p class="departement">${location.departement}</p>` : ''}
                 
                 <div class="generations-summary">
                     ${Object.entries(generations)
-                .sort(([a], [b]) => parseInt(a) - parseInt(b))
-                .map(([gen, persons]) => {
-                    const count = this.isTimelineActive ?
-                        persons.filter(p => p.birthYear <= this.currentYear).length :
-                        persons.length;
-                    return `
+            .sort(([a], [b]) => parseInt(a) - parseInt(b))
+            .map(([gen, persons]) => {
+                const count = this.isTimelineActive ?
+                    persons.filter(p => p.birthYear <= this.currentYear).length :
+                    persons.length;
+                return `
                                 <div class="generation-row" style="border-left: 3px solid ${this.generationColors[gen]}">
                                     <span>Génération ${gen}</span>
                                     <strong>${count}</strong>
                                 </div>`;
-                }).join('')}
+            }).join('')}
                 </div>
 
                 <div class="persons-list">
                     ${births
-                .sort((a, b) => a.birthYear - b.birthYear)
-                .filter(person => !this.isTimelineActive || person.birthYear <= this.currentYear)
-                .map(person => `
+            .sort((a, b) => a.birthYear - b.birthYear)
+            .filter(person => !this.isTimelineActive || person.birthYear <= this.currentYear)
+            .map(person => `
                             <div class="person-item" 
                                 style="border-left: 3px solid ${this.generationColors[person.generation]}">
                                 <strong>${person.name}</strong>
@@ -352,25 +352,25 @@ class GoogleMapsStore {
                         `).join('')}
                 </div>
             </div>`;
-    }
+}
 
-    showAncestorInfoWindow(marker, location, births, generations) {
-        console.log('💡 Debug showAncestorInfoWindow:');
-        console.log('- Location:', location);
-        console.log('- Timeline active:', this.isTimelineActive);
-        console.log('- Current year:', this.currentYear);
-        console.log('- Total births:', births.length);
-        console.log('- Births details:', births.map(b => ({
-            name: b.name,
-            year: b.birthYear,
-            generation: b.generation,
-            included: !this.isTimelineActive || b.birthYear <= this.currentYear
-        })));
-        console.log('- Generations before filtering:', generations);
+showAncestorInfoWindow(marker, location, births, generations) {
+    console.log('💡 Debug showAncestorInfoWindow:');
+    console.log('- Location:', location);
+    console.log('- Timeline active:', this.isTimelineActive);
+    console.log('- Current year:', this.currentYear);
+    console.log('- Total births:', births.length);
+    console.log('- Births details:', births.map(b => ({
+        name: b.name,
+        year: b.birthYear,
+        generation: b.generation,
+        included: !this.isTimelineActive || b.birthYear <= this.currentYear
+    })));
+    console.log('- Generations before filtering:', generations);
 
-        const pieChartSvg = this.createPieChartSVG(generations, births.length);
+    const pieChartSvg = this.createPieChartSVG(generations, births.length);
 
-        const content = `
+    const content = `
             <div class="info-window">
                 <div class="flex flex-col space-y-4">
                     <div class="text-center">
@@ -394,12 +394,12 @@ class GoogleMapsStore {
                         <!-- Colonne de droite : Légende -->
                         <div class="flex flex-col gap-2">
                             ${Object.entries(generations)
-                .sort(([a], [b]) => parseInt(a) - parseInt(b))
-                .map(([gen, persons]) => {
-                    const count = this.isTimelineActive ?
-                        persons.filter(p => p.birthYear <= this.currentYear).length :
-                        persons.length;
-                    return `
+            .sort(([a], [b]) => parseInt(a) - parseInt(b))
+            .map(([gen, persons]) => {
+                const count = this.isTimelineActive ?
+                    persons.filter(p => p.birthYear <= this.currentYear).length :
+                    persons.length;
+                return `
                                         <div class="flex items-center gap-2">
                                             <div class="w-3 h-3" style="background-color: ${this.generationColors[gen]}"></div>
                                             <span class="text-sm">
@@ -407,7 +407,7 @@ class GoogleMapsStore {
                                                 <span class="font-medium">(${count})</span>
                                             </span>
                                         </div>`;
-                }).join('')}
+            }).join('')}
                         </div>
                     </div>
 
@@ -416,9 +416,9 @@ class GoogleMapsStore {
                         <h4 class="font-medium mb-2">Personnes nées dans ce lieu :</h4>
                         <div class="space-y-2 max-h-48 overflow-y-auto">
                             ${births
-                .sort((a, b) => a.birthYear - b.birthYear)
-                .filter(person => !this.isTimelineActive || person.birthYear <= this.currentYear)
-                .map(person => `
+            .sort((a, b) => a.birthYear - b.birthYear)
+            .filter(person => !this.isTimelineActive || person.birthYear <= this.currentYear)
+            .map(person => `
                                     <div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
                                         <div class="w-2 h-full" style="background-color: ${this.generationColors[person.generation]}"></div>
                                         <div class="flex-grow">
@@ -435,189 +435,189 @@ class GoogleMapsStore {
                 </div>
             </div>`;
 
-        if (this.infoWindow) {
-            this.infoWindow.setContent(content);
-            this.infoWindow.open({
-                anchor: marker,
-                map: this.map
-            });
-        }
-    }
-
-    // Activer les marqueurs sur la carte
-    activateMapMarkers(individualTownKeys = null) {
-        if (!this.map) {
-            console.log('Pas de carte disponible');
-            return;
-        }
-
-        console.log('Mode timeline:', this.isTimelineActive);
-
-        // Nettoyer les marqueurs existants d'abord
-        this.clearCurrentMarkers();
-
-        if (this.isTimelineActive) {
-            // console.log('🗺️ Processing birthData:', this.birthData);
-
-            const locationGroups = new Map();
-
-            // Grouper les données par localisation
-            this.birthData.forEach(birth => {
-                if (!birth.location?.lat || !birth.location?.lng) {
-                    console.warn('⚠️ Birth location missing coordinates:', birth);
-                    return;
-                }
-
-                const key = `${birth.location.lat}-${birth.location.lng}`;
-                if (!locationGroups.has(key)) {
-                    locationGroups.set(key, {
-                        location: birth.location,
-                        births: [],
-                        generations: {}
-                    });
-                }
-
-                const group = locationGroups.get(key);
-                group.births.push(birth);
-
-                if (!group.generations[birth.generation]) {
-                    group.generations[birth.generation] = [];
-                }
-                group.generations[birth.generation].push(birth);
-            });
-
-            console.log('📊 Location groups created:', locationGroups);
-
-            // Créer les marqueurs avec piecharts
-            locationGroups.forEach((data, key) => {
-                const marker = this.createAncestorMarker(
-                    data.location,
-                    data.births,
-                    data.generations
-                );
-                if (marker) {
-                    this.activeMarkers[key] = marker;
-                }
-            });
-
-            console.log('📍 Active markers:', this.activeMarkers);
-        }
-
-        // Mettre à jour le cluster avec uniquement les marqueurs valides
-        const validMarkers = Object.values(this.activeMarkers).filter(Boolean);
-        if (this.markerCluster && validMarkers.length > 0) {
-            console.log('🔄 Updating marker cluster with', validMarkers.length, 'markers');
-            this.markerCluster.clearMarkers();
-            this.markerCluster.addMarkers(validMarkers);
-        }
-
-        // Centrer la carte sur les marqueurs actifs
-        this.centerMapOnMarkers();
-    }
-
-    clearCurrentMarkers() {
-        // Retirer tous les marqueurs actifs de la carte
-        Object.values(this.activeMarkers).forEach(marker => {
-            if (marker) {
-                marker.setMap(null);
-            }
+    if (this.infoWindow) {
+        this.infoWindow.setContent(content);
+        this.infoWindow.open({
+            anchor: marker,
+            map: this.map
         });
-        this.activeMarkers = {};
+    }
+}
 
-        // Vider le cluster si présent
-        if (this.markerCluster) {
-            this.markerCluster.clearMarkers();
-        }
+// Activer les marqueurs sur la carte
+activateMapMarkers(individualTownKeys = null) {
+    if (!this.map) {
+        console.log('Pas de carte disponible');
+        return;
     }
 
-    // Gestion des marqueurs ancestraux
-    processHierarchy(hierarchy) {
-        if (!hierarchy) {
-            console.error('❌ Pas de hiérarchie disponible');
-            return;
-        }
-        // console.log('🔍 Début du traitement de la hiérarchie:', hierarchy);
+    console.log('Mode timeline:', this.isTimelineActive);
 
-        // Réinitialiser les données
-        this.birthData = [];
+    // Nettoyer les marqueurs existants d'abord
+    this.clearCurrentMarkers();
 
-        const processNode = (node, depth = 0) => {
-            if (!node) {
-                console.warn(`⚠️ Nœud invalide au niveau ${depth}`);
+    if (this.isTimelineActive) {
+        // console.log('🗺️ Processing birthData:', this.birthData);
+
+        const locationGroups = new Map();
+
+        // Grouper les données par localisation
+        this.birthData.forEach(birth => {
+            if (!birth.location?.lat || !birth.location?.lng) {
+                console.warn('⚠️ Birth location missing coordinates:', birth);
                 return;
             }
 
-            const indent = '  '.repeat(depth);
-            // console.log(`${indent}📍 Traitement du nœud:`, {
-            //     id: node.id,
-            //     name: node.name,
-            //     surname: node.surname,
-            //     birthInfo: node.stats?.demography?.birthInfo
-            // });
-
-            // Si on a des coordonnées de naissance
-            const demography = node.stats?.demography;
-            const birthInfo = demography?.birthInfo;
-
-            if (birthInfo) {
-                // console.log(`${indent}📌 Informations de naissance trouvées:`, birthInfo);
-            }
-
-            if (birthInfo?.place?.coordinates?.latitude) {
-                // console.log(`${indent}✅ Ajout du lieu de naissance:`, {
-                //     place: node.fanBirthPlace,
-                //     coordinates: birthInfo.place.coordinates,
-                //     departement: birthInfo.place.departement
-                // });
-
-                this.birthData.push({
-                    id: node.id,
-                    name: `${node.name} ${node.surname}`,
-                    birthYear: node.birthYear,
-                    generation: node.generation || 0,
-                    sosa: node.sosa || 1,
-                    location: {
-                        lat: birthInfo.place.coordinates.latitude,
-                        lng: birthInfo.place.coordinates.longitude,
-                        name: node.fanBirthPlace,
-                        departement: birthInfo.place.departement
-                    }
-                });
-            } else {
-                console.warn(`${indent}⚠️ Pas de coordonnées pour:`, {
-                    name: `${node.name} ${node.surname}`,
-                    birthPlace: node.fanBirthPlace,
-                    birthInfo: birthInfo
+            const key = `${birth.location.lat}-${birth.location.lng}`;
+            if (!locationGroups.has(key)) {
+                locationGroups.set(key, {
+                    location: birth.location,
+                    births: [],
+                    generations: {}
                 });
             }
 
-            // Traiter récursivement les enfants
-            if (node.children && Array.isArray(node.children)) {
-                // console.log(`${indent}👨‍👩‍👧‍👦 Traitement de ${node.children.length} enfant(s)`);
-                node.children.forEach((child, index) => {
-                    // console.log(`${indent}  🔄 Traitement enfant ${index + 1}/${node.children.length}`);
-                    processNode(child, depth + 1);
-                });
-            }
-        };
+            const group = locationGroups.get(key);
+            group.births.push(birth);
 
-        processNode(hierarchy);
+            if (!group.generations[birth.generation]) {
+                group.generations[birth.generation] = [];
+            }
+            group.generations[birth.generation].push(birth);
+        });
+
+        console.log('📊 Location groups created:', locationGroups);
+
+        // Créer les marqueurs avec piecharts
+        locationGroups.forEach((data, key) => {
+            const marker = this.createAncestorMarker(
+                data.location,
+                data.births,
+                data.generations
+            );
+            if (marker) {
+                this.activeMarkers[key] = marker;
+            }
+        });
+
+        console.log('📍 Active markers:', this.activeMarkers);
     }
 
-    createPieChartSVG(generations, total) {
-        const size = 128; // Taille fixe pour l'infoWindow
-        const center = size / 2;
-        const radius = (size / 2) - 2;
+    // Mettre à jour le cluster avec uniquement les marqueurs valides
+    const validMarkers = Object.values(this.activeMarkers).filter(Boolean);
+    if (this.markerCluster && validMarkers.length > 0) {
+        console.log('🔄 Updating marker cluster with', validMarkers.length, 'markers');
+        this.markerCluster.clearMarkers();
+        this.markerCluster.addMarkers(validMarkers);
+    }
 
-        // Cas particulier : une seule génération
-        if (Object.entries(generations).length === 1) {
-            const [[gen, births]] = Object.entries(generations);
-            const count = this.isTimelineActive ?
-                births.filter(b => b.birthYear <= this.currentYear).length :
-                births.length;
-            const isFuture = this.isTimelineActive && count === 0;
+    // Centrer la carte sur les marqueurs actifs
+    this.centerMapOnMarkers();
+}
 
-            return `
+clearCurrentMarkers() {
+    // Retirer tous les marqueurs actifs de la carte
+    Object.values(this.activeMarkers).forEach(marker => {
+        if (marker) {
+            marker.setMap(null);
+        }
+    });
+    this.activeMarkers = {};
+
+    // Vider le cluster si présent
+    if (this.markerCluster) {
+        this.markerCluster.clearMarkers();
+    }
+}
+
+// Gestion des marqueurs ancestraux
+processHierarchy(hierarchy) {
+    if (!hierarchy) {
+        console.error('❌ Pas de hiérarchie disponible');
+        return;
+    }
+    // console.log('🔍 Début du traitement de la hiérarchie:', hierarchy);
+
+    // Réinitialiser les données
+    this.birthData = [];
+
+    const processNode = (node, depth = 0) => {
+        if (!node) {
+            console.warn(`⚠️ Nœud invalide au niveau ${depth}`);
+            return;
+        }
+
+        const indent = '  '.repeat(depth);
+        // console.log(`${indent}📍 Traitement du nœud:`, {
+        //     id: node.id,
+        //     name: node.name,
+        //     surname: node.surname,
+        //     birthInfo: node.stats?.demography?.birthInfo
+        // });
+
+        // Si on a des coordonnées de naissance
+        const demography = node.stats?.demography;
+        const birthInfo = demography?.birthInfo;
+
+        if (birthInfo) {
+            // console.log(`${indent}📌 Informations de naissance trouvées:`, birthInfo);
+        }
+
+        if (birthInfo?.place?.coordinates?.latitude) {
+            // console.log(`${indent}✅ Ajout du lieu de naissance:`, {
+            //     place: node.fanBirthPlace,
+            //     coordinates: birthInfo.place.coordinates,
+            //     departement: birthInfo.place.departement
+            // });
+
+            this.birthData.push({
+                id: node.id,
+                name: `${node.name} ${node.surname}`,
+                birthYear: node.birthYear,
+                generation: node.generation || 0,
+                sosa: node.sosa || 1,
+                location: {
+                    lat: birthInfo.place.coordinates.latitude,
+                    lng: birthInfo.place.coordinates.longitude,
+                    name: node.fanBirthPlace,
+                    departement: birthInfo.place.departement
+                }
+            });
+        } else {
+            console.warn(`${indent}⚠️ Pas de coordonnées pour:`, {
+                name: `${node.name} ${node.surname}`,
+                birthPlace: node.fanBirthPlace,
+                birthInfo: birthInfo
+            });
+        }
+
+        // Traiter récursivement les enfants
+        if (node.children && Array.isArray(node.children)) {
+            // console.log(`${indent}👨‍👩‍👧‍👦 Traitement de ${node.children.length} enfant(s)`);
+            node.children.forEach((child, index) => {
+                // console.log(`${indent}  🔄 Traitement enfant ${index + 1}/${node.children.length}`);
+                processNode(child, depth + 1);
+            });
+        }
+    };
+
+    processNode(hierarchy);
+}
+
+createPieChartSVG(generations, total) {
+    const size = 128; // Taille fixe pour l'infoWindow
+    const center = size / 2;
+    const radius = (size / 2) - 2;
+
+    // Cas particulier : une seule génération
+    if (Object.entries(generations).length === 1) {
+        const [[gen, births]] = Object.entries(generations);
+        const count = this.isTimelineActive ?
+            births.filter(b => b.birthYear <= this.currentYear).length :
+            births.length;
+        const isFuture = this.isTimelineActive && count === 0;
+
+        return `
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}">
                     <circle 
                         cx="${center}" 
@@ -629,39 +629,39 @@ class GoogleMapsStore {
                         stroke-width="1"
                     />
                 </svg>`;
-        }
+    }
 
-        // Cas général : plusieurs générations
-        let startAngle = 0;
-        const paths = Object.entries(generations)
-            .sort(([a], [b]) => parseInt(a) - parseInt(b))
-            .map(([gen, births]) => {
-                const count = this.isTimelineActive ?
-                    births.filter(b => b.birthYear <= this.currentYear).length :
-                    births.length;
-                const percentage = births.length / total;
-                const angle = percentage * 360;
-                const endAngle = startAngle + angle;
+    // Cas général : plusieurs générations
+    let startAngle = 0;
+    const paths = Object.entries(generations)
+        .sort(([a], [b]) => parseInt(a) - parseInt(b))
+        .map(([gen, births]) => {
+            const count = this.isTimelineActive ?
+                births.filter(b => b.birthYear <= this.currentYear).length :
+                births.length;
+            const percentage = births.length / total;
+            const angle = percentage * 360;
+            const endAngle = startAngle + angle;
 
-                const startRad = (startAngle - 90) * Math.PI / 180;
-                const endRad = (endAngle - 90) * Math.PI / 180;
+            const startRad = (startAngle - 90) * Math.PI / 180;
+            const endRad = (endAngle - 90) * Math.PI / 180;
 
-                const x1 = center + radius * Math.cos(startRad);
-                const y1 = center + radius * Math.sin(startRad);
-                const x2 = center + radius * Math.cos(endRad);
-                const y2 = center + radius * Math.sin(endRad);
+            const x1 = center + radius * Math.cos(startRad);
+            const y1 = center + radius * Math.sin(startRad);
+            const x2 = center + radius * Math.cos(endRad);
+            const y2 = center + radius * Math.sin(endRad);
 
-                const largeArcFlag = angle > 180 ? 1 : 0;
-                const path = `
+            const largeArcFlag = angle > 180 ? 1 : 0;
+            const path = `
                     M ${center},${center}
                     L ${x1},${y1}
                     A ${radius},${radius} 0 ${largeArcFlag},1 ${x2},${y2}
                     Z`;
 
-                startAngle += angle;
-                const isFuture = this.isTimelineActive && count === 0;
+            startAngle += angle;
+            const isFuture = this.isTimelineActive && count === 0;
 
-                return `
+            return `
                     <path 
                         d="${path}" 
                         fill="${this.generationColors[gen]}"
@@ -669,623 +669,614 @@ class GoogleMapsStore {
                         stroke="white"
                         stroke-width="1"
                     />`;
-            }).join('');
+        }).join('');
 
-        return `
+    return `
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}">
                 ${paths}
             </svg>`;
+}
+
+// Gestion de la timeline
+initializeAncestorsMap() {
+    if (!this.currentYear && this.birthData.length > 0) {
+        this.currentYear = Math.max(...this.birthData
+            .filter(b => b.birthYear)
+            .map(b => parseInt(b.birthYear, 10)));
+        console.log('Initialisation année courante:', this.currentYear);
     }
 
-    // Gestion de la timeline
-    toggleTimeline(active) {
-        this.isTimelineActive = active;
-
-        // Initialiser l'année courante si pas encore fait
-        if (active && !this.currentYear && this.birthData.length > 0) {
-            this.currentYear = Math.max(...this.birthData
-                .filter(b => b.birthYear)
-                .map(b => parseInt(b.birthYear, 10)));
-            console.log('Initialisation année courante:', this.currentYear);
-        } else if (!active) {
-            this.currentYear = null;
-        }
-
-        if (active && this.birthData.length > 0) {
-            // Recalculer les statistiques si nécessaire
-            if (!this.statistics || !this.statistics.total) {
-                this.statistics = {
-                    total: this.birthData.length,
-                    withLocation: this.birthData.length,
-                    withoutLocation: 0,
-                    emptyNames: 0,
-                    generations: {},
-                    reasons: {
-                        noData: 0,
-                        noCoordinates: 0,
-                        emptyLocation: 0,
-                        invalidData: 0
-                    }
-                };
-
-                // Reconstruire les statistiques de génération
-                this.birthData.forEach(birth => {
-                    if (birth.generation !== undefined) {
-                        this.statistics.generations[birth.generation] =
-                            (this.statistics.generations[birth.generation] || 0) + 1;
-                    }
-                });
+    if (this.birthData.length > 0) {
+        // Mettre à jour les statistiques
+        this.statistics = {
+            total: this.birthData.length,
+            withLocation: this.birthData.length,
+            withoutLocation: 0,
+            generations: {},
+            categories: {
+                withCoordinates: this.birthData.length,
+                noPlace: 0,
+                noCoordinates: 0,
+                emptyName: 0,
+                unknownParent: 0
             }
-        }
-
-        // Afficher les logs et mettre à jour les marqueurs
-        console.log('Mode timeline:', active);
-        console.log('Année courante:', this.currentYear);
-        this.displayProcessingLogs();
-        this.activateMapMarkers();
-    }
-
-    updateMarkers() {
-        // À implémenter selon les besoins spécifiques
-        console.log("Updating markers with timeline:", this.isTimelineActive);
-    }
-
-    // Méthodes utilitaires
-    moveMapToContainer(containerId) {
-        const mapContainer = document.getElementById(containerId);
-        if (!mapContainer || !this.map) return;
-
-        const mapDiv = this.map.getDiv();
-        // Si la carte est déjà dans le bon conteneur, ne rien faire
-        if (mapContainer === mapDiv.parentNode) {
-            return;
-        }
-
-        try {
-            mapContainer.appendChild(mapDiv);
-            google.maps.event.trigger(this.map, "resize");
-        } catch (error) {
-            console.error(`Failed to move map to container ${containerId}:`, error);
-            // Si nécessaire, on pourrait essayer de réinitialiser la carte ici
-        }
-    }
-
-    clearMap() {
-        this.clearMarkers();
-        if (this.map) {
-            this.map.setCenter({ lat: 46.2276, lng: 2.2137 });
-            this.map.setZoom(6.2);
-            google.maps.event.trigger(this.map, 'resize');
-        }
-    }
-
-    clearMarkers() {
-        Object.values(this.activeMarkers).forEach(marker => marker.setMap(null));
-        this.activeMarkers = {};
-        this.allMarkers = {};
-        if (this.markerCluster) {
-            this.markerCluster.clearMarkers();
-        }
-    }
-
-    isValidCoordinate(coordinate) {
-        const num = Number(coordinate);
-        return !isNaN(num) && num.toString().trim() !== "";
-    }
-
-    centerMapOnMarkers() {
-        if (this.map && Object.keys(this.activeMarkers).length > 0) {
-            const bounds = new google.maps.LatLngBounds();
-            Object.values(this.activeMarkers).forEach(marker => {
-                bounds.extend(marker.getPosition());
-            });
-            this.map.fitBounds(bounds);
-        }
-    }
-
-    analyzeNodeStructure(node, path = '') {
-        const seen = new Set();
-
-        function analyze(obj, currentPath) {
-            if (!obj || seen.has(obj)) return {};
-            if (typeof obj !== 'object') return obj;
-
-            seen.add(obj);
-            const structure = {};
-
-            for (const [key, value] of Object.entries(obj)) {
-                const newPath = currentPath ? `${currentPath}.${key}` : key;
-
-                if (Array.isArray(value)) {
-                    structure[key] = `Array(${value.length})`;
-                } else if (typeof value === 'object' && value !== null) {
-                    structure[key] = analyze(value, newPath);
-                } else {
-                    structure[key] = typeof value;
-                }
-            }
-
-            return structure;
-        }
-
-        return analyze(node, path);
-    }
-
-    collectLog(type, data) {
-        switch (type) {
-            case 'marker':
-                this.logsCollection.markers.push({
-                    timestamp: new Date().toISOString(),
-                    location: data.location,
-                    births: data.births,
-                    generations: data.generations,
-                    status: 'created'
-                });
-                this.logsCollection.stats.totalMarkers++;
-                break;
-
-            case 'error':
-                this.logsCollection.errors.push({
-                    timestamp: new Date().toISOString(),
-                    message: data.message,
-                    details: data.details
-                });
-                if (data.isMarker) {
-                    this.logsCollection.stats.failedMarkers++;
-                }
-                break;
-
-            case 'warning':
-                this.logsCollection.warnings.push({
-                    timestamp: new Date().toISOString(),
-                    message: data.message,
-                    details: data.details
-                });
-                break;
-
-            case 'success':
-                if (data.isMarker) {
-                    this.logsCollection.stats.successfulMarkers++;
-                }
-                break;
-        }
-    }
-
-    displayProcessingLogs() {
-        const styles = {
-            header: 'color: white; background: #3b82f6; padding: 4px 8px; border-radius: 4px;',
-            subheader: 'color: #3b82f6; font-weight: bold;',
-            success: 'color: #10b981;',
-            error: 'color: #ef4444;',
-            warning: 'color: #f59e0b;'
         };
 
-        // S'assurer que les statistiques sont initialisées
-        if (!this.statistics) {
-            this.statistics = {
-                total: this.birthData.length,
-                withLocation: this.birthData.length,
-                withoutLocation: 0,
-                emptyNames: 0,
-                generations: {},
-                reasons: {
-                    noData: 0,
-                    noCoordinates: 0,
-                    emptyLocation: 0,
-                    invalidData: 0
-                }
-            };
-
-            // Calculer les générations à partir des données disponibles
-            this.birthData.forEach(birth => {
-                if (birth.generation !== undefined) {
-                    this.statistics.generations[birth.generation] =
-                        (this.statistics.generations[birth.generation] || 0) + 1;
-                }
-            });
-        }
-
-        console.group('%c📍 Analyse géographique des individus', styles.header);
-
-        // Statistiques générales
-        console.group('Statistiques globales');
-        console.table({
-            'Total des individus': this.birthData.length,
-            'Lieux identifiés': this.birthData.length,
-            'Lieux manquants': this.statistics.withoutLocation || 0
-        });
-        console.groupEnd();
-
-        // Répartition par génération
-        if (Object.keys(this.statistics.generations).length > 0) {
-            console.group('%cRépartition par génération', styles.subheader);
-            console.table(
-                Object.entries(this.statistics.generations)
-                    .sort(([a], [b]) => parseInt(a) - parseInt(b))
-                    .reduce((acc, [gen, count]) => {
-                        acc[`Génération ${gen}`] = count;
-                        return acc;
-                    }, {})
-            );
-            console.groupEnd();
-        }
-
-        // Liste des individus
-        if (this.birthData.length > 0) {
-            console.group('%cLocalisation des individus', styles.subheader);
-            console.table(
-                this.birthData.map(birth => ({
-                    'Nom': birth.name,
-                    'Lieu': birth.location.name,
-                    'Département': birth.location.departement || 'Non spécifié',
-                    'Génération': birth.generation,
-                    'N° Sosa': birth.sosa,
-                    'Année': birth.birthYear
-                }))
-            );
-            console.groupEnd();
-        }
-
-        console.groupEnd();
-    }
-
-    // Méthode privée pour déterminer la raison de l'absence de coordonnées
-    #getLocationIssueReason(birth) {
-        if (!birth.location) return 'Aucune information de lieu';
-        if (!birth.location.name || birth.location.name.trim() === '') return 'Nom du lieu manquant';
-        if (!birth.location.lat || !birth.location.lng) return 'Coordonnées manquantes';
-        return 'Autre problème';
-    }
-
-    // Gestion de l'historique
-    undo() {
-        if (this.history.length > 1) {
-            const lastState = this.history.pop();
-            this.redoStack.push(lastState);
-            const previousState = this.history[this.history.length - 1];
-            this.#applyState(previousState);
-        }
-    }
-
-    redo() {
-        if (this.redoStack.length > 0) {
-            const stateToRestore = this.redoStack.pop();
-            this.history.push(stateToRestore);
-            this.#applyState(stateToRestore);
-        }
-    }
-
-    // Méthodes privées
-    #setupMapListeners() {
-        this.map.addListener('zoom_changed', () => this.#recordState());
-        this.map.addListener('center_changed', () => this.#recordState());
-    }
-
-    #recordState() {
-        const currentState = {
-            zoom: this.map.getZoom(),
-            center: this.map.getCenter().toJSON()
-        };
-
-        const lastState = this.history[this.history.length - 1];
-        if (!this.#isSameState(lastState, currentState)) {
-            this.history.push(currentState);
-            this.redoStack = [];
-        }
-    }
-
-    #isSameState(state1, state2) {
-        if (!state1) return false;
-        return state1.zoom === state2.zoom &&
-            state1.center.lat === state2.center.lat &&
-            state1.center.lng === state2.center.lng;
-    }
-
-    #addMapControls() {
-        this.#addResetControl();
-        this.#addUndoRedoControls();
-    }
-
-    #addResetControl() {
-        const controlDiv = document.createElement('div');
-        controlDiv.style.margin = '10px';
-
-        const button = document.createElement('button');
-        this.#styleControlButton(button);
-        button.title = 'Reset map';
-        button.innerText = 'Reset Map';
-        button.addEventListener('click', () => this.clearMap());
-
-        controlDiv.appendChild(button);
-        this.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlDiv);
-    }
-
-    #addUndoRedoControls() {
-        const controlDiv = document.createElement('div');
-        controlDiv.style.margin = '10px';
-
-        const undoButton = document.createElement('button');
-        this.#styleControlButton(undoButton);
-        undoButton.title = 'Undo';
-        undoButton.innerText = 'Undo';
-        undoButton.addEventListener('click', () => this.undo());
-
-        const redoButton = document.createElement('button');
-        this.#styleControlButton(redoButton);
-        redoButton.title = 'Redo';
-        redoButton.innerText = 'Redo';
-        redoButton.addEventListener('click', () => this.redo());
-
-        controlDiv.appendChild(undoButton);
-        controlDiv.appendChild(redoButton);
-        this.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlDiv);
-    }
-
-    #styleControlButton(button) {
-        Object.assign(button.style, {
-            backgroundColor: '#fff',
-            border: '2px solid #fff',
-            borderRadius: '3px',
-            boxShadow: '0 2px 6px rgba(0,0,0,.3)',
-            cursor: 'pointer',
-            marginRight: '5px',
-            textAlign: 'center'
+        // Calculer les statistiques par génération
+        this.birthData.forEach(birth => {
+            if (birth.generation !== undefined) {
+                this.statistics.generations[birth.generation] = 
+                    (this.statistics.generations[birth.generation] || 0) + 1;
+            }
         });
     }
 
-    #applyState(state) {
-        this.map.setZoom(state.zoom);
-        this.map.setCenter(state.center);
+    console.log('Année courante:', this.currentYear);
+    this.displayProcessingLogs();
+    this.activateMapMarkers();
+}
+
+updateMarkers() {
+    // À implémenter selon les besoins spécifiques
+    console.log("Updating markers with timeline:", this.isTimelineActive);
+}
+
+// Méthodes utilitaires
+moveMapToContainer(containerId) {
+    const mapContainer = document.getElementById(containerId);
+    if (!mapContainer || !this.map) return;
+
+    const mapDiv = this.map.getDiv();
+    // Si la carte est déjà dans le bon conteneur, ne rien faire
+    if (mapContainer === mapDiv.parentNode) {
+        return;
     }
 
-    #getBranchColor(births) {
-        const paternalCount = births.filter(b => this.#determineBranchFromSosa(b.sosa) === 'paternal').length;
-        const maternalCount = births.filter(b => this.#determineBranchFromSosa(b.sosa) === 'maternal').length;
-        const total = births.length;
+    try {
+        mapContainer.appendChild(mapDiv);
+        google.maps.event.trigger(this.map, "resize");
+    } catch (error) {
+        console.error(`Failed to move map to container ${containerId}:`, error);
+        // Si nécessaire, on pourrait essayer de réinitialiser la carte ici
+    }
+}
 
-        if (paternalCount === total) {
-            return '#3b82f6';  // Bleu
+clearMap() {
+    this.clearMarkers();
+    if (this.map) {
+        this.map.setCenter({ lat: 46.2276, lng: 2.2137 });
+        this.map.setZoom(6.2);
+        google.maps.event.trigger(this.map, 'resize');
+    }
+}
+
+clearMarkers() {
+    Object.values(this.activeMarkers).forEach(marker => marker.setMap(null));
+    this.activeMarkers = {};
+    this.allMarkers = {};
+    if (this.markerCluster) {
+        this.markerCluster.clearMarkers();
+    }
+}
+
+isValidCoordinate(coordinate) {
+    const num = Number(coordinate);
+    return !isNaN(num) && num.toString().trim() !== "";
+}
+
+centerMapOnMarkers() {
+    if (this.map && Object.keys(this.activeMarkers).length > 0) {
+        const bounds = new google.maps.LatLngBounds();
+        Object.values(this.activeMarkers).forEach(marker => {
+            bounds.extend(marker.getPosition());
+        });
+        this.map.fitBounds(bounds);
+    }
+}
+
+analyzeNodeStructure(node, path = '') {
+    const seen = new Set();
+
+    function analyze(obj, currentPath) {
+        if (!obj || seen.has(obj)) return {};
+        if (typeof obj !== 'object') return obj;
+
+        seen.add(obj);
+        const structure = {};
+
+        for (const [key, value] of Object.entries(obj)) {
+            const newPath = currentPath ? `${currentPath}.${key}` : key;
+
+            if (Array.isArray(value)) {
+                structure[key] = `Array(${value.length})`;
+            } else if (typeof value === 'object' && value !== null) {
+                structure[key] = analyze(value, newPath);
+            } else {
+                structure[key] = typeof value;
+            }
         }
-        if (maternalCount === total) {
-            return '#ec4899';  // Rose
-        }
-        return '#8b5cf6';  // Violet
+
+        return structure;
     }
 
-    #getBranchesIndicator(births) {
-        const paternalCount = births.filter(b => b.line === 'paternal').length;
-        const maternalCount = births.filter(b => b.line === 'maternal').length;
-        const total = births.length;
+    return analyze(node, path);
+}
 
-        const paternalWidth = (paternalCount / total) * 100;
-        const maternalWidth = (maternalCount / total) * 100;
+collectLog(type, data) {
+    switch (type) {
+        case 'marker':
+            this.logsCollection.markers.push({
+                timestamp: new Date().toISOString(),
+                location: data.location,
+                births: data.births,
+                generations: data.generations,
+                status: 'created'
+            });
+            this.logsCollection.stats.totalMarkers++;
+            break;
 
-        return `
+        case 'error':
+            this.logsCollection.errors.push({
+                timestamp: new Date().toISOString(),
+                message: data.message,
+                details: data.details
+            });
+            if (data.isMarker) {
+                this.logsCollection.stats.failedMarkers++;
+            }
+            break;
+
+        case 'warning':
+            this.logsCollection.warnings.push({
+                timestamp: new Date().toISOString(),
+                message: data.message,
+                details: data.details
+            });
+            break;
+
+        case 'success':
+            if (data.isMarker) {
+                this.logsCollection.stats.successfulMarkers++;
+            }
+            break;
+    }
+}
+
+displayProcessingLogs() {
+    const styles = {
+        header: 'color: white; background: #3b82f6; padding: 4px 8px; border-radius: 4px;',
+        subheader: 'color: #3b82f6; font-weight: bold;',
+        success: 'color: #10b981;',
+        error: 'color: #ef4444;',
+        warning: 'color: #f59e0b;'
+    };
+
+    // S'assurer que les statistiques sont initialisées
+    if (!this.statistics) {
+        this.statistics = {
+            total: this.birthData.length,
+            withLocation: this.birthData.length,
+            withoutLocation: 0,
+            emptyNames: 0,
+            generations: {},
+            reasons: {
+                noData: 0,
+                noCoordinates: 0,
+                emptyLocation: 0,
+                invalidData: 0
+            }
+        };
+
+        // Calculer les générations à partir des données disponibles
+        this.birthData.forEach(birth => {
+            if (birth.generation !== undefined) {
+                this.statistics.generations[birth.generation] =
+                    (this.statistics.generations[birth.generation] || 0) + 1;
+            }
+        });
+    }
+
+    console.group('%c📍 Analyse géographique des individus', styles.header);
+
+    // Statistiques générales
+    console.group('Statistiques globales');
+    console.table({
+        'Total des individus': this.birthData.length,
+        'Lieux identifiés': this.birthData.length,
+        'Lieux manquants': this.statistics.withoutLocation || 0
+    });
+    console.groupEnd();
+
+    // Répartition par génération
+    if (Object.keys(this.statistics.generations).length > 0) {
+        console.group('%cRépartition par génération', styles.subheader);
+        console.table(
+            Object.entries(this.statistics.generations)
+                .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                .reduce((acc, [gen, count]) => {
+                    acc[`Génération ${gen}`] = count;
+                    return acc;
+                }, {})
+        );
+        console.groupEnd();
+    }
+
+    // Liste des individus
+    if (this.birthData.length > 0) {
+        console.group('%cLocalisation des individus', styles.subheader);
+        console.table(
+            this.birthData.map(birth => ({
+                'Nom': birth.name,
+                'Lieu': birth.location.name,
+                'Département': birth.location.departement || 'Non spécifié',
+                'Génération': birth.generation,
+                'N° Sosa': birth.sosa,
+                'Année': birth.birthYear
+            }))
+        );
+        console.groupEnd();
+    }
+
+    console.groupEnd();
+}
+
+// Méthode privée pour déterminer la raison de l'absence de coordonnées
+#getLocationIssueReason(birth) {
+    if (!birth.location) return 'Aucune information de lieu';
+    if (!birth.location.name || birth.location.name.trim() === '') return 'Nom du lieu manquant';
+    if (!birth.location.lat || !birth.location.lng) return 'Coordonnées manquantes';
+    return 'Autre problème';
+}
+
+// Gestion de l'historique
+undo() {
+    if (this.history.length > 1) {
+        const lastState = this.history.pop();
+        this.redoStack.push(lastState);
+        const previousState = this.history[this.history.length - 1];
+        this.#applyState(previousState);
+    }
+}
+
+redo() {
+    if (this.redoStack.length > 0) {
+        const stateToRestore = this.redoStack.pop();
+        this.history.push(stateToRestore);
+        this.#applyState(stateToRestore);
+    }
+}
+
+// Méthodes privées
+#setupMapListeners() {
+    this.map.addListener('zoom_changed', () => this.#recordState());
+    this.map.addListener('center_changed', () => this.#recordState());
+}
+
+#recordState() {
+    const currentState = {
+        zoom: this.map.getZoom(),
+        center: this.map.getCenter().toJSON()
+    };
+
+    const lastState = this.history[this.history.length - 1];
+    if (!this.#isSameState(lastState, currentState)) {
+        this.history.push(currentState);
+        this.redoStack = [];
+    }
+}
+
+#isSameState(state1, state2) {
+    if (!state1) return false;
+    return state1.zoom === state2.zoom &&
+        state1.center.lat === state2.center.lat &&
+        state1.center.lng === state2.center.lng;
+}
+
+#addMapControls() {
+    this.#addResetControl();
+    this.#addUndoRedoControls();
+}
+
+#addResetControl() {
+    const controlDiv = document.createElement('div');
+    controlDiv.style.margin = '10px';
+
+    const button = document.createElement('button');
+    this.#styleControlButton(button);
+    button.title = 'Reset map';
+    button.innerText = 'Reset Map';
+    button.addEventListener('click', () => this.clearMap());
+
+    controlDiv.appendChild(button);
+    this.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlDiv);
+}
+
+#addUndoRedoControls() {
+    const controlDiv = document.createElement('div');
+    controlDiv.style.margin = '10px';
+
+    const undoButton = document.createElement('button');
+    this.#styleControlButton(undoButton);
+    undoButton.title = 'Undo';
+    undoButton.innerText = 'Undo';
+    undoButton.addEventListener('click', () => this.undo());
+
+    const redoButton = document.createElement('button');
+    this.#styleControlButton(redoButton);
+    redoButton.title = 'Redo';
+    redoButton.innerText = 'Redo';
+    redoButton.addEventListener('click', () => this.redo());
+
+    controlDiv.appendChild(undoButton);
+    controlDiv.appendChild(redoButton);
+    this.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlDiv);
+}
+
+#styleControlButton(button) {
+    Object.assign(button.style, {
+        backgroundColor: '#fff',
+        border: '2px solid #fff',
+        borderRadius: '3px',
+        boxShadow: '0 2px 6px rgba(0,0,0,.3)',
+        cursor: 'pointer',
+        marginRight: '5px',
+        textAlign: 'center'
+    });
+}
+
+#applyState(state) {
+    this.map.setZoom(state.zoom);
+    this.map.setCenter(state.center);
+}
+
+#getBranchColor(births) {
+    const paternalCount = births.filter(b => this.#determineBranchFromSosa(b.sosa) === 'paternal').length;
+    const maternalCount = births.filter(b => this.#determineBranchFromSosa(b.sosa) === 'maternal').length;
+    const total = births.length;
+
+    if (paternalCount === total) {
+        return '#3b82f6';  // Bleu
+    }
+    if (maternalCount === total) {
+        return '#ec4899';  // Rose
+    }
+    return '#8b5cf6';  // Violet
+}
+
+#getBranchesIndicator(births) {
+    const paternalCount = births.filter(b => b.line === 'paternal').length;
+    const maternalCount = births.filter(b => b.line === 'maternal').length;
+    const total = births.length;
+
+    const paternalWidth = (paternalCount / total) * 100;
+    const maternalWidth = (maternalCount / total) * 100;
+
+    return `
             <div class="mt-2">
                 <div class="flex h-2 w-full rounded-full overflow-hidden">
                     ${paternalCount > 0 ?
-                `<div class="bg-blue-500" style="width: ${paternalWidth}%"></div>` : ''}
+            `<div class="bg-blue-500" style="width: ${paternalWidth}%"></div>` : ''}
                     ${maternalCount > 0 ?
-                `<div class="bg-pink-500" style="width: ${maternalWidth}%"></div>` : ''}
+            `<div class="bg-pink-500" style="width: ${maternalWidth}%"></div>` : ''}
                 </div>
                 <div class="flex justify-between text-xs mt-1">
                     <span class="text-blue-500">Branche paternelle: ${paternalCount}</span>
                     <span class="text-pink-500">Branche maternelle: ${maternalCount}</span>
                 </div>
             </div>`;
-    }
+}
 
-    #determineBranchFromSosa(sosa) {
-        if (sosa === 1) return null;
-        // On détermine l'ancêtre direct (2 = père, 3 = mère)
-        while (sosa > 3) {
-            sosa = Math.floor(sosa/2);
+#determineBranchFromSosa(sosa) {
+    if (sosa === 1) return null;
+    // On détermine l'ancêtre direct (2 = père, 3 = mère)
+    while (sosa > 3) {
+        sosa = Math.floor(sosa / 2);
+    }
+    return sosa === 2 ? 'paternal' : 'maternal';
+}
+
+getMapStyle() {
+    return [
+        {
+            "featureType": "all",
+            "elementType": "labels",
+            "stylers": [
+                {
+                    "visibility": "off"
+                },
+                {
+                    "color": "#f49f53"
+                }
+            ]
+        },
+        {
+            "featureType": "all",
+            "elementType": "labels.text",
+            "stylers": [
+                {
+                    "visibility": "simplified"
+                }
+            ]
+        },
+        {
+            "featureType": "landscape",
+            "elementType": "all",
+            "stylers": [
+                {
+                    "color": "#f9ddc5"
+                },
+                {
+                    "lightness": -7
+                }
+            ]
+        },
+        {
+            "featureType": "poi.business",
+            "elementType": "all",
+            "stylers": [
+                {
+                    "color": "#645c20"
+                },
+                {
+                    "lightness": 38
+                }
+            ]
+        },
+        {
+            "featureType": "poi.government",
+            "elementType": "all",
+            "stylers": [
+                {
+                    "color": "#9e5916"
+                },
+                {
+                    "lightness": 46
+                }
+            ]
+        },
+        {
+            "featureType": "poi.medical",
+            "elementType": "geometry.fill",
+            "stylers": [
+                {
+                    "color": "#813033"
+                },
+                {
+                    "lightness": 38
+                },
+                {
+                    "visibility": "off"
+                }
+            ]
+        },
+        {
+            "featureType": "poi.park",
+            "elementType": "all",
+            "stylers": [
+                {
+                    "color": "#645c20"
+                },
+                {
+                    "lightness": 39
+                }
+            ]
+        },
+        {
+            "featureType": "poi.school",
+            "elementType": "all",
+            "stylers": [
+                {
+                    "color": "#a95521"
+                },
+                {
+                    "lightness": 35
+                }
+            ]
+        },
+        {
+            "featureType": "poi.sports_complex",
+            "elementType": "all",
+            "stylers": [
+                {
+                    "color": "#9e5916"
+                },
+                {
+                    "lightness": 32
+                }
+            ]
+        },
+        {
+            "featureType": "road",
+            "elementType": "all",
+            "stylers": [
+                {
+                    "color": "#813033"
+                },
+                {
+                    "lightness": 43
+                }
+            ]
+        },
+        {
+            "featureType": "road.local",
+            "elementType": "geometry.fill",
+            "stylers": [
+                {
+                    "color": "#f19f53"
+                },
+                {
+                    "weight": 1.3
+                },
+                {
+                    "visibility": "on"
+                },
+                {
+                    "lightness": 16
+                }
+            ]
+        },
+        {
+            "featureType": "road.local",
+            "elementType": "geometry.stroke",
+            "stylers": [
+                {
+                    "color": "#f19f53"
+                },
+                {
+                    "lightness": -10
+                }
+            ]
+        },
+        {
+            "featureType": "transit",
+            "elementType": "all",
+            "stylers": [
+                {
+                    "lightness": 38
+                }
+            ]
+        },
+        {
+            "featureType": "transit.line",
+            "elementType": "all",
+            "stylers": [
+                {
+                    "color": "#813033"
+                },
+                {
+                    "lightness": 22
+                }
+            ]
+        },
+        {
+            "featureType": "transit.station",
+            "elementType": "all",
+            "stylers": [
+                {
+                    "visibility": "off"
+                }
+            ]
+        },
+        {
+            "featureType": "water",
+            "elementType": "all",
+            "stylers": [
+                {
+                    "color": "#1994bf"
+                },
+                {
+                    "saturation": -69
+                },
+                {
+                    "gamma": 0.99
+                },
+                {
+                    "lightness": 43
+                }
+            ]
         }
-        return sosa === 2 ? 'paternal' : 'maternal';
-    }
-
-    getMapStyle() {
-        return [
-            {
-                "featureType": "all",
-                "elementType": "labels",
-                "stylers": [
-                    {
-                        "visibility": "off"
-                    },
-                    {
-                        "color": "#f49f53"
-                    }
-                ]
-            },
-            {
-                "featureType": "all",
-                "elementType": "labels.text",
-                "stylers": [
-                    {
-                        "visibility": "simplified"
-                    }
-                ]
-            },
-            {
-                "featureType": "landscape",
-                "elementType": "all",
-                "stylers": [
-                    {
-                        "color": "#f9ddc5"
-                    },
-                    {
-                        "lightness": -7
-                    }
-                ]
-            },
-            {
-                "featureType": "poi.business",
-                "elementType": "all",
-                "stylers": [
-                    {
-                        "color": "#645c20"
-                    },
-                    {
-                        "lightness": 38
-                    }
-                ]
-            },
-            {
-                "featureType": "poi.government",
-                "elementType": "all",
-                "stylers": [
-                    {
-                        "color": "#9e5916"
-                    },
-                    {
-                        "lightness": 46
-                    }
-                ]
-            },
-            {
-                "featureType": "poi.medical",
-                "elementType": "geometry.fill",
-                "stylers": [
-                    {
-                        "color": "#813033"
-                    },
-                    {
-                        "lightness": 38
-                    },
-                    {
-                        "visibility": "off"
-                    }
-                ]
-            },
-            {
-                "featureType": "poi.park",
-                "elementType": "all",
-                "stylers": [
-                    {
-                        "color": "#645c20"
-                    },
-                    {
-                        "lightness": 39
-                    }
-                ]
-            },
-            {
-                "featureType": "poi.school",
-                "elementType": "all",
-                "stylers": [
-                    {
-                        "color": "#a95521"
-                    },
-                    {
-                        "lightness": 35
-                    }
-                ]
-            },
-            {
-                "featureType": "poi.sports_complex",
-                "elementType": "all",
-                "stylers": [
-                    {
-                        "color": "#9e5916"
-                    },
-                    {
-                        "lightness": 32
-                    }
-                ]
-            },
-            {
-                "featureType": "road",
-                "elementType": "all",
-                "stylers": [
-                    {
-                        "color": "#813033"
-                    },
-                    {
-                        "lightness": 43
-                    }
-                ]
-            },
-            {
-                "featureType": "road.local",
-                "elementType": "geometry.fill",
-                "stylers": [
-                    {
-                        "color": "#f19f53"
-                    },
-                    {
-                        "weight": 1.3
-                    },
-                    {
-                        "visibility": "on"
-                    },
-                    {
-                        "lightness": 16
-                    }
-                ]
-            },
-            {
-                "featureType": "road.local",
-                "elementType": "geometry.stroke",
-                "stylers": [
-                    {
-                        "color": "#f19f53"
-                    },
-                    {
-                        "lightness": -10
-                    }
-                ]
-            },
-            {
-                "featureType": "transit",
-                "elementType": "all",
-                "stylers": [
-                    {
-                        "lightness": 38
-                    }
-                ]
-            },
-            {
-                "featureType": "transit.line",
-                "elementType": "all",
-                "stylers": [
-                    {
-                        "color": "#813033"
-                    },
-                    {
-                        "lightness": 22
-                    }
-                ]
-            },
-            {
-                "featureType": "transit.station",
-                "elementType": "all",
-                "stylers": [
-                    {
-                        "visibility": "off"
-                    }
-                ]
-            },
-            {
-                "featureType": "water",
-                "elementType": "all",
-                "stylers": [
-                    {
-                        "color": "#1994bf"
-                    },
-                    {
-                        "saturation": -69
-                    },
-                    {
-                        "gamma": 0.99
-                    },
-                    {
-                        "lightness": 43
-                    }
-                ]
-            }
-        ];
-    }
+    ];
+}
 }
 
 export const googleMapsStore = new GoogleMapsStore();
