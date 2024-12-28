@@ -125,121 +125,93 @@ class GoogleMapsStore {
         }
     }
 
-processHierarchy(hierarchy) {
-    if (!hierarchy) {
-        console.error('❌ Pas de hiérarchie disponible');
-        return;
-    }
-
-    // Réinitialiser les données
-    this.birthData = [];
-    this.statistics = {
-        total: 0,
-        withLocation: 0,
-        withoutLocation: 0,
-        generations: {},
-        categories: {
-            withCoordinates: 0,
-            noPlace: 0,
-            noCoordinates: 0,
-            emptyName: 0,
-            unknownParent: 0
-        }
-    };
-
-    const processNode = (node, depth = 0) => {
-        if (!node) {
-            console.warn(`⚠️ Nœud invalide au niveau ${depth}`);
+    processHierarchy(hierarchy) {
+        if (!hierarchy) {
+            console.error('❌ Pas de hiérarchie disponible');
             return;
         }
-
-        const indent = '  '.repeat(depth);
-
-        // Si on a des coordonnées de naissance
-        const demography = node.stats?.demography;
-        const birthInfo = demography?.birthInfo;
-
-        if (birthInfo?.place?.coordinates?.latitude) {
-            // Logs de débogage spécifiques pour Marie Alliaume
-            if (node.name === 'Marie' && node.surname === 'Alliaume') {
-                console.group('🔍 Débogage Sosa pour Marie Alliaume');
-                console.log('Valeur brute du Sosa:', node.sosa);
-                console.log('Type du Sosa:', typeof node.sosa);
-                console.log('Sosa après parseInt:', parseInt(node.sosa, 10));
-                console.log('Nœud complet:', node);
-                console.groupEnd();
+    
+        // Réinitialiser les données
+        this.birthData = [];
+        this.statistics = {
+            total: 0,
+            withLocation: 0,
+            withoutLocation: 0,
+            generations: {},
+            categories: {
+                withCoordinates: 0,
+                noPlace: 0,
+                noCoordinates: 0,
+                emptyName: 0,
+                unknownParent: 0
             }
-
-            this.birthData.push({
-                id: node.id,
-                name: `${node.name} ${node.surname}`,
-                birthYear: node.birthYear,
-                generation: node.generation || 0,
-                sosa: node.sosa || 1,
-                line: node.sosa % 2 === 0 ? 'paternal' : 'maternal',
-                location: {
-                    lat: birthInfo.place.coordinates.latitude,
-                    lng: birthInfo.place.coordinates.longitude,
-                    name: node.fanBirthPlace,
-                    departement: birthInfo.place.departement
+        };
+    
+        const processNode = (node, depth = 0) => {
+            if (!node) {
+                console.warn(`⚠️ Nœud invalide au niveau ${depth}`);
+                return;
+            }
+    
+            const indent = '  '.repeat(depth);
+            const demography = node.stats?.demography;
+            const birthInfo = demography?.birthInfo;
+    
+            this.statistics.total++;
+    
+            if (birthInfo?.place?.coordinates?.latitude) {
+                this.birthData.push({
+                    id: node.id,
+                    name: `${node.name} ${node.surname}`,
+                    birthYear: node.birthYear,
+                    generation: node.generation || 0,
+                    sosa: node.sosa || 1,
+                    location: {
+                        lat: birthInfo.place.coordinates.latitude,
+                        lng: birthInfo.place.coordinates.longitude,
+                        name: node.fanBirthPlace,
+                        departement: birthInfo.place.departement
+                    }
+                });
+    
+                this.statistics.withLocation++;
+                this.statistics.categories.withCoordinates++;
+    
+                // Mise à jour des statistiques par génération
+                const generation = node.generation || 0;
+                this.statistics.generations[generation] = (this.statistics.generations[generation] || 0) + 1;
+            } else {
+                if (!birthInfo?.place) {
+                    this.statistics.categories.noPlace++;
+                } else if (!birthInfo.place.coordinates) {
+                    this.statistics.categories.noCoordinates++;
                 }
-            });
-        } else {
-            console.warn(`${indent}⚠️ Pas de coordonnées pour:`, {
-                name: `${node.name} ${node.surname}`,
-                birthPlace: node.fanBirthPlace,
-                birthInfo: birthInfo
-            });
-        }
-
-        // Traiter récursivement les enfants
-        if (node.children && Array.isArray(node.children)) {
-            node.children.forEach(child => processNode(child, depth + 1));
-        }
-
-    };
-
-    // Traiter la hiérarchie
-    processNode(hierarchy);
-    this.statistics.withoutLocation = this.statistics.total - this.statistics.withLocation;
-
-    console.group('📊 Analyse des données généalogiques');
-
-    // Afficher les statistiques globales
-    console.table({
-        'Total des individus': this.statistics.total,
-        'Lieux identifiés': this.statistics.withLocation,
-        'Lieux manquants': this.statistics.withoutLocation,
-        'Couverture de géocodage': `${((this.statistics.withLocation / this.statistics.total) * 100).toFixed(1)}%`
-    });
-
-    // Afficher la répartition par catégorie
-    console.group('Répartition des données manquantes');
-    console.table({
-        'Lieux avec coordonnées': this.statistics.categories.withCoordinates,
-        'Lieux sans coordonnées': this.statistics.categories.noCoordinates,
-        'Sans lieu défini': this.statistics.categories.noPlace,
-        'Parents inconnus': this.statistics.categories.unknownParent,
-        'Noms vides': this.statistics.categories.emptyName
-    });
-    console.groupEnd();
-
-    // Afficher la répartition par génération
-    console.group('Répartition par génération');
-    console.table(
-        Object.entries(this.statistics.generations)
-            .sort(([a], [b]) => parseInt(a) - parseInt(b))
-            .reduce((acc, [gen, count]) => {
-                acc[`Génération ${gen}`] = count;
-                return acc;
-            }, {})
-    );
-    console.groupEnd();
-
-    console.groupEnd();
-
-    this.initializeAncestorsMap();
-}
+                console.warn(`${indent}⚠️ Pas de coordonnées pour:`, {
+                    name: `${node.name} ${node.surname}`,
+                    birthPlace: node.fanBirthPlace,
+                    birthInfo: birthInfo
+                });
+            }
+    
+            // Traiter récursivement les enfants
+            if (node.children && Array.isArray(node.children)) {
+                node.children.forEach(child => processNode(child, depth + 1));
+            }
+        };
+    
+        // Traiter la hiérarchie
+        processNode(hierarchy);
+        this.statistics.withoutLocation = this.statistics.total - this.statistics.withLocation;
+    
+        // Afficher les statistiques
+        this.displayProcessingLogs();
+        
+        // Mettre à jour et afficher les marqueurs
+        this.activateMapMarkers();
+        
+        // Centrer la carte sur les nouveaux marqueurs
+        this.centerMapOnMarkers();
+    }  
 
 // Gestion des marqueurs standard
 addMarker(key, town) {
@@ -282,6 +254,7 @@ createAncestorMarker(location, births, generations) {
         const marker = new google.maps.Marker({
             position: { lat, lng },
             map: this.map,
+            birthData: births, // Important : stocker les données de naissance
             icon: {
                 path: google.maps.SymbolPath.CIRCLE,
                 fillColor: this.#getBranchColor(births),
@@ -294,10 +267,6 @@ createAncestorMarker(location, births, generations) {
 
         marker.addListener('click', () => {
             if (!this.infoWindow) {
-                this.collectLog('warning', {
-                    message: 'InfoWindow non initialisée',
-                    details: 'Création d\'une nouvelle instance'
-                });
                 this.infoWindow = new google.maps.InfoWindow({
                     maxWidth: 400
                 });
@@ -305,7 +274,6 @@ createAncestorMarker(location, births, generations) {
             this.showAncestorInfoWindow(marker, location, births, generations);
         });
 
-        this.collectLog('success', { isMarker: true });
         return marker;
     } catch (error) {
         this.collectLog('error', {
@@ -355,85 +323,85 @@ generateInfoWindowContent(data) {
 }
 
 showAncestorInfoWindow(marker, location, births, generations) {
-    console.log('💡 Debug showAncestorInfoWindow:');
-    console.log('- Location:', location);
-    console.log('- Timeline active:', this.isTimelineActive);
-    console.log('- Current year:', this.currentYear);
-    console.log('- Total births:', births.length);
-    console.log('- Births details:', births.map(b => ({
-        name: b.name,
-        year: b.birthYear,
-        generation: b.generation,
-        included: !this.isTimelineActive || b.birthYear <= this.currentYear
-    })));
-    console.log('- Generations before filtering:', generations);
+    console.log('💡 Debug showAncestorInfoWindow:', {
+        location,
+        births,
+        generations,
+        timelineActive: this.isTimelineActive,
+        currentYear: this.currentYear
+    });
 
     const pieChartSvg = this.createPieChartSVG(generations, births.length);
 
+    const filteredBirths = births.filter(person => 
+        !this.isTimelineActive || person.birthYear <= this.currentYear
+    );
+
     const content = `
-            <div class="info-window">
-                <div class="flex flex-col space-y-4">
-                    <div class="text-center">
-                        <h3 class="text-lg font-semibold">${location.name}</h3>
-                        ${location.departement ? `<p class="text-sm text-gray-600">${location.departement}</p>` : ''}
-                        
-                        <!-- Affichage du nombre total de naissances -->
-                        <p class="mt-2 text-sm">
-                            <span class="font-medium">${births.length}</span> naissances dans ce lieu
-                        </p>
-                        ${this.#getBranchesIndicator(births)} 
-                    </div>
+        <div class="info-window">
+            <div class="flex flex-col space-y-4">
+                <div class="text-center">
+                    <h3 class="text-lg font-semibold">${location.name}</h3>
+                    ${location.departement ? 
+                        `<p class="text-sm text-gray-600">${location.departement}</p>` : ''}
+                    
+                    <p class="mt-2 text-sm">
+                        <span class="font-medium">${births.length}</span> naissances dans ce lieu
+                    </p>
+                    ${this.#getBranchesIndicator(births)} 
+                </div>
 
-                    <!-- Piechart et légende côte à côte -->
-                    <div class="flex gap-4 justify-center items-start">
-                        <!-- Colonne de gauche : Piechart -->
-                        <div class="w-32 h-32" style="min-width: 128px;">
-                            ${pieChartSvg}
-                        </div>
-                        
-                        <!-- Colonne de droite : Légende -->
-                        <div class="flex flex-col gap-2">
-                            ${Object.entries(generations)
-            .sort(([a], [b]) => parseInt(a) - parseInt(b))
-            .map(([gen, persons]) => {
-                const count = this.isTimelineActive ?
-                    persons.filter(p => p.birthYear <= this.currentYear).length :
-                    persons.length;
-                return `
-                                        <div class="flex items-center gap-2">
-                                            <div class="w-3 h-3" style="background-color: ${this.generationColors[gen]}"></div>
-                                            <span class="text-sm">
-                                                Gén. ${gen} 
-                                                <span class="font-medium">(${count})</span>
-                                            </span>
-                                        </div>`;
-            }).join('')}
-                        </div>
+                <!-- Piechart et légende côte à côte -->
+                <div class="flex gap-4 justify-center items-start">
+                    <div class="w-32 h-32" style="min-width: 128px;">
+                        ${pieChartSvg}
                     </div>
-
-                    <!-- Liste des personnes -->
-                    <div class="mt-4">
-                        <h4 class="font-medium mb-2">Personnes nées dans ce lieu :</h4>
-                        <div class="space-y-2 max-h-48 overflow-y-auto">
-                            ${births
-            .sort((a, b) => a.birthYear - b.birthYear)
-            .filter(person => !this.isTimelineActive || person.birthYear <= this.currentYear)
-            .map(person => `
-                                    <div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                                        <div class="w-2 h-full" style="background-color: ${this.generationColors[person.generation]}"></div>
-                                        <div class="flex-grow">
-                                            <div class="font-medium" 
-                                                style="color: ${this.#determineBranchFromSosa(person.sosa) === 'paternal' ? '#3b82f6' : '#ec4899'}">${person.name}</div>
-                                            <div class="text-sm text-gray-600">
-                                                ${person.birthYear} • Sosa ${person.sosa}
-                                            </div>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                        </div>
+                    
+                    <div class="flex flex-col gap-2">
+                        ${Object.entries(generations)
+                            .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                            .map(([gen, persons]) => {
+                                // Important : persons est un tableau
+                                const count = persons ? persons.length : 0;
+                                return `
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-3 h-3" style="background-color: ${this.generationColors[gen]}"></div>
+                                        <span class="text-sm">
+                                            Gén. ${gen} 
+                                            <span class="font-medium">(${count})</span>
+                                        </span>
+                                    </div>`;
+                            }).join('')}
                     </div>
                 </div>
-            </div>`;
+
+                <!-- Liste des personnes -->
+                <div class="mt-4">
+                    <h4 class="font-medium mb-2">Personnes nées dans ce lieu :</h4>
+                    <div class="space-y-2 max-h-48 overflow-y-auto">
+                        ${births
+                            .sort((a, b) => a.birthYear - b.birthYear)
+                            .map(person => `
+                                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                                    <div class="w-2 h-full" 
+                                         style="background-color: ${this.generationColors[person.generation]}">
+                                    </div>
+                                    <div class="flex-grow">
+                                        <div class="font-medium" 
+                                             style="color: ${this.#determineBranchFromSosa(person.sosa) === 'paternal' ? 
+                                                           '#3b82f6' : '#ec4899'}">
+                                            ${person.name}
+                                        </div>
+                                        <div class="text-sm text-gray-600">
+                                            ${person.birthYear} • Sosa ${person.sosa}
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                    </div>
+                </div>
+            </div>
+        </div>`;
 
     if (this.infoWindow) {
         this.infoWindow.setContent(content);
@@ -451,14 +419,10 @@ activateMapMarkers(individualTownKeys = null) {
         return;
     }
 
-    console.log('Mode timeline:', this.isTimelineActive);
-
     // Nettoyer les marqueurs existants d'abord
     this.clearCurrentMarkers();
 
     if (this.isTimelineActive) {
-        // console.log('🗺️ Processing birthData:', this.birthData);
-
         const locationGroups = new Map();
 
         // Grouper les données par localisation
@@ -480,16 +444,26 @@ activateMapMarkers(individualTownKeys = null) {
             const group = locationGroups.get(key);
             group.births.push(birth);
 
+            // S'assurer que le tableau pour cette génération existe
             if (!group.generations[birth.generation]) {
                 group.generations[birth.generation] = [];
             }
+            // Ajouter la naissance à sa génération
             group.generations[birth.generation].push(birth);
         });
 
-        console.log('📊 Location groups created:', locationGroups);
-
-        // Créer les marqueurs avec piecharts
+        // Créer les marqueurs
         locationGroups.forEach((data, key) => {
+            console.log('📍 Création marqueur pour', key, 'avec données:', {
+                location: data.location,
+                totalBirths: data.births.length,
+                generations: Object.entries(data.generations)
+                    .reduce((acc, [gen, births]) => ({
+                        ...acc,
+                        [gen]: births.length
+                    }), {})
+            });
+
             const marker = this.createAncestorMarker(
                 data.location,
                 data.births,
@@ -499,14 +473,11 @@ activateMapMarkers(individualTownKeys = null) {
                 this.activeMarkers[key] = marker;
             }
         });
-
-        console.log('📍 Active markers:', this.activeMarkers);
     }
 
-    // Mettre à jour le cluster avec uniquement les marqueurs valides
+    // Mettre à jour le cluster
     const validMarkers = Object.values(this.activeMarkers).filter(Boolean);
     if (this.markerCluster && validMarkers.length > 0) {
-        console.log('🔄 Updating marker cluster with', validMarkers.length, 'markers');
         this.markerCluster.clearMarkers();
         this.markerCluster.addMarkers(validMarkers);
     }
@@ -528,80 +499,6 @@ clearCurrentMarkers() {
     if (this.markerCluster) {
         this.markerCluster.clearMarkers();
     }
-}
-
-// Gestion des marqueurs ancestraux
-processHierarchy(hierarchy) {
-    if (!hierarchy) {
-        console.error('❌ Pas de hiérarchie disponible');
-        return;
-    }
-    // console.log('🔍 Début du traitement de la hiérarchie:', hierarchy);
-
-    // Réinitialiser les données
-    this.birthData = [];
-
-    const processNode = (node, depth = 0) => {
-        if (!node) {
-            console.warn(`⚠️ Nœud invalide au niveau ${depth}`);
-            return;
-        }
-
-        const indent = '  '.repeat(depth);
-        // console.log(`${indent}📍 Traitement du nœud:`, {
-        //     id: node.id,
-        //     name: node.name,
-        //     surname: node.surname,
-        //     birthInfo: node.stats?.demography?.birthInfo
-        // });
-
-        // Si on a des coordonnées de naissance
-        const demography = node.stats?.demography;
-        const birthInfo = demography?.birthInfo;
-
-        if (birthInfo) {
-            // console.log(`${indent}📌 Informations de naissance trouvées:`, birthInfo);
-        }
-
-        if (birthInfo?.place?.coordinates?.latitude) {
-            // console.log(`${indent}✅ Ajout du lieu de naissance:`, {
-            //     place: node.fanBirthPlace,
-            //     coordinates: birthInfo.place.coordinates,
-            //     departement: birthInfo.place.departement
-            // });
-
-            this.birthData.push({
-                id: node.id,
-                name: `${node.name} ${node.surname}`,
-                birthYear: node.birthYear,
-                generation: node.generation || 0,
-                sosa: node.sosa || 1,
-                location: {
-                    lat: birthInfo.place.coordinates.latitude,
-                    lng: birthInfo.place.coordinates.longitude,
-                    name: node.fanBirthPlace,
-                    departement: birthInfo.place.departement
-                }
-            });
-        } else {
-            console.warn(`${indent}⚠️ Pas de coordonnées pour:`, {
-                name: `${node.name} ${node.surname}`,
-                birthPlace: node.fanBirthPlace,
-                birthInfo: birthInfo
-            });
-        }
-
-        // Traiter récursivement les enfants
-        if (node.children && Array.isArray(node.children)) {
-            // console.log(`${indent}👨‍👩‍👧‍👦 Traitement de ${node.children.length} enfant(s)`);
-            node.children.forEach((child, index) => {
-                // console.log(`${indent}  🔄 Traitement enfant ${index + 1}/${node.children.length}`);
-                processNode(child, depth + 1);
-            });
-        }
-    };
-
-    processNode(hierarchy);
 }
 
 createPieChartSVG(generations, total) {

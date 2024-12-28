@@ -12,41 +12,65 @@ class GoogleMapManager {
 
         console.log('🔍 GoogleMapManager: Initialisation du constructor');
 
-        // Utiliser autorun au lieu de reaction
-        const disposer = autorun(() => {
-            const hierarchy = gedcomDataStore.getHierarchy();
-            console.log('🔄 Autorun déclenché, hiérarchie:', hierarchy ? 'présente' : 'null');
+        // Amélioration de l'autorun pour une meilleure réactivité
+        const hierarchyDisposer = autorun(() => {
+            try {
+                const hierarchy = gedcomDataStore.getHierarchy();
+                console.log('🔄 Autorun déclenché pour la hiérarchie:', 
+                    hierarchy ? 'présente' : 'absent');
 
-            if (hierarchy) {
-                console.log('✨ Structure de la hiérarchie:', {
-                    type: typeof hierarchy,
-                    keys: Object.keys(hierarchy),
-                    hasChildren: !!hierarchy.children,
-                    childrenCount: hierarchy.children?.length || 0
-                });
-
-                try {
-                    console.log('🎯 Tentative de traitement de la hiérarchie');
-                    googleMapsStore.processHierarchy(hierarchy);
-                    console.log('✅ Traitement terminé avec succès');
-                } catch (error) {
-                    console.error('❌ Erreur lors du traitement de la hiérarchie:', error);
+                // On vérifie que la carte est initialisée et qu'on a une hiérarchie
+                if (this.initialized && hierarchy) {
+                    console.log('✨ Mise à jour de la carte avec la nouvelle hiérarchie');
+                    this.updateMapWithHierarchy(hierarchy);
+                } else {
+                    console.log('⏳ En attente de l\'initialisation de la carte ou de la hiérarchie',
+                        {mapInitialized: this.initialized, hasHierarchy: !!hierarchy});
                 }
+            } catch (error) {
+                console.error('❌ Erreur lors du traitement de la hiérarchie:', error);
             }
         }, {
             name: 'HierarchyAutorun',
             onError: (error) => {
-                console.error('🚨 Erreur dans l\'autorun:', error);
+                console.error('🚨 Erreur critique dans l\'autorun:', error);
             }
         });
 
-        this.disposers.add(disposer);
+        this.disposers.add(hierarchyDisposer);
+    }
+
+    // Nouvelle méthode pour gérer la mise à jour de la carte
+    async updateMapWithHierarchy(hierarchy) {
+        try {
+            console.group('📍 Mise à jour de la carte');
+            
+            // Vérification que la carte est prête
+            if (!googleMapsStore.map) {
+                console.warn('⚠️ La carte n\'est pas encore prête');
+                console.groupEnd();
+                return;
+            }
+
+            // Traitement de la hiérarchie et mise à jour des marqueurs
+            console.log('🔄 Traitement de la hiérarchie...');
+            await googleMapsStore.processHierarchy(hierarchy);
+            
+            console.log('✅ Mise à jour terminée');
+            console.groupEnd();
+        } catch (error) {
+            console.error('❌ Erreur lors de la mise à jour de la carte:', error);
+            console.groupEnd();
+            throw error;
+        }
     }
 
     async initialize() {
         if (this.initialized) return;
 
         try {
+            console.group('🚀 Initialisation de Google Maps');
+            
             this.loader = new Loader({
                 apiKey: googleMapsStore.apiKey,
                 version: "weekly",
@@ -56,12 +80,21 @@ class GoogleMapManager {
             await this.loader.load();
             this.initialized = true;
 
+            // Initialiser la carte
             await this.initializeMap("familyMap");
             this.setupEventListeners();
 
-            console.log('Google Maps API loaded successfully');
+            // Vérifier si une hiérarchie existe déjà et la traiter
+            const currentHierarchy = gedcomDataStore.getHierarchy();
+            if (currentHierarchy) {
+                await this.updateMapWithHierarchy(currentHierarchy);
+            }
+
+            console.log('✅ Initialisation terminée avec succès');
+            console.groupEnd();
         } catch (error) {
-            console.error("Failed to initialize Google Maps:", error);
+            console.error("❌ Échec de l'initialisation:", error);
+            console.groupEnd();
             throw error;
         }
     }
