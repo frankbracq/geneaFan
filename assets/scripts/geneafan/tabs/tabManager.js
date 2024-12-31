@@ -11,8 +11,10 @@ export async function initializeTabs() {
         await FanChartManager.initialize();
 
         // Initialisation de la carte une fois l'onglet visible
+        // Initialisation de la carte une fois l'onglet visible
         initializeTabOnVisible('#tab2', () => {
-            console.log('Map tab is visible. Initializing Google Maps...');
+            console.log('🗺️ Map tab is now visible and ready for initialization');
+            console.log('⚙️ Starting Google Maps initialization process...');
             googleMapManager.initialize();
         });
 

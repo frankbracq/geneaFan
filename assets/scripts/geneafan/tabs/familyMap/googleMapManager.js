@@ -1,6 +1,6 @@
 import { Loader } from "@googlemaps/js-api-loader";
-import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { googleMapsStore } from './googleMapsStore.js';
+import { mapMarkerStore } from './mapMarkerStore.js';
 import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
 import { autorun } from 'mobx';
 
@@ -12,20 +12,22 @@ class GoogleMapManager {
 
         console.log('🔍 GoogleMapManager: Initialisation du constructor');
 
-        // Amélioration de l'autorun pour une meilleure réactivité
         const hierarchyDisposer = autorun(() => {
             try {
                 const hierarchy = gedcomDataStore.getHierarchy();
                 console.log('🔄 Autorun déclenché pour la hiérarchie:', 
                     hierarchy ? 'présente' : 'absent');
 
-                // On vérifie que la carte est initialisée et qu'on a une hiérarchie
-                if (this.initialized && hierarchy) {
+                if (this.initialized && hierarchy && googleMapsStore.map) {
                     console.log('✨ Mise à jour de la carte avec la nouvelle hiérarchie');
                     this.updateMapWithHierarchy(hierarchy);
                 } else {
-                    console.log('⏳ En attente de l\'initialisation de la carte ou de la hiérarchie',
-                        {mapInitialized: this.initialized, hasHierarchy: !!hierarchy});
+                    console.log('⏳ En attente de l\'initialisation complète',
+                        {
+                            managerInitialized: this.initialized,
+                            hasHierarchy: !!hierarchy,
+                            hasMap: !!googleMapsStore.map
+                        });
                 }
             } catch (error) {
                 console.error('❌ Erreur lors du traitement de la hiérarchie:', error);
@@ -40,19 +42,16 @@ class GoogleMapManager {
         this.disposers.add(hierarchyDisposer);
     }
 
-    // Nouvelle méthode pour gérer la mise à jour de la carte
     async updateMapWithHierarchy(hierarchy) {
         try {
             console.group('📍 Mise à jour de la carte');
             
-            // Vérification que la carte est prête
             if (!googleMapsStore.map) {
                 console.warn('⚠️ La carte n\'est pas encore prête');
                 console.groupEnd();
                 return;
             }
 
-            // Traitement de la hiérarchie et mise à jour des marqueurs
             console.log('🔄 Traitement de la hiérarchie...');
             await googleMapsStore.processHierarchy(hierarchy);
             
@@ -67,7 +66,7 @@ class GoogleMapManager {
 
     async initialize() {
         if (this.initialized) return;
-
+    
         try {
             console.group('🚀 Initialisation de Google Maps');
             
@@ -76,20 +75,28 @@ class GoogleMapManager {
                 version: "weekly",
                 libraries: []
             });
-
+    
             await this.loader.load();
+            
+            // Initialiser la carte et attendre qu'elle soit prête
+            const map = await this.initializeMap("familyMap");
+            
+            // Attendre que la carte soit complètement chargée
+            await new Promise(resolve => {
+                google.maps.event.addListenerOnce(map, 'idle', resolve);
+            });
+            
             this.initialized = true;
-
-            // Initialiser la carte
-            await this.initializeMap("familyMap");
             this.setupEventListeners();
-
-            // Vérifier si une hiérarchie existe déjà et la traiter
+    
+            console.log('📋 Initialisation de la liste des lieux...');
+            googleMapsStore.initializePlacesList();
+    
             const currentHierarchy = gedcomDataStore.getHierarchy();
             if (currentHierarchy) {
                 await this.updateMapWithHierarchy(currentHierarchy);
             }
-
+    
             console.log('✅ Initialisation terminée avec succès');
             console.groupEnd();
         } catch (error) {
@@ -100,8 +107,8 @@ class GoogleMapManager {
     }
 
     async initializeMap(containerId, options = {}) {
-        if (!this.initialized) {
-            console.error("Google Maps not initialized. Call initialize() first");
+        if (!this.loader) {
+            console.error("Google Maps loader not initialized");
             return;
         }
 
@@ -127,15 +134,17 @@ class GoogleMapManager {
         };
 
         const mapOptions = { ...defaultOptions, ...options };
-        googleMapsStore.map = new google.maps.Map(container, mapOptions);
-        googleMapsStore.markerCluster = new MarkerClusterer({ map: googleMapsStore.map });
-        googleMapsStore.initializeAncestorsMap();
+        const map = new google.maps.Map(container, mapOptions);
+        
+        // Initialiser le store avec la nouvelle instance de carte
+        googleMapsStore.map = map;
+        mapMarkerStore.initialize(map);
+        googleMapsStore.initializeMap();
 
-        return googleMapsStore.map;
+        return map;
     }
 
     setupEventListeners() {
-        // Gestion de la carte individuelle uniquement
         const offcanvasElement = document.getElementById("individualMap");
         if (offcanvasElement) {
             offcanvasElement.addEventListener("shown.bs.offcanvas", () => {
@@ -144,13 +153,17 @@ class GoogleMapManager {
             });
         }
 
-        // Gérer la réinitialisation de la carte lors du changement d'onglet
         const tabElement = document.querySelector('a[href="#tab2"]');
         if (tabElement) {
             tabElement.addEventListener('shown.bs.tab', () => {
+                console.log('🔄 Tab change detected - Map tab is now active');
                 if (googleMapsStore.map) {
+                    console.log('🗺️ Triggering map resize and recentering');
                     google.maps.event.trigger(googleMapsStore.map, 'resize');
                     googleMapsStore.centerMapOnMarkers();
+                    console.log('✅ Map display refreshed and centered');
+                } else {
+                    console.warn('⚠️ Map instance not found during tab activation');
                 }
             });
         }
