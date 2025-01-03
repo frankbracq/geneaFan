@@ -4,3 +4,5 @@ module.exports = {
     ],
     plugins: ['lodash'] // Add the lodash plugin here
   };
+
+  

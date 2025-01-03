@@ -1,389 +1,398 @@
+import { makeObservable, observable, action, autorun, toJS  } from 'mobx';
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { markerLogger } from './markerLogger.js';
-import { infoWindowManager } from './infoWindowManager.js'; 
+import { infoWindowManager } from './infoWindowManager.js';
 
 class MapMarkerStore {
-    #positionCache = new Map();
-    #worker = null;
+   #positionCache = new Map();
+   #worker = null;
 
-    constructor() {
-        // Structures de données principales
-        this.activeMarkers = new Map();
-        this.markerCluster = null;
-        this.map = null;
-        this.iconCache = new Map();
-        this.visibleMarkers = new Set();
-        this.birthData = [];
+   constructor() {
+       // Structures principales
+       this.activeMarkers = new Map();
+       this.markerCluster = null;
+       this.map = null;
+       this.iconCache = new Map();
+       this.visibleMarkers = new Set();
+       this.birthData = [];
 
-        // Configuration
-        this.MARKER_CLEANUP_INTERVAL = 60000;
-        this.MARKER_BATCH_SIZE = 50;
-        this.BOUNDS_UPDATE_DELAY = 150;
-        this.UPDATE_THROTTLE_DELAY = 100;
-        this.updateThrottleTimeout = null;
+       // Configuration
+       this.MARKER_CLEANUP_INTERVAL = 60000;
+       this.MARKER_BATCH_SIZE = 50;
+       this.BOUNDS_UPDATE_DELAY = 150;
+       this.UPDATE_THROTTLE_DELAY = 100;
+       this.updateThrottleTimeout = null;
 
-        this.#initWorker();
-    }
-
-    #initWorker() {
-        const workerCode = `
-            self.onmessage = function(e) {
-                const { birthData, bounds } = e.data;
-                const visibleData = birthData.filter(birth => {
-                    const pos = { lat: birth.location.lat, lng: birth.location.lng };
-                    return bounds.south <= pos.lat && pos.lat <= bounds.north &&
-                           bounds.west <= pos.lng && pos.lng <= bounds.east;
-                });
-                self.postMessage(visibleData);
-            };
-        `;
-
-        const blob = new Blob([workerCode], { type: 'application/javascript' });
-        this.#worker = new Worker(URL.createObjectURL(blob));
+       makeObservable(this, {
+        activeMarkers: observable,
+        visibleMarkers: observable,
+        birthData: observable,
+        map: observable.ref,
+        markerCluster: observable.ref,
+        iconCache: observable,
         
-        this.#worker.onmessage = (e) => {
-            this.processBirthDataBatch(e.data, 0);
-        };
-    }
+        initialize: action,
+        updateMarkers: action,
+        clearMarkers: action,
+        processBirthDataBatch: action,
+        createMarker: action,
+        loadVisibleMarkers: action,
+        updateCluster: action,
+        cleanupInvisibleMarkers: action,
+    });
 
-    initialize(map) {
-        const startTime = performance.now();
-        try {
-            this.map = map;
-            this.initializeCluster();
-            this.setupMapListeners();
-            this.startMarkerCleanup();
+       this.#initWorker();
 
-            markerLogger.logPerformance('initialization', {
-                duration: performance.now() - startTime,
-                status: 'success'
-            });
-        } catch (error) {
-            markerLogger.logMarkerError(error, { context: 'initialization' });
-        }
-    }
+       autorun(() => {
+           if (this.markerCluster && this.activeMarkers.size) {
+               this.updateCluster();
+           }
+       });
+   }
 
-    initializeCluster() {
-        this.markerCluster = new MarkerClusterer({
-            map: this.map,
-            renderer: {
-                render: this.renderCluster.bind(this)
-            }
-        });
-    }
+   #initWorker() {
+       const workerCode = `
+           self.onmessage = function(e) {
+               const { birthData, bounds } = e.data;
+               const visibleData = birthData.filter(birth => {
+                   const pos = { lat: birth.location.lat, lng: birth.location.lng };
+                   return bounds.south <= pos.lat && pos.lat <= bounds.north &&
+                          bounds.west <= pos.lng && pos.lng <= bounds.east;
+               });
+               self.postMessage(visibleData);
+           };
+       `;
 
-    setupMapListeners() {
-        if (!this.map) return;
+       const blob = new Blob([workerCode], { type: 'application/javascript' });
+       this.#worker = new Worker(URL.createObjectURL(blob));
+       
+       this.#worker.onmessage = (e) => {
+           this.processBirthDataBatch(e.data, 0);
+       };
+   }
 
-        let boundsChangedTimeout;
-        this.map.addListener('bounds_changed', () => {
-            clearTimeout(boundsChangedTimeout);
-            boundsChangedTimeout = setTimeout(() => this.loadVisibleMarkers(), this.BOUNDS_UPDATE_DELAY);
-        });
-    }
+   initialize(map) {
+       const startTime = performance.now();
+       try {
+           this.map = map;
+           this.initializeCluster();
+           this.setupMapListeners();
+           this.startMarkerCleanup();
 
-    startMarkerCleanup() {
-        setInterval(() => this.cleanupInvisibleMarkers(), this.MARKER_CLEANUP_INTERVAL);
-    }
+           markerLogger.logPerformance('initialization', {
+               duration: performance.now() - startTime,
+               status: 'success'
+           });
+       } catch (error) {
+           markerLogger.logMarkerError(error, { context: 'initialization' });
+       }
+   }
 
-    loadVisibleMarkers() {
-        if (!this.map || !this.birthData.length) return;
+   initializeCluster() {
+       this.markerCluster = new MarkerClusterer({
+           map: this.map,
+           renderer: {
+               render: this.renderCluster.bind(this)
+           }
+       });
+   }
 
-        const bounds = this.map.getBounds();
-        if (!bounds) return;
+   setupMapListeners() {
+       if (!this.map) return;
 
-        this.#worker.postMessage({
-            birthData: this.birthData,
-            bounds: bounds.toJSON()
-        });
-    }
+       let boundsChangedTimeout;
+       this.map.addListener('bounds_changed', () => {
+           clearTimeout(boundsChangedTimeout);
+           boundsChangedTimeout = setTimeout(() => this.loadVisibleMarkers(), this.BOUNDS_UPDATE_DELAY);
+       });
+   }
 
-    processBirthDataBatch(data, startIndex) {
-        const endIndex = Math.min(startIndex + this.MARKER_BATCH_SIZE, data.length);
-        const batch = data.slice(startIndex, endIndex);
-        const batchStartTime = performance.now();
-    
-        const locationMap = this.#groupBirthDataByLocation(batch);
-    
-        locationMap.forEach((locationData, key) => {
-            if (!this.activeMarkers.has(key)) {
-                const marker = this.createMarker(
-                    locationData.location,
-                    locationData.births,
-                    locationData.generations
-                );
-                if (marker) {
-                    this.activeMarkers.set(key, marker);
-                }
-            }
-            this.visibleMarkers.add(key);
-        });
-    
-        markerLogger.logPerformance('processBatch', {
-            duration: performance.now() - batchStartTime,
-            batchSize: batch.length,
-            uniqueLocations: locationMap.size,
-            startIndex,
-            endIndex
-        });
-    
-        if (endIndex < data.length) {
-            requestAnimationFrame(() => {
-                this.processBirthDataBatch(data, endIndex);
-            });
-        } else {
-            this.updateCluster();
-        }
-    }
+   startMarkerCleanup() {
+       setInterval(() => this.cleanupInvisibleMarkers(), this.MARKER_CLEANUP_INTERVAL);
+   }
 
-    cleanupInvisibleMarkers() {
-        const startTime = performance.now();
-        const initialCount = this.activeMarkers.size;
-        
-        const bounds = this.map?.getBounds();
-        if (!bounds) return;
+   loadVisibleMarkers() {
+    if (!this.map || !this.birthData.length) return;
 
-        this.activeMarkers.forEach((marker, key) => {
-            const position = marker.getPosition();
-            if (!bounds.contains(position) && !this.visibleMarkers.has(key)) {
-                marker.setMap(null);
-                this.activeMarkers.delete(key);
-            }
-        });
+    const bounds = this.map.getBounds();
+    if (!bounds) return;
 
-        markerLogger.logPerformance('cleanup', {
-            duration: performance.now() - startTime,
-            removedMarkers: initialCount - this.activeMarkers.size,
-            remainingMarkers: this.activeMarkers.size
-        });
-    }
+    this.#worker.postMessage({
+        birthData: toJS(this.birthData),
+        bounds: bounds.toJSON()
+    });
+}
+   processBirthDataBatch(data, startIndex) {
+       const endIndex = Math.min(startIndex + this.MARKER_BATCH_SIZE, data.length);
+       const batch = data.slice(startIndex, endIndex);
+       const batchStartTime = performance.now();
+   
+       const locationMap = this.#groupBirthDataByLocation(batch);
+   
+       locationMap.forEach((locationData, key) => {
+           if (!this.activeMarkers.has(key)) {
+               const marker = this.createMarker(
+                   locationData.location,
+                   locationData.births,
+                   locationData.generations
+               );
+               if (marker) {
+                   this.activeMarkers.set(key, marker);
+               }
+           }
+           this.visibleMarkers.add(key);
+       });
+   
+       markerLogger.logPerformance('processBatch', {
+           duration: performance.now() - batchStartTime,
+           batchSize: batch.length,
+           uniqueLocations: locationMap.size,
+           startIndex,
+           endIndex
+       });
+   
+       if (endIndex < data.length) {
+           requestAnimationFrame(() => {
+               this.processBirthDataBatch(data, endIndex);
+           });
+       }
+   }
 
-    getMarkerPosition(lat, lng) {
-        const key = `${lat}-${lng}`;
-        if (!this.#positionCache.has(key)) {
-            this.#positionCache.set(key, new google.maps.LatLng(lat, lng));
-        }
-        return this.#positionCache.get(key);
-    }
+   cleanupInvisibleMarkers() {
+       const startTime = performance.now();
+       const initialCount = this.activeMarkers.size;
+       
+       const bounds = this.map?.getBounds();
+       if (!bounds) return;
 
-    createMarker(location, births, generations) {
-        const startTime = performance.now();
-        const lat = parseFloat(location.lat);
-        const lng = parseFloat(location.lng);
-    
-        if (isNaN(lat) || isNaN(lng)) {
-            markerLogger.logMarkerError(new Error('Coordonnées invalides'), { location });
-            return null;
-        }
+       this.activeMarkers.forEach((marker, key) => {
+           const position = marker.getPosition();
+           if (!bounds.contains(position) && !this.visibleMarkers.has(key)) {
+               marker.setMap(null);
+               this.activeMarkers.delete(key);
+           }
+       });
 
-        try {
-            const scale = births.length === 1 ? 8 : Math.min(8 + (births.length * 0.5), 12);
-            const color = infoWindowManager.getBranchColor(births);
-            const position = this.getMarkerPosition(lat, lng);
-            
-            const marker = new google.maps.Marker({
-                position,
-                map: this.map,
-                birthData: births,
-                icon: this.getCachedIcon(color, scale)
-            });
+       markerLogger.logPerformance('cleanup', {
+           duration: performance.now() - startTime,
+           removedMarkers: initialCount - this.activeMarkers.size,
+           remainingMarkers: this.activeMarkers.size
+       });
+   }
 
-            marker.addListener('click', () => {
-                infoWindowManager.initialize(); 
-                infoWindowManager.showInfoWindow(marker, location, births, generations);
-            });
+   getMarkerPosition(lat, lng) {
+       const key = `${lat}-${lng}`;
+       if (!this.#positionCache.has(key)) {
+           this.#positionCache.set(key, new google.maps.LatLng(lat, lng));
+       }
+       return this.#positionCache.get(key);
+   }
 
-            markerLogger.logMarkerCreation({ location, births, generations }, 
-                performance.now() - startTime);
+   createMarker(location, births, generations) {
+       const startTime = performance.now();
+       const lat = parseFloat(location.lat);
+       const lng = parseFloat(location.lng);
+   
+       if (isNaN(lat) || isNaN(lng)) {
+           markerLogger.logMarkerError(new Error('Coordonnées invalides'), { location });
+           return null;
+       }
 
-            return marker;
-        } catch (error) {
-            markerLogger.logMarkerError(error, { location, births });
-            return null;
-        }
-    }
+       try {
+           const scale = births.length === 1 ? 8 : Math.min(8 + (births.length * 0.5), 12);
+           const color = infoWindowManager.getBranchColor(births);
+           const position = this.getMarkerPosition(lat, lng);
+           
+           const marker = new google.maps.Marker({
+               position,
+               map: this.map,
+               birthData: births,
+               icon: this.getCachedIcon(color, scale)
+           });
 
-    updateMarkers(birthData, isTimelineActive = true, currentYear = null) {
-        if (this.updateThrottleTimeout) {
-            clearTimeout(this.updateThrottleTimeout);
-        }
+           marker.addListener('click', () => {
+               infoWindowManager.initialize(); 
+               infoWindowManager.showInfoWindow(marker, location, births, generations);
+           });
 
-        this.updateThrottleTimeout = setTimeout(() => {
-            this.#performUpdate(birthData, isTimelineActive, currentYear);
-        }, this.UPDATE_THROTTLE_DELAY);
-    }
+           markerLogger.logMarkerCreation({ location, births, generations }, 
+               performance.now() - startTime);
 
-    #performUpdate(birthData, isTimelineActive, currentYear) {
-        const startTime = performance.now();
-        
-        this.birthData = birthData;
-        this.clearMarkers();
-        this.visibleMarkers.clear();
-        
-        requestAnimationFrame(() => {
-            this.loadVisibleMarkers();
-        });
+           return marker;
+       } catch (error) {
+           markerLogger.logMarkerError(error, { location, births });
+           return null;
+       }
+   }
 
-        markerLogger.logPerformance('updateMarkers', {
-            duration: performance.now() - startTime,
-            dataSize: birthData.length,
-            timelineActive: isTimelineActive,
-            year: currentYear
-        });
-    }
+   updateMarkers(birthData, isTimelineActive = true, currentYear = null) {
+       if (this.updateThrottleTimeout) {
+           clearTimeout(this.updateThrottleTimeout);
+       }
 
-    clearMarkers() {
-        const startTime = performance.now();
-        const count = this.activeMarkers.size;
+       this.updateThrottleTimeout = setTimeout(() => {
+           this.#performUpdate(birthData, isTimelineActive, currentYear);
+       }, this.UPDATE_THROTTLE_DELAY);
+   }
 
-        this.activeMarkers.forEach(marker => marker.setMap(null));
-        this.activeMarkers.clear();
-        
-        if (this.markerCluster) {
-            this.markerCluster.clearMarkers();
-        }
+   #performUpdate(birthData, isTimelineActive, currentYear) {
+       const startTime = performance.now();
+       
+       this.birthData = birthData;
+       this.clearMarkers();
+       this.visibleMarkers.clear();
+       
+       requestAnimationFrame(() => {
+           this.loadVisibleMarkers();
+       });
 
-        markerLogger.logPerformance('clearMarkers', {
-            duration: performance.now() - startTime,
-            clearedCount: count
-        });
-    }
+       markerLogger.logPerformance('updateMarkers', {
+           duration: performance.now() - startTime,
+           dataSize: birthData.length,
+           timelineActive: isTimelineActive,
+           year: currentYear
+       });
+   }
 
-    updateCluster() {
-        const startTime = performance.now();
-        const markers = Array.from(this.activeMarkers.values()).filter(Boolean);
-        
-        if (this.markerCluster) {
-            this.markerCluster.clearMarkers();
-            this.markerCluster.addMarkers(markers);
-        }
+   clearMarkers() {
+       const startTime = performance.now();
+       const count = this.activeMarkers.size;
 
-        markerLogger.logPerformance('updateCluster', {
-            duration: performance.now() - startTime,
-            markerCount: markers.length
-        });
-    }
+       this.activeMarkers.forEach(marker => marker.setMap(null));
+       this.activeMarkers.clear();
+       
+       if (this.markerCluster) {
+           this.markerCluster.clearMarkers();
+       }
 
-    // Méthodes utilitaires
-    getMarkerKey(location) {
-        return `${location.lat}-${location.lng}-${location.name}`;
-    }
+       markerLogger.logPerformance('clearMarkers', {
+           duration: performance.now() - startTime,
+           clearedCount: count
+       });
+   }
 
-    getCachedIcon(color, scale) {
-        const key = `${color}-${scale}`;
-        if (!this.iconCache.has(key)) {
-            this.iconCache.set(key, {
-                path: google.maps.SymbolPath.CIRCLE,
-                fillColor: color,
-                fillOpacity: 1,
-                strokeWeight: 1,
-                strokeColor: '#1e40af',
-                scale: scale
-            });
-        }
-        return this.iconCache.get(key);
-    }
+   updateCluster() {
+       const startTime = performance.now();
+       const markers = Array.from(this.activeMarkers.values()).filter(Boolean);
+       
+       if (this.markerCluster) {
+           this.markerCluster.clearMarkers();
+           this.markerCluster.addMarkers(markers);
+       }
 
-    renderCluster({ count, position, markers }) {
-        const paternalCount = markers.filter(m => 
-            infoWindowManager.determineBranchFromSosa(m.birthData?.[0]?.sosa) === 'paternal'
-        ).length;
-        
-        const color = paternalCount === markers.length ? infoWindowManager.styles.colors.paternal : 
-                     paternalCount === 0 ? infoWindowManager.styles.colors.maternal : 
-                     infoWindowManager.styles.colors.mixed;
+       markerLogger.logPerformance('updateCluster', {
+           duration: performance.now() - startTime,
+           markerCount: markers.length
+       });
+   }
 
-        return new google.maps.Marker({
-            position,
-            icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                fillColor: color,
-                fillOpacity: 0.9,
-                strokeWeight: 1,
-                strokeColor: color,
-                scale: Math.min(count * 3, 20)
-            },
-            label: {
-                text: String(count),
-                color: 'white',
-                fontSize: '12px'
-            },
-            zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
-        });
-    }
+   getCachedIcon(color, scale) {
+       const key = `${color}-${scale}`;
+       if (!this.iconCache.has(key)) {
+           this.iconCache.set(key, {
+               path: google.maps.SymbolPath.CIRCLE,
+               fillColor: color,
+               fillOpacity: 1,
+               strokeWeight: 1,
+               strokeColor: '#1e40af',
+               scale: scale
+           });
+       }
+       return this.iconCache.get(key);
+   }
 
-    getBounds() {
-        if (this.activeMarkers.size === 0) return null;
+   renderCluster({ count, position, markers }) {
+       const paternalCount = markers.filter(m => 
+           infoWindowManager.determineBranchFromSosa(m.birthData?.[0]?.sosa) === 'paternal'
+       ).length;
+       
+       const color = paternalCount === markers.length ? infoWindowManager.styles.colors.paternal : 
+                    paternalCount === 0 ? infoWindowManager.styles.colors.maternal : 
+                    infoWindowManager.styles.colors.mixed;
 
-        const bounds = new google.maps.LatLngBounds();
-        this.activeMarkers.forEach(marker => {
-            if (marker) {
-                bounds.extend(marker.getPosition());
-            }
-        });
-        return bounds;
-    }
+       return new google.maps.Marker({
+           position,
+           icon: {
+               path: google.maps.SymbolPath.CIRCLE,
+               fillColor: color,
+               fillOpacity: 0.9,
+               strokeWeight: 1,
+               strokeColor: color,
+               scale: Math.min(count * 3, 20)
+           },
+           label: {
+               text: String(count),
+               color: 'white',
+               fontSize: '12px'
+           },
+           zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count,
+       });
+   }
 
-    hasActiveMarkers() {
-        return this.activeMarkers.size > 0;
-    }
+   getBounds() {
+       if (this.activeMarkers.size === 0) return null;
 
-    #groupBirthDataByLocation(data) {
-        const groups = new Map();
-        
-        data.forEach(birth => {
-            if (!birth.location?.lat || !birth.location?.lng || !birth.location?.name) {
-                console.warn(`Données de localisation invalides pour ${birth.name}`);
-                return;
-            }
-            
-            const key = `${birth.location.lat}-${birth.location.lng}-${birth.location.name}`;
-            
-            if (!groups.has(key)) {
-                groups.set(key, {
-                    location: birth.location,
-                    births: [],
-                    generations: {}
-                });
-            }
-            
-            const group = groups.get(key);
-            group.births.push(birth);
-            
-            if (!group.generations[birth.generation]) {
-                group.generations[birth.generation] = [];
-            }
-            group.generations[birth.generation].push(birth);
-        });
-        
-        return groups;
-    }
+       const bounds = new google.maps.LatLngBounds();
+       this.activeMarkers.forEach(marker => {
+           if (marker) {
+               bounds.extend(marker.getPosition());
+           }
+       });
+       return bounds;
+   }
 
-    cleanup() {
-        this.clearMarkers();
-        this.#positionCache.clear();
-        if (this.#worker) {
-            this.#worker.terminate();
-            this.#worker = null;
-        }
-        clearTimeout(this.updateThrottleTimeout);
-        this.updateThrottleTimeout = null;
-    }
+   hasActiveMarkers() {
+       return this.activeMarkers.size > 0;
+   }
 
-    // Debug methods
-    getDebugInfo() {
-        return {
-            activeMarkersCount: this.activeMarkers.size,
-            visibleMarkersCount: this.visibleMarkers.size,
-            iconCacheSize: this.iconCache.size,
-            positionCacheSize: this.#positionCache.size,
-            birthDataCount: this.birthData.length,
-            hasMap: !!this.map,
-            hasClusterer: !!this.markerCluster,
-            hasWorker: !!this.#worker,
-            memoryUsage: markerLogger.getMemoryUsage()
-        };
-    }
+   #groupBirthDataByLocation(data) {
+       return new Map(
+           data.reduce((acc, birth) => {
+               if (!birth.location?.lat || !birth.location?.lng || !birth.location?.name) {
+                   console.warn(`Données de localisation invalides pour ${birth.name}`);
+                   return acc;
+               }
+               
+               const key = `${birth.location.lat}-${birth.location.lng}-${birth.location.name}`;
+               const existing = acc.get(key) || {
+                   location: birth.location,
+                   births: [],
+                   generations: {}
+               };
+               
+               existing.births.push(birth);
+               existing.generations[birth.generation] = 
+                   [...(existing.generations[birth.generation] || []), birth];
+               
+               return acc.set(key, existing);
+           }, new Map())
+       );
+   }
+
+   cleanup() {
+       this.clearMarkers();
+       this.#positionCache.clear();
+       if (this.#worker) {
+           this.#worker.terminate();
+           this.#worker = null;
+       }
+       clearTimeout(this.updateThrottleTimeout);
+       this.updateThrottleTimeout = null;
+   }
+
+   getDebugInfo() {
+       return {
+           activeMarkersCount: this.activeMarkers.size,
+           visibleMarkersCount: this.visibleMarkers.size,
+           iconCacheSize: this.iconCache.size,
+           positionCacheSize: this.#positionCache.size,
+           birthDataCount: this.birthData.length,
+           hasMap: !!this.map,
+           hasClusterer: !!this.markerCluster,
+           hasWorker: !!this.#worker,
+           memoryUsage: markerLogger.getMemoryUsage()
+       };
+   }
 }
 
-export const mapMarkerStore = new MapMarkerStore()
+export const mapMarkerStore = new MapMarkerStore();

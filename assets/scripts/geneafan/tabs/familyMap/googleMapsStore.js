@@ -1,9 +1,11 @@
+import { makeObservable, observable, action } from '../../common/stores/mobx-config.js';
 import { Offcanvas } from "bootstrap";
 import { mapStatisticsStore } from './mapStatisticsStore.js';
 import { mapMarkerStore } from './mapMarkerStore.js';
 
 class GoogleMapsStore {
     constructor() {
+
         this.map = null;
         this.currentYear = null;
         this.birthData = [];
@@ -33,6 +35,17 @@ class GoogleMapsStore {
             8: '#dbeafe', // blue-100
             9: '#eff6ff'  // blue-50
         };
+
+        makeObservable(this, {
+            map: observable,
+            currentYear: observable,
+            birthData: observable,
+            isTimelineActive: observable,
+            
+            processHierarchy: action,
+            clearMap: action,
+            activateMapMarkers: action
+        });
     }
 
     async initMap(elementId, options = {}) {
