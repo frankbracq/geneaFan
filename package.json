@@ -67,6 +67,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.24.4",
+    "@babel/plugin-proposal-decorators": "^7.25.9",
     "@babel/preset-env": "^7.24.4",
     "@zainulbr/i18n-webpack-plugin": "^2.0.3",
     "assert": "^2.1.0",

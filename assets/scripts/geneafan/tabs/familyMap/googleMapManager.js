@@ -73,7 +73,7 @@ class GoogleMapManager {
             this.loader = new Loader({
                 apiKey: googleMapsStore.apiKey,
                 version: "weekly",
-                libraries: []
+                libraries: ['marker']
             });
     
             await this.loader.load();
@@ -121,7 +121,7 @@ class GoogleMapManager {
         const defaultOptions = {
             zoom: 6.2,
             center: { lat: 46.2276, lng: 2.2137 },
-            styles: googleMapsStore.getMapStyle(),
+            mapId: 'e998be704b1911eb',
             streetViewControl: false,
             zoomControl: true,
             zoomControlOptions: {

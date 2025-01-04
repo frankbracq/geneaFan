@@ -617,3 +617,26 @@ svg.tommy .node.female>rect {
     }
   }
 }
+
+// Google Maps
+.custom-marker {
+  cursor: pointer;
+  opacity: 0.9;
+  transition: transform 0.2s ease;
+}
+
+.custom-marker:hover {
+  transform: scale(1.1);
+  opacity: 1;
+}
+
+.cluster-marker {
+  cursor: pointer;
+  opacity: 0.9;
+  transition: transform 0.2s ease;
+}
+
+.cluster-marker:hover {
+  transform: scale(1.1);
+  opacity: 1;
+}
