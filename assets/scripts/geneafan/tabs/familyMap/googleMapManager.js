@@ -111,14 +111,15 @@ class GoogleMapManager {
             console.error("Google Maps loader not initialized");
             return;
         }
-
+    
         const container = document.getElementById(containerId);
         if (!container) {
             console.error(`Container ${containerId} not found`);
             return;
         }
-
-        const defaultOptions = {
+    
+        // On délègue complètement l'initialisation au store
+        const map = await googleMapsStore.initMap(containerId, {
             zoom: 6.2,
             center: { lat: 46.2276, lng: 2.2137 },
             mapId: 'e998be704b1911eb',
@@ -130,17 +131,13 @@ class GoogleMapManager {
             fullscreenControl: true,
             fullscreenControlOptions: {
                 position: google.maps.ControlPosition.TOP_CENTER,
-            }
-        };
-
-        const mapOptions = { ...defaultOptions, ...options };
-        const map = new google.maps.Map(container, mapOptions);
-        
-        // Initialiser le store avec la nouvelle instance de carte
-        googleMapsStore.map = map;
+            },
+            ...options
+        });
+    
+        // On initialise seulement le markerStore ici
         mapMarkerStore.initialize(map);
-        googleMapsStore.initializeMap();
-
+    
         return map;
     }
 

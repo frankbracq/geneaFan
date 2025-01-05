@@ -3,47 +3,78 @@ import { googleMapManager } from './familyMap/googleMapManager.js';
 import { FanChartManager } from './fanChart/fanChartManager.js';
 import { statisticsManager } from './statistics/statisticsManager.js';
 
+function initializeTabOnVisible(tabSelector, initCallback) {
+    console.group(`📑 Configuration de l'initialisation pour ${tabSelector}`);
+    
+    const tab = document.querySelector(tabSelector);
+    if (!tab) {
+        console.warn(`⚠️ Onglet ${tabSelector} non trouvé`);
+        console.groupEnd();
+        return;
+    }
+
+    console.log(`✓ Onglet ${tabSelector} trouvé, configuration de l'observer...`);
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                console.log(`📍 Onglet ${tabSelector} visible, démarrage de l'initialisation`);
+                try {
+                    initCallback();
+                } catch (error) {
+                    console.error(`❌ Erreur lors de l'initialisation de ${tabSelector}:`, error);
+                }
+                observer.disconnect();
+                console.log(`✅ Observer déconnecté pour ${tabSelector}`);
+            }
+        });
+    });
+
+    observer.observe(tab);
+    console.log(`✓ Observer configuré pour ${tabSelector}`);
+    console.groupEnd();
+}
+
 export async function initializeTabs() {
-    console.log('Tab initialization started');
+    console.group('🚀 Initialisation des onglets');
 
     try {
         // Initialisation de l'onglet Éventail
+        console.log('📊 Initialisation de l\'éventail...');
         await FanChartManager.initialize();
 
-        // Initialisation de la carte une fois l'onglet visible
-        // Initialisation de la carte une fois l'onglet visible
+        // Initialisation de la carte
         initializeTabOnVisible('#tab2', () => {
-            console.log('🗺️ Map tab is now visible and ready for initialization');
-            console.log('⚙️ Starting Google Maps initialization process...');
-            googleMapManager.initialize();
+            console.group('🗺️ Initialisation de la carte');
+            console.log('⚙️ Démarrage du processus d\'initialisation de Google Maps...');
+            googleMapManager.initialize()
+                .catch(error => {
+                    console.error('❌ Erreur lors de l\'initialisation de la carte:', error);
+                });
+            console.groupEnd();
         });
 
         // Initialisation de la Timeline
+        console.log('⏳ Initialisation de la timeline...');
         new TimelineManager();
 
-        // Initialisation des statistiques une fois l'onglet visible
+        // Initialisation des statistiques
         initializeTabOnVisible('#tab5', () => {
-            console.log('Statistics tab is visible. Initializing statistics...');
-            statisticsManager.initialize();
+            console.group('📈 Initialisation des statistiques');
+            console.log('Démarrage de l\'initialisation des statistiques...');
+            statisticsManager.initialize()
+                .catch(error => {
+                    console.error('❌ Erreur lors de l\'initialisation des statistiques:', error);
+                });
+            console.groupEnd();
         });
+
+        console.log('✅ Configuration de tous les onglets terminée');
 
     } catch (error) {
-        console.error("Error initializing tabs:", error);
+        console.error("❌ Erreur critique lors de l'initialisation des onglets:", error);
         throw error;
     }
-}
 
-function initializeTabOnVisible(tabSelector, initCallback) {
-    const tab = document.querySelector(tabSelector);
-    if (tab) {
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    initCallback();
-                    observer.disconnect();
-                }
-            });
-        });
-        observer.observe(tab);
-    }
+    console.groupEnd();
 }
