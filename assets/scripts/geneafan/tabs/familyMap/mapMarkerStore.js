@@ -6,6 +6,8 @@ import { infoWindowManager } from './infoWindowManager.js';
 class MapMarkerStore {
     #positionCache = new Map();
     #worker = null;
+    #pendingData = [];
+    #isGoogleMapsReady = false;
 
     constructor() {
         // Structures principales
@@ -75,9 +77,14 @@ class MapMarkerStore {
         const startTime = performance.now();
         try {
             this.map = map;
+            this.#isGoogleMapsReady = true;
             this.initializeCluster();
             this.setupMapListeners();
             this.startMarkerCleanup();
+            
+            if (this.#pendingData.length > 0) {
+                this.processPendingData();
+            }
 
             markerLogger.logPerformance('initialization', {
                 duration: performance.now() - startTime,
@@ -247,7 +254,19 @@ class MapMarkerStore {
         }
     }
 
+    processPendingData() {
+        while (this.#pendingData.length > 0) {
+            const { birthData, isTimelineActive, currentYear } = this.#pendingData.shift();
+            this.#performUpdate(birthData, isTimelineActive, currentYear);
+        }
+    }
+
     updateMarkers(birthData, isTimelineActive = true, currentYear = null) {
+        if (!this.#isGoogleMapsReady) {
+            this.#pendingData.push({ birthData, isTimelineActive, currentYear });
+            return;
+        }
+
         if (this.updateThrottleTimeout) {
             clearTimeout(this.updateThrottleTimeout);
         }
@@ -274,6 +293,19 @@ class MapMarkerStore {
             timelineActive: isTimelineActive,
             year: currentYear
         });
+    }
+
+    cleanup() {
+        this.clearMarkers();
+        this.#positionCache.clear();
+        this.#pendingData = [];
+        this.#isGoogleMapsReady = false;
+        if (this.#worker) {
+            this.#worker.terminate();
+            this.#worker = null;
+        }
+        clearTimeout(this.updateThrottleTimeout);
+        this.updateThrottleTimeout = null;
     }
 
     clearMarkers() {

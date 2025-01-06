@@ -46,12 +46,6 @@ class GoogleMapsStore {
             
             // Nouvelles actions pour le calque des villes
             toggleFamilyTownsLayer: action,
-            updateFamilyTownsLayer: action
-        });
-
-        // Écouter les mises à jour des villes
-        eventBus.on('familyTownsUpdated', (townsData) => {
-            this.updateFamilyTownsLayer(townsData);
         });
     }
 
@@ -630,98 +624,12 @@ class GoogleMapsStore {
     }
 
     // Gestion des calques
-    toggleFamilyTownsLayer = () => {
+    toggleFamilyTownsLayer = async () => {
         this.isFamilyTownsLayerVisible = !this.isFamilyTownsLayerVisible;
-        this.familyTownsLayer.forEach(marker => {
-            marker.map = this.isFamilyTownsLayerVisible ? this.map : null;
-        });
-    }
-
-    updateFamilyTownsLayer = (townsData) => {
-        runInAction(() => {
-            // Nettoyer les markers existants
-            this.familyTownsLayer.forEach(marker => marker.map = null);
-            this.familyTownsLayer.clear();
-
-            // Créer les nouveaux markers
-            townsData.forEach((townData, key) => {
-                if (townData.latitude && townData.longitude) {
-                    const marker = this.createFamilyTownMarker(townData);
-                    if (marker) {
-                        this.familyTownsLayer.set(key, marker);
-                        marker.map = this.isFamilyTownsLayerVisible ? this.map : null;
-                    }
-                }
-            });
-        });
-    }
-
-    createFamilyTownMarker(townData) {
-        try {
-            const position = {
-                lat: parseFloat(townData.latitude),
-                lng: parseFloat(townData.longitude)
-            };
-
-            if (isNaN(position.lat) || isNaN(position.lng)) {
-                return null;
-            }
-
-            // Créer un élément pour le marker personnalisé
-            const element = document.createElement('div');
-            element.className = 'family-town-marker';
-            element.style.cssText = `
-                width: 12px;
-                height: 12px;
-                background-color: #4CAF50;
-                border: 2px solid #388E3C;
-                border-radius: 50%;
-                opacity: 0.8;
-                cursor: pointer;
-            `;
-
-            // Créer le marker
-            const marker = new google.maps.marker.AdvancedMarkerElement({
-                position,
-                content: element,
-                title: `${townData.townDisplay || townData.town}${townData.departement ? ` (${townData.departement})` : ''}`
-            });
-
-            // Ajouter les informations de la ville au marker
-            marker.townData = townData;
-
-            // Gestionnaire d'événements pour le clic
-            marker.addListener('click', () => {
-                this.showFamilyTownInfo(marker);
-            });
-
-            return marker;
-        } catch (error) {
-            console.error('Erreur lors de la création du marker:', error);
-            return null;
-        }
-    }
-
-    showFamilyTownInfo(marker) {
-        const townData = marker.townData;
-        const content = `
-            <div class="info-window">
-                <h3>${townData.townDisplay || townData.town}</h3>
-                ${townData.departement ? `<p>Département: ${townData.departement}</p>` : ''}
-                ${townData.country ? `<p>Pays: ${townData.country}</p>` : ''}
-            </div>
-        `;
-
-        if (this.currentInfoWindow) {
-            this.currentInfoWindow.close();
-        }
-
-        this.currentInfoWindow = new google.maps.InfoWindow({
-            content,
-            position: marker.position
-        });
-
-        this.currentInfoWindow.open(this.map);
+        
+        const familyTownsStore = await import('../../gedcom/familyTownsStore.js');
+        familyTownsStore.default.initialize(this.map);
+        familyTownsStore.default.toggleVisibility(this.isFamilyTownsLayerVisible);
     }
 }
 

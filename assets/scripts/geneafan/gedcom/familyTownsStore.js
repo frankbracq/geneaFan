@@ -2,25 +2,40 @@ import { makeObservable, observable, action, computed, runInAction, toJS, autoru
 import { eventBus } from '../tabs/familyMap/eventBus.js';
 
 class FamilyTownsStore {
+    #pendingTowns = [];
+    #isGoogleMapsReady = false;
+    #map = null;
+
     constructor() {
         this.townsData = new Map();
         this.isLoading = false;
+        this.townMarkers = new Map();
 
         makeObservable(this, {
             townsData: observable,
             isLoading: observable,
+            townMarkers: observable,
             setTownsData: action,
             addTown: action,
             updateTown: action,
             totalTowns: computed
         });
 
-        // Émettre un événement quand les données changent
         autorun(() => {
             if (this.townsData.size > 0) {
+                this.createMarkers(this.townsData);
                 eventBus.emit('familyTownsUpdated', this.townsData);
             }
         });
+    }
+
+    initialize(map) {
+        this.#map = map;
+        this.#isGoogleMapsReady = true;
+        
+        if (this.#pendingTowns.length > 0) {
+            this.processPendingTowns();
+        }
     }
 
     cleanData = (data) => {
@@ -65,6 +80,65 @@ class FamilyTownsStore {
                 this.townsData.set(key, { ...town, ...updates });
             }
         });
+    }
+
+    createMarkers(townsData) {
+        if (!this.#isGoogleMapsReady) {
+            this.#pendingTowns.push(townsData);
+            return;
+        }
+
+        this.clearMarkers();
+        townsData.forEach((townData, townName) => {
+            if (townData.latitude && townData.longitude) {
+                this.createTownMarker(townName, townData);
+            }
+        });
+    }
+
+    createTownMarker(townName, townData) {
+        if (!townData.latitude || !townData.longitude || !window.google?.maps || !this.#map) return;
+
+        const position = new google.maps.LatLng(
+            parseFloat(townData.latitude),
+            parseFloat(townData.longitude)
+        );
+
+        const element = document.createElement('div');
+        element.className = 'town-marker';
+        element.style.background = townData.departementColor || '#4B5563';
+        element.style.width = '24px';
+        element.style.height = '24px';
+        element.style.borderRadius = '50%';
+        element.style.border = '2px solid white';
+
+        const marker = new google.maps.marker.AdvancedMarkerElement({
+            position,
+            map: this.#map,
+            title: townName,
+            content: element
+        });
+
+        this.townMarkers.set(townName, marker);
+    }
+
+    processPendingTowns() {
+        while (this.#pendingTowns.length > 0) {
+            const townsData = this.#pendingTowns.shift();
+            this.createMarkers(townsData);
+        }
+    }
+
+    clearMarkers() {
+        this.townMarkers.forEach(marker => marker.map = null);
+        this.townMarkers.clear();
+    }
+
+    cleanup() {
+        this.clearMarkers();
+        this.#pendingTowns = [];
+        this.#isGoogleMapsReady = false;
+        this.#map = null;
     }
 
     updateTownsViaProxy = async () => {
@@ -138,6 +212,13 @@ class FamilyTownsStore {
         } catch (error) {
             console.error('Error saving to localStorage:', error);
         }
+    }
+
+    // Toggle visibility of all family town markers on the map
+    toggleVisibility = (isVisible) => {
+        this.townMarkers.forEach(marker => {
+            marker.map = isVisible ? this.#map : null;
+        });
     }
 
     get totalTowns() {
