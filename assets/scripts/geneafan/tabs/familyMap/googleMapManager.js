@@ -2,7 +2,8 @@ import { Loader } from "@googlemaps/js-api-loader";
 import { googleMapsStore } from './googleMapsStore.js';
 import { mapMarkerStore } from './mapMarkerStore.js';
 import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
-import { autorun } from 'mobx';
+import { autorun } from '../../common/stores/mobx-config.js';
+import { eventBus } from './eventBus.js';
 
 class GoogleMapManager {
     constructor() {
@@ -91,6 +92,9 @@ class GoogleMapManager {
     
             console.log('📋 Initialisation de la liste des lieux...');
             googleMapsStore.initializePlacesList();
+
+            // Ajouter le contrôle de calque
+            this.addLayerControl();
     
             const currentHierarchy = gedcomDataStore.getHierarchy();
             if (currentHierarchy) {
@@ -164,6 +168,37 @@ class GoogleMapManager {
                 }
             });
         }
+    }
+
+    addLayerControl() {
+        const controlDiv = document.createElement('div');
+        controlDiv.className = 'layer-control';
+        controlDiv.style.margin = '10px';
+
+        const button = document.createElement('button');
+        button.className = 'layer-toggle-button';
+        button.style.cssText = `
+            background-color: #fff;
+            border: 2px solid #fff;
+            border-radius: 3px;
+            box-shadow: 0 2px 6px rgba(0,0,0,.3);
+            cursor: pointer;
+            padding: 8px 16px;
+        `;
+        
+        const updateButtonText = () => {
+            button.textContent = googleMapsStore.isFamilyTownsLayerVisible ? 
+                'Masquer les villes' : 'Afficher les villes';
+        };
+        updateButtonText();
+
+        button.addEventListener('click', () => {
+            googleMapsStore.toggleFamilyTownsLayer();
+            updateButtonText();
+        });
+
+        controlDiv.appendChild(button);
+        googleMapsStore.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlDiv);
     }
 
     adjustMapHeight() {

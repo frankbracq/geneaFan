@@ -1,5 +1,6 @@
-import { makeObservable, observable, action } from '../../common/stores/mobx-config.js';
 import { Offcanvas } from "bootstrap";
+import { makeObservable, observable, action, runInAction } from '../../common/stores/mobx-config.js';
+import { eventBus } from './eventBus.js';
 import { mapStatisticsStore } from './mapStatisticsStore.js';
 import { mapMarkerStore } from './mapMarkerStore.js';
 
@@ -9,6 +10,9 @@ class GoogleMapsStore {
         this.currentYear = null;
         this.birthData = [];
         this.isTimelineActive = true;
+        this.familyTownsLayer = new Map();
+        this.isFamilyTownsLayerVisible = false;
+        this.currentInfoWindow = null;
 
         // Deux clés API distinctes
         this.mapsApiKey = "AIzaSyDu9Qz5YXRF6CTJ4vf-0s89BaVq_eh13YE";  // Pour la carte principale
@@ -32,9 +36,22 @@ class GoogleMapsStore {
             birthData: observable,
             isTimelineActive: observable,
             overviewMapVisible: observable,
+            familyTownsLayer: observable,
+            isFamilyTownsLayerVisible: observable,
+            
+            // Actions existantes
             processHierarchy: action,
             clearMap: action,
-            activateMapMarkers: action
+            activateMapMarkers: action,
+            
+            // Nouvelles actions pour le calque des villes
+            toggleFamilyTownsLayer: action,
+            updateFamilyTownsLayer: action
+        });
+
+        // Écouter les mises à jour des villes
+        eventBus.on('familyTownsUpdated', (townsData) => {
+            this.updateFamilyTownsLayer(townsData);
         });
     }
 
@@ -610,6 +627,101 @@ class GoogleMapsStore {
         if (wrapper) {
             wrapper.remove();
         }
+    }
+
+    // Gestion des calques
+    toggleFamilyTownsLayer = () => {
+        this.isFamilyTownsLayerVisible = !this.isFamilyTownsLayerVisible;
+        this.familyTownsLayer.forEach(marker => {
+            marker.map = this.isFamilyTownsLayerVisible ? this.map : null;
+        });
+    }
+
+    updateFamilyTownsLayer = (townsData) => {
+        runInAction(() => {
+            // Nettoyer les markers existants
+            this.familyTownsLayer.forEach(marker => marker.map = null);
+            this.familyTownsLayer.clear();
+
+            // Créer les nouveaux markers
+            townsData.forEach((townData, key) => {
+                if (townData.latitude && townData.longitude) {
+                    const marker = this.createFamilyTownMarker(townData);
+                    if (marker) {
+                        this.familyTownsLayer.set(key, marker);
+                        marker.map = this.isFamilyTownsLayerVisible ? this.map : null;
+                    }
+                }
+            });
+        });
+    }
+
+    createFamilyTownMarker(townData) {
+        try {
+            const position = {
+                lat: parseFloat(townData.latitude),
+                lng: parseFloat(townData.longitude)
+            };
+
+            if (isNaN(position.lat) || isNaN(position.lng)) {
+                return null;
+            }
+
+            // Créer un élément pour le marker personnalisé
+            const element = document.createElement('div');
+            element.className = 'family-town-marker';
+            element.style.cssText = `
+                width: 12px;
+                height: 12px;
+                background-color: #4CAF50;
+                border: 2px solid #388E3C;
+                border-radius: 50%;
+                opacity: 0.8;
+                cursor: pointer;
+            `;
+
+            // Créer le marker
+            const marker = new google.maps.marker.AdvancedMarkerElement({
+                position,
+                content: element,
+                title: `${townData.townDisplay || townData.town}${townData.departement ? ` (${townData.departement})` : ''}`
+            });
+
+            // Ajouter les informations de la ville au marker
+            marker.townData = townData;
+
+            // Gestionnaire d'événements pour le clic
+            marker.addListener('click', () => {
+                this.showFamilyTownInfo(marker);
+            });
+
+            return marker;
+        } catch (error) {
+            console.error('Erreur lors de la création du marker:', error);
+            return null;
+        }
+    }
+
+    showFamilyTownInfo(marker) {
+        const townData = marker.townData;
+        const content = `
+            <div class="info-window">
+                <h3>${townData.townDisplay || townData.town}</h3>
+                ${townData.departement ? `<p>Département: ${townData.departement}</p>` : ''}
+                ${townData.country ? `<p>Pays: ${townData.country}</p>` : ''}
+            </div>
+        `;
+
+        if (this.currentInfoWindow) {
+            this.currentInfoWindow.close();
+        }
+
+        this.currentInfoWindow = new google.maps.InfoWindow({
+            content,
+            position: marker.position
+        });
+
+        this.currentInfoWindow.open(this.map);
     }
 }
 

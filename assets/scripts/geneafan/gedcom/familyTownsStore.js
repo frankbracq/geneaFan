@@ -1,10 +1,11 @@
-import { makeObservable, observable, action, computed, runInAction, toJS } from '../common/stores/mobx-config.js';
+import { makeObservable, observable, action, computed, runInAction, toJS, autorun } from '../common/stores/mobx-config.js';
+import { eventBus } from '../tabs/familyMap/eventBus.js';
 
 class FamilyTownsStore {
-    townsData = new Map();
-    isLoading = false;
-
     constructor() {
+        this.townsData = new Map();
+        this.isLoading = false;
+
         makeObservable(this, {
             townsData: observable,
             isLoading: observable,
@@ -12,6 +13,13 @@ class FamilyTownsStore {
             addTown: action,
             updateTown: action,
             totalTowns: computed
+        });
+
+        // Émettre un événement quand les données changent
+        autorun(() => {
+            if (this.townsData.size > 0) {
+                eventBus.emit('familyTownsUpdated', this.townsData);
+            }
         });
     }
 

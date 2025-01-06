@@ -1,4 +1,4 @@
-import { makeObservable, observable, action, autorun, toJS } from 'mobx';
+import { makeObservable, observable, action, autorun, toJS } from '../../common/stores/mobx-config.js';
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { markerLogger } from './markerLogger.js';
 import { infoWindowManager } from './infoWindowManager.js';
