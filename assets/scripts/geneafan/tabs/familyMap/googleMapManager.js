@@ -71,7 +71,7 @@ class GoogleMapManager {
             console.group('🚀 Initialisation de Google Maps');
             
             this.loader = new Loader({
-                apiKey: googleMapsStore.apiKey,
+                apiKey: googleMapsStore.mapsApiKey,
                 version: "weekly",
                 libraries: ['marker']
             });
