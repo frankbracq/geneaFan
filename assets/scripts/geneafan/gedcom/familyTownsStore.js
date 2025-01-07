@@ -89,19 +89,44 @@ class FamilyTownsStore {
         });
     }
 
-    addTown = (key, townData) => {
+    addTown = (key, townData, eventData = null) => {
         runInAction(() => {
-            this.townsData.set(key, {
-                town: townData.town || '',
-                townDisplay: townData.townDisplay || townData.town || '',
-                departement: townData.departement || '',
-                departementColor: townData.departementColor || '',
-                country: townData.country || '',
-                countryCode: townData.countryCode || '',
-                countryColor: townData.countryColor || '',
-                latitude: townData.latitude || '',
-                longitude: townData.longitude || ''
+            let town = this.townsData.get(key);
+            
+            // Debug log
+            console.log('Adding town event:', {
+                key,
+                eventType: eventData?.type,
+                existing: !!town,
+                eventData
             });
+            
+            if (!town) {
+                town = observable({
+                    town: townData.town || '',
+                    townDisplay: townData.townDisplay || townData.town || '',
+                    departement: townData.departement || '',
+                    departementColor: townData.departementColor || '',
+                    country: townData.country || '',
+                    countryCode: townData.countryCode || '',
+                    countryColor: townData.countryColor || '',
+                    latitude: townData.latitude || '',
+                    longitude: townData.longitude || '',
+                    events: observable({
+                        BIRT: observable([]),
+                        DEAT: observable([]),
+                        MARR: observable([]),
+                        BURI: observable([]),
+                        OCCU: observable([]),
+                        EVEN: observable([])
+                    })
+                });
+                this.townsData.set(key, town);
+            }
+    
+            if (eventData && eventData.type && town.events[eventData.type]) {
+                town.events[eventData.type] = observable([...town.events[eventData.type], eventData]);
+            }
         });
     }
 

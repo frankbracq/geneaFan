@@ -1225,27 +1225,27 @@ function toJson(data) {
 export async function getAllPlaces(json) {
     try {
         console.group('getAllPlaces - Traitement des lieux');
-        
+
         // 1. Charger le cache de géolocalisation
         const geoCache = await getAllRecords();
         console.log('Cache chargé:', Object.keys(geoCache).length, 'villes en cache');
-        
+
         // 2. Réinitialiser le store pour le nouveau fichier
         familyTownsStore.setTownsData({});
         console.log('Store réinitialisé');
-        
+
         // 3. Collecter toutes les villes du nouveau fichier GEDCOM
         for (const individual of json) {
             await processTree(individual.tree, null);
         }
-        
+
         // 4. Récupérer la liste des nouvelles villes
         const currentTowns = familyTownsStore.getAllTowns();
         console.log('Nouvelles villes collectées:', Object.keys(currentTowns).length, 'villes');
-        
+
         // 5. Identifier les villes qui ont besoin d'une mise à jour
         const missingTowns = [];
-        
+
         Object.entries(currentTowns).forEach(([key, town]) => {
             const cachedTown = geoCache[key];
             if (cachedTown) {
@@ -1264,7 +1264,7 @@ export async function getAllPlaces(json) {
                 missingTowns.push(key);
             }
         });
-        
+
         // 6. Mise à jour uniquement pour les villes manquantes
         if (missingTowns.length > 0) {
             console.log('Villes nécessitant une géolocalisation:', missingTowns.length);
@@ -1272,10 +1272,29 @@ export async function getAllPlaces(json) {
         } else {
             console.log('Toutes les géolocalisations sont disponibles en cache');
         }
-        
+
         // 7. Sauvegarder dans le localStorage
         familyTownsStore.saveToLocalStorage();
-        
+
+        const allTowns = familyTownsStore.getAllTowns();
+console.log('Données complètes des villes:', allTowns);
+Object.entries(allTowns).forEach(([key, town]) => {
+    // Déstructurer le Proxy pour voir le contenu réel
+    console.log(`Debug town events for ${key}:`, JSON.parse(JSON.stringify(town.events)));
+    console.log(`\n${town.townDisplay} (${key}):`, {
+        details: {
+            département: town.departement,
+            pays: town.country,
+            coords: [town.latitude, town.longitude]
+        },
+        événements: {
+            naissances: town.events?.BIRT?.length || 0,
+            décès: town.events?.DEAT?.length || 0,
+            mariages: town.events?.MARR?.length || 0
+        }
+    });
+});
+
         console.groupEnd();
         return { json };
     } catch (error) {
@@ -1316,18 +1335,24 @@ async function processTree(tree, parentNode) {
 
             parentNode.key = normalizedKey;
 
-            // Ajout de la ville au store avec les informations de base
-            familyTownsStore.addTown(normalizedKey, {
-                town: placeInfo.town,
-                townDisplay: placeInfo.townDisplay,
-                departement: placeInfo.departement,
-                departementColor: placeInfo.departementColor,
-                country: placeInfo.country,
-                countryCode: placeInfo.countryCode,
-                countryColor: placeInfo.countryColor,
-                latitude: placeInfo.latitude,
-                longitude: placeInfo.longitude
+            const dateNode = parentNode.tree?.find(n => n.tag === "DATE");
+            const eventDate = dateNode ? processDate(dateNode.data) : null;
+
+            // Debug log
+            console.log('Processing place event:', {
+                normalizedKey,
+                parentTag: parentNode.tag,
+                place: node.data,
+                date: eventDate
             });
+
+            const eventData = {
+                type: parentNode.tag,
+                date: eventDate,
+                personId: parentNode.personId
+            };
+
+            familyTownsStore.addTown(normalizedKey, placeInfo, eventData);
         }
 
         if (node.tree && node.tree.length > 0) {
