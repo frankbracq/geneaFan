@@ -1,10 +1,11 @@
 import { makeObservable, observable, action, computed, runInAction, toJS, autorun } from '../common/stores/mobx-config.js';
-import { eventBus } from '../tabs/familyMap/eventBus.js';
+import { MarkerClusterer } from "@googlemaps/markerclusterer";
 
 class FamilyTownsStore {
     #pendingTowns = [];
     #isGoogleMapsReady = false;
     #map = null;
+    #markerCluster = null;
 
     constructor() {
         this.townsData = new Map();
@@ -24,7 +25,6 @@ class FamilyTownsStore {
         autorun(() => {
             if (this.townsData.size > 0) {
                 this.createMarkers(this.townsData);
-                eventBus.emit('familyTownsUpdated', this.townsData);
             }
         });
     }
@@ -32,10 +32,42 @@ class FamilyTownsStore {
     initialize(map) {
         this.#map = map;
         this.#isGoogleMapsReady = true;
+        this.initializeCluster();
         
         if (this.#pendingTowns.length > 0) {
             this.processPendingTowns();
         }
+    }
+
+    initializeCluster() {
+        this.#markerCluster = new MarkerClusterer({
+            map: this.#map,
+            renderer: {
+                render: this.renderCluster.bind(this)
+            }
+        });
+    }
+
+    renderCluster({ count, position }) {
+        const element = document.createElement('div');
+        element.className = 'cluster-marker';
+        element.style.background = '#4B5563';  // Couleur par défaut pour les clusters
+        element.style.borderRadius = '50%';
+        element.style.width = `${Math.min(count * 3, 20) * 2}px`;
+        element.style.height = `${Math.min(count * 3, 20) * 2}px`;
+        element.style.border = '2px solid white';
+        element.style.display = 'flex';
+        element.style.alignItems = 'center';
+        element.style.justifyContent = 'center';
+        element.style.color = 'white';
+        element.style.fontSize = '12px';
+        element.textContent = String(count);
+
+        return new google.maps.marker.AdvancedMarkerElement({
+            position,
+            content: element,
+            zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count
+        });
     }
 
     cleanData = (data) => {
@@ -89,11 +121,22 @@ class FamilyTownsStore {
         }
 
         this.clearMarkers();
+        const markers = [];
+
         townsData.forEach((townData, townName) => {
             if (townData.latitude && townData.longitude) {
-                this.createTownMarker(townName, townData);
+                const marker = this.createTownMarker(townName, townData);
+                if (marker) {
+                    this.townMarkers.set(townName, marker);
+                    markers.push(marker);
+                }
             }
         });
+
+        if (this.#markerCluster) {
+            this.#markerCluster.clearMarkers();
+            this.#markerCluster.addMarkers(markers);
+        }
     }
 
     createTownMarker(townName, townData) {
@@ -114,12 +157,11 @@ class FamilyTownsStore {
 
         const marker = new google.maps.marker.AdvancedMarkerElement({
             position,
-            map: this.#map,
             title: townName,
             content: element
         });
 
-        this.townMarkers.set(townName, marker);
+        return marker;
     }
 
     processPendingTowns() {
@@ -130,38 +172,55 @@ class FamilyTownsStore {
     }
 
     clearMarkers() {
+        if (this.#markerCluster) {
+            this.#markerCluster.clearMarkers();
+        }
         this.townMarkers.forEach(marker => marker.map = null);
         this.townMarkers.clear();
     }
 
     cleanup() {
         this.clearMarkers();
+        if (this.#markerCluster) {
+            this.#markerCluster.clearMarkers();
+            this.#markerCluster = null;
+        }
         this.#pendingTowns = [];
         this.#isGoogleMapsReady = false;
         this.#map = null;
     }
 
-    updateTownsViaProxy = async () => {
-        console.log('Starting geocoding process...');
-        runInAction(() => {
-            this.isLoading = true;
-        });
+    toggleVisibility = (isVisible) => {
+        if (this.#markerCluster) {
+            this.#markerCluster.setMap(isVisible ? this.#map : null);
+        }
+    }
 
+    get totalTowns() {
+        return this.townsData.size;
+    }
+
+    updateTownsViaProxy = async () => {
+        console.log('Checking for towns needing geocoding...');
         try {
+            // Identifier les villes qui ont besoin d'une mise à jour
             const townsToUpdate = {};
+            let needsUpdate = false;
+    
             this.townsData.forEach((town, key) => {
-                if (((town.country === 'France' || town.country === 'FR' || town.country === '') &&
-                    ((town.departement && town.departement.length === 2) || !town.departement || !town.latitude || !town.longitude)) ||
-                    ((town.country !== 'France' && town.country !== 'FR' && town.country !== '') && (!town.latitude || !town.longitude))) {
+                if (!town.latitude || !town.longitude) {
                     townsToUpdate[key] = this.cleanData(town);
+                    needsUpdate = true;
                 }
             });
-
-            if (Object.keys(townsToUpdate).length === 0) {
+    
+            if (!needsUpdate) {
                 console.log('No towns need updating');
                 return;
             }
-
+    
+            console.log(`Updating geocoding for ${Object.keys(townsToUpdate).length} towns...`);
+            
             const response = await fetch('https://opencageproxy.genealogie.workers.dev/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -170,11 +229,11 @@ class FamilyTownsStore {
                     userId: localStorage.getItem('userId')
                 })
             });
-
+    
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-
+    
             const updatedTowns = await response.json();
             
             runInAction(() => {
@@ -183,13 +242,11 @@ class FamilyTownsStore {
                 });
                 this.saveToLocalStorage();
             });
-
+    
+            console.log('Geocoding update completed');
+    
         } catch (error) {
             console.error('Error updating towns:', error);
-        } finally {
-            runInAction(() => {
-                this.isLoading = false;
-            });
         }
     }
 
@@ -212,17 +269,6 @@ class FamilyTownsStore {
         } catch (error) {
             console.error('Error saving to localStorage:', error);
         }
-    }
-
-    // Toggle visibility of all family town markers on the map
-    toggleVisibility = (isVisible) => {
-        this.townMarkers.forEach(marker => {
-            marker.map = isVisible ? this.#map : null;
-        });
-    }
-
-    get totalTowns() {
-        return this.townsData.size;
     }
 }
 

@@ -3,7 +3,6 @@ import { googleMapsStore } from './googleMapsStore.js';
 import { mapMarkerStore } from './mapMarkerStore.js';
 import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
 import { autorun } from '../../common/stores/mobx-config.js';
-import { eventBus } from './eventBus.js';
 
 class GoogleMapManager {
     constructor() {

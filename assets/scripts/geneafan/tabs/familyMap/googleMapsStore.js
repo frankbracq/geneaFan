@@ -1,6 +1,5 @@
 import { Offcanvas } from "bootstrap";
 import { makeObservable, observable, action, runInAction } from '../../common/stores/mobx-config.js';
-import { eventBus } from './eventBus.js';
 import { mapStatisticsStore } from './mapStatisticsStore.js';
 import { mapMarkerStore } from './mapMarkerStore.js';
 

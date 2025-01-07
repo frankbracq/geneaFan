@@ -176,6 +176,16 @@ function setupTabAndUIEventListeners() {
         });
 
     document
+        .getElementById("mapParametersDisplay")
+        .addEventListener("click", () => {
+            const mapParametersOffcanvas = new Offcanvas(
+                document.getElementById("mapParameters")
+            );
+            mapParametersOffcanvas.show();
+        });
+
+
+    document
         .getElementById("treeParametersDisplay")
         .addEventListener("click", () => {
             const treeParametersOffcanvas = new Offcanvas(
@@ -227,7 +237,7 @@ export const setupAllEventListeners = (authStore) => {
         setupTabAndUIEventListeners();
         setupFileLoadingEventListeners();
         setupUndoRedoEventListeners();
-        
+
         setTimeout(() => {
             setupResponsiveTabs();
             setupTabResizeListener();

@@ -531,6 +531,7 @@ async function onFileChange(data) {
             document.getElementById("individual-select"),
             document.getElementById("download-menu"),
             document.getElementById("fanParametersDisplay"),
+            document.getElementById("mapParametersDisplay"),
             document.getElementById("treeParametersDisplay"),
             document.getElementById("fullscreenButton"),
         ].forEach((el) => {

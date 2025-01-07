@@ -1224,42 +1224,85 @@ function toJson(data) {
 // Function to store all family locations in memory
 export async function getAllPlaces(json) {
     try {
-        const dbTowns = await getAllRecords();
-        familyTownsStore.setTownsData(dbTowns);
-
-        // Process each individual for places
+        console.group('getAllPlaces - Traitement des lieux');
+        
+        // 1. Charger le cache de géolocalisation
+        const geoCache = await getAllRecords();
+        console.log('Cache chargé:', Object.keys(geoCache).length, 'villes en cache');
+        
+        // 2. Réinitialiser le store pour le nouveau fichier
+        familyTownsStore.setTownsData({});
+        console.log('Store réinitialisé');
+        
+        // 3. Collecter toutes les villes du nouveau fichier GEDCOM
         for (const individual of json) {
             await processTree(individual.tree, null);
         }
-
-        // Update geocoding after all places are collected
-        await familyTownsStore.updateTownsViaProxy();
-
+        
+        // 4. Récupérer la liste des nouvelles villes
+        const currentTowns = familyTownsStore.getAllTowns();
+        console.log('Nouvelles villes collectées:', Object.keys(currentTowns).length, 'villes');
+        
+        // 5. Identifier les villes qui ont besoin d'une mise à jour
+        const missingTowns = [];
+        
+        Object.entries(currentTowns).forEach(([key, town]) => {
+            const cachedTown = geoCache[key];
+            if (cachedTown) {
+                // Appliquer les données du cache
+                familyTownsStore.updateTown(key, {
+                    ...town,
+                    latitude: cachedTown.latitude || town.latitude,
+                    longitude: cachedTown.longitude || town.longitude,
+                    departement: cachedTown.departement || town.departement,
+                    departementColor: cachedTown.departementColor || town.departementColor,
+                    country: cachedTown.country || town.country,
+                    countryCode: cachedTown.countryCode || town.countryCode,
+                    countryColor: cachedTown.countryColor || town.countryColor
+                });
+            } else {
+                missingTowns.push(key);
+            }
+        });
+        
+        // 6. Mise à jour uniquement pour les villes manquantes
+        if (missingTowns.length > 0) {
+            console.log('Villes nécessitant une géolocalisation:', missingTowns.length);
+            await familyTownsStore.updateTownsViaProxy();
+        } else {
+            console.log('Toutes les géolocalisations sont disponibles en cache');
+        }
+        
+        // 7. Sauvegarder dans le localStorage
+        familyTownsStore.saveToLocalStorage();
+        
+        console.groupEnd();
         return { json };
     } catch (error) {
         console.error("Error in getAllPlaces: ", error);
+        console.groupEnd();
         throw error;
     }
 }
 
-async function getAllRecords() {
+function getAllRecords() {
     return new Promise((resolve, reject) => {
+        console.log('Accessing localStorage...');
         const storedData = localStorage.getItem("townsDB");
         if (storedData) {
+            console.log('Found data in townsDB:', storedData.slice(0, 100) + '...');
             try {
-                // Convertir les données JSON en objet JavaScript
                 const dbTowns = JSON.parse(storedData);
-
-                // Vider townsDB debug
-                // localStorage.removeItem("townsDB");
-
+                console.log('Successfully parsed townsDB, found', Object.keys(dbTowns).length, 'towns');
                 resolve(dbTowns);
             } catch (error) {
-                reject("Erreur lors de la conversion des données JSON : " + error);
+                console.error("Erreur lors de la conversion des données JSON :", error);
+                console.log('Raw data causing error:', storedData);
+                resolve({});  // En cas d'erreur, on renvoie un objet vide
             }
         } else {
-            // S'il n'y a pas de données, retourner un objet vide
-            resolve({});
+            console.log('No data found in townsDB');
+            resolve({});  // Si pas de données, on renvoie un objet vide
         }
     });
 }
@@ -1273,18 +1316,17 @@ async function processTree(tree, parentNode) {
 
             parentNode.key = normalizedKey;
 
+            // Ajout de la ville au store avec les informations de base
             familyTownsStore.addTown(normalizedKey, {
                 town: placeInfo.town,
+                townDisplay: placeInfo.townDisplay,
                 departement: placeInfo.departement,
                 departementColor: placeInfo.departementColor,
                 country: placeInfo.country,
                 countryCode: placeInfo.countryCode,
                 countryColor: placeInfo.countryColor,
                 latitude: placeInfo.latitude,
-                longitude: placeInfo.longitude,
-                townDisplay: placeInfo.departement ?
-                    `${placeInfo.town} (${placeInfo.departement})` :
-                    placeInfo.town
+                longitude: placeInfo.longitude
             });
         }
 
