@@ -1,9 +1,15 @@
+/*
+Se concentre uniquement sur les villes des ancêtres de l'individu racine
+Ne traite que les événements de naissance
+Fournit le calque principal pour visualiser l'ascendance
+*/
+
 import { makeObservable, observable, action, autorun, toJS } from '../../common/stores/mobx-config.js';
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { markerLogger } from './markerLogger.js';
 import { infoWindowManager } from './infoWindowManager.js';
 
-class MapMarkerStore {
+class RootAncestorTownsStore {
     #positionCache = new Map();
     #worker = null;
     #pendingData = [];
@@ -17,6 +23,7 @@ class MapMarkerStore {
         this.iconCache = new Map();
         this.visibleMarkers = new Set();
         this.birthData = [];
+        this.isVisible = true;
 
         // Configuration
         this.MARKER_CLEANUP_INTERVAL = 60000;
@@ -32,6 +39,7 @@ class MapMarkerStore {
             map: observable.ref,
             markerCluster: observable.ref,
             iconCache: observable,
+            isVisible: observable,
 
             initialize: action,
             updateMarkers: action,
@@ -41,13 +49,18 @@ class MapMarkerStore {
             loadVisibleMarkers: action,
             updateCluster: action,
             cleanupInvisibleMarkers: action,
+            toggleVisibility: action,
         });
 
         this.#initWorker();
 
         autorun(() => {
-            if (this.markerCluster && this.activeMarkers.size) {
-                this.updateCluster();
+            if (this.markerCluster) {
+                if (this.activeMarkers.size && this.isVisible) {
+                    this.updateCluster();
+                } else {
+                    this.markerCluster.clearMarkers();
+                }
             }
         });
     }
@@ -97,9 +110,24 @@ class MapMarkerStore {
 
     initializeCluster() {
         this.markerCluster = new MarkerClusterer({
-            map: this.map,
+            map: this.isVisible ? this.map : null,
             renderer: {
                 render: this.renderCluster.bind(this)
+            }
+        });
+    }
+
+    toggleVisibility = (visible) => {
+        this.isVisible = visible;
+        if (this.markerCluster) {
+            this.markerCluster.setMap(visible ? this.map : null);
+        }
+        this.activeMarkers.forEach(marker => {
+            // Mettre à jour la visibilité du marker
+            marker.visible = visible;
+            const element = marker.content;
+            if (element) {
+                element.style.display = visible ? 'flex' : 'none';
             }
         });
     }
@@ -119,36 +147,56 @@ class MapMarkerStore {
     }
 
     loadVisibleMarkers() {
-        if (!this.map || !this.birthData.length) return;
-
+        console.log('📍 loadVisibleMarkers avec:', {
+            hasMap: !!this.map,
+            dataCount: this.birthData?.length
+        });
+    
+        if (!this.map || !this.birthData.length) {
+            console.log('⚠️ Conditions non remplies pour charger les markers');
+            return;
+        }
+    
         const bounds = this.map.getBounds();
-        if (!bounds) return;
-
+        if (!bounds) {
+            console.log('⚠️ Pas de bounds disponibles');
+            return;
+        }
+    
+        console.log('✉️ Envoi des données au worker');
         this.#worker.postMessage({
             birthData: toJS(this.birthData),
             bounds: bounds.toJSON()
         });
     }
+
     processBirthDataBatch(data, startIndex) {
+        console.log('📦 Traitement du batch:', {
+            dataLength: data?.length,
+            startIndex
+        });
+    
         const endIndex = Math.min(startIndex + this.MARKER_BATCH_SIZE, data.length);
         const batch = data.slice(startIndex, endIndex);
         const batchStartTime = performance.now();
 
         const locationMap = this.#groupBirthDataByLocation(batch);
+    console.log('🗺️ Locations trouvées:', locationMap.size);
 
-        locationMap.forEach((locationData, key) => {
-            if (!this.activeMarkers.has(key)) {
-                const marker = this.createMarker(
-                    locationData.location,
-                    locationData.births,
-                    locationData.generations
-                );
-                if (marker) {
-                    this.activeMarkers.set(key, marker);
-                }
+    locationMap.forEach((locationData, key) => {
+        if (!this.activeMarkers.has(key)) {
+            console.log('🎯 Création marker pour:', key);
+            const marker = this.createMarker(
+                locationData.location,
+                locationData.births,
+                locationData.generations
+            );
+            if (marker) {
+                this.activeMarkers.set(key, marker);
             }
-            this.visibleMarkers.add(key);
-        });
+        }
+        this.visibleMarkers.add(key);
+    });
 
         markerLogger.logPerformance('processBatch', {
             duration: performance.now() - batchStartTime,
@@ -201,52 +249,61 @@ class MapMarkerStore {
         const startTime = performance.now();
         const lat = parseFloat(location.lat);
         const lng = parseFloat(location.lng);
-
+    
         if (isNaN(lat) || isNaN(lng)) {
             markerLogger.logMarkerError(new Error('Coordonnées invalides'), { location });
             return null;
         }
-
+    
         try {
+            console.log('Création d\'un marker:', { location, births });  // Log de débogage
+    
             const scale = births.length === 1 ? 8 : Math.min(8 + (births.length * 0.5), 12);
             const color = infoWindowManager.getBranchColor(births);
             const position = this.getMarkerPosition(lat, lng);
-
-            // Créer un élément content pour le marker
+    
             const element = document.createElement('div');
             element.className = 'custom-marker';
-
-            // Créer le marker avec l'élément personnalisé
+    
             const marker = new google.maps.marker.AdvancedMarkerElement({
                 position,
                 map: this.map,
                 content: element,
-                // Stocker les données comme propriétés de l'élément content
                 title: births.map(b => b.name).join(', ')
             });
-
-            // Stocker les données dans l'élément content plutôt que directement sur le marker
-            element.births = births;
-            element.generations = generations;
-
-            // Appliquer le style
+    
+            // Stocker explicitement les données sur le marker lui-même
+            marker.locationData = location;
+            marker.birthsData = births;
+            marker.generationsData = generations;
+    
+            // Style du marker
             element.style.background = color;
             element.style.borderRadius = '50%';
             element.style.width = `${scale * 2}px`;
             element.style.height = `${scale * 2}px`;
             element.style.border = '1px solid #1e40af';
-
-            // Ajouter l'écouteur d'événements
-            marker.addListener('click', () => {
+            element.style.cursor = 'pointer'; // Ajout du curseur pointer
+    
+            // Ajouter l'événement click explicitement sur l'élément
+            element.addEventListener('click', () => {
+                console.log('Click sur le marker:', { lat, lng, births }); // Log de débogage
                 infoWindowManager.initialize();
-                infoWindowManager.showInfoWindow(marker, location, element.births, element.generations);
+                infoWindowManager.showInfoWindow(marker, marker.locationData, marker.birthsData, marker.generationsData);
             });
-
+    
+            // Ajouter aussi l'événement sur le marker
+            marker.addListener('click', () => {
+                console.log('Click sur le marker (via Google Maps):', { lat, lng, births }); // Log de débogage
+                infoWindowManager.initialize();
+                infoWindowManager.showInfoWindow(marker, marker.locationData, marker.birthsData, marker.generationsData);
+            });
+    
             markerLogger.logMarkerCreation(
                 { location, births, generations },
                 performance.now() - startTime
             );
-
+    
             return marker;
         } catch (error) {
             markerLogger.logMarkerError(error, { location, births });
@@ -262,36 +319,39 @@ class MapMarkerStore {
     }
 
     updateMarkers(birthData, isTimelineActive = true, currentYear = null) {
+        console.log('🏁 updateMarkers appelé avec:', { 
+            dataCount: birthData?.length,
+            isTimelineActive,
+            currentYear
+        });
+    
         if (!this.#isGoogleMapsReady) {
+            console.log('⏳ Google Maps pas prêt, mise en attente des données');
             this.#pendingData.push({ birthData, isTimelineActive, currentYear });
             return;
         }
-
+    
         if (this.updateThrottleTimeout) {
             clearTimeout(this.updateThrottleTimeout);
         }
-
+    
         this.updateThrottleTimeout = setTimeout(() => {
             this.#performUpdate(birthData, isTimelineActive, currentYear);
         }, this.UPDATE_THROTTLE_DELAY);
     }
-
+    
     #performUpdate(birthData, isTimelineActive, currentYear) {
-        const startTime = performance.now();
-
+        console.log('🔄 Début de performUpdate avec:', {
+            dataCount: birthData?.length
+        });
+    
         this.birthData = birthData;
         this.clearMarkers();
         this.visibleMarkers.clear();
-
+    
         requestAnimationFrame(() => {
+            console.log('🎯 Chargement des markers visibles...');
             this.loadVisibleMarkers();
-        });
-
-        markerLogger.logPerformance('updateMarkers', {
-            duration: performance.now() - startTime,
-            dataSize: birthData.length,
-            timelineActive: isTimelineActive,
-            year: currentYear
         });
     }
 
@@ -454,4 +514,4 @@ class MapMarkerStore {
     }
 }
 
-export const mapMarkerStore = new MapMarkerStore();
+export const rootAncestorTownsStore = new RootAncestorTownsStore();

@@ -1,7 +1,8 @@
 import { Loader } from "@googlemaps/js-api-loader";
 import { googleMapsStore } from './googleMapsStore.js';
-import { mapMarkerStore } from './mapMarkerStore.js';
+import { rootAncestorTownsStore } from './rootAncestorTownsStore.js';
 import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
+import familyTownsStore from '../../gedcom/familyTownsStore.js';
 import { autorun } from '../../common/stores/mobx-config.js';
 
 class GoogleMapManager {
@@ -86,14 +87,18 @@ class GoogleMapManager {
                 google.maps.event.addListenerOnce(map, 'idle', resolve);
             });
             
+            // Initialiser les stores avec la carte
+            rootAncestorTownsStore.initialize(map);
+            familyTownsStore.initialize(map);
+
+            // Configurer les contrôles de calques
+            this.setupLayerControls();
+
             this.initialized = true;
             this.setupEventListeners();
     
             console.log('📋 Initialisation de la liste des lieux...');
             googleMapsStore.initializePlacesList();
-
-            // Ajouter le contrôle de calque
-            this.addLayerControl();
     
             const currentHierarchy = gedcomDataStore.getHierarchy();
             if (currentHierarchy) {
@@ -107,7 +112,7 @@ class GoogleMapManager {
             console.groupEnd();
             throw error;
         }
-    }
+    }    
 
     async initializeMap(containerId, options = {}) {
         if (!this.loader) {
@@ -138,10 +143,48 @@ class GoogleMapManager {
             ...options
         });
     
-        // On initialise seulement le markerStore ici
-        mapMarkerStore.initialize(map);
-    
         return map;
+    }
+
+    setupLayerControls() {
+        const ancestorLayerSwitch = document.getElementById('layerAncestors');
+        const familyLayerSwitch = document.getElementById('layerFamily');
+
+        // Configuration initiale
+        ancestorLayerSwitch.checked = true;
+        familyLayerSwitch.checked = false;
+        rootAncestorTownsStore.toggleVisibility(true);
+        familyTownsStore.toggleVisibility(false);
+
+        // Gestion du switch des ancêtres
+        ancestorLayerSwitch.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                familyLayerSwitch.checked = false;
+                familyTownsStore.toggleVisibility(false);
+                rootAncestorTownsStore.toggleVisibility(true);
+                googleMapsStore.clearMap();
+            } else {
+                familyLayerSwitch.checked = true;
+                familyTownsStore.toggleVisibility(true);
+                rootAncestorTownsStore.toggleVisibility(false);
+                googleMapsStore.clearMap();
+            }
+        });
+
+        // Gestion du switch familial
+        familyLayerSwitch.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                ancestorLayerSwitch.checked = false;
+                rootAncestorTownsStore.toggleVisibility(false);
+                familyTownsStore.toggleVisibility(true);
+                googleMapsStore.clearMap();
+            } else {
+                ancestorLayerSwitch.checked = true;
+                rootAncestorTownsStore.toggleVisibility(true);
+                familyTownsStore.toggleVisibility(false);
+                googleMapsStore.clearMap();
+            }
+        });
     }
 
     setupEventListeners() {
@@ -167,37 +210,6 @@ class GoogleMapManager {
                 }
             });
         }
-    }
-
-    addLayerControl() {
-        const controlDiv = document.createElement('div');
-        controlDiv.className = 'layer-control';
-        controlDiv.style.margin = '10px';
-
-        const button = document.createElement('button');
-        button.className = 'layer-toggle-button';
-        button.style.cssText = `
-            background-color: #fff;
-            border: 2px solid #fff;
-            border-radius: 3px;
-            box-shadow: 0 2px 6px rgba(0,0,0,.3);
-            cursor: pointer;
-            padding: 8px 16px;
-        `;
-        
-        const updateButtonText = () => {
-            button.textContent = googleMapsStore.isFamilyTownsLayerVisible ? 
-                'Masquer les villes' : 'Afficher les villes';
-        };
-        updateButtonText();
-
-        button.addEventListener('click', () => {
-            googleMapsStore.toggleFamilyTownsLayer();
-            updateButtonText();
-        });
-
-        controlDiv.appendChild(button);
-        googleMapsStore.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlDiv);
     }
 
     adjustMapHeight() {

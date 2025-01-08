@@ -1,3 +1,9 @@
+/*
+Gère l'ensemble des villes du fichier GEDCOM
+Traite tous types d'événements (naissances, mariages, décès)
+Fournit un calque de contexte global pour la carte
+*/
+
 import { makeObservable, observable, action, computed, runInAction, toJS, autorun } from '../common/stores/mobx-config.js';
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 
@@ -11,6 +17,7 @@ class FamilyTownsStore {
         this.townsData = new Map();
         this.isLoading = false;
         this.townMarkers = new Map();
+        this.isVisible = false; // Désactivé par défaut
 
         makeObservable(this, {
             townsData: observable,
@@ -41,7 +48,7 @@ class FamilyTownsStore {
 
     initializeCluster() {
         this.#markerCluster = new MarkerClusterer({
-            map: this.#map,
+            map: this.isVisible ? this.#map : null, // Ne pas afficher si isVisible est false
             renderer: {
                 render: this.renderCluster.bind(this)
             }
@@ -92,14 +99,6 @@ class FamilyTownsStore {
     addTown = (key, townData, eventData = null) => {
         runInAction(() => {
             let town = this.townsData.get(key);
-            
-            // Debug log
-            console.log('Adding town event:', {
-                key,
-                eventType: eventData?.type,
-                existing: !!town,
-                eventData
-            });
             
             if (!town) {
                 town = observable({
@@ -183,7 +182,8 @@ class FamilyTownsStore {
         const marker = new google.maps.marker.AdvancedMarkerElement({
             position,
             title: townName,
-            content: element
+            content: element,
+            map: this.isVisible ? this.#map : null // Ne pas afficher si isVisible est false
         });
 
         return marker;
@@ -216,9 +216,14 @@ class FamilyTownsStore {
     }
 
     toggleVisibility = (isVisible) => {
+        this.isVisible = isVisible;
         if (this.#markerCluster) {
             this.#markerCluster.setMap(isVisible ? this.#map : null);
         }
+        // Mettre à jour la visibilité de tous les marqueurs individuels
+        this.townMarkers.forEach(marker => {
+            marker.map = isVisible ? this.#map : null;
+        });
     }
 
     get totalTowns() {

@@ -175,15 +175,17 @@ function setupTabAndUIEventListeners() {
             fanParametersOffcanvas.show();
         });
 
-    document
-        .getElementById("mapParametersDisplay")
-        .addEventListener("click", () => {
-            const mapParametersOffcanvas = new Offcanvas(
-                document.getElementById("mapParameters")
-            );
-            mapParametersOffcanvas.show();
+        document.getElementById("mapParametersDisplay")?.addEventListener("click", () => {
+            const mapParameters = document.getElementById("mapParameters");
+            if (mapParameters) {
+                const offcanvas = new Offcanvas(mapParameters, {
+                    backdrop: true,
+                    keyboard: true,
+                    scroll: false
+                });
+                offcanvas.show();
+            }
         });
-
 
     document
         .getElementById("treeParametersDisplay")

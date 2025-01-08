@@ -1,7 +1,7 @@
 import { Offcanvas } from "bootstrap";
 import { makeObservable, observable, action, runInAction } from '../../common/stores/mobx-config.js';
 import { mapStatisticsStore } from './mapStatisticsStore.js';
-import { mapMarkerStore } from './mapMarkerStore.js';
+import { rootAncestorTownsStore } from './rootAncestorTownsStore.js';
 
 class GoogleMapsStore {
     constructor() {
@@ -9,8 +9,6 @@ class GoogleMapsStore {
         this.currentYear = null;
         this.birthData = [];
         this.isTimelineActive = true;
-        this.familyTownsLayer = new Map();
-        this.isFamilyTownsLayerVisible = false;
         this.currentInfoWindow = null;
 
         // Deux clés API distinctes
@@ -35,16 +33,11 @@ class GoogleMapsStore {
             birthData: observable,
             isTimelineActive: observable,
             overviewMapVisible: observable,
-            familyTownsLayer: observable,
-            isFamilyTownsLayerVisible: observable,
             
             // Actions existantes
             processHierarchy: action,
             clearMap: action,
             activateMapMarkers: action,
-            
-            // Nouvelles actions pour le calque des villes
-            toggleFamilyTownsLayer: action,
         });
     }
 
@@ -102,51 +95,60 @@ class GoogleMapsStore {
         }
     }
 
-    processHierarchy(hierarchy) {
-        if (!hierarchy) {
-            console.error('❌ Pas de hiérarchie disponible');
-            return;
+    async processHierarchy(hierarchy) {
+        try {
+            console.group('📍 Mise à jour de la carte avec la hiérarchie');
+            console.log('🌳 Données de la hiérarchie:', hierarchy);
+            
+            // Extraire les données des lieux de naissance
+            const birthData = [];
+            
+            const processNode = (node, depth = 0) => {
+                const birthInfo = node.stats?.demography?.birthInfo;
+                // console.log('📌 Traitement du nœud:', {
+                //    name: node.name,
+                //    birthInfo: birthInfo
+                //});
+    
+                if (birthInfo?.place?.coordinates?.latitude) {
+                    birthData.push({
+                        id: node.id,
+                        name: `${node.name} ${node.surname}`,
+                        birthYear: node.birthYear,
+                        generation: node.generation || 0,
+                        sosa: node.sosa || 1,
+                        location: {
+                            lat: birthInfo.place.coordinates.latitude,
+                            lng: birthInfo.place.coordinates.longitude,
+                            name: node.fanBirthPlace,
+                            departement: birthInfo.place.departement
+                        }
+                    });
+                }
+    
+                if (node.children && Array.isArray(node.children)) {
+                    node.children.forEach(child => processNode(child, depth + 1));
+                }
+            };
+    
+            processNode(hierarchy);
+            
+            console.log('🎯 Données extraites pour les markers:', birthData);
+            
+            // Mettre à jour les markers
+            if (birthData.length > 0) {
+                rootAncestorTownsStore.updateMarkers(birthData);
+                console.log('✅ Markers mis à jour');
+            } else {
+                console.warn('⚠️ Pas de données de naissance à afficher');
+            }
+    
+            console.groupEnd();
+        } catch (error) {
+            console.error('❌ Erreur lors du traitement de la hiérarchie:', error);
+            console.groupEnd();
+            throw error;
         }
-
-        // Réinitialiser les données
-        this.birthData = [];
-        mapStatisticsStore.resetStatistics();
-        mapMarkerStore.clearMarkers();
-
-        const processNode = (node, depth = 0) => {
-            if (!node) {
-                console.warn(`⚠️ Nœud invalide au niveau ${depth}`);
-                return;
-            }
-
-            mapStatisticsStore.processNodeStatistics(node);
-            const birthInfo = node.stats?.demography?.birthInfo;
-
-            if (birthInfo?.place?.coordinates?.latitude) {
-                this.birthData.push({
-                    id: node.id,
-                    name: `${node.name} ${node.surname}`,
-                    birthYear: node.birthYear,
-                    generation: node.generation || 0,
-                    sosa: node.sosa || 1,
-                    location: {
-                        lat: birthInfo.place.coordinates.latitude,
-                        lng: birthInfo.place.coordinates.longitude,
-                        name: node.fanBirthPlace,
-                        departement: birthInfo.place.departement
-                    }
-                });
-            }
-
-            if (node.children && Array.isArray(node.children)) {
-                node.children.forEach(child => processNode(child, depth + 1));
-            }
-        };
-
-        processNode(hierarchy);
-        mapStatisticsStore.displayStatistics();
-        this.activateMapMarkers();
-        this.centerMapOnMarkers();
     }
 
     activateMapMarkers() {
@@ -155,17 +157,17 @@ class GoogleMapsStore {
             return;
         }
 
-        mapMarkerStore.updateMarkers(this.birthData, this.isTimelineActive, this.currentYear);
+        rootAncestorTownsStore.updateMarkers(this.birthData, this.isTimelineActive, this.currentYear);
         this.centerMapOnMarkers();
     }
 
     clearCurrentMarkers() {
-        mapMarkerStore.clearMarkers();
+        rootAncestorTownsStore.clearMarkers();
     }
 
     centerMapOnMarkers() {
-        if (this.map && mapMarkerStore.hasActiveMarkers()) {
-            const bounds = mapMarkerStore.getBounds();
+        if (this.map && rootAncestorTownsStore.hasActiveMarkers()) {
+            const bounds = rootAncestorTownsStore.getBounds();
             if (bounds) {
                 this.map.fitBounds(bounds);
             }
@@ -267,7 +269,7 @@ class GoogleMapsStore {
 
     // Méthodes utilitaires
     clearMap() {
-        mapMarkerStore.clearMarkers();
+        rootAncestorTownsStore.clearMarkers();
         if (this.map) {
             this.map.setCenter({ lat: 46.2276, lng: 2.2137 });
             this.map.setZoom(6.2);
@@ -620,15 +622,6 @@ class GoogleMapsStore {
         if (wrapper) {
             wrapper.remove();
         }
-    }
-
-    // Gestion des calques
-    toggleFamilyTownsLayer = async () => {
-        this.isFamilyTownsLayerVisible = !this.isFamilyTownsLayerVisible;
-        
-        const familyTownsStore = await import('../../gedcom/familyTownsStore.js');
-        familyTownsStore.default.initialize(this.map);
-        familyTownsStore.default.toggleVisibility(this.isFamilyTownsLayerVisible);
     }
 }
 

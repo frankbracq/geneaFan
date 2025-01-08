@@ -1277,23 +1277,24 @@ export async function getAllPlaces(json) {
         familyTownsStore.saveToLocalStorage();
 
         const allTowns = familyTownsStore.getAllTowns();
-console.log('Données complètes des villes:', allTowns);
-Object.entries(allTowns).forEach(([key, town]) => {
-    // Déstructurer le Proxy pour voir le contenu réel
-    console.log(`Debug town events for ${key}:`, JSON.parse(JSON.stringify(town.events)));
-    console.log(`\n${town.townDisplay} (${key}):`, {
-        details: {
-            département: town.departement,
-            pays: town.country,
-            coords: [town.latitude, town.longitude]
-        },
-        événements: {
-            naissances: town.events?.BIRT?.length || 0,
-            décès: town.events?.DEAT?.length || 0,
-            mariages: town.events?.MARR?.length || 0
-        }
-    });
-});
+        console.log('Données complètes des villes:', allTowns);
+        
+        // Object.entries(allTowns).forEach(([key, town]) => {
+            // Déstructurer le Proxy pour voir le contenu réel
+            // console.log(`Debug town events for ${key}:`, JSON.parse(JSON.stringify(town.events)));
+        //    console.log(`\n${town.townDisplay} (${key}):`, {
+        //        details: {
+        //            département: town.departement,
+        //            pays: town.country,
+        //            coords: [town.latitude, town.longitude]
+        //        },
+        //        événements: {
+        //            naissances: town.events?.BIRT?.length || 0,
+        //            décès: town.events?.DEAT?.length || 0,
+        //            mariages: town.events?.MARR?.length || 0
+        //        }
+        //    });
+        // });
 
         console.groupEnd();
         return { json };
@@ -1339,12 +1340,12 @@ async function processTree(tree, parentNode) {
             const eventDate = dateNode ? processDate(dateNode.data) : null;
 
             // Debug log
-            console.log('Processing place event:', {
-                normalizedKey,
-                parentTag: parentNode.tag,
-                place: node.data,
-                date: eventDate
-            });
+            // console.log('Processing place event:', {
+            //    normalizedKey,
+            //    parentTag: parentNode.tag,
+            //    place: node.data,
+            //    date: eventDate
+            //});
 
             const eventData = {
                 type: parentNode.tag,
