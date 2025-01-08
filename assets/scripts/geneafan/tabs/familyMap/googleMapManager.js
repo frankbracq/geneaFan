@@ -89,7 +89,7 @@ class GoogleMapManager {
             
             // Initialiser les stores avec la carte
             rootAncestorTownsStore.initialize(map);
-            familyTownsStore.initialize(map);
+            // familyTownsStore.initialize(map);
 
             // Configurer les contrôles de calques
             this.setupLayerControls();
@@ -148,44 +148,30 @@ class GoogleMapManager {
 
     setupLayerControls() {
         const ancestorLayerSwitch = document.getElementById('layerAncestors');
-        const familyLayerSwitch = document.getElementById('layerFamily');
+        
+        // S'assurer que le switch est coché par défaut
+        if (ancestorLayerSwitch) {
+            ancestorLayerSwitch.checked = true;
+        }
 
-        // Configuration initiale
-        ancestorLayerSwitch.checked = true;
-        familyLayerSwitch.checked = false;
-        rootAncestorTownsStore.toggleVisibility(true);
-        familyTownsStore.toggleVisibility(false);
-
-        // Gestion du switch des ancêtres
+        // Activer le layer des ancêtres par défaut
+        if (rootAncestorTownsStore.map) {
+            console.log('🔄 Activation du layer des ancêtres par défaut');
+            // Forcer la visibilité initiale
+            rootAncestorTownsStore.isVisible = true;
+            rootAncestorTownsStore.markerManager.toggleLayerVisibility('rootAncestors', true, rootAncestorTownsStore.map);
+            // Forcer le clustering initial
+            rootAncestorTownsStore.markerManager.addMarkersToCluster(rootAncestorTownsStore.map);
+        }
+    
+        // Ajouter l'écouteur d'événements pour les changements ultérieurs
         ancestorLayerSwitch.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                familyLayerSwitch.checked = false;
-                familyTownsStore.toggleVisibility(false);
-                rootAncestorTownsStore.toggleVisibility(true);
-                googleMapsStore.clearMap();
-            } else {
-                familyLayerSwitch.checked = true;
-                familyTownsStore.toggleVisibility(true);
-                rootAncestorTownsStore.toggleVisibility(false);
-                googleMapsStore.clearMap();
-            }
-        });
-
-        // Gestion du switch familial
-        familyLayerSwitch.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                ancestorLayerSwitch.checked = false;
-                rootAncestorTownsStore.toggleVisibility(false);
-                familyTownsStore.toggleVisibility(true);
-                googleMapsStore.clearMap();
-            } else {
-                ancestorLayerSwitch.checked = true;
-                rootAncestorTownsStore.toggleVisibility(true);
-                familyTownsStore.toggleVisibility(false);
-                googleMapsStore.clearMap();
-            }
+            const isChecked = e.target.checked;
+            rootAncestorTownsStore.isVisible = isChecked;
+            rootAncestorTownsStore.markerManager.toggleLayerVisibility('rootAncestors', isChecked, rootAncestorTownsStore.map);
         });
     }
+
 
     setupEventListeners() {
         const offcanvasElement = document.getElementById("individualMap");
