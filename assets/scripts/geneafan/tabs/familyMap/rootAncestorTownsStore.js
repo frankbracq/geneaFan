@@ -109,10 +109,45 @@ class RootAncestorTownsStore {
         this.markerManager.clearMarkers('rootAncestors');
     }
 
+    hasActiveMarkers() {
+        if (!this.markerManager) return false;
+        let hasMarkers = false;
+        this.markerManager.layers.forEach(layerMarkers => {
+            layerMarkers.forEach(marker => {
+                if (marker.map !== null) {
+                    hasMarkers = true;
+                }
+            });
+        });
+        return hasMarkers;
+    }
+
+    getBounds() {
+        if (!this.markerManager) return null;
+        
+        const bounds = new google.maps.LatLngBounds();
+        let hasMarkers = false;
+
+        this.markerManager.layers.forEach(layerMarkers => {
+            layerMarkers.forEach(marker => {
+                if (marker.map !== null) {
+                    bounds.extend(marker.position);
+                    hasMarkers = true;
+                }
+            });
+        });
+
+        return hasMarkers ? bounds : null;
+    }
+
+    // Uniformisation avec FamilyTownsStore pour la méthode toggleVisibility
     toggleVisibility(visible) {
         this.isVisible = visible;
         if (this.map) {
             this.markerManager.toggleLayerVisibility('rootAncestors', visible, this.map);
+            if (visible) {
+                this.markerManager.addMarkersToCluster(this.map);
+            }
         }
     }
 

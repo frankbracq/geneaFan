@@ -142,6 +142,37 @@ class FamilyTownsStore {
         }
     }
 
+    hasActiveMarkers() {
+        if (!this.markerManager) return false;
+        let hasMarkers = false;
+        this.markerManager.layers.forEach(layerMarkers => {
+            layerMarkers.forEach(marker => {
+                if (marker.map !== null) {
+                    hasMarkers = true;
+                }
+            });
+        });
+        return hasMarkers;
+    }
+
+    getBounds() {
+        if (!this.markerManager) return null;
+        
+        const bounds = new google.maps.LatLngBounds();
+        let hasMarkers = false;
+
+        this.markerManager.layers.forEach(layerMarkers => {
+            layerMarkers.forEach(marker => {
+                if (marker.map !== null) {
+                    bounds.extend(marker.position);
+                    hasMarkers = true;
+                }
+            });
+        });
+
+        return hasMarkers ? bounds : null;
+    }
+
     toggleVisibility(isVisible) {
         this.isVisible = isVisible;
         if (this.map) {
@@ -195,19 +226,6 @@ class FamilyTownsStore {
 
     get totalTowns() {
         return this.townsData.size;
-    }
-
-    hasActiveMarkers() {
-        if (!this.markerManager) return false;
-        let hasMarkers = false;
-        this.markerManager.layers.forEach(layerMarkers => {
-            layerMarkers.forEach(marker => {
-                if (marker.map !== null) {
-                    hasMarkers = true;
-                }
-            });
-        });
-        return hasMarkers;
     }
 
     updateTownsViaProxy = async () => {
