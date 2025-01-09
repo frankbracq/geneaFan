@@ -1,7 +1,6 @@
 import { makeObservable, observable, action, autorun } from '../../common/stores/mobx-config.js';
 import MarkerManager from './markerManager.js';
 import { infoWindowManager } from './infoWindowManager.js';
-import { markerLogger } from './markerLogger.js';
 
 class RootAncestorTownsStore {
     constructor() {
@@ -9,6 +8,13 @@ class RootAncestorTownsStore {
         this.map = null;
         this.birthData = [];
         this.isVisible = true;
+        this.styles = {
+            colors: {
+                paternal: '#1e40af', // blue-800
+                maternal: '#be185d', // pink-800
+                mixed: '#9333ea'     // purple-700
+            }
+        };
 
         makeObservable(this, {
             birthData: observable,
@@ -25,7 +31,7 @@ class RootAncestorTownsStore {
         console.log('Initializing RootAncestorTownsStore with map');
         this.map = map;
         this.markerManager.initializeCluster(map, this.renderCluster.bind(this));
-        
+
         // Si nous avons déjà des données, mettons à jour les marqueurs
         if (this.birthData.length > 0) {
             this.updateMarkers(this.birthData);
@@ -68,15 +74,15 @@ class RootAncestorTownsStore {
         console.log('Updating markers with:', { dataCount: birthData?.length });
         this.birthData = birthData;
         this.clearMarkers();
-    
+
         const locationMap = this.groupBirthDataByLocation(birthData);
         console.log('Processed locations for markers:', locationMap);
-    
+
         locationMap.forEach((locationData) => {
             console.log('Creating marker for location:', locationData.location);
             this.createMarker(locationData.location, locationData.births, locationData.generations);
         });
-    
+
         // Si le layer est visible, afficher les marqueurs
         if (this.isVisible && this.map) {
             this.markerManager.toggleLayerVisibility('rootAncestors', true, this.map);
@@ -140,6 +146,145 @@ class RootAncestorTownsStore {
         this.clearMarkers();
         this.map = null;
         this.markerManager.cleanup();
+    }
+
+    // Branch and styling utilities
+    determineBranchFromSosa(sosa) {
+        if (!sosa) return 'unknown';
+        return sosa % 2 === 0 ? 'paternal' : 'maternal';
+    }
+
+    getBranchColor(births) {
+        if (!births || births.length === 0) return this.styles.colors.mixed;
+
+        const branches = new Set(
+            births.map(birth => this.determineBranchFromSosa(birth.sosa))
+                .filter(branch => branch !== 'unknown')
+        );
+
+        if (branches.size === 0) return this.styles.colors.mixed;
+        if (branches.size === 1) {
+            return branches.has('paternal') ?
+                this.styles.colors.paternal :
+                this.styles.colors.maternal;
+        }
+        return this.styles.colors.mixed;
+    }
+
+    // Info window content generation
+    groupBirthsByGeneration(births) {
+        const grouped = new Map();
+
+        births.forEach(birth => {
+            const generation = birth.generation;
+            if (!grouped.has(generation)) {
+                grouped.set(generation, []);
+            }
+            grouped.get(generation).push(birth);
+        });
+
+        // Trier par génération
+        return new Map([...grouped.entries()].sort((a, b) => a[0] - b[0]));
+    }
+
+    createInfoWindowContent(location, births) {
+        const div = document.createElement('div');
+        div.className = 'info-window-content';
+
+        // Titre avec le nom du lieu
+        const title = document.createElement('h3');
+        title.textContent = location.name;
+        title.className = 'font-bold text-lg mb-2';
+        div.appendChild(title);
+
+        // Département si disponible
+        if (location.departement) {
+            const dept = document.createElement('p');
+            dept.textContent = `Département: ${location.departement}`;
+            dept.className = 'text-sm text-gray-600 mb-2';
+            div.appendChild(dept);
+        }
+
+        // Conteneur pour les personnes par génération
+        const generations = document.createElement('div');
+        generations.className = 'generations-list space-y-2';
+
+        const birthsByGeneration = this.groupBirthsByGeneration(births);
+
+        birthsByGeneration.forEach((birthsInGen, gen) => {
+            const genDiv = document.createElement('div');
+            genDiv.className = 'generation-group';
+
+            // Titre de la génération
+            const genTitle = document.createElement('h4');
+            genTitle.textContent = `Génération ${gen}`;
+            genTitle.className = 'font-semibold text-sm text-gray-700';
+            genDiv.appendChild(genTitle);
+
+            // Liste des personnes
+            const list = document.createElement('ul');
+            list.className = 'list-disc ml-4';
+
+            birthsInGen.forEach(birth => {
+                const li = document.createElement('li');
+                li.className = 'text-sm';
+
+                const branch = this.determineBranchFromSosa(birth.sosa);
+                const color = branch === 'paternal' ? this.styles.colors.paternal :
+                    branch === 'maternal' ? this.styles.colors.maternal :
+                        this.styles.colors.mixed;
+
+                li.style.color = color;
+                li.textContent = birth.name;
+                if (birth.birthYear) {
+                    li.textContent += ` (${birth.birthYear})`;
+                }
+
+                list.appendChild(li);
+            });
+
+            genDiv.appendChild(list);
+            generations.appendChild(genDiv);
+        });
+
+        div.appendChild(generations);
+        return div;
+    }
+
+    // Marker management
+    createMarker(location, births) {
+        if (!location || !location.lat || !location.lng) {
+            console.warn('Invalid location data', location);
+            return;
+        }
+
+        const key = `${location.lat}-${location.lng}-${location.name}`;
+        const position = new google.maps.LatLng(location.lat, location.lng);
+        const content = this.renderMarkerContent(location, births);
+
+        return this.markerManager.addMarkerToLayer(
+            'rootAncestors',
+            key,
+            position,
+            { content, title: births.map(b => b.name).join(', ') },
+            (marker) => this.onMarkerClick(marker, location, births)
+        );
+    }
+
+    renderMarkerContent(location, births) {
+        const element = document.createElement('div');
+        element.className = 'custom-marker';
+        element.style.background = this.getBranchColor(births);
+        element.style.borderRadius = '50%';
+        element.style.width = '16px';
+        element.style.height = '16px';
+        element.style.border = '1px solid #1e40af';
+        return element;
+    }
+
+    onMarkerClick(marker, location, births) {
+        const content = this.createInfoWindowContent(location, births);
+        infoWindowManager.showInfoWindow(marker, content);
     }
 }
 
