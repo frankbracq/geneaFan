@@ -4,6 +4,7 @@ class MarkerManager {
     constructor() {
         this.layers = new Map();
         this.cluster = null;
+        this.activeMarkers = new Set();
     }
 
     initializeCluster(map, renderFn) {
@@ -23,6 +24,7 @@ class MarkerManager {
     addMarkerToLayer(layerName, key, position, options, onClickCallback = null) {
         if (!this.layers.has(layerName)) {
             this.layers.set(layerName, new Map());
+            console.log(`Created new layer: ${layerName}`);
         }
 
         const layerMarkers = this.layers.get(layerName);
@@ -38,56 +40,74 @@ class MarkerManager {
             }
 
             layerMarkers.set(key, marker);
+            console.log(`Added marker to layer ${layerName}, total markers in layer: ${layerMarkers.size}`);
         }
 
         return layerMarkers.get(key);
     }
 
     addMarkersToCluster(map) {
-        if (!this.cluster || !map) return;
+        if (!this.cluster || !map) {
+            console.warn('Cluster or map not initialized');
+            return;
+        }
 
-        const markers = [];
-        this.layers.forEach(layerMarkers => {
+        // Récupérer tous les marqueurs visibles
+        const visibleMarkers = new Set();
+        this.layers.forEach((layerMarkers, layerName) => {
+            console.log(`Processing layer ${layerName} with ${layerMarkers.size} markers`);
             layerMarkers.forEach(marker => {
                 if (marker.map) {
-                    markers.push(marker);
+                    visibleMarkers.add(marker);
                 }
             });
         });
 
-        console.log('Markers being clustered:', markers.length);
+        const markers = Array.from(visibleMarkers);
+        console.log('Total unique markers to be clustered:', markers.length);
         
+        // Désactiver temporairement les clusters
+        if (this.cluster) {
+            this.cluster.setMap(null);
+            this.cluster.clearMarkers();
+        }
+
         // Ne créer les clusters que s'il y a des marqueurs visibles
         if (markers.length > 0) {
-            this.cluster.setMap(map);
-            this.cluster.clearMarkers();
+            // Réactiver les clusters avec les nouveaux marqueurs
             this.cluster.addMarkers(markers);
-        } else {
-            // Si aucun marqueur n'est visible, désactiver le clustering
-            this.cluster.setMap(null);
+            this.cluster.setMap(map);
+            console.log(`Cluster updated with ${markers.length} markers`);
         }
+        
+        this.activeMarkers = new Set(markers);
     }
 
     toggleLayerVisibility(layerName, visible, map) {
+        console.log(`Toggling visibility for layer ${layerName} to ${visible}`);
         const layerMarkers = this.layers.get(layerName);
         if (layerMarkers) {
+            // Supprimer d'abord les marqueurs des clusters
+            if (this.cluster && !visible) {
+                this.cluster.clearMarkers();
+            }
+            
+            // Mettre à jour la visibilité des marqueurs
             layerMarkers.forEach(marker => {
                 marker.map = visible ? map : null;
             });
             
-            // Mettre à jour les clusters en fonction de la visibilité
+            // Si le calque est visible, mettre à jour les clusters
             if (visible && map) {
+                console.log(`Updating clusters after enabling layer ${layerName}`);
                 this.addMarkersToCluster(map);
-            } else {
-                // Si le layer est masqué, désactiver le clustering
-                if (this.cluster) {
-                    this.cluster.setMap(null);
-                }
             }
         }
     }
 
     clearMarkers(layerName = null) {
+        console.log(`Clearing markers${layerName ? ` for layer ${layerName}` : ' for all layers'}`);
+        
         // Désactiver d'abord le clustering
         if (this.cluster) {
             this.cluster.clearMarkers();
@@ -106,6 +126,8 @@ class MarkerManager {
             });
             this.layers.clear();
         }
+        
+        this.activeMarkers.clear();
     }
 
     cleanup() {
@@ -114,6 +136,7 @@ class MarkerManager {
             this.cluster.setMap(null);
         }
         this.cluster = null;
+        this.activeMarkers.clear();
     }
 }
 

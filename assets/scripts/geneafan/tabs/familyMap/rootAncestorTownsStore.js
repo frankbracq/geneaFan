@@ -24,6 +24,7 @@ class RootAncestorTownsStore {
             updateMarkers: action,
             clearMarkers: action,
             toggleVisibility: action,
+            hasActiveMarkers: action,
         });
     }
 
@@ -54,7 +55,8 @@ class RootAncestorTownsStore {
             position,
             { content, title: births.map(b => b.name).join(', ') },
             (marker) => {
-                infoWindowManager.showInfoWindow(marker, location, births, generations);
+                const content = this.createInfoWindowContent(location, births, generations);
+                infoWindowManager.showInfoWindow(marker, content);
             }
         );
     }
@@ -62,7 +64,7 @@ class RootAncestorTownsStore {
     renderMarkerContent(location, births) {
         const element = document.createElement('div');
         element.className = 'custom-marker';
-        element.style.background = infoWindowManager.getBranchColor(births);
+        element.style.background = this.getBranchColor(births);
         element.style.borderRadius = '50%';
         element.style.width = '16px';
         element.style.height = '16px';
@@ -73,7 +75,7 @@ class RootAncestorTownsStore {
     updateMarkers(birthData) {
         console.log('Updating markers with:', { dataCount: birthData?.length });
         this.birthData = birthData;
-        this.clearMarkers();
+        this.markerManager.clearMarkers('rootAncestors');
 
         const locationMap = this.groupBirthDataByLocation(birthData);
         console.log('Processed locations for markers:', locationMap);
@@ -98,6 +100,38 @@ class RootAncestorTownsStore {
         if (this.map) {
             this.markerManager.toggleLayerVisibility('rootAncestors', visible, this.map);
         }
+    }
+
+    hasActiveMarkers() {
+        if (!this.markerManager) return false;
+        let hasMarkers = false;
+        this.markerManager.layers.forEach(layerMarkers => {
+            layerMarkers.forEach(marker => {
+                if (marker.map !== null) {
+                    hasMarkers = true;
+                }
+            });
+        });
+        console.log('Checking active markers:', hasMarkers);
+        return hasMarkers;
+    }
+
+    getBounds() {
+        if (!this.markerManager || !this.map) return null;
+        
+        const bounds = new google.maps.LatLngBounds();
+        let hasMarkers = false;
+
+        this.markerManager.layers.forEach(layerMarkers => {
+            layerMarkers.forEach(marker => {
+                if (marker.map !== null) {
+                    bounds.extend(marker.position);
+                    hasMarkers = true;
+                }
+            });
+        });
+
+        return hasMarkers ? bounds : null;
     }
 
     groupBirthDataByLocation(data) {
@@ -135,6 +169,7 @@ class RootAncestorTownsStore {
         element.style.alignItems = 'center';
         element.style.justifyContent = 'center';
         element.textContent = count;
+        element.style.border = '2px solid white';
 
         return new google.maps.marker.AdvancedMarkerElement({
             position,
@@ -148,7 +183,6 @@ class RootAncestorTownsStore {
         this.markerManager.cleanup();
     }
 
-    // Branch and styling utilities
     determineBranchFromSosa(sosa) {
         if (!sosa) return 'unknown';
         return sosa % 2 === 0 ? 'paternal' : 'maternal';
@@ -171,23 +205,7 @@ class RootAncestorTownsStore {
         return this.styles.colors.mixed;
     }
 
-    // Info window content generation
-    groupBirthsByGeneration(births) {
-        const grouped = new Map();
-
-        births.forEach(birth => {
-            const generation = birth.generation;
-            if (!grouped.has(generation)) {
-                grouped.set(generation, []);
-            }
-            grouped.get(generation).push(birth);
-        });
-
-        // Trier par génération
-        return new Map([...grouped.entries()].sort((a, b) => a[0] - b[0]));
-    }
-
-    createInfoWindowContent(location, births) {
+    createInfoWindowContent(location, births, generations) {
         const div = document.createElement('div');
         div.className = 'info-window-content';
 
@@ -205,23 +223,17 @@ class RootAncestorTownsStore {
             div.appendChild(dept);
         }
 
-        // Conteneur pour les personnes par génération
-        const generations = document.createElement('div');
-        generations.className = 'generations-list space-y-2';
-
+        // Générations et personnes
         const birthsByGeneration = this.groupBirthsByGeneration(births);
-
         birthsByGeneration.forEach((birthsInGen, gen) => {
             const genDiv = document.createElement('div');
-            genDiv.className = 'generation-group';
+            genDiv.className = 'generation-group mb-2';
 
-            // Titre de la génération
             const genTitle = document.createElement('h4');
             genTitle.textContent = `Génération ${gen}`;
             genTitle.className = 'font-semibold text-sm text-gray-700';
             genDiv.appendChild(genTitle);
 
-            // Liste des personnes
             const list = document.createElement('ul');
             list.className = 'list-disc ml-4';
 
@@ -244,47 +256,25 @@ class RootAncestorTownsStore {
             });
 
             genDiv.appendChild(list);
-            generations.appendChild(genDiv);
+            div.appendChild(genDiv);
         });
 
-        div.appendChild(generations);
         return div;
     }
 
-    // Marker management
-    createMarker(location, births) {
-        if (!location || !location.lat || !location.lng) {
-            console.warn('Invalid location data', location);
-            return;
-        }
-
-        const key = `${location.lat}-${location.lng}-${location.name}`;
-        const position = new google.maps.LatLng(location.lat, location.lng);
-        const content = this.renderMarkerContent(location, births);
-
-        return this.markerManager.addMarkerToLayer(
-            'rootAncestors',
-            key,
-            position,
-            { content, title: births.map(b => b.name).join(', ') },
-            (marker) => this.onMarkerClick(marker, location, births)
-        );
-    }
-
-    renderMarkerContent(location, births) {
-        const element = document.createElement('div');
-        element.className = 'custom-marker';
-        element.style.background = this.getBranchColor(births);
-        element.style.borderRadius = '50%';
-        element.style.width = '16px';
-        element.style.height = '16px';
-        element.style.border = '1px solid #1e40af';
-        return element;
-    }
-
-    onMarkerClick(marker, location, births) {
-        const content = this.createInfoWindowContent(location, births);
-        infoWindowManager.showInfoWindow(marker, content);
+    groupBirthsByGeneration(births) {
+        const grouped = new Map();
+        
+        births.forEach(birth => {
+            const generation = birth.generation;
+            if (!grouped.has(generation)) {
+                grouped.set(generation, []);
+            }
+            grouped.get(generation).push(birth);
+        });
+        
+        // Trier par génération
+        return new Map([...grouped.entries()].sort((a, b) => a[0] - b[0]));
     }
 }
 

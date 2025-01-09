@@ -5,54 +5,50 @@ Fournit un calque de contexte global pour la carte
 */
 
 import { makeObservable, observable, action, computed, runInAction, toJS, autorun } from '../common/stores/mobx-config.js';
-import { MarkerClusterer } from "@googlemaps/markerclusterer";
+import MarkerManager from '../tabs/familyMap/markerManager.js';
+import { infoWindowManager } from '../tabs/familyMap/infoWindowManager.js';
 
 class FamilyTownsStore {
-    #pendingTowns = [];
-    #isGoogleMapsReady = false;
-    #map = null;
-    #markerCluster = null;
-
     constructor() {
+        this.markerManager = new MarkerManager();
         this.townsData = new Map();
         this.isLoading = false;
-        this.townMarkers = new Map();
         this.isVisible = false; // Désactivé par défaut
+        this.map = null;
 
         makeObservable(this, {
             townsData: observable,
             isLoading: observable,
-            townMarkers: observable,
+            isVisible: observable,
             setTownsData: action,
             addTown: action,
             updateTown: action,
+            toggleVisibility: action,
+            hasActiveMarkers: action,
             totalTowns: computed
         });
 
         autorun(() => {
-            if (this.townsData.size > 0) {
-                this.createMarkers(this.townsData);
+            if (this.map && (this.townsData.size > 0 || this.isVisible)) {
+                console.log('FamilyTownsStore autorun triggered:', {
+                    dataSize: this.townsData.size,
+                    isVisible: this.isVisible,
+                    hasMap: !!this.map
+                });
+                this.updateMarkers();
             }
         });
     }
 
     initialize(map) {
-        this.#map = map;
-        this.#isGoogleMapsReady = true;
-        this.initializeCluster();
-        
-        if (this.#pendingTowns.length > 0) {
-            this.processPendingTowns();
-        }
-    }
+        console.log('Initializing FamilyTownsStore with map');
+        this.map = map;
+        this.markerManager.initializeCluster(map, this.renderCluster.bind(this));
 
-    initializeCluster() {
-        this.#markerCluster = new MarkerClusterer({
-            map: this.isVisible ? this.#map : null, // Ne pas afficher si isVisible est false
-            renderer: {
-                render: this.renderCluster.bind(this)
-            }
-        });
+        // Si nous avons déjà des données, mettons à jour les marqueurs
+        if (this.townsData.size > 0) {
+            this.updateMarkers();
+        }
     }
 
     renderCluster({ count, position }) {
@@ -75,6 +71,162 @@ class FamilyTownsStore {
             content: element,
             zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count
         });
+    }
+
+    createMarker(townName, townData) {
+        console.log('Creating marker for:', {
+            townName,
+            coordinates: {
+                lat: townData.latitude,
+                lng: townData.longitude
+            },
+            departement: townData.departement,
+            fullData: townData
+        });
+
+        if (!townData.latitude || !townData.longitude) {
+            console.warn(`Missing coordinates for town: ${townName}`);
+            return;
+        }
+
+        const key = `${townData.latitude}-${townData.longitude}-${townName}`;
+        console.log(`Generated key: ${key}`);
+        
+        try {
+            const position = new google.maps.LatLng(
+                parseFloat(townData.latitude),
+                parseFloat(townData.longitude)
+            );
+            console.log('Position created:', position.toString());
+
+            const element = document.createElement('div');
+            element.className = 'town-marker';
+            element.style.background = townData.departementColor || '#4B5563';
+            element.style.width = '24px';
+            element.style.height = '24px';
+            element.style.borderRadius = '50%';
+            element.style.border = '2px solid white';
+
+            console.log('Marker element created');
+
+            const marker = this.markerManager.addMarkerToLayer(
+                'familyTowns',
+                key,
+                position,
+                { content: element, title: townName },
+                (marker) => {
+                    this.onMarkerClick(marker, townData);
+                }
+            );
+
+            console.log('Marker added to layer:', !!marker);
+            return marker;
+
+        } catch (error) {
+            console.error('Error creating marker for town:', townName, error);
+            return null;
+        }
+    }
+
+    onMarkerClick(marker, townData) {
+        const content = this.createInfoWindowContent(townData);
+        infoWindowManager.showInfoWindow(marker, content);
+    }
+
+    createInfoWindowContent(townData) {
+        const div = document.createElement('div');
+        div.className = 'info-window-content p-4';
+
+        // Ajouter le nom de la ville
+        const townName = document.createElement('h3');
+        townName.textContent = townData.townDisplay || townData.town;
+        townName.className = 'font-bold text-lg mb-2';
+        div.appendChild(townName);
+
+        // Ajouter le département s'il existe
+        if (townData.departement) {
+            const deptDiv = document.createElement('div');
+            deptDiv.className = 'text-sm text-gray-600';
+            deptDiv.textContent = `Département: ${townData.departement}`;
+            div.appendChild(deptDiv);
+        }
+
+        // Ajouter le pays s'il existe
+        if (townData.country) {
+            const countryDiv = document.createElement('div');
+            countryDiv.className = 'text-sm text-gray-600';
+            countryDiv.textContent = `Pays: ${townData.country}`;
+            div.appendChild(countryDiv);
+        }
+
+        return div;
+    }
+
+    updateMarkers() {
+        console.log('Updating family town markers', {
+            dataSize: this.townsData.size,
+            isVisible: this.isVisible,
+            hasMap: !!this.map
+        });
+        
+        this.markerManager.clearMarkers('familyTowns');
+        let markersCreated = 0;
+        console.log('TownsData:', Array.from(this.townsData.entries()));
+
+        this.townsData.forEach((townData, townName) => {
+            console.log('Processing town:', {
+                name: townName,
+                data: townData,
+                hasLatitude: !!townData.latitude,
+                hasLongitude: !!townData.longitude
+            });
+            
+            if (townData.latitude && townData.longitude) {
+                console.log('Creating marker for location:', {
+                    name: townName,
+                    lat: townData.latitude,
+                    lng: townData.longitude,
+                    departement: townData.departement
+                });
+                const marker = this.createMarker(townName, townData);
+                if (marker) {
+                    markersCreated++;
+                    console.log(`Marker created successfully for ${townName}`);
+                } else {
+                    console.warn(`Failed to create marker for ${townName}`);
+                }
+            } else {
+                console.warn(`Missing coordinates for town: ${townName}`, {
+                    latitude: townData.latitude,
+                    longitude: townData.longitude
+                });
+            }
+        });
+
+        console.log(`Created ${markersCreated} markers out of ${this.townsData.size} towns`);
+
+        // Si le layer est visible, afficher les marqueurs
+        if (this.isVisible && this.map) {
+            console.log('Layer is visible, toggling visibility and updating clusters');
+            this.markerManager.toggleLayerVisibility('familyTowns', true, this.map);
+            this.markerManager.addMarkersToCluster(this.map);
+        } else {
+            console.log('Layer is not visible or map not ready', {
+                isVisible: this.isVisible,
+                hasMap: !!this.map
+            });
+        }
+    }
+
+    toggleVisibility = (isVisible) => {
+        console.log(`Toggling family towns visibility: ${isVisible}`);
+        this.isVisible = isVisible;
+        if (this.map) {
+            this.markerManager.toggleLayerVisibility('familyTowns', isVisible, this.map);
+            if (isVisible) {
+                this.markerManager.addMarkersToCluster(this.map);
+            }
+        }
     }
 
     cleanData = (data) => {
@@ -138,96 +290,28 @@ class FamilyTownsStore {
         });
     }
 
-    createMarkers(townsData) {
-        if (!this.#isGoogleMapsReady) {
-            this.#pendingTowns.push(townsData);
-            return;
-        }
-
-        this.clearMarkers();
-        const markers = [];
-
-        townsData.forEach((townData, townName) => {
-            if (townData.latitude && townData.longitude) {
-                const marker = this.createTownMarker(townName, townData);
-                if (marker) {
-                    this.townMarkers.set(townName, marker);
-                    markers.push(marker);
-                }
-            }
-        });
-
-        if (this.#markerCluster) {
-            this.#markerCluster.clearMarkers();
-            this.#markerCluster.addMarkers(markers);
-        }
-    }
-
-    createTownMarker(townName, townData) {
-        if (!townData.latitude || !townData.longitude || !window.google?.maps || !this.#map) return;
-
-        const position = new google.maps.LatLng(
-            parseFloat(townData.latitude),
-            parseFloat(townData.longitude)
-        );
-
-        const element = document.createElement('div');
-        element.className = 'town-marker';
-        element.style.background = townData.departementColor || '#4B5563';
-        element.style.width = '24px';
-        element.style.height = '24px';
-        element.style.borderRadius = '50%';
-        element.style.border = '2px solid white';
-
-        const marker = new google.maps.marker.AdvancedMarkerElement({
-            position,
-            title: townName,
-            content: element,
-            map: this.isVisible ? this.#map : null // Ne pas afficher si isVisible est false
-        });
-
-        return marker;
-    }
-
-    processPendingTowns() {
-        while (this.#pendingTowns.length > 0) {
-            const townsData = this.#pendingTowns.shift();
-            this.createMarkers(townsData);
-        }
-    }
-
-    clearMarkers() {
-        if (this.#markerCluster) {
-            this.#markerCluster.clearMarkers();
-        }
-        this.townMarkers.forEach(marker => marker.map = null);
-        this.townMarkers.clear();
-    }
-
     cleanup() {
-        this.clearMarkers();
-        if (this.#markerCluster) {
-            this.#markerCluster.clearMarkers();
-            this.#markerCluster = null;
-        }
-        this.#pendingTowns = [];
-        this.#isGoogleMapsReady = false;
-        this.#map = null;
-    }
-
-    toggleVisibility = (isVisible) => {
-        this.isVisible = isVisible;
-        if (this.#markerCluster) {
-            this.#markerCluster.setMap(isVisible ? this.#map : null);
-        }
-        // Mettre à jour la visibilité de tous les marqueurs individuels
-        this.townMarkers.forEach(marker => {
-            marker.map = isVisible ? this.#map : null;
-        });
+        this.markerManager.clearMarkers();
+        this.markerManager.cleanup();
+        this.map = null;
     }
 
     get totalTowns() {
         return this.townsData.size;
+    }
+
+    hasActiveMarkers() {
+        if (!this.markerManager) return false;
+        let hasMarkers = false;
+        this.markerManager.layers.forEach(layerMarkers => {
+            layerMarkers.forEach(marker => {
+                if (marker.map !== null) {
+                    hasMarkers = true;
+                }
+            });
+        });
+        console.log('Checking active markers:', hasMarkers);
+        return hasMarkers;
     }
 
     updateTownsViaProxy = async () => {
@@ -302,5 +386,5 @@ class FamilyTownsStore {
     }
 }
 
-const familyTownsStore = new FamilyTownsStore();
-export default familyTownsStore;
+// On exporte directement une instance de la classe
+export default new FamilyTownsStore();
