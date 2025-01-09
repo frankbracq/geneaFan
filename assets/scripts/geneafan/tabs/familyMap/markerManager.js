@@ -11,7 +11,7 @@ class MarkerManager {
         if (this.cluster) {
             this.cluster.setMap(null);
         }
-        
+
         this.cluster = new MarkerClusterer({
             map,
             markers: [],
@@ -21,13 +21,17 @@ class MarkerManager {
         });
     }
 
-    addMarkerToLayer(layerName, key, position, options, onClickCallback = null) {
+    addLayer(layerName) {
         if (!this.layers.has(layerName)) {
             this.layers.set(layerName, new Map());
             console.log(`Created new layer: ${layerName}`);
         }
+    }
 
+    addMarker(layerName, key, position, options, onClickCallback = null) {
+        this.addLayer(layerName);
         const layerMarkers = this.layers.get(layerName);
+
         if (!layerMarkers.has(key)) {
             const marker = new google.maps.marker.AdvancedMarkerElement({
                 position,
@@ -52,10 +56,8 @@ class MarkerManager {
             return;
         }
 
-        // Récupérer tous les marqueurs visibles
         const visibleMarkers = new Set();
-        this.layers.forEach((layerMarkers, layerName) => {
-            console.log(`Processing layer ${layerName} with ${layerMarkers.size} markers`);
+        this.layers.forEach((layerMarkers) => {
             layerMarkers.forEach(marker => {
                 if (marker.map) {
                     visibleMarkers.add(marker);
@@ -65,21 +67,18 @@ class MarkerManager {
 
         const markers = Array.from(visibleMarkers);
         console.log('Total unique markers to be clustered:', markers.length);
-        
-        // Désactiver temporairement les clusters
+
         if (this.cluster) {
             this.cluster.setMap(null);
             this.cluster.clearMarkers();
         }
 
-        // Ne créer les clusters que s'il y a des marqueurs visibles
         if (markers.length > 0) {
-            // Réactiver les clusters avec les nouveaux marqueurs
             this.cluster.addMarkers(markers);
             this.cluster.setMap(map);
             console.log(`Cluster updated with ${markers.length} markers`);
         }
-        
+
         this.activeMarkers = new Set(markers);
     }
 
@@ -87,19 +86,15 @@ class MarkerManager {
         console.log(`Toggling visibility for layer ${layerName} to ${visible}`);
         const layerMarkers = this.layers.get(layerName);
         if (layerMarkers) {
-            // Supprimer d'abord les marqueurs des clusters
             if (this.cluster && !visible) {
                 this.cluster.clearMarkers();
             }
-            
-            // Mettre à jour la visibilité des marqueurs
+
             layerMarkers.forEach(marker => {
                 marker.map = visible ? map : null;
             });
-            
-            // Si le calque est visible, mettre à jour les clusters
+
             if (visible && map) {
-                console.log(`Updating clusters after enabling layer ${layerName}`);
                 this.addMarkersToCluster(map);
             }
         }
@@ -107,8 +102,7 @@ class MarkerManager {
 
     clearMarkers(layerName = null) {
         console.log(`Clearing markers${layerName ? ` for layer ${layerName}` : ' for all layers'}`);
-        
-        // Désactiver d'abord le clustering
+
         if (this.cluster) {
             this.cluster.clearMarkers();
             this.cluster.setMap(null);
@@ -126,7 +120,7 @@ class MarkerManager {
             });
             this.layers.clear();
         }
-        
+
         this.activeMarkers.clear();
     }
 

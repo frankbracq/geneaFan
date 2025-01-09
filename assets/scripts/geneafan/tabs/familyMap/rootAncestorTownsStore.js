@@ -23,8 +23,7 @@ class RootAncestorTownsStore {
             initialize: action,
             updateMarkers: action,
             clearMarkers: action,
-            toggleVisibility: action,
-            hasActiveMarkers: action,
+            toggleVisibility: action
         });
     }
 
@@ -33,10 +32,29 @@ class RootAncestorTownsStore {
         this.map = map;
         this.markerManager.initializeCluster(map, this.renderCluster.bind(this));
 
-        // Si nous avons déjà des données, mettons à jour les marqueurs
         if (this.birthData.length > 0) {
             this.updateMarkers(this.birthData);
         }
+    }
+
+    renderCluster({ count, position }) {
+        const element = document.createElement('div');
+        element.className = 'cluster-marker';
+        element.style.background = '#9333ea';
+        element.style.borderRadius = '50%';
+        element.style.width = `${Math.min(count * 3, 20) * 2}px`;
+        element.style.height = `${Math.min(count * 3, 20) * 2}px`;
+        element.style.color = 'white';
+        element.style.display = 'flex';
+        element.style.alignItems = 'center';
+        element.style.justifyContent = 'center';
+        element.textContent = count;
+        element.style.border = '2px solid white';
+
+        return new google.maps.marker.AdvancedMarkerElement({
+            position,
+            content: element
+        });
     }
 
     createMarker(location, births, generations) {
@@ -49,7 +67,7 @@ class RootAncestorTownsStore {
         const position = new google.maps.LatLng(location.lat, location.lng);
         const content = this.renderMarkerContent(location, births);
 
-        return this.markerManager.addMarkerToLayer(
+        return this.markerManager.addMarker(
             'rootAncestors',
             key,
             position,
@@ -78,21 +96,17 @@ class RootAncestorTownsStore {
         this.markerManager.clearMarkers('rootAncestors');
 
         const locationMap = this.groupBirthDataByLocation(birthData);
-        console.log('Processed locations for markers:', locationMap);
-
         locationMap.forEach((locationData) => {
-            console.log('Creating marker for location:', locationData.location);
             this.createMarker(locationData.location, locationData.births, locationData.generations);
         });
 
-        // Si le layer est visible, afficher les marqueurs
         if (this.isVisible && this.map) {
             this.markerManager.toggleLayerVisibility('rootAncestors', true, this.map);
         }
     }
 
     clearMarkers() {
-        this.markerManager.clearMarkers();
+        this.markerManager.clearMarkers('rootAncestors');
     }
 
     toggleVisibility(visible) {
@@ -100,38 +114,6 @@ class RootAncestorTownsStore {
         if (this.map) {
             this.markerManager.toggleLayerVisibility('rootAncestors', visible, this.map);
         }
-    }
-
-    hasActiveMarkers() {
-        if (!this.markerManager) return false;
-        let hasMarkers = false;
-        this.markerManager.layers.forEach(layerMarkers => {
-            layerMarkers.forEach(marker => {
-                if (marker.map !== null) {
-                    hasMarkers = true;
-                }
-            });
-        });
-        console.log('Checking active markers:', hasMarkers);
-        return hasMarkers;
-    }
-
-    getBounds() {
-        if (!this.markerManager || !this.map) return null;
-        
-        const bounds = new google.maps.LatLngBounds();
-        let hasMarkers = false;
-
-        this.markerManager.layers.forEach(layerMarkers => {
-            layerMarkers.forEach(marker => {
-                if (marker.map !== null) {
-                    bounds.extend(marker.position);
-                    hasMarkers = true;
-                }
-            });
-        });
-
-        return hasMarkers ? bounds : null;
     }
 
     groupBirthDataByLocation(data) {
@@ -157,65 +139,15 @@ class RootAncestorTownsStore {
         );
     }
 
-    renderCluster({ count, position }) {
-        const element = document.createElement('div');
-        element.className = 'cluster-marker';
-        element.style.background = '#1e40af';
-        element.style.borderRadius = '50%';
-        element.style.width = `${Math.min(count * 3, 20) * 2}px`;
-        element.style.height = `${Math.min(count * 3, 20) * 2}px`;
-        element.style.color = 'white';
-        element.style.display = 'flex';
-        element.style.alignItems = 'center';
-        element.style.justifyContent = 'center';
-        element.textContent = count;
-        element.style.border = '2px solid white';
-
-        return new google.maps.marker.AdvancedMarkerElement({
-            position,
-            content: element
-        });
-    }
-
-    cleanup() {
-        this.clearMarkers();
-        this.map = null;
-        this.markerManager.cleanup();
-    }
-
-    determineBranchFromSosa(sosa) {
-        if (!sosa) return 'unknown';
-        return sosa % 2 === 0 ? 'paternal' : 'maternal';
-    }
-
-    getBranchColor(births) {
-        if (!births || births.length === 0) return this.styles.colors.mixed;
-
-        const branches = new Set(
-            births.map(birth => this.determineBranchFromSosa(birth.sosa))
-                .filter(branch => branch !== 'unknown')
-        );
-
-        if (branches.size === 0) return this.styles.colors.mixed;
-        if (branches.size === 1) {
-            return branches.has('paternal') ?
-                this.styles.colors.paternal :
-                this.styles.colors.maternal;
-        }
-        return this.styles.colors.mixed;
-    }
-
     createInfoWindowContent(location, births, generations) {
         const div = document.createElement('div');
         div.className = 'info-window-content';
 
-        // Titre avec le nom du lieu
         const title = document.createElement('h3');
         title.textContent = location.name;
         title.className = 'font-bold text-lg mb-2';
         div.appendChild(title);
 
-        // Département si disponible
         if (location.departement) {
             const dept = document.createElement('p');
             dept.textContent = `Département: ${location.departement}`;
@@ -223,7 +155,6 @@ class RootAncestorTownsStore {
             div.appendChild(dept);
         }
 
-        // Générations et personnes
         const birthsByGeneration = this.groupBirthsByGeneration(births);
         birthsByGeneration.forEach((birthsInGen, gen) => {
             const genDiv = document.createElement('div');
@@ -264,7 +195,7 @@ class RootAncestorTownsStore {
 
     groupBirthsByGeneration(births) {
         const grouped = new Map();
-        
+
         births.forEach(birth => {
             const generation = birth.generation;
             if (!grouped.has(generation)) {
@@ -272,9 +203,36 @@ class RootAncestorTownsStore {
             }
             grouped.get(generation).push(birth);
         });
-        
-        // Trier par génération
+
         return new Map([...grouped.entries()].sort((a, b) => a[0] - b[0]));
+    }
+
+    determineBranchFromSosa(sosa) {
+        if (!sosa) return 'unknown';
+        return sosa % 2 === 0 ? 'paternal' : 'maternal';
+    }
+
+    getBranchColor(births) {
+        if (!births || births.length === 0) return this.styles.colors.mixed;
+
+        const branches = new Set(
+            births.map(birth => this.determineBranchFromSosa(birth.sosa))
+                .filter(branch => branch !== 'unknown')
+        );
+
+        if (branches.size === 0) return this.styles.colors.mixed;
+        if (branches.size === 1) {
+            return branches.has('paternal') ?
+                this.styles.colors.paternal :
+                this.styles.colors.maternal;
+        }
+        return this.styles.colors.mixed;
+    }
+
+    cleanup() {
+        this.clearMarkers();
+        this.map = null;
+        this.markerManager.cleanup();
     }
 }
 

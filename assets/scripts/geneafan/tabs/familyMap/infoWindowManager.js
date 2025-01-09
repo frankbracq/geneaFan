@@ -10,6 +10,27 @@ class InfoWindowManager {
         }
     }
 
+    createInfoWindowContent(title, details = []) {
+        const div = document.createElement('div');
+        div.className = 'info-window-content';
+
+        const titleElement = document.createElement('h3');
+        titleElement.textContent = title;
+        titleElement.className = 'font-bold text-lg mb-2';
+        div.appendChild(titleElement);
+
+        details.forEach(({ label, value }) => {
+            if (value) {
+                const detailElement = document.createElement('p');
+                detailElement.textContent = `${label}: ${value}`;
+                detailElement.className = 'text-sm text-gray-600';
+                div.appendChild(detailElement);
+            }
+        });
+
+        return div;
+    }
+
     showInfoWindow(marker, content, options = {}) {
         if (this.currentInfoWindow) {
             this.currentInfoWindow.close();
@@ -29,7 +50,6 @@ class InfoWindowManager {
             shouldFocus: false
         });
 
-        // Ajuster la position si le marqueur a un contenu personnalisé
         const offset = marker.content ? marker.content.offsetHeight || 0 : 0;
         this.currentInfoWindow.setOptions({
             pixelOffset: new google.maps.Size(0, -(offset / 2))
