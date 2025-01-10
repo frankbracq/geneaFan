@@ -44,7 +44,7 @@ class MarkerManager {
             }
 
             layerMarkers.set(key, marker);
-            console.log(`Added marker to layer ${layerName}, total markers in layer: ${layerMarkers.size}`);
+            // console.log(`Added marker to layer ${layerName}, total markers in layer: ${layerMarkers.size}`);
         }
 
         return layerMarkers.get(key);

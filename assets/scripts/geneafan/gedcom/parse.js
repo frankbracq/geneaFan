@@ -1235,8 +1235,9 @@ export async function getAllPlaces(json) {
         console.log('Store réinitialisé');
 
         // 3. Collecter toutes les villes du nouveau fichier GEDCOM
-        for (const individual of json) {
-            await processTree(individual.tree, null);
+        const individuals = json.filter(byTag(TAGS.INDIVIDUAL));
+        for (const individual of individuals) {
+            await processTree(individual.tree, null, individual);
         }
 
         // 4. Récupérer la liste des nouvelles villes
@@ -1327,7 +1328,7 @@ function getAllRecords() {
     });
 }
 
-async function processTree(tree, parentNode) {
+async function processTree(tree, parentNode, individual) {
     for (const node of tree) {
         if (node.tag === "PLAC" && parentNode) {
             let placeInfo = await processPlace({ data: node.data, tree: node.tree });
@@ -1339,18 +1340,16 @@ async function processTree(tree, parentNode) {
             const dateNode = parentNode.tree?.find(n => n.tag === "DATE");
             const eventDate = dateNode ? processDate(dateNode.data) : null;
 
-            // Debug log
-            // console.log('Processing place event:', {
-            //    normalizedKey,
-            //    parentTag: parentNode.tag,
-            //    place: node.data,
-            //    date: eventDate
-            //});
-
+            // Construction d'un eventData enrichi
             const eventData = {
                 type: parentNode.tag,
                 date: eventDate,
-                personId: parentNode.personId
+                personId: individual.pointer,
+                personDetails: {
+                    name: extractBasicInfo(individual).name,
+                    surname: extractBasicInfo(individual).surname,
+                    gender: extractBasicInfo(individual).gender
+                }
             };
 
             familyTownsStore.addTown(normalizedKey, placeInfo, eventData);
@@ -1359,7 +1358,8 @@ async function processTree(tree, parentNode) {
         if (node.tree && node.tree.length > 0) {
             await processTree(
                 node.tree,
-                ["BIRT", "DEAT", "BURI", "MARR", "OCCU", "EVEN"].includes(node.tag) ? node : parentNode
+                ["BIRT", "DEAT", "BURI", "MARR", "OCCU", "EVEN"].includes(node.tag) ? node : parentNode,
+                individual  // On passe l'individual aux appels récursifs
             );
         }
     }
