@@ -4,9 +4,9 @@ Traite tous types d'événements (naissances, mariages, décès)
 Fournit un calque de contexte global pour la carte
 */
 
-import { makeObservable, observable, action, computed, runInAction, autorun } from '../common/stores/mobx-config.js';
-import MarkerManager from '../tabs/familyMap/markerManager.js';
-import { infoWindowManager } from '../tabs/familyMap/infoWindowManager.js';
+import { makeObservable, observable, action, computed, runInAction, autorun } from '../../common/stores/mobx-config.js';
+import MarkerManager from '../../tabs/familyMap/markerManager.js';
+import { infoWindowManager } from '../../tabs/familyMap/infoWindowManager.js';
 
 class FamilyTownsStore {
     constructor() {

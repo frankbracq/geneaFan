@@ -1,5 +1,5 @@
 import { makeAutoObservable, runInAction, reaction } from 'mobx';
-import gedcomDataStore from '../../gedcom/gedcomDataStore';
+import gedcomDataStore from '../../gedcom/stores/gedcomDataStore';
 import { statisticsService } from './services/statisticsService';
 
 const AGE_RANGE_ORDER = [

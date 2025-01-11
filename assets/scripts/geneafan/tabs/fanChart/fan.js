@@ -7,7 +7,7 @@ import _ from "lodash";
 import { mmToPixels } from '../../utils/utils.js';
 import { extractYear } from '../../utils/dates.js';
 import configStore from './fanConfigStore.js';
-import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
+import gedcomDataStore from '../../gedcom/stores/gedcomDataStore.js';
 
 const weightFontFirst = 0.25,
     weightFontOther = 0.22,

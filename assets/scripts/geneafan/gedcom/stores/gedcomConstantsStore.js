@@ -102,6 +102,15 @@ class GedcomConstantsStore {
     }
 }
 
-// Create and export a singleton instance
+// Create instance
 const gedcomConstantsStore = new GedcomConstantsStore();
+
+// Export individual elements and the store
+export const { TAGS, VALUES, CALENDARS, MONTHS_MAP } = gedcomConstantsStore;
+export const { OCCUPATION: VALUE_OCCUPATION } = VALUES;  // Exporter VALUE_OCCUPATION spécifiquement
+export const byTag = (tag) => gedcomConstantsStore.byTag(tag);
+export const isRepublicanCalendar = (dateString) => gedcomConstantsStore.isRepublicanCalendar(dateString);
+export const isGregorianCalendar = (dateString) => gedcomConstantsStore.isGregorianCalendar(dateString);
+
+// Export store as default
 export default gedcomConstantsStore;

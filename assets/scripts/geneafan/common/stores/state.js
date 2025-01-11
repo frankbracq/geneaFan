@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import timelineEventsStore from '../../tabs/timeline/timelineEventsStore.js';
 import familyTreeDataStore from '../../tabs/familyTree/familyTreeDataStore.js';
-import familyTownsStore from '../../gedcom/familyTownsStore.js';
+import familyTownsStore from '../../gedcom/stores/familyTownsStore.js';
 import statisticsStore from '../../tabs/statistics/statisticsStore.js';
 
 /**

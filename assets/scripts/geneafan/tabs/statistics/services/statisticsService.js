@@ -1,5 +1,5 @@
 import statisticsStore from '../statisticsStore.js';
-import gedcomDataStore from '../../../gedcom/gedcomDataStore.js';
+import gedcomDataStore from '../../../gedcom/stores/gedcomDataStore.js';
 
 class StatisticsService {
     constructor() {

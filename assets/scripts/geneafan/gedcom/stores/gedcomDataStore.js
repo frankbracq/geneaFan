@@ -1,5 +1,7 @@
-import { makeObservable, observable, action, computed, runInAction, reaction } from '../common/stores/mobx-config.js';
+import { makeObservable, observable, action, computed, runInAction, reaction } from '../../common/stores/mobx-config.js';
 import _ from 'lodash';
+import { buildIndividual } from '../builders/buildIndividual.js';
+import { TAGS } from './gedcomConstantsStore.js';
 
 class GedcomDataStore {
     sourceData = [];
@@ -36,22 +38,82 @@ class GedcomDataStore {
             hasData: computed,
             familyTreeData: computed
         });
+
+        // Ajout d'une réaction pour construire automatiquement le cache
+        this.addReactionDisposer(
+            'buildCache',
+            () => this.sourceData,
+            (newSourceData) => {
+                if (newSourceData && newSourceData.length > 0) {
+                    console.log('🔄 Construction automatique du cache des individus...');
+                    this.buildIndividualsCache(newSourceData);
+                    
+                    // Vider sourceData après construction du cache
+                    runInAction(() => {
+                        console.log('🗑️ Nettoyage des données source...');
+                        this.sourceData = [];
+                    });
+                }
+            },
+            {
+                name: 'buildCacheReaction'
+            }
+        );
+    }
+
+    // Méthode pour construire le cache
+    buildIndividualsCache = async (sourceData) => {
+        try {
+            console.time('buildIndividualsCache');
+            
+            const allIndividuals = sourceData.filter(item => item.tag === TAGS.INDIVIDUAL);
+            const allFamilies = sourceData.filter(item => item.tag === TAGS.FAMILY);
+    
+            const newCache = new Map();
+            
+            // Construire le cache de manière synchrone
+            allIndividuals.forEach(individualJson => {
+                const individual = buildIndividual(individualJson, allIndividuals, allFamilies);
+                newCache.set(individualJson.pointer, individual);
+            });
+    
+            // Mise à jour atomique du cache
+            runInAction(() => {
+                this.individualsCache = newCache;
+                console.log(`Cache construit avec ${newCache.size} individus`);
+            });
+    
+            console.timeEnd('buildIndividualsCache');
+            return newCache; // Retourner le cache pour chaîner les opérations
+        } catch (error) {
+            console.error('Erreur lors de la construction du cache:', error);
+            throw error;
+        }
     }
 
     // Source Data Methods
-    getSourceData = () => {
-        return this.sourceData;
-    }
-
     setSourceData = (newSourceData) => {
+        if (!Array.isArray(newSourceData)) {
+            console.error('setSourceData: les données doivent être un tableau');
+            return;
+        }
+
+        console.log('🚀 setSourceData appelé avec', newSourceData?.length, 'éléments');
         runInAction(() => {
             this.sourceData = newSourceData;
+            // La réaction se déclenchera automatiquement après cette mise à jour
         });
     }
 
     clearSourceData = () => {
         runInAction(() => {
             this.sourceData = [];
+        });
+    }
+
+    clearCache = () => {
+        runInAction(() => {
+            this.individualsCache.clear();
         });
     }
 
@@ -63,6 +125,7 @@ class GedcomDataStore {
     }
 
     getIndividualsCache = () => {
+        console.log('📚 getIndividualsCache appelé, taille:', this.individualsCache.size);
         return this.individualsCache;
     }
 

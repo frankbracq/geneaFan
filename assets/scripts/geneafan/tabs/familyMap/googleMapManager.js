@@ -1,8 +1,8 @@
 import { Loader } from "@googlemaps/js-api-loader";
 import { googleMapsStore } from './googleMapsStore.js';
 import { rootAncestorTownsStore } from './rootAncestorTownsStore.js';
-import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
-import familyTownsStore from '../../gedcom/familyTownsStore.js';
+import gedcomDataStore from '../../gedcom/stores/gedcomDataStore.js';
+import familyTownsStore from '../../gedcom/stores/familyTownsStore.js';
 import { autorun } from '../../common/stores/mobx-config.js';
 
 class GoogleMapManager {

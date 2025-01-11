@@ -3,8 +3,8 @@ import TomSelect from 'tom-select';
 import { updateFilename } from "../downloadManager.js";
 import { FanChartManager } from "../../tabs/fanChart/fanChartManager.js";
 import { draw } from "../../tabs/fanChart/fan.js";
-import { buildHierarchy } from '../../gedcom/parse.js';
-import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
+import { buildHierarchy } from '../../gedcom/builders/hierarchyBuilder.js';
+import gedcomDataStore from '../../gedcom/stores/gedcomDataStore.js';
 import { DownloadManager } from "../downloadManager.js"; 
 
 class RootPersonStore {
