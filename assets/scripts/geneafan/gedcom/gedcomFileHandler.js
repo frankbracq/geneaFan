@@ -485,9 +485,6 @@ async function onFileChange(data) {
             console.error("Error updating geolocation:", error);
         }
 
-        // Retirer la partie d'ajout des marqueurs car nous n'utilisons plus que la vue temporelle
-        // qui est gérée par googleMapsStore.processHierarchy()
-
         const selectElement = document.getElementById("individual-select");
         selectElement.innerHTML = "";
         const placeholderOption = new Option("", "", true, true);
@@ -502,8 +499,10 @@ async function onFileChange(data) {
 
         tomSelect.clearOptions();
 
-        result = getIndividualsList(result.json);
-        let individuals = result.individualsList;
+        // Modifier cette partie pour gérer l'appel asynchrone
+        let { individualsList } = await getIndividualsList();
+        let individuals = individualsList;
+        
         individuals.forEach((individual) => {
             tomSelect.addOption({
                 value: individual.id,

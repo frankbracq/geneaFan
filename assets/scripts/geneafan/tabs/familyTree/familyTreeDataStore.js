@@ -1,23 +1,29 @@
 import { makeObservable, observable, action, computed, reaction } from '../../common/stores/mobx-config.js';
-import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
 
 class FamilyTreeDataStore {
-    constructor() {
-        // Initialize observable properties
-        this.familyTreeData = [];
-        this.genealogyGraph = { nodes: [], edges: [] };
-        this.ancestorMapCache = new Map();
-        this.commonAncestryGraphData = [];
+    static instance = null;
+    static initializing = false;
 
-        // Make properties observable
+    familyTreeData = [];
+    genealogyGraph = { nodes: [], edges: [] };
+    ancestorMapCache = new Map();
+    commonAncestryGraphData = [];
+    disposers = new Set();
+    gedcomDataStore = null;
+    initialized = false;
+
+    constructor() {
+        if (FamilyTreeDataStore.instance) {
+            return FamilyTreeDataStore.instance;
+        }
+        
         makeObservable(this, {
-            // Observable properties
             familyTreeData: observable.ref,
             genealogyGraph: observable.ref,
             ancestorMapCache: observable.ref,
             commonAncestryGraphData: observable.ref,
+            initialized: observable,
 
-            // Actions
             setFamilyTreeData: action,
             updateFromIndividualsCache: action,
             clearFamilyTreeData: action,
@@ -28,37 +34,73 @@ class FamilyTreeDataStore {
             clearAncestorMap: action,
             setAncestorMapCache: action,
             setCommonAncestryGraphData: action,
+            setInitialized: action,
 
-            // Computed values
             getFamilyTreeData: computed,
             getGenealogyGraph: computed,
             getAncestorMapCache: computed,
             getCommonAncestryGraphData: computed,
-            formatIndividualsForTree: computed
+            formatIndividualsForTree: computed,
+            isInitialized: computed
         });
 
-        // Déplacer la réaction dans une méthode séparée
-        this.initializeReactions();
+        FamilyTreeDataStore.instance = this;
     }
 
-    // Nouvelle méthode pour initialiser les réactions
-    initializeReactions = () => {
-        // Réaction aux changements de la source de données
-        reaction(
-            () => gedcomDataStore.getSourceData(),
-            () => {
-                this.clearAncestorMap();
-            },
-            {
-                name: 'FamilyTreeDataStore-SourceDataReaction'
-            }
-        );
+    static getInstance() {
+        if (!FamilyTreeDataStore.instance) {
+            FamilyTreeDataStore.instance = new FamilyTreeDataStore();
+        }
+        return FamilyTreeDataStore.instance;
+    }
 
-        // Réaction aux changements de la liste des individus
-        reaction(
-            () => gedcomDataStore.getIndividualsList(),
+    async initialize() {
+        // Si déjà initialisé ou en cours d'initialisation, retourner l'instance
+        if (this.initialized || FamilyTreeDataStore.initializing) {
+            console.log('FamilyTreeDataStore déjà initialisé ou en cours d\'initialisation');
+            return this;
+        }
+
+        console.group('🌳 Initialisation FamilyTreeDataStore');
+        FamilyTreeDataStore.initializing = true;
+
+        try {
+            console.log('Import de gedcomDataStore...');
+            const { default: gedcomStore } = await import('../../gedcom/gedcomDataStore.js');
+            this.gedcomDataStore = gedcomStore;
+
+            console.log('Configuration de la réaction aux changements du cache...');
+            this.initializeReactions();
+
+            this.setInitialized(true);
+            console.log('✅ FamilyTreeDataStore initialisé avec succès');
+
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'initialisation de FamilyTreeDataStore:', error);
+            throw error;
+        } finally {
+            FamilyTreeDataStore.initializing = false;
+            console.groupEnd();
+        }
+
+        return this;
+    }
+
+    setInitialized = (value) => {
+        this.initialized = value;
+    }
+
+    get isInitialized() {
+        return this.initialized;
+    }
+
+    initializeReactions() {
+        const individualsReaction = reaction(
+            () => Array.from(this.gedcomDataStore.individualsCache.values()),
             (individuals) => {
                 if (individuals && Array.isArray(individuals)) {
+                    console.log('Mise à jour du cache d\'ancêtres et des données de l\'arbre familial');
+                    this.clearAncestorMap();
                     this.updateFromIndividualsCache(individuals);
                 }
             },
@@ -66,10 +108,25 @@ class FamilyTreeDataStore {
                 name: 'FamilyTreeDataStore-IndividualsCacheReaction'
             }
         );
+
+        this.disposers.add(individualsReaction);
     }
 
+    dispose() {
+        console.log('Nettoyage de FamilyTreeDataStore');
+        this.disposers.forEach(disposer => disposer());
+        this.disposers.clear();
+        this.clearAllData();
+    }
 
-    // Le reste des méthodes reste inchangé
+    clearAllData() {
+        this.familyTreeData = [];
+        this.genealogyGraph = { nodes: [], edges: [] };
+        this.ancestorMapCache = new Map();
+        this.commonAncestryGraphData = [];
+        this.gedcomDataStore = null;
+    }
+
     setFamilyTreeData = (newData) => {
         this.familyTreeData = [...newData];
     }
@@ -173,5 +230,4 @@ class FamilyTreeDataStore {
     }
 }
 
-const familyTreeDataStore = new FamilyTreeDataStore();
-export default familyTreeDataStore;
+export default FamilyTreeDataStore.getInstance();

@@ -1,6 +1,5 @@
 // External libraries
 import _ from "lodash";
-import moment from "moment";
 import parseGedcom from "parse-gedcom";
 import jsonpointer from 'jsonpointer';
 
@@ -20,27 +19,17 @@ import {
     prefixedDate
 } from "../utils/dates.js";
 
-import {
-    processEventDatePlace,
-    generateEventDescription,
-    buildEventFallback,
-    addEvent,
-    handleEventTags
-} from './processors/eventProcessor.js';
-
 import { extractBasicInfo } from './builders/personBuilder.js';
 
 import { statisticsService } from '../tabs/statistics/services/statisticsService.js';
 
 // Stores
 import gedcomDataStore from './gedcomDataStore.js';
-import configStore from '../tabs/fanChart/fanConfigStore.js';
 import timelineEventsStore from '../tabs/timeline/timelineEventsStore.js';
 import familyTreeDataStore from '../tabs/familyTree/familyTreeDataStore.js';
 import familyTownsStore from './familyTownsStore.js';
 import statisticsStore from '../tabs/statistics/statisticsStore.js';
 import gedcomConstantsStore from './gedcomConstantsStore.js';
-import { buildIndividual } from './builders/personBuilder.js';
 
 const EMPTY = "";
 
@@ -253,155 +242,6 @@ export function processDate(s) {
     return display;
 }
 
-function buildHierarchy(currentRoot) {
-    console.time("buildHierarchy");
-    if (!currentRoot) {
-        console.warn("Root is undefined in buildHierarchy");
-        return null;
-    }
-
-    const config = configStore.getConfig;
-    const maxHeight = config.maxGenerations - 1;
-
-    timelineEventsStore.clearEvents();
-
-    // Utiliser le cache des individus déjà construit
-    const individualsCache = gedcomDataStore.getIndividualsCache()
-
-    function buildRecursive(
-        individualPointer,
-        parent,
-        sosa,
-        height,
-        individualsCache,
-        config
-    ) {
-        if (!individualsCache.has(individualPointer) && individualPointer !== null) {
-            return null;
-        }
-
-        const individual =
-            individualsCache.get(individualPointer) ||
-            createFictiveIndividual(individualPointer, sosa, height);
-
-        // Utiliser les événements individuels si disponibles
-        if (individual.individualEvents && individual.individualEvents.length > 0) {
-            individual.individualEvents.forEach((event) => {
-                const validTypes = ['death', 'birth', 'marriage'];
-                if (validTypes.includes(event.type)) {
-                    timelineEventsStore.addEvent({
-                        ...event,
-                        id: individualPointer,
-                        sosa,
-                    });
-                }
-            });
-        }
-
-        let obj = {
-            ...individual,
-            sosa: sosa,
-            generation: height,
-            parent: parent,
-        };
-
-        if (height < maxHeight) {
-            const parents = [];
-
-            const fatherPointer = individual.fatherId;
-            const motherPointer = individual.motherId;
-
-            if (fatherPointer) {
-                const fatherObj = individualsCache.get(fatherPointer);
-                if (fatherObj) {
-                    parents.push(
-                        buildRecursive(
-                            fatherPointer,
-                            obj,
-                            sosa * 2,
-                            height + 1,
-                            individualsCache,
-                            config
-                        )
-                    );
-                } else {
-                    console.log(`Father not found in cache: ${fatherPointer}`);
-                }
-            } else if (config.showMissing) {
-                parents.push(
-                    buildRecursive(
-                        null,
-                        obj,
-                        sosa * 2,
-                        height + 1,
-                        individualsCache,
-                        config
-                    )
-                );
-            }
-
-            if (motherPointer) {
-                const motherObj = individualsCache.get(motherPointer);
-                if (motherObj) {
-                    parents.push(
-                        buildRecursive(
-                            motherPointer,
-                            obj,
-                            sosa * 2 + 1,
-                            height + 1,
-                            individualsCache,
-                            config
-                        )
-                    );
-                } else {
-                    console.log(`Mother not found in cache: ${motherPointer}`);
-                }
-            } else if (config.showMissing) {
-                parents.push(
-                    buildRecursive(
-                        null,
-                        obj,
-                        sosa * 2 + 1,
-                        height + 1,
-                        individualsCache,
-                        config
-                    )
-                );
-            }
-            obj.children = parents;
-        }
-
-        return obj;
-    }
-
-    function createFictiveIndividual(individualPointer, sosa, height) {
-        return {
-            id: individualPointer,
-            name: "",
-            surname: "",
-            sosa: sosa,
-            generation: height,
-            gender: sosa % 2 === 0 ? "M" : "F",
-            children: [],
-            parent: null,
-            individualEvents: [],
-        };
-    }
-
-    // Utiliser currentRoot au lieu de rootIndividualPointer
-    const hierarchy = buildRecursive(
-        currentRoot,
-        null,
-        1,
-        0,
-        individualsCache,
-        config
-    );
-
-    console.timeEnd("buildHierarchy");
-    return hierarchy;
-}
-
 function toJson(data) {
     const triggers = "[�]";
     const view = new Uint8Array(data);
@@ -579,53 +419,64 @@ async function processTree(tree, parentNode, individual) {
     }
 }
 
-function calculateMaxGenerations(individualsCache, allFamilies) {
-    let maxGen = 0;
-    const generationMap = new Map();
-
-    // Initialize with root individuals (those without parents)
-    const rootIndividuals = Array.from(individualsCache.keys()).filter(id => {
-        const individual = individualsCache.get(id);
-        return !individual.fatherId && !individual.motherId;
-    });
-
-    // Set generation 1 for root individuals
-    rootIndividuals.forEach(id => generationMap.set(id, 1));
-
-    // Process each family to calculate generations
-    let changed = true;
-    while (changed) {
-        changed = false;
-        allFamilies.forEach(family => {
-            // Get parents
-            const fatherId = family.tree.find(node => node.tag === 'HUSB')?.data;
-            const motherId = family.tree.find(node => node.tag === 'WIFE')?.data;
-
-            // Get parent generation (max of both parents if they exist)
-            const parentGen = Math.max(
-                generationMap.get(fatherId) || 0,
-                generationMap.get(motherId) || 0
-            );
-
-            if (parentGen > 0) {
-                // Process children
-                const childNodes = family.tree.filter(node => node.tag === 'CHIL');
-                childNodes.forEach(childNode => {
-                    const childId = childNode.data;
-                    const currentChildGen = generationMap.get(childId) || 0;
-                    const newChildGen = parentGen + 1;
-
-                    if (newChildGen > currentChildGen) {
-                        generationMap.set(childId, newChildGen);
-                        maxGen = Math.max(maxGen, newChildGen);
-                        changed = true;
-                    }
-                });
-            }
+async function getIndividualsList() {
+    try {
+        console.group('Processing individuals list and initializing services');
+        
+        // Initialize statistics service
+        console.log('Initializing statistics service...');
+        statisticsService.initialize();
+        statisticsService.onProgress((progress) => {
+            console.log(`Processing statistics: ${progress}%`);
         });
-    }
 
-    return maxGen;
+        // Process family data
+        console.log('Processing family data...');
+        await statisticsService.processFamilyData();
+
+        // Get individuals list from cache
+        console.log('Getting individuals from cache...');
+        const individualsList = Array.from(gedcomDataStore.getIndividualsCache().values());
+        
+        if (!individualsList.length) {
+            throw new Error('No individuals found in cache');
+        }
+
+        // Initialize family tree data store and update data atomically
+        console.log('Initializing family tree data store...');
+        try {
+            await familyTreeDataStore.initialize();
+            console.log('Updating family tree data store with individuals...');
+            familyTreeDataStore.updateFromIndividualsCache(individualsList);
+            console.log('Family tree data store updated successfully');
+        } catch (error) {
+            console.error('Error initializing family tree data store:', error);
+            throw error;
+        }
+
+        // Initialize tree visualization
+        console.log('Initializing tree visualization...');
+        try {
+            const { initializeFamilyTree } = await import(
+                /* webpackChunkName: "treeUI" */ 
+                '../tabs/familyTree/familyTreeManager.js'
+            );
+            await initializeFamilyTree();
+            console.log('Family tree initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize tree visualization:', error);
+            // On continue même si l'initialisation de la visualisation échoue
+        }
+
+        console.log(`Successfully processed ${individualsList.length} individuals`);
+        console.groupEnd();
+        return { individualsList };
+
+    } catch (error) {
+        console.error('Error in getIndividualsList:', error);
+        console.groupEnd();
+        throw error;
+    }
 }
 
 /**
@@ -761,65 +612,4 @@ function processMarriageAndChildrenStatistics(
     });
 }
 
-function prebuildindividualsCache() {
-    console.time("prebuildindividualsCache");
-    const json = gedcomDataStore.getSourceData();
-    const individualsCache = new Map();
-
-    const allIndividuals = _.filter(json, byTag(TAGS.INDIVIDUAL));
-    const allFamilies = _.filter(json, byTag(TAGS.FAMILY));
-
-    // Traiter les individus pour le cache
-    allIndividuals.forEach(individualJson => {
-        const individual = buildIndividual(individualJson, allIndividuals, allFamilies);
-        individualsCache.set(individualJson.pointer, individual);
-    });
-
-    // Calculer le nombre max de générations
-    const maxGenerations = calculateMaxGenerations(individualsCache, allFamilies);
-    configStore.setConfig({ maxGenerations: Math.min(maxGenerations, 8) });
-    configStore.setAvailableGenerations(maxGenerations);
-
-    // Retirer l'appel aux statistiques d'ici
-    console.timeEnd("prebuildindividualsCache");
-    return individualsCache;
-}
-
-
-function getIndividualsList() {
-    const json = gedcomDataStore.getSourceData();
-    const allIndividuals = _.filter(json, byTag(TAGS.INDIVIDUAL));
-    const allFamilies = _.filter(json, byTag(TAGS.FAMILY));
-
-    // Initialiser le service avant de l'utiliser
-    statisticsService.initialize();
-
-    // Configurer l'écoute du progrès
-    statisticsService.onProgress((progress) => {
-        console.log(`Processing statistics: ${progress}%`);
-    });
-
-    // Construire d'abord le cache des individus
-    const individualsCache = prebuildindividualsCache();
-    gedcomDataStore.clearSourceData();
-    gedcomDataStore.setIndividualsCache(individualsCache);
-
-    // Puis lancer le traitement des statistiques pour la famille
-    statisticsService.processFamilyData();
-
-    requestAnimationFrame(() => {
-        import(/* webpackChunkName: "treeUI" */ '../tabs/familyTree/treeUI.js')
-            .then(module => {
-                const { initializeFamilyTree } = module;
-                initializeFamilyTree();
-            })
-            .catch(error => {
-                console.error('Error loading the module:', error);
-            });
-    });
-
-    const individualsList = Array.from(individualsCache.values());
-    return { individualsList };
-}
-
-export { toJson, buildHierarchy, getIndividualsList };
+export { toJson, getIndividualsList };

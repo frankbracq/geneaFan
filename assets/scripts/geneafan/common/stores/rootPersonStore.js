@@ -3,9 +3,10 @@ import TomSelect from 'tom-select';
 import { updateFilename } from "../downloadManager.js";
 import { FanChartManager } from "../../tabs/fanChart/fanChartManager.js";
 import { draw } from "../../tabs/fanChart/fan.js";
-import { buildHierarchy } from '../../gedcom/parse.js';
 import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
 import { DownloadManager } from "../downloadManager.js"; 
+import configStore from '../../tabs/fanChart/fanConfigStore.js';
+import timelineEventsStore from '../../tabs/timeline/timelineEventsStore.js';
 
 class RootPersonStore {
     root = null;
@@ -48,7 +49,7 @@ class RootPersonStore {
                     console.log('👉 Triggering buildHierarchy for root:', root);
                     
                     // 1. Mettre à jour la hiérarchie
-                    const newHierarchy = buildHierarchy(root);
+                    const newHierarchy = this.buildHierarchy(root);
                     console.log('✅ Hierarchy built and stored');
                     console.groupEnd();
                     
@@ -175,6 +176,155 @@ class RootPersonStore {
             return false;
         }
     });
+
+    buildHierarchy(currentRoot) {
+        console.time("buildHierarchy");
+        if (!currentRoot) {
+            console.warn("Root is undefined in buildHierarchy");
+            return null;
+        }
+
+        const config = configStore.getConfig;
+        const maxHeight = config.maxGenerations - 1;
+
+        timelineEventsStore.clearEvents();
+
+        // Utiliser le cache des individus déjà construit
+        const individualsCache = gedcomDataStore.getIndividualsCache()
+
+        const buildRecursive = (
+            individualPointer,
+            parent,
+            sosa,
+            height,
+            individualsCache,
+            config
+        ) => {
+            if (!individualsCache.has(individualPointer) && individualPointer !== null) {
+                return null;
+            }
+
+            const individual =
+                individualsCache.get(individualPointer) ||
+                this.createFictiveIndividual(individualPointer, sosa, height);
+
+            // Utiliser les événements individuels si disponibles
+            if (individual.individualEvents && individual.individualEvents.length > 0) {
+                individual.individualEvents.forEach((event) => {
+                    const validTypes = ['death', 'birth', 'marriage'];
+                    if (validTypes.includes(event.type)) {
+                        timelineEventsStore.addEvent({
+                            ...event,
+                            id: individualPointer,
+                            sosa,
+                        });
+                    }
+                });
+            }
+
+            let obj = {
+                ...individual,
+                sosa: sosa,
+                generation: height,
+                parent: parent,
+            };
+
+            if (height < maxHeight) {
+                const parents = [];
+
+                const fatherPointer = individual.fatherId;
+                const motherPointer = individual.motherId;
+
+                if (fatherPointer) {
+                    const fatherObj = individualsCache.get(fatherPointer);
+                    if (fatherObj) {
+                        parents.push(
+                            buildRecursive(
+                                fatherPointer,
+                                obj,
+                                sosa * 2,
+                                height + 1,
+                                individualsCache,
+                                config
+                            )
+                        );
+                    } else {
+                        console.log(`Father not found in cache: ${fatherPointer}`);
+                    }
+                } else if (config.showMissing) {
+                    parents.push(
+                        buildRecursive(
+                            null,
+                            obj,
+                            sosa * 2,
+                            height + 1,
+                            individualsCache,
+                            config
+                        )
+                    );
+                }
+
+                if (motherPointer) {
+                    const motherObj = individualsCache.get(motherPointer);
+                    if (motherObj) {
+                        parents.push(
+                            buildRecursive(
+                                motherPointer,
+                                obj,
+                                sosa * 2 + 1,
+                                height + 1,
+                                individualsCache,
+                                config
+                            )
+                        );
+                    } else {
+                        console.log(`Mother not found in cache: ${motherPointer}`);
+                    }
+                } else if (config.showMissing) {
+                    parents.push(
+                        buildRecursive(
+                            null,
+                            obj,
+                            sosa * 2 + 1,
+                            height + 1,
+                            individualsCache,
+                            config
+                        )
+                    );
+                }
+                obj.children = parents;
+            }
+
+            return obj;
+        };
+
+        // Méthode privée déplacée dans la classe
+        const hierarchy = buildRecursive(
+            currentRoot,
+            null,
+            1,
+            0,
+            individualsCache,
+            config
+        );
+
+        console.timeEnd("buildHierarchy");
+        return hierarchy;
+    }
+
+    createFictiveIndividual(individualPointer, sosa, height) {
+        return {
+            id: individualPointer,
+            name: "",
+            surname: "",
+            sosa: sosa,
+            generation: height,
+            gender: sosa % 2 === 0 ? "M" : "F",
+            children: [],
+            parent: null,
+            individualEvents: [],
+        };
+    }
 
     initializeTomSelect() {
         this.tomSelect = new TomSelect("#individual-select", {

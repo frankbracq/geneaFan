@@ -102,6 +102,10 @@ class GedcomConstantsStore {
     }
 }
 
-// Create and export a singleton instance
+// Create the singleton instance
 const gedcomConstantsStore = new GedcomConstantsStore();
+
+// Export both the instance and the needed constants/functions
+export const TAGS = gedcomConstantsStore.TAGS;
+export const byTag = gedcomConstantsStore.byTag;
 export default gedcomConstantsStore;

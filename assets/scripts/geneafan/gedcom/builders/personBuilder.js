@@ -10,19 +10,18 @@ import {
     prefixedDate
 } from "../../utils/dates.js";
 
-import { handleEventTags, buildEventFallback, generateEventDescription, addEvent } from '../processors/eventProcessor.js';
-import { processDate } from '../parse.js';
-import { processEventDatePlace} from '../processors/eventProcessor.js';
+import { 
+    handleEventTags, 
+    buildEventFallback, 
+    generateEventDescription, 
+    addEvent, 
+    processEventDatePlace 
+} from '../processors/eventProcessor.js';
 
-import { statisticsService } from '../../tabs/statistics/services/statisticsService.js';
+import { processDate } from '../parse.js';
 
 // Stores
-import gedcomDataStore from '../gedcomDataStore.js';
-import configStore from '../../tabs/fanChart/fanConfigStore.js';
-import timelineEventsStore from '../../tabs/timeline/timelineEventsStore.js';
 import familyTreeDataStore from '../../tabs/familyTree/familyTreeDataStore.js';
-import familyTownsStore from '../familyTownsStore.js';
-import statisticsStore from '../../tabs/statistics/statisticsStore.js';
 import gedcomConstantsStore from '../gedcomConstantsStore.js';
 
 
@@ -31,6 +30,10 @@ const { TAGS } = gedcomConstantsStore;
 
 function byTag(tag) {
     return gedcomConstantsStore.byTag(tag);
+}
+
+function formatPersonLink(id, name) {
+    return `<a href="#"><span class="person-link" data-person-id="${id}">${name}</span></a>`;
 }
 
 function formatName(str, isSurname) {
@@ -186,10 +189,6 @@ function processMarriages(
     });
 
     return marriages;
-}
-
-function formatPersonLink(id, name) {
-    return `<a href="#"><span class="person-link" data-person-id="${id}">${name}</span></a>`;
 }
 
 function formatSiblings(siblings) {

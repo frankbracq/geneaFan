@@ -1,5 +1,4 @@
 import * as d3 from 'd3';
-import statisticsStore from './statisticsStore.js';
 import { Tooltip } from 'bootstrap';
 
 class StatisticsManager {
@@ -10,32 +9,51 @@ class StatisticsManager {
         this.minHeight = 1;
         this.minChartWidth = 300;
         this.minChartHeight = 200;
+        this.statisticsStore = null;
 
         // Bind methods
         this.initialize = this.initialize.bind(this);
         this.updateCharts = this.updateCharts.bind(this);
         this.resize = this.resize.bind(this);
-
-        // Subscribe to statistics updates
-        statisticsStore.subscribeToUpdates(this.updateCharts);
     }
 
-    initialize() {
+    async initialize() {
+        console.group('📈 Initialisation du StatisticsManager');
+        
         if (document.readyState === 'loading') {
+            console.log('Document en cours de chargement, attente du DOMContentLoaded');
             document.addEventListener('DOMContentLoaded', this.initialize);
-            return;
-        }
-
-        const containers = ['#age-chart', '#lifespan-chart'];
-
-        // Vérifier que les conteneurs et les données sont disponibles
-        const stats = statisticsStore.getStatistics('family');
-        if (!containers.every(id => document.querySelector(id)) || !stats?.demography) {
-            setTimeout(this.initialize, 500);
+            console.groupEnd();
             return;
         }
 
         try {
+            // Import dynamique du store
+            console.log('Import du statisticsStore...');
+            const { default: statisticsStore } = await import('./statisticsStore.js');
+            this.statisticsStore = statisticsStore;
+
+            // Initialisation du store
+            console.log('Initialisation du statisticsStore...');
+            this.statisticsStore.initialize();
+
+            // S'abonner aux mises à jour
+            console.log('Configuration des abonnements aux mises à jour...');
+            this.statisticsStore.subscribeToUpdates(this.updateCharts);
+
+            const containers = ['#age-chart', '#lifespan-chart'];
+            console.log('Vérification des conteneurs:', containers);
+
+            // Vérifier que les conteneurs et les données sont disponibles
+            const stats = this.statisticsStore.getStatistics('family');
+            if (!containers.every(id => document.querySelector(id)) || !stats?.demography) {
+                console.log('Conteneurs ou données non disponibles, nouvelle tentative dans 500ms');
+                setTimeout(this.initialize, 500);
+                console.groupEnd();
+                return;
+            }
+
+            console.log('Initialisation des graphiques...');
             this.cleanupContainers();
             this.updateBasicStats();
             this.createDemographyCharts();
@@ -44,12 +62,33 @@ class StatisticsManager {
             if (!this.initialized) {
                 window.addEventListener('resize', this.resize);
                 this.initialized = true;
+                console.log('✅ Initialisation terminée avec succès');
             }
+
         } catch (error) {
-            console.error('Error initializing statistics manager:', error);
+            console.error('❌ Erreur lors de l\'initialisation:', error);
         }
+
+        console.groupEnd();
     }
 
+    dispose() {
+        if (this.initialized) {
+            Object.keys(this.charts).forEach(key => {
+                d3.select(`#${key}-chart`).selectAll('*').remove();
+            });
+            this.charts = {};
+            window.removeEventListener('resize', this.resize);
+            this.initialized = false;
+            
+            // Nettoyage du store
+            if (this.statisticsStore) {
+                this.statisticsStore.dispose();
+                this.statisticsStore = null;
+            }
+        }
+    }
+    
     initializeNavigation() {
         const navLinks = document.querySelectorAll('.statistics-container .nav.nav-pills .nav-link');
 

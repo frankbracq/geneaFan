@@ -1,7 +1,6 @@
 import TimelineManager from './timeline/timelineManager.js';
 import { googleMapManager } from './familyMap/googleMapManager.js';
 import { FanChartManager } from './fanChart/fanChartManager.js';
-import { statisticsManager } from './statistics/statisticsManager.js';
 
 function initializeTabOnVisible(tabSelector, initCallback) {
     console.group(`📑 Configuration de l'initialisation pour ${tabSelector}`);
@@ -58,14 +57,16 @@ export async function initializeTabs() {
         console.log('⏳ Initialisation de la timeline...');
         new TimelineManager();
 
-        // Initialisation des statistiques
-        initializeTabOnVisible('#tab5', () => {
+        // Initialisation des statistiques avec import dynamique
+        initializeTabOnVisible('#tab5', async () => {
             console.group('📈 Initialisation des statistiques');
             console.log('Démarrage de l\'initialisation des statistiques...');
-            statisticsManager.initialize()
-                .catch(error => {
-                    console.error('❌ Erreur lors de l\'initialisation des statistiques:', error);
-                });
+            try {
+                const { statisticsManager } = await import('./statistics/statisticsManager.js');
+                await statisticsManager.initialize();
+            } catch (error) {
+                console.error('❌ Erreur lors de l\'initialisation des statistiques:', error);
+            }
             console.groupEnd();
         });
 
