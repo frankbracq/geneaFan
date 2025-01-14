@@ -52,7 +52,7 @@ class FamilyTownsStore {
     addTown(key, townData, eventData = null) {
         runInAction(() => {
             let town = this.townsData.get(key);
-
+    
             if (!town) {
                 town = observable({
                     town: townData.town || '',
@@ -75,34 +75,39 @@ class FamilyTownsStore {
                         birthCount: 0,
                         deathCount: 0,
                         marriageCount: 0,
-                        localDeaths: 0,      // Personnes décédées dans leur ville de naissance
-                        externalDeaths: 0,   // Personnes décédées ailleurs
+                        localDeaths: 0,      
+                        externalDeaths: 0,   
                         timespan: {
                             firstEvent: null,
                             lastEvent: null
-                        }
+                        },
+                        patronymes: observable({
+                            total: new Set(),              // Ensemble de tous les patronymes
+                            byPeriod: new Map(),           // Map des patronymes par période
+                            frequents: [],                 // Top des patronymes les plus fréquents
+                            evolution: []                  // Évolution des patronymes dans le temps
+                        })
                     })
                 });
                 this.townsData.set(key, town);
             }
-
+    
             if (eventData && eventData.type && town.events[eventData.type]) {
                 const enrichedEvent = {
                     ...eventData,
                     personDetails: {
-                        name: eventData.name || '',
-                        surname: eventData.surname || '',
-                        birthDate: eventData.birthDate || '',
-                        deathDate: eventData.deathDate || '',
-                        birthPlace: eventData.birthPlace || '',
-                        deathPlace: eventData.deathPlace || '',
-                        occupation: eventData.occupation || ''
+                        name: eventData.personDetails.name || '',
+                        surname: eventData.personDetails.surname || '',
+                        gender: eventData.personDetails.gender || '',
+                        birthDate: eventData.personDetails.birthDate || '',
+                        deathDate: eventData.personDetails.deathDate || '',
+                        birthPlace: eventData.personDetails.birthPlace || '',
+                        deathPlace: eventData.personDetails.deathPlace || '',
+                        occupation: eventData.personDetails.occupation || ''
                     }
                 };
                 
-                // Mise à jour des statistiques
                 this.updateTownStatistics(town, enrichedEvent);
-                
                 town.events[eventData.type].push(enrichedEvent);
             }
         });

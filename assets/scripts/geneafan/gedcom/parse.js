@@ -393,7 +393,7 @@ async function processTree(tree, parentNode, individual) {
 
             const dateNode = parentNode.tree?.find(n => n.tag === "DATE");
             const eventDate = dateNode ? processDate(dateNode.data) : null;
-
+            const personData = extractBasicInfo(individual);
             // Construction d'un eventData enrichi
             const eventData = {
                 type: parentNode.tag,

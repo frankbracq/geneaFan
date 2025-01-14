@@ -36,21 +36,23 @@ function formatPersonLink(id, name) {
     return `<a href="#"><span class="person-link" data-person-id="${id}">${name}</span></a>`;
 }
 
-function formatName(str, isSurname) {
+function formatName(str, isSurname = false) {
     if (typeof str !== "string") {
         str = String(str);
     }
 
-    str = str.toLowerCase().replace(/(^|\s|-)([a-zà-ÿ])/g, function (match) {
+    // Convert to lowercase and capitalize first letter of each word after space or hyphen
+    str = str.toLowerCase().replace(/(^|\s|-)([a-zà-ÿ])/g, function(match) {
         return match.toUpperCase();
     });
 
+    // Handle particle "de"
     str = str.replace(/ De /g, " de ");
-
     if (str.startsWith("De ")) {
         str = "de " + str.slice(3);
     }
 
+    // For surnames, keep only the first part if there's an "ou" separator
     if (isSurname) {
         str = str.replace(/(\S+)\s+[oO]u\s+\S+/gi, "$1");
     }
@@ -211,35 +213,76 @@ function formatChild(child) {
         }`;
 }
 
+/**
+ * Extracts basic information from a GEDCOM individual record
+ * @param {Object} individualJson - The GEDCOM individual record
+ * @returns {Object} Object containing name, surname, gender, canSign, and personLink
+ */
 export function extractBasicInfo(individualJson) {
-    const names = individualJson.tree.filter(byTag(TAGS.NAME));
-    const nameInfo = names.map((o) =>
-        o.data.split("/").map((s) => s.trim().replace(/_/, " "))
-    );
-    let name = formatName(
-        nameInfo.map((info) => info[0]).find((n) => n) || "",
-        false
-    );
-    let surname = formatName(
-        nameInfo.map((info) => info[1]).find((s) => s) || "",
-        true
-    );
+    if (!individualJson?.tree) {
+        return { 
+            name: '', 
+            surname: '', 
+            gender: 'unknown', 
+            canSign: false, 
+            personLink: '' 
+        };
+    }
 
-    let fullName = `${name.split(" ")[0]} ${surname}`;
-    let personLink = formatPersonLink(individualJson.pointer, fullName);
-
-    const genderMap = { 'M': 'male', 'F': 'female' };
-
-    const result = individualJson.tree.reduce((acc, curr) => {
-        if (byTag(TAGS.SEX)(curr)) {
-            acc.gender = genderMap[curr.data] || 'unknown';
-        } else if (byTag(TAGS.SIGNATURE)(curr)) {
-            acc.canSign = curr.data === TAGS.YES;
+    // Process NAME nodes
+    const names = individualJson.tree.filter(node => node.tag === TAGS.NAME);
+    
+    // Extract name components, handling both GIVN/SURN structure and traditional format
+    let name = '', surname = '';
+    
+    if (names.length > 0) {
+        const nameNode = names[0]; // Take first NAME node
+        
+        if (nameNode.tree?.length > 0) {
+            // Check for structured name components (GIVN/SURN)
+            const givnNode = nameNode.tree.find(node => node.tag === 'GIVN');
+            const surnNode = nameNode.tree.find(node => node.tag === 'SURN');
+            
+            if (givnNode || surnNode) {
+                name = givnNode ? formatName(givnNode.data, false) : '';
+                surname = surnNode ? formatName(surnNode.data, true) : '';
+            }
         }
-        return acc;
-    }, { gender: 'male', canSign: false });
+        
+        // If structured components weren't found, parse the NAME data
+        if (!name && !surname && nameNode.data) {
+            const nameParts = nameNode.data.split('/').map(part => part.trim());
+            if (nameParts.length >= 2) {
+                name = formatName(nameParts[0], false);
+                surname = formatName(nameParts[1], true);
+            }
+        }
+    }
 
-    return { name, surname, gender: result.gender, canSign: result.canSign, personLink };
+    // Process gender
+    const genderMap = {
+        'M': 'male',
+        'F': 'female'
+    };
+    
+    const sexNode = individualJson.tree.find(node => node.tag === TAGS.SEX);
+    const gender = genderMap[sexNode?.data] || 'unknown';
+
+    // Process signature capability
+    const signNode = individualJson.tree.find(node => node.tag === TAGS.SIGNATURE);
+    const canSign = signNode?.data === TAGS.YES;
+
+    // Generate person link
+    const fullName = `${name.split(" ")[0]} ${surname}`.trim();
+    const personLink = formatPersonLink(individualJson.pointer, fullName);
+
+    return {
+        name,
+        surname,
+        gender,
+        canSign,
+        personLink
+    };
 }
 
 /* Parental Family Members */
