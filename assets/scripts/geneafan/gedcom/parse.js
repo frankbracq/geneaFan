@@ -23,6 +23,9 @@ import { extractBasicInfo } from './builders/personBuilder.js';
 
 import { statisticsService } from '../tabs/statistics/services/statisticsService.js';
 
+import { departementData } from './departementData.js';
+import { countryData } from './countryData.js';
+
 // Stores
 import gedcomDataStore from './gedcomDataStore.js';
 import timelineEventsStore from '../tabs/timeline/timelineEventsStore.js';
@@ -57,25 +60,17 @@ function formatSiblings(siblings) {
 let cachedDepartementData = null;
 let cachedCountryData = null;
 
-async function getDepartementData() {
-    if (!cachedDepartementData) {
-        const { departementData } = await import('./departementData.js');
-        cachedDepartementData = departementData;
-    }
-    return cachedDepartementData;
+function getDepartementData() {
+    return departementData;
 }
 
-async function getCountryData() {
-    if (!cachedCountryData) {
-        const { countryData } = await import('./countryData.js');
-        cachedCountryData = countryData;
-    }
-    return cachedCountryData;
+function getCountryData() {
+    return countryData;
 }
 
-async function processPlace({ data: original, tree } = {}) {
-    const departementData = await getDepartementData();
-    const countryData = await getCountryData();
+function processPlace({ data: original, tree } = {}) {
+    const departementData = getDepartementData();
+    const countryData = getCountryData();
 
     const segments = original.split(/\s*,\s*/);
     let placeObj = {
@@ -291,7 +286,7 @@ export async function getAllPlaces(json) {
         // 3. Collecter toutes les villes du nouveau fichier GEDCOM
         const individuals = json.filter(byTag(TAGS.INDIVIDUAL));
         for (const individual of individuals) {
-            await processTree(individual.tree, null, individual);
+            processTree(individual.tree, null, individual);
         }
 
         // 4. Récupérer la liste des nouvelles villes
@@ -382,10 +377,10 @@ function getAllRecords() {
     });
 }
 
-async function processTree(tree, parentNode, individual) {
+function processTree(tree, parentNode, individual) {
     for (const node of tree) {
         if (node.tag === "PLAC" && parentNode) {
-            let placeInfo = await processPlace({ data: node.data, tree: node.tree });
+            let placeInfo = processPlace({ data: node.data, tree: node.tree });
             let normalizedKey = normalizeGeoString(placeInfo.town);
             if (!normalizedKey) continue;
 
@@ -411,7 +406,7 @@ async function processTree(tree, parentNode, individual) {
         }
 
         if (node.tree && node.tree.length > 0) {
-            await processTree(
+            processTree(
                 node.tree,
                 ["BIRT", "DEAT", "BURI", "MARR", "OCCU", "EVEN"].includes(node.tag) ? node : parentNode,
                 individual  // On passe l'individual aux appels récursifs
