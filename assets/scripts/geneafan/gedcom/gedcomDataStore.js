@@ -2,7 +2,8 @@ import { makeObservable, observable, action, computed, reaction, runInAction } f
 import _ from 'lodash';
 import { buildIndividual } from './builders/personBuilder.js';
 import configStore from '../tabs/fanChart/fanConfigStore.js';
-import { TAGS, byTag } from './gedcomConstantsStore.js'; 
+import { TAGS, byTag } from './gedcomConstantsStore.js';
+import { storeEvents, EVENTS } from './storeEvents.js'; 
 
 class GedcomDataStore {
     sourceData = [];
@@ -56,6 +57,13 @@ class GedcomDataStore {
         );
     }
 
+    addIndividual = (id, data) => {
+        runInAction(() => {
+            this.individualsCache.set(id, data);
+            storeEvents.emit(EVENTS.INDIVIDUAL.ADDED, { id, data });
+        });
+    }
+
     buildIndividualsCache(json) {
         console.time("buildIndividualsCache");
         const allIndividuals = _.filter(json, byTag(TAGS.INDIVIDUAL));
@@ -71,6 +79,14 @@ class GedcomDataStore {
         // Mise à jour atomique du cache
         runInAction(() => {
             this.individualsCache = newCache;
+            
+            // Émettre les événements individuels après la mise à jour atomique
+            newCache.forEach((data, id) => {
+                storeEvents.emit(EVENTS.INDIVIDUAL.ADDED, { id, data });
+            });
+            
+            // Émettre l'événement de construction complète
+            storeEvents.emit(EVENTS.CACHE.BUILT, this.individualsCache);
         });
 
         // Calculer le nombre max de générations
@@ -298,7 +314,10 @@ class GedcomDataStore {
             this._hierarchy = null;
             this.familyEvents = [];
             this.isFileUploaded = false;
-            this.clearReactions(); // Nettoyer aussi les réactions
+            this.clearReactions();
+            
+            // Émettre l'événement de nettoyage
+            storeEvents.emit(EVENTS.CACHE.CLEARED);
         });
     }
 

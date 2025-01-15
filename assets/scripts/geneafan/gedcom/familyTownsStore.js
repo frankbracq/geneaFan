@@ -7,11 +7,14 @@ Fournit un calque de contexte global pour la carte
 import { makeObservable, observable, action, computed, runInAction, autorun } from '../common/stores/mobx-config.js';
 import MarkerManager from '../tabs/familyMap/markerManager.js';
 import { infoWindowManager } from '../tabs/familyMap/infoWindowManager.js';
+import { storeEvents, EVENTS } from './storeEvents.js';
+import { normalizeGeoString } from "../utils/geo.js";
 
 class FamilyTownsStore {
     constructor() {
         this.markerManager = new MarkerManager();
         this.townsData = new Map();
+        this.disposers = new Map();
         this.isLoading = false;
         this.isVisible = false;
         this.map = null;
@@ -24,6 +27,11 @@ class FamilyTownsStore {
             addTown: action,
             updateTown: action,
             toggleVisibility: action,
+            clearAllTowns: action,
+            updateTownEventsForIndividual: action,
+            finalizeAllTownsData: action,
+            addOrUpdateTownEvent: action,
+            recalculateAllTownsStatistics: action,
             totalTowns: computed
         });
 
@@ -32,6 +40,303 @@ class FamilyTownsStore {
                 this.updateMarkers();
             }
         });
+
+        this.setupEventSubscriptions();
+    }
+
+    setupEventSubscriptions() {
+        // Écouter les ajouts d'individus
+        const individualDisposer = storeEvents.subscribe(
+            EVENTS.INDIVIDUAL.ADDED,
+            ({id, data}) => {
+                this.updateTownEventsForIndividual(data);
+            }
+        );
+
+        // Écouter la construction complète du cache
+        const cacheDisposer = storeEvents.subscribe(
+            EVENTS.CACHE.BUILT,
+            () => {
+                console.log('🏁 Cache des individus construit, finalisation des données des villes');
+                this.finalizeAllTownsData();
+            }
+        );
+
+        // Écouter le nettoyage du cache
+        const clearDisposer = storeEvents.subscribe(
+            EVENTS.CACHE.CLEARED,
+            () => {
+                console.log('🧹 Nettoyage des données des villes');
+                this.clearAllTowns();
+            }
+        );
+
+        this.disposers.set('individual', individualDisposer);
+        this.disposers.set('cache', cacheDisposer);
+        this.disposers.set('clear', clearDisposer);
+    }
+
+    updateTownEventsForIndividual(individual) {
+        individual.individualEvents?.forEach(event => {
+            if (!event.town) return;
+            
+            const townKey = normalizeGeoString(event.town);
+            if (!townKey) return;
+
+            // Enrichir l'événement avec les données complètes de l'individu
+            const enrichedEvent = {
+                type: event.type,
+                date: event.date,
+                personId: individual.id,
+                personDetails: {
+                    name: individual.name,
+                    surname: individual.surname,
+                    gender: individual.gender,
+                    birthDate: individual.birthDate,
+                    deathDate: individual.deathDate,
+                    birthPlace: individual.fanBirthPlace,
+                    deathPlace: individual.fanDeathPlace,
+                    occupation: individual.occupation
+                }
+            };
+
+            // Notifier de la mise à jour de la ville
+            storeEvents.emit(EVENTS.TOWN.UPDATED, {
+                townKey,
+                event: enrichedEvent
+            });
+
+            this.addOrUpdateTownEvent(townKey, enrichedEvent);
+        });
+    }
+
+    addOrUpdateTownEvent(townKey, eventData) {
+        runInAction(() => {
+            let town = this.townsData.get(townKey);
+            
+            if (!town) {
+                // Initialisation complète d'une nouvelle ville
+                town = {
+                    events: {
+                        BIRT: [],  // Naissances
+                        DEAT: [],  // Décès
+                        MARR: [],  // Mariages
+                        BURI: [],  // Inhumations
+                        OCCU: [],  // Occupations
+                        EVEN: []   // Autres événements
+                    },
+                    statistics: {
+                        birthCount: 0,
+                        deathCount: 0,
+                        marriageCount: 0,
+                        localDeaths: 0,      
+                        externalDeaths: 0,   
+                        timespan: {
+                            firstEvent: null,
+                            lastEvent: null
+                        },
+                        patronymes: {
+                            total: new Set(),              // Ensemble de tous les patronymes
+                            byPeriod: new Map(),           // Map des patronymes par période
+                            frequents: [],                 // Top des patronymes les plus fréquents
+                            evolution: []                  // Évolution des patronymes dans le temps
+                        }
+                    }
+                };
+                this.townsData.set(townKey, town);
+            }
+
+            // S'assurer que le tableau d'événements existe pour ce type
+            if (!town.events[eventData.type]) {
+                town.events[eventData.type] = [];
+            }
+
+            // Vérifier si l'événement existe déjà
+            const existingEventIndex = town.events[eventData.type].findIndex(
+                e => e.personId === eventData.personId && e.date === eventData.date
+            );
+
+            if (existingEventIndex !== -1) {
+                // Mettre à jour l'événement existant
+                town.events[eventData.type][existingEventIndex] = {
+                    ...town.events[eventData.type][existingEventIndex],
+                    ...eventData
+                };
+            } else {
+                // Ajouter le nouvel événement
+                town.events[eventData.type].push(eventData);
+            }
+
+            // Mise à jour des statistiques de la ville
+            this.updateTownStatistics(town, eventData);
+        });
+    }
+
+    recalculateAllTownsStatistics() {
+        runInAction(() => {
+            this.townsData.forEach((town, townKey) => {
+                // Réinitialiser les compteurs
+                town.statistics = {
+                    birthCount: 0,
+                    deathCount: 0,
+                    marriageCount: 0,
+                    localDeaths: 0,
+                    externalDeaths: 0,
+                    timespan: {
+                        firstEvent: null,
+                        lastEvent: null
+                    },
+                    patronymes: {
+                        total: new Set(),
+                        byPeriod: new Map(),
+                        frequents: [],
+                        evolution: []
+                    }
+                };
+
+                // Recalculer les statistiques pour chaque type d'événement
+                Object.entries(town.events).forEach(([eventType, events]) => {
+                    events.forEach(event => {
+                        const eventDate = event.date ? new Date(event.date.split('/').reverse().join('-')) : null;
+                        
+                        // Mise à jour du timespan
+                        if (eventDate) {
+                            if (!town.statistics.timespan.firstEvent || 
+                                eventDate < new Date(town.statistics.timespan.firstEvent)) {
+                                town.statistics.timespan.firstEvent = eventDate.toISOString();
+                            }
+                            if (!town.statistics.timespan.lastEvent || 
+                                eventDate > new Date(town.statistics.timespan.lastEvent)) {
+                                town.statistics.timespan.lastEvent = eventDate.toISOString();
+                            }
+                        }
+
+                        // Mise à jour des compteurs selon le type d'événement
+                        switch (eventType) {
+                            case 'BIRT':
+                                town.statistics.birthCount++;
+                                if (event.personDetails?.surname) {
+                                    town.statistics.patronymes.total.add(event.personDetails.surname);
+                                    if (eventDate) {
+                                        const year = eventDate.getFullYear();
+                                        const period = Math.floor(year / 50) * 50;
+                                        const periodKey = `${period}-${period + 49}`;
+                                        
+                                        if (!town.statistics.patronymes.byPeriod.has(periodKey)) {
+                                            town.statistics.patronymes.byPeriod.set(periodKey, new Map());
+                                        }
+                                        
+                                        const periodStats = town.statistics.patronymes.byPeriod.get(periodKey);
+                                        periodStats.set(
+                                            event.personDetails.surname,
+                                            (periodStats.get(event.personDetails.surname) || 0) + 1
+                                        );
+                                    }
+                                }
+                                break;
+                            case 'DEAT':
+                                town.statistics.deathCount++;
+                                if (event.personDetails?.birthPlace === town.town) {
+                                    town.statistics.localDeaths++;
+                                } else {
+                                    town.statistics.externalDeaths++;
+                                }
+                                break;
+                            case 'MARR':
+                                town.statistics.marriageCount++;
+                                break;
+                        }
+                    });
+                });
+
+                // Recalculer les patronymes fréquents
+                if (town.statistics.patronymes.total.size > 0) {
+                    // Compter la fréquence totale de chaque patronyme
+                    const frequency = new Map();
+                    town.statistics.patronymes.byPeriod.forEach(periodMap => {
+                        periodMap.forEach((count, surname) => {
+                            frequency.set(surname, (frequency.get(surname) || 0) + count);
+                        });
+                    });
+                    
+                    // Trier et garder les 10 plus fréquents
+                    town.statistics.patronymes.frequents = Array.from(frequency.entries())
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 10)
+                        .map(([surname, count]) => ({ surname, count }));
+
+                    // Calculer l'évolution dans le temps
+                    const topSurnames = new Set(town.statistics.patronymes.frequents.map(p => p.surname));
+                    town.statistics.patronymes.evolution = Array.from(town.statistics.patronymes.byPeriod.entries())
+                        .map(([period, patronymes]) => {
+                            const evolutionEntry = { period };
+                            topSurnames.forEach(surname => {
+                                evolutionEntry[surname] = patronymes.get(surname) || 0;
+                            });
+                            return evolutionEntry;
+                        })
+                        .sort((a, b) => a.period.localeCompare(b.period));
+                }
+            });
+        });
+    }
+
+    updateTownStatistics(town, event) {
+        const eventDate = event.date ? new Date(event.date.split('/').reverse().join('-')) : null;
+        
+        // Mise à jour du timespan
+        if (eventDate) {
+            if (!town.statistics.timespan.firstEvent || 
+                eventDate < new Date(town.statistics.timespan.firstEvent)) {
+                town.statistics.timespan.firstEvent = eventDate.toISOString();
+            }
+            if (!town.statistics.timespan.lastEvent || 
+                eventDate > new Date(town.statistics.timespan.lastEvent)) {
+                town.statistics.timespan.lastEvent = eventDate.toISOString();
+            }
+        }
+
+        // Mise à jour des compteurs selon le type d'événement
+        switch (event.type) {
+            case 'BIRT':
+                town.statistics.birthCount++;
+                if (event.personDetails?.surname) {
+                    town.statistics.patronymes.total.add(event.personDetails.surname);
+                    if (eventDate) {
+                        const year = eventDate.getFullYear();
+                        const period = Math.floor(year / 50) * 50;
+                        const periodKey = `${period}-${period + 49}`;
+                        
+                        if (!town.statistics.patronymes.byPeriod.has(periodKey)) {
+                            town.statistics.patronymes.byPeriod.set(periodKey, new Map());
+                        }
+                        
+                        const periodStats = town.statistics.patronymes.byPeriod.get(periodKey);
+                        periodStats.set(
+                            event.personDetails.surname,
+                            (periodStats.get(event.personDetails.surname) || 0) + 1
+                        );
+                    }
+                }
+                break;
+            case 'DEAT':
+                town.statistics.deathCount++;
+                if (event.personDetails?.birthPlace === town.town) {
+                    town.statistics.localDeaths++;
+                } else {
+                    town.statistics.externalDeaths++;
+                }
+                break;
+            case 'MARR':
+                town.statistics.marriageCount++;
+                break;
+        }
+    }
+
+    finalizeAllTownsData() {
+        // Calculs finaux ou mises à jour après que tous les individus ont été traités
+        this.recalculateAllTownsStatistics();
+        this.saveToLocalStorage();
     }
 
     initialize(map) {
@@ -41,6 +346,15 @@ class FamilyTownsStore {
         if (this.townsData.size > 0) {
             this.updateMarkers();
         }
+    }
+
+    clearAllTowns() {
+        runInAction(() => {
+            this.townsData = new Map();
+            if (this.markerManager) {
+                this.markerManager.clearMarkers();
+            }
+        });
     }
 
     setTownsData(towns) {
@@ -254,6 +568,17 @@ class FamilyTownsStore {
         this.markerManager.clearMarkers();
         this.markerManager.cleanup();
         this.map = null;
+        this.disposers.forEach(disposer => disposer());
+        this.disposers.clear();
+    }
+
+    saveToLocalStorage() {
+        try {
+            const data = Object.fromEntries(this.townsData);
+            localStorage.setItem('townsDB', JSON.stringify(data));
+        } catch (error) {
+            console.error('Error saving to localStorage:', error);
+        }
     }
 
     get totalTowns() {
