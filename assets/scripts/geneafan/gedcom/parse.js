@@ -406,7 +406,8 @@ async function processTree(tree, parentNode, individual) {
                 }
             };
 
-            familyTownsStore.addTown(normalizedKey, placeInfo, eventData);
+            // familyTownsStore.addTown(normalizedKey, placeInfo, eventData);
+            familyTownsStore.addTown(normalizedKey, placeInfo);
         }
 
         if (node.tree && node.tree.length > 0) {

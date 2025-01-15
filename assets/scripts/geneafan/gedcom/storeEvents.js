@@ -22,7 +22,7 @@ class StoreEventBus {
     }
 
     emit(event, data) {
-        console.log(`📢 Event émis: ${event}`, data ? 'avec données' : 'sans données');
+        // console.log(`📢 Event émis: ${event}`, data ? 'avec données' : 'sans données');
         const callbacks = this.listeners.get(event);
         if (callbacks) {
             callbacks.forEach(callback => {

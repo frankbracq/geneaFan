@@ -45,9 +45,43 @@ class GedcomDataStore {
             () => this.sourceData,
             (json) => {
                 if (json && json.length > 0) {
+                    console.group('📥 Source JSON avant traitement');
+                    console.log('Nombre d\'entrées:', json.length);
+                    // Déconstruire le proxy du JSON source
+                    console.log('Contenu:', JSON.parse(JSON.stringify(json)));
+                    console.groupEnd();
+        
                     this.buildIndividualsCache(json);
-                    // Nettoyer les données source après construction du cache
                     this.clearSourceData();
+        
+                    // Log détaillé du cache
+                    console.group('🗂️ Cache des individus après construction');
+                    console.log('Nombre total d\'individus:', this.individualsCache.size);
+                    
+                    this.individualsCache.forEach((individual, id) => {
+                        // Déconstruire le proxy de chaque individu
+                        const cleanIndividual = JSON.parse(JSON.stringify(individual));
+                        console.group(`👤 ${cleanIndividual.name} ${cleanIndividual.surname} (${id})`);
+                        
+                        if (cleanIndividual.individualEvents?.length > 0) {
+                            console.group('📅 Événements:');
+                            cleanIndividual.individualEvents.forEach(event => {
+                                console.log({
+                                    type: event.type,
+                                    date: event.date,
+                                    town: event.town,
+                                    formatted: event.formatted || ''
+                                });
+                            });
+                            console.groupEnd();
+                        } else {
+                            console.log('Aucun événement');
+                        }
+                        
+                        console.groupEnd();
+                    });
+                    
+                    console.groupEnd();
                 }
             },
             {
