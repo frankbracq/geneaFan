@@ -9,7 +9,7 @@ import MarkerManager from '../../tabs/familyMap/markerManager.js';
 import { infoWindowManager } from '../../tabs/familyMap/infoWindowManager.js';
 import { storeEvents, EVENTS } from './storeEvents.js';
 import { normalizeGeoString } from "../../utils/geo.js";
-import { isValidDate } from "../../utils/dates.js";
+import { TownStatisticsManager } from './townStatisticsManager';
 
 class FamilyTownsStore {
     constructor() {
@@ -54,7 +54,6 @@ class FamilyTownsStore {
     }
 
     setupEventSubscriptions() {
-        // Écouter les ajouts d'individus
         const individualDisposer = storeEvents.subscribe(
             EVENTS.INDIVIDUAL.ADDED,
             ({id, data}) => {
@@ -62,7 +61,6 @@ class FamilyTownsStore {
             }
         );
 
-        // Écouter la construction complète du cache
         const cacheDisposer = storeEvents.subscribe(
             EVENTS.CACHE.BUILT,
             () => {
@@ -71,7 +69,6 @@ class FamilyTownsStore {
             }
         );
 
-        // Écouter le nettoyage du cache
         const clearDisposer = storeEvents.subscribe(
             EVENTS.CACHE.CLEARED,
             () => {
@@ -92,7 +89,6 @@ class FamilyTownsStore {
             const townKey = normalizeGeoString(event.town);
             if (!townKey) return;
     
-            // Enrichir l'événement avec les données complètes de l'individu
             const enrichedEvent = {
                 type: event.type,
                 date: event.date,
@@ -109,13 +105,11 @@ class FamilyTownsStore {
                 }
             };
     
-            // Notifier de la mise à jour de la ville
             storeEvents.emit(EVENTS.TOWN.UPDATED, {
                 townKey,
                 event: enrichedEvent
             });
     
-            // Utiliser la nouvelle fonction unifiée
             this.addOrUpdateTown(townKey, { 
                 town: event.town,
                 townDisplay: event.town
@@ -132,15 +126,7 @@ class FamilyTownsStore {
         runInAction(() => {
             let town = this.townsData.get(key);
     
-            // Si la ville n'existe pas, on l'initialise
             if (!town) {
-                const nativePatronymeStruct = {
-                    total: new Set(),
-                    byPeriod: new Map(),
-                    frequents: [],
-                    evolution: []
-                };
-                
                 town = observable({
                     town: townData.town || '',
                     townDisplay: townData.townDisplay || townData.town || '',
@@ -158,25 +144,11 @@ class FamilyTownsStore {
                         occupation: observable([]),
                         event: observable([])
                     }),
-                    statistics: {
-                        birthCount: 0,
-                        deathCount: 0,
-                        marriageCount: 0,
-                        localDeaths: 0,
-                        externalDeaths: 0,
-                        timespan: {
-                            firstEvent: null,
-                            lastEvent: null
-                        }
-                    }
+                    statistics: TownStatisticsManager.createEmptyStatistics()
                 });
-                
-                // Ajout manuel des structures natives pour éviter leur transformation en observables
-                town.statistics.patronymes = nativePatronymeStruct;
                 
                 this.townsData.set(key, town);
             } else {
-                // Mise à jour des données de la ville si elles existent
                 Object.entries(townData).forEach(([field, value]) => {
                     if (value !== undefined && value !== null) {
                         town[field] = value;
@@ -184,7 +156,6 @@ class FamilyTownsStore {
                 });
             }
 
-            // Traitement de l'événement si fourni
             if (eventData && eventData.type) {
                 try {
                     const eventTypeMap = {
@@ -213,7 +184,6 @@ class FamilyTownsStore {
                         return;
                     }
 
-                    // S'assurer que le tableau d'événements est observable
                     if (!Array.isArray(town.events[internalType])) {
                         town.events[internalType] = observable([]);
                     }
@@ -243,7 +213,7 @@ class FamilyTownsStore {
                         town.events[internalType].push(enrichedEvent);
                     }
 
-                    this.updateTownStatistics(town, enrichedEvent);
+                    TownStatisticsManager.updateTownStatistics(town, enrichedEvent);
                 } catch (error) {
                     console.error('Erreur lors du traitement de l\'événement:', error);
                 }
@@ -255,26 +225,13 @@ class FamilyTownsStore {
         runInAction(() => {
             this.townsData.forEach((town, townKey) => {
                 try {
-                    const nativePatronymeStruct = this.initializePatronymesStructure();
-                    
-                    town.statistics = {
-                        birthCount: 0,
-                        deathCount: 0,
-                        marriageCount: 0,
-                        localDeaths: 0,
-                        externalDeaths: 0,
-                        timespan: {
-                            firstEvent: null,
-                            lastEvent: null
-                        },
-                        patronymes: nativePatronymeStruct
-                    };
+                    town.statistics = TownStatisticsManager.createEmptyStatistics();
     
                     ['birth', 'death', 'marriage'].forEach(eventType => {
                         if (Array.isArray(town.events[eventType])) {
                             town.events[eventType].forEach(event => {
                                 if (event) {
-                                    this.updateTownStatistics(town, event);
+                                    TownStatisticsManager.updateTownStatistics(town, event);
                                 }
                             });
                         }
@@ -284,49 +241,6 @@ class FamilyTownsStore {
                 }
             });
         });
-    }
-    
-
-    updateTownStatistics(town, event) {
-        if (!town || !event) return;
-    
-        try {
-            const eventDate = event.date ? new Date(event.date.split('/').reverse().join('-')) : null;
-            const stats = town.statistics;
-            
-            // Mise à jour du timespan
-            if (eventDate) {
-                if (!stats.timespan.firstEvent || eventDate < new Date(stats.timespan.firstEvent)) {
-                    stats.timespan.firstEvent = eventDate.toISOString();
-                }
-                if (!stats.timespan.lastEvent || eventDate > new Date(stats.timespan.lastEvent)) {
-                    stats.timespan.lastEvent = eventDate.toISOString();
-                }
-            }
-    
-            // Mise à jour des compteurs selon le type d'événement
-            switch (event.type) {
-                case 'birth':
-                    stats.birthCount++;
-                    if (event.personDetails?.surname) {
-                        this.updatePatronymeStats(stats, event.personDetails.surname, eventDate?.getFullYear());
-                    }
-                    break;
-                case 'death':
-                    stats.deathCount++;
-                    if (event.personDetails?.birthPlace === town.town) {
-                        stats.localDeaths++;
-                    } else {
-                        stats.externalDeaths++;
-                    }
-                    break;
-                case 'marriage':
-                    stats.marriageCount++;
-                    break;
-            }
-        } catch (error) {
-            console.error('Erreur lors de la mise à jour des statistiques:', error);
-        }
     }
 
     finalizeAllTownsData() {
@@ -666,193 +580,7 @@ class FamilyTownsStore {
             return '';
         }
     }
-
-
-    // Statistic functions
-    updateTownStatistics(town, event) {
-        if (!town?.statistics || !event) return;
     
-        try {
-            let eventDate = null;
-            if (event.date) {
-                const [day, month, year] = event.date.split('/').map(Number);
-                const potentialDate = new Date(year, month - 1, day);
-                if (isValidDate(potentialDate)) {
-                    eventDate = potentialDate;
-                }
-            }
-            
-            const stats = town.statistics;
-            
-            // Mise à jour du timespan
-            if (eventDate && isValidDate(eventDate)) {
-                if (!stats.timespan.firstEvent || eventDate < new Date(stats.timespan.firstEvent)) {
-                    stats.timespan.firstEvent = eventDate.toISOString();
-                }
-                if (!stats.timespan.lastEvent || eventDate > new Date(stats.timespan.lastEvent)) {
-                    stats.timespan.lastEvent = eventDate.toISOString();
-                }
-            }
-    
-            // Mise à jour des compteurs selon le type d'événement
-            switch (event.type) {
-                case 'birth':
-                    stats.birthCount++;
-                    if (event.personDetails?.surname) {
-                        this.updatePatronymeStats(stats, event.personDetails.surname, eventDate?.getFullYear());
-                    }
-                    break;
-                case 'death':
-                    stats.deathCount++;
-                    if (event.personDetails?.birthPlace === town.town) {
-                        stats.localDeaths++;
-                    } else {
-                        stats.externalDeaths++;
-                    }
-                    break;
-                case 'marriage':
-                    stats.marriageCount++;
-                    break;
-            }
-        } catch (error) {
-            console.error('Erreur lors de la mise à jour des statistiques:', error);
-        }
-    }
-
-    // Modification du contenu de l'infoWindow pour inclure les nouvelles données
-    updatePatronymeStats(stats, surname, year) {
-        if (!stats || !surname || !year) return;
-    
-        try {
-            // Vérifier et initialiser la structure patronymes si nécessaire
-            if (!stats.patronymes) {
-                stats.patronymes = {
-                    total: new Set(),
-                    byPeriod: new Map(),
-                    frequents: [],
-                    evolution: []
-                };
-            }
-            
-            // Vérifier et recréer total si nécessaire
-            if (!(stats.patronymes.total instanceof Set)) {
-                stats.patronymes.total = new Set();
-            }
-    
-            // Ajouter le patronyme
-            stats.patronymes.total.add(surname);
-    
-            // Vérifier et recréer byPeriod si nécessaire
-            if (!(stats.patronymes.byPeriod instanceof Map)) {
-                stats.patronymes.byPeriod = new Map();
-            }
-    
-            // Calculer la période
-            const period = Math.floor(year / 50) * 50;
-            const periodKey = `${period}-${period + 49}`;
-    
-            // Récupérer ou créer la Map pour la période
-            let periodMap;
-            if (!stats.patronymes.byPeriod.has(periodKey)) {
-                periodMap = new Map();
-                stats.patronymes.byPeriod.set(periodKey, periodMap);
-            } else {
-                periodMap = stats.patronymes.byPeriod.get(periodKey);
-                if (!(periodMap instanceof Map)) {
-                    periodMap = new Map();
-                    stats.patronymes.byPeriod.set(periodKey, periodMap);
-                }
-            }
-    
-            // Mettre à jour le compteur
-            const currentCount = periodMap.get(surname) || 0;
-            periodMap.set(surname, currentCount + 1);
-    
-            // Mettre à jour les fréquences
-            this.updateFrequentPatronymes(stats);
-        } catch (error) {
-            console.error('Erreur lors de la mise à jour des patronymes:', error);
-            console.error('État actuel des patronymes:', stats.patronymes);
-        }
-    }
-
-    updateFrequentPatronymes(stats) {
-        if (!stats?.patronymes?.byPeriod) return;
-    
-        try {
-            // S'assurer que byPeriod est une Map
-            if (!(stats.patronymes.byPeriod instanceof Map)) {
-                stats.patronymes.byPeriod = new Map();
-            }
-    
-            const frequency = new Map();
-            
-            for (const [, periodMap] of stats.patronymes.byPeriod) {
-                if (periodMap instanceof Map) {
-                    for (const [surname, count] of periodMap) {
-                        frequency.set(surname, (frequency.get(surname) || 0) + count);
-                    }
-                }
-            }
-    
-            const frequents = Array.from(frequency.entries())
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 10)
-                .map(([surname, count]) => ({ surname, count }));
-    
-            runInAction(() => {
-                stats.patronymes.frequents = frequents;
-            });
-    
-            this.calculatePatronymeEvolution(stats);
-        } catch (error) {
-            console.error('Erreur lors de la mise à jour des fréquences:', error);
-        }
-    }    
-    
-    calculatePatronymeEvolution(stats) {
-        if (!stats?.patronymes?.byPeriod || !stats?.patronymes?.frequents) return;
-    
-        try {
-            // Obtenir la liste des patronymes les plus fréquents
-            const topSurnames = stats.patronymes.frequents.map(p => p.surname);
-            const evolution = [];
-    
-            // Traitement de chaque période
-            const periods = Array.from(stats.patronymes.byPeriod.keys()).sort();
-            
-            for (const period of periods) {
-                const patronymeMap = stats.patronymes.byPeriod.get(period);
-                if (!(patronymeMap instanceof Map)) continue;
-    
-                const evolutionEntry = { period };
-                
-                // Pour chaque patronyme principal
-                topSurnames.forEach(surname => {
-                    evolutionEntry[surname] = patronymeMap.get(surname) || 0;
-                });
-    
-                evolution.push(evolutionEntry);
-            }
-    
-            // Mise à jour observable de l'évolution
-            runInAction(() => {
-                stats.patronymes.evolution = evolution;
-            });
-        } catch (error) {
-            console.error('Erreur lors du calcul de l\'évolution:', error);
-        }
-    }
-
-    initializePatronymesStructure() {
-        return {
-            total: new Set(),
-            byPeriod: new Map(),
-            frequents: [],
-            evolution: []
-        };
-    }
-
     updateTownsViaProxy = async () => {
         try {
             const townsToUpdate = {};
@@ -908,6 +636,10 @@ class FamilyTownsStore {
         } catch (error) {
             console.error('Error saving to localStorage:', error);
         }
+    }
+
+    get totalTowns() {
+        return this.townsData.size;
     }
 }
 
