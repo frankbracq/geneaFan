@@ -5,8 +5,8 @@ import AwsS3 from '@uppy/aws-s3';
 import configStore from '../tabs/fanChart/fanConfigStore.js';
 import rootPersonStore from '../common/stores/rootPersonStore.js';
 import authStore from '../common/stores/authStore.js';
-import gedcomDataStore from './gedcomDataStore.js';
-import familyTownsStore from './familyTownsStore.js';
+import gedcomDataStore from './stores/gedcomDataStore.js';
+import familyTownsStore from './stores/familyTownsStore.js';
 import { FanChartManager } from '../tabs/fanChart/fanChartManager.js';
 import {
     clearAllStates,
@@ -15,7 +15,8 @@ import {
     updateFamilyTownsViaProxy,
     updateIndividualTownsFromFamilyTowns,
 } from "../utils/utils.js";
-import { toJson, getAllPlaces, getIndividualsList } from "./parse.js";
+import { toJson, getIndividualsList } from "./parse.js";
+import { placeProcessor } from './processors/placeProcessor.js';
 import { setupPersonLinkEventListener } from "../listeners/eventListeners.js";
 import { googleMapsStore } from '../tabs/familyMap/googleMapsStore.js';
 
@@ -474,7 +475,7 @@ async function onFileChange(data) {
         familyTownsStore.setTownsData({});
 
         let json = toJson(data);
-        let result = await getAllPlaces(json);
+        let result = await placeProcessor.getAllPlaces(json);
         gedcomDataStore.setSourceData(result.json);
 
         try {

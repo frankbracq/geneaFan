@@ -17,7 +17,9 @@ import {
     addEvent
 } from '../processors/eventProcessor.js';
 
-import { processDate, processPlace } from '../parse.js';
+import { processDate } from '../parse.js';
+
+import { placeProcessor } from '../processors/placeProcessor.js';
 
 import {
     normalizeGeoString,
@@ -25,7 +27,7 @@ import {
 
 // Stores
 import familyTreeDataStore from '../../tabs/familyTree/familyTreeDataStore.js';
-import gedcomConstantsStore from '../gedcomConstantsStore.js';
+import gedcomConstantsStore from '../stores/gedcomConstantsStore.js';
 
 
 const VALUE_OCCUPATION = "Occupation";
@@ -162,7 +164,7 @@ function processMarriages(
 
             // Process place using the same logic as in processTree
             if (marriage.place) {
-                const placeInfo = processPlace({ 
+                const placeInfo = placeProcessor.processPlace({ 
                     data: marriage.place, 
                     tree: [] // Pass empty tree if no MAP data available
                 });

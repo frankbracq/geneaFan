@@ -10,10 +10,10 @@
 import _ from 'lodash';
 import { extractYear, prefixedDate, calculateAge } from '../../utils/dates.js';
 import { processDate } from '../parse.js';
-import gedcomDataStore from '../gedcomDataStore.js';
-import gedcomConstantsStore from '../gedcomConstantsStore.js';
+import gedcomDataStore from '../stores/gedcomDataStore.js';
+import gedcomConstantsStore from '../stores/gedcomConstantsStore.js';
 import configStore from '../../tabs/fanChart/fanConfigStore.js';
-import familyTownsStore from '../familyTownsStore.js';
+import familyTownsStore from '../stores/familyTownsStore.js';
 
 const { TAGS } = gedcomConstantsStore;
 

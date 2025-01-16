@@ -3,7 +3,7 @@ import TomSelect from 'tom-select';
 import { updateFilename } from "../downloadManager.js";
 import { FanChartManager } from "../../tabs/fanChart/fanChartManager.js";
 import { draw } from "../../tabs/fanChart/fan.js";
-import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
+import gedcomDataStore from '../../gedcom/stores/gedcomDataStore.js';
 import { DownloadManager } from "../downloadManager.js"; 
 import configStore from '../../tabs/fanChart/fanConfigStore.js';
 import timelineEventsStore from '../../tabs/timeline/timelineEventsStore.js';

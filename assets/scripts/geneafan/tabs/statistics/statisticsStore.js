@@ -39,7 +39,7 @@ class StatisticsStore {
             // Import des dépendances
             console.log('Chargement des dépendances...');
             const [gedcomModule, statisticsServiceModule] = await Promise.all([
-                import('../../gedcom/gedcomDataStore.js'),
+                import('../../gedcom/stores/gedcomDataStore.js'),
                 import('./services/statisticsService.js')
             ]);
 

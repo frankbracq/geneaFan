@@ -1,7 +1,7 @@
-import { makeObservable, observable, action, computed, reaction, runInAction } from '../common/stores/mobx-config.js';
+import { makeObservable, observable, action, computed, reaction, runInAction } from '../../common/stores/mobx-config.js';
 import _ from 'lodash';
-import { buildIndividual } from './builders/personBuilder.js';
-import configStore from '../tabs/fanChart/fanConfigStore.js';
+import { buildIndividual } from '../builders/personBuilder.js';
+import configStore from '../../tabs/fanChart/fanConfigStore.js';
 import { TAGS, byTag } from './gedcomConstantsStore.js';
 import { storeEvents, EVENTS } from './storeEvents.js'; 
 

@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import familyTownsStore from '../gedcom/familyTownsStore.js';
+import familyTownsStore from '../gedcom/stores/familyTownsStore.js';
 import { parseDate } from './dates.js';
 
 export const memoize = (fn) => {

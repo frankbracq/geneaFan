@@ -4,12 +4,12 @@ Traite tous types d'événements (naissances, mariages, décès)
 Fournit un calque de contexte global pour la carte
 */
 
-import { makeObservable, observable, action, computed, runInAction, autorun } from '../common/stores/mobx-config.js';
-import MarkerManager from '../tabs/familyMap/markerManager.js';
-import { infoWindowManager } from '../tabs/familyMap/infoWindowManager.js';
+import { makeObservable, observable, action, computed, runInAction, autorun } from '../../common/stores/mobx-config.js';
+import MarkerManager from '../../tabs/familyMap/markerManager.js';
+import { infoWindowManager } from '../../tabs/familyMap/infoWindowManager.js';
 import { storeEvents, EVENTS } from './storeEvents.js';
-import { normalizeGeoString } from "../utils/geo.js";
-import { isValidDate } from "../utils/dates.js";
+import { normalizeGeoString } from "../../utils/geo.js";
+import { isValidDate } from "../../utils/dates.js";
 
 class FamilyTownsStore {
     constructor() {
@@ -20,12 +20,12 @@ class FamilyTownsStore {
         this.isVisible = false;
         this.map = null;
         this.events = observable({
-            birth: observable([]),    // Anciennement BIRT
-            death: observable([]),    // Anciennement DEAT
-            marriage: observable([]), // Anciennement MARR
-            burial: observable([]),   // Anciennement BURI
-            occupation: observable([]), // Anciennement OCCU
-            event: observable([])     // Anciennement EVEN
+            birth: observable([]),    
+            death: observable([]),    
+            marriage: observable([]), 
+            burial: observable([]),   
+            occupation: observable([]),
+            event: observable([]) 
         });
     
         makeObservable(this, {

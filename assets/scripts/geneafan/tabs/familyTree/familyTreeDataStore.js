@@ -66,7 +66,7 @@ class FamilyTreeDataStore {
 
         try {
             console.log('Import de gedcomDataStore...');
-            const { default: gedcomStore } = await import('../../gedcom/gedcomDataStore.js');
+            const { default: gedcomStore } = await import('../../gedcom/stores/gedcomDataStore.js');
             this.gedcomDataStore = gedcomStore;
 
             console.log('Configuration de la réaction aux changements du cache...');

@@ -1,5 +1,5 @@
 import { Modal, Tooltip, Collapse } from 'bootstrap';
-import ShareFormStore from './shareFormStore';
+import ShareFormStore from './stores/shareFormStore';
 import { reaction } from '../common/stores/mobx-config';
 import { loadGedcomFile } from './gedcomFileHandler';
 

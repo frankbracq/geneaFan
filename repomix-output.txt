@@ -1756,7 +1756,7 @@ import { updateFilename } from "../downloadManager.js";
 import { FanChartManager } from "../../tabs/fanChart/fanChartManager.js";
 import { draw } from "../../tabs/fanChart/fan.js";
 import { buildHierarchy } from '../../gedcom/parse.js';
-import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
+import gedcomDataStore from '../../gedcom/stores/gedcomDataStore.js';
 import { DownloadManager } from "../downloadManager.js"; 
 
 class RootPersonStore {
@@ -2004,7 +2004,7 @@ File: assets/scripts/geneafan/common/stores/state.js
 import _ from 'lodash';
 import timelineEventsStore from '../../tabs/timeline/timelineEventsStore.js';
 import familyTreeDataStore from '../../tabs/familyTree/familyTreeDataStore.js';
-import familyTownsStore from '../../gedcom/familyTownsStore.js';
+import familyTownsStore from '../../gedcom/stores/familyTownsStore.js';
 import statisticsStore from '../../tabs/statistics/statisticsStore.js';
 
 /**
@@ -5752,7 +5752,7 @@ export const departementData = {
 };
 
 ================
-File: assets/scripts/geneafan/gedcom/familyTownsStore.js
+File: assets/scripts/geneafan/gedcom/stores/familyTownsStore.js
 ================
 import { makeObservable, observable, action, computed, runInAction, toJS } from '../common/stores/mobx-config.js';
 
@@ -6008,7 +6008,7 @@ const gedcomConstantsStore = new GedcomConstantsStore();
 export default gedcomConstantsStore;
 
 ================
-File: assets/scripts/geneafan/gedcom/gedcomDataStore.js
+File: assets/scripts/geneafan/gedcom/stores/gedcomDataStore.js
 ================
 import { makeObservable, observable, action, computed, runInAction, reaction } from '../common/stores/mobx-config.js';
 import _ from 'lodash';
@@ -6268,8 +6268,8 @@ import AwsS3 from '@uppy/aws-s3';
 import configStore from '../tabs/fanChart/fanConfigStore.js';
 import rootPersonStore from '../common/stores/rootPersonStore.js';
 import authStore from '../common/stores/authStore.js';
-import gedcomDataStore from './gedcomDataStore.js';
-import familyTownsStore from './familyTownsStore.js';
+import gedcomDataStore from './stores/gedcomDataStore.js';
+import familyTownsStore from './stores/familyTownsStore.js';
 import { FanChartManager } from '../tabs/fanChart/fanChartManager.js';
 import {
     clearAllStates,
@@ -7530,11 +7530,11 @@ import {
 import { statisticsService } from '../tabs/statistics/services/statisticsService.js';
 
 // Stores
-import gedcomDataStore from './gedcomDataStore.js';
+import gedcomDataStore from './stores/gedcomDataStore.js';
 import configStore from '../tabs/fanChart/fanConfigStore.js';
 import timelineEventsStore from '../tabs/timeline/timelineEventsStore.js';
 import familyTreeDataStore from '../tabs/familyTree/familyTreeDataStore.js';
-import familyTownsStore from './familyTownsStore.js';
+import familyTownsStore from './stores/familyTownsStore.js';
 import statisticsStore from '../tabs/statistics/statisticsStore.js';
 import gedcomConstantsStore from './gedcomConstantsStore.js';
 
@@ -9945,7 +9945,7 @@ File: assets/scripts/geneafan/tabs/familyMap/googleMapManager.js
 import { Loader } from "@googlemaps/js-api-loader";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { googleMapsStore } from './googleMapsStore.js';
-import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
+import gedcomDataStore from '../../gedcom/stores/gedcomDataStore.js';
 import { autorun } from 'mobx';
 
 class GoogleMapManager {
@@ -11543,7 +11543,7 @@ export function commonAncestryGraph(id1, id2) {
 File: assets/scripts/geneafan/tabs/familyTree/familyTreeDataStore.js
 ================
 import { makeObservable, observable, action, computed, reaction } from '../../common/stores/mobx-config.js';
-import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
+import gedcomDataStore from '../../gedcom/stores/gedcomDataStore.js';
 
 class FamilyTreeDataStore {
     constructor() {
@@ -11997,7 +11997,7 @@ import _ from "lodash";
 import { mmToPixels } from '../../utils/utils.js';
 import { extractYear } from '../../utils/dates.js';
 import configStore from './fanConfigStore.js';
-import gedcomDataStore from '../../gedcom/gedcomDataStore.js';
+import gedcomDataStore from '../../gedcom/stores/gedcomDataStore.js';
 
 const weightFontFirst = 0.25,
     weightFontOther = 0.22,
@@ -14019,7 +14019,7 @@ export class SVGPanZoomManager {
 File: assets/scripts/geneafan/tabs/statistics/services/statisticsService.js
 ================
 import statisticsStore from '../statisticsStore.js';
-import gedcomDataStore from '../../../gedcom/gedcomDataStore.js';
+import gedcomDataStore from '../../../gedcom/stores/gedcomDataStore.js';
 
 class StatisticsService {
     constructor() {
@@ -18790,7 +18790,7 @@ export function initializeTooltips(containerElement) {
 File: assets/scripts/geneafan/utils/utils.js
 ================
 import _ from 'lodash';
-import familyTownsStore from '../gedcom/familyTownsStore.js';
+import familyTownsStore from '../gedcom/stores/familyTownsStore.js';
 import { parseDate } from './dates.js';
 
 export const memoize = (fn) => {
