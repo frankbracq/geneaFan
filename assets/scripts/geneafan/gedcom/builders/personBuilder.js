@@ -14,11 +14,14 @@ import {
     handleEventTags, 
     buildEventFallback, 
     generateEventDescription, 
-    addEvent, 
-    processEventDatePlace 
+    addEvent
 } from '../processors/eventProcessor.js';
 
-import { processDate } from '../parse.js';
+import { processDate, processPlace } from '../parse.js';
+
+import {
+    normalizeGeoString,
+} from "../../utils/geo.js";
 
 // Stores
 import familyTreeDataStore from '../../tabs/familyTree/familyTreeDataStore.js';
@@ -150,32 +153,50 @@ function processMarriages(
     const marriages = _.map(individualFamilyInfo.spouses, (spouseInfo, spouseId) => {
         const { details: spouseDetails, children, marriage } = spouseInfo;
 
-        // Process the details of the marriage event
-        const event = {
-            tree: [{ tag: 'DATE', data: marriage.date }, { tag: 'PLAC', data: marriage.place }],
-            key: marriage.key // Add the town key (townKey)
-        };
-        const { eventDetails: rawEventDetails, updatedIndividualTowns } = processEventDatePlace(
-            event,
-            individualTowns
-        );
+        // Process the details of the marriage event, including place processing
+        let eventDetails = {};
+        
+        if (marriage) {
+            // Process date with processDate
+            eventDetails.date = marriage.date ? processDate(marriage.date) : "";
 
-        // Add the family ID to the event details
-        const eventDetails = { ...rawEventDetails, eventId: '', spouseId }; // Add spouseId here
+            // Process place using the same logic as in processTree
+            if (marriage.place) {
+                const placeInfo = processPlace({ 
+                    data: marriage.place, 
+                    tree: [] // Pass empty tree if no MAP data available
+                });
+                
+                // Use the normalized town name and other place details
+                eventDetails = {
+                    ...eventDetails,
+                    town: placeInfo.town || 'lieu inconnu',
+                    townDisplay: placeInfo.townDisplay,
+                    departement: placeInfo.departement,
+                    country: placeInfo.country,
+                    latitude: placeInfo.latitude,
+                    longitude: placeInfo.longitude,
+                    key: normalizeGeoString(placeInfo.town)
+                };
+            }
+        }
+
+        // Add the family ID and spouse ID to the event details
+        eventDetails = { ...eventDetails, eventId: '', spouseId };
 
         // Get the spouse's name
         const spouseName = spouseDetails.name;
 
         // Generate the formatted marriage description
-        let gender = "";  // Assume that gender is determined elsewhere or can be added here
-        let age = "";  // Assume that age is determined elsewhere or can be added here
+        let gender = "";  // Assume that gender is determined elsewhere
+        let age = "";    // Assume that age is determined elsewhere
 
         const formattedMarriage = generateEventDescription(
             "MARR",
             {
                 ...eventDetails,
                 spouseName: spouseName,
-                spouseId: spouseId // Pass spouseId to eventData
+                spouseId: spouseId
             },
             gender,
             age

@@ -68,7 +68,7 @@ function getCountryData() {
     return countryData;
 }
 
-function processPlace({ data: original, tree } = {}) {
+export function processPlace({ data: original, tree } = {}) {
     const departementData = getDepartementData();
     const countryData = getCountryData();
 
@@ -389,27 +389,33 @@ function processTree(tree, parentNode, individual) {
             const dateNode = parentNode.tree?.find(n => n.tag === "DATE");
             const eventDate = dateNode ? processDate(dateNode.data) : null;
             const personData = extractBasicInfo(individual);
+
             // Construction d'un eventData enrichi
             const eventData = {
                 type: parentNode.tag,
                 date: eventDate,
                 personId: individual.pointer,
                 personDetails: {
-                    name: extractBasicInfo(individual).name,
-                    surname: extractBasicInfo(individual).surname,
-                    gender: extractBasicInfo(individual).gender
+                    name: personData.name,
+                    surname: personData.surname,
+                    gender: personData.gender,
+                    birthDate: '',  // Sera rempli plus tard
+                    deathDate: '',
+                    birthPlace: '',
+                    deathPlace: '',
+                    occupation: ''
                 }
             };
 
-            // familyTownsStore.addTown(normalizedKey, placeInfo, eventData);
-            familyTownsStore.addTown(normalizedKey, placeInfo);
+            // Utiliser la nouvelle fonction unifiée
+            familyTownsStore.addOrUpdateTown(normalizedKey, placeInfo, eventData);
         }
 
         if (node.tree && node.tree.length > 0) {
             processTree(
                 node.tree,
                 ["BIRT", "DEAT", "BURI", "MARR", "OCCU", "EVEN"].includes(node.tag) ? node : parentNode,
-                individual  // On passe l'individual aux appels récursifs
+                individual
             );
         }
     }
