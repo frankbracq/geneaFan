@@ -4,47 +4,54 @@ class InfoWindowContentManager {
     
         try {
             const { statistics: stats, events } = townData;
-            const counts = {
-                birth: events.birth?.length || 0,
-                death: events.death?.length || 0,
-                marriage: events.marriage?.length || 0
-            };
-            
-            const baseContent = `
-                <div class="info-window-content">
-                    <h3 class="text-lg font-bold mb-0">${townName}</h3>
-                    <h4 class="text-gray-600 text-sm mb-2">(${townData.departement || '-'})</h4>
-                    <div class="text-sm">
-                        <div class="mt-2">
-                            <ul class="list-inside">
-                                <li>${this.#pluralize('Naissance', counts.birth)} : ${counts.birth}</li>
-                                <li>${this.#getDeathLine(counts.death, stats.localDeaths)}</li>
-                                <li>${this.#pluralize('Mariage', counts.marriage)} : ${counts.marriage}</li>
-                            </ul>
-                        </div>`;
+            const counts = this.#getEventCounts(events);
+            const baseContent = this.#createBaseContent(townName, townData, counts, stats);
+            const sections = this.#createSections(events, counts);
     
-            const sections = [];
-            
-            // Add recent events section if applicable
-            const recentEventsByType = this.getRecentEventsByType(events);
-            if (Object.values(recentEventsByType).some(events => events.length > 0)) {
-                sections.push(this.#createRecentEventsSection(recentEventsByType));
-            }
-
-            // Add patronymes section if births exist
-            if (counts.birth > 0) {
-                const patronymesData = this.#preparePatronymesData(events.birth || []);
-                sections.push(this.#createPatronymesSection(patronymesData));
-            }
-    
-            return `${baseContent}${sections.join('')}
-                    </div>
-                </div>`;
-    
+            return `${baseContent}${sections.join('')}</div></div>`;
         } catch (error) {
-            console.error('Erreur lors de la création du contenu de l\'infoWindow:', error);
+            console.error('Erreur lors de la création de l\'infoWindow:', error);
             return '<div class="error">Erreur lors du chargement des données</div>';
         }
+    }
+
+    #getEventCounts(events) {
+        return {
+            birth: events.birth?.length || 0,
+            death: events.death?.length || 0,
+            marriage: events.marriage?.length || 0
+            };
+    }
+    
+    #createBaseContent(townName, townData, counts, stats) {
+        return `
+            <div class="info-window-content">
+                <h3 class="text-lg font-bold mb-0">${townName}</h3>
+                <h4 class="text-gray-600 text-sm mb-2">(${townData.departement || '-'})</h4>
+                <div class="text-sm">
+            <div class="mt-2">
+                        <ul class="list-inside">
+                            <li>${this.#pluralize('Naissance', counts.birth)} : ${counts.birth}</li>
+                            <li>${this.#getDeathLine(counts.death, stats.localDeaths)}</li>
+                            <li>${this.#pluralize('Mariage', counts.marriage)} : ${counts.marriage}</li>
+                </ul>
+            </div>`;
+    }
+
+    #createSections(events, counts) {
+        const sections = [];
+        const recentEvents = this.getRecentEventsByType(events);
+        
+        if (Object.values(recentEvents).some(events => events.length > 0)) {
+            sections.push(this.#createRecentEventsSection(recentEvents));
+        }
+
+        if (counts.birth > 0) {
+            const patronymesData = this.#preparePatronymesData(events.birth || []);
+            sections.push(this.#createPatronymesSection(patronymesData));
+        }
+
+        return sections;
     }
 
     #getDeathLine(deathCount, localDeaths) {
@@ -54,170 +61,147 @@ class InfoWindowContentManager {
     }
     
     #preparePatronymesData(birthEvents) {
-        // Compter les occurrences de chaque patronyme
+        if (!birthEvents?.length) return { frequents: [], evolution: [] };
+
+        const [patronymeCount, evolutionMap] = this.#processEvents(birthEvents);
+
+        return {
+            frequents: this.#createFrequentsArray(patronymeCount),
+            evolution: this.#createEvolutionArray(evolutionMap)
+        };
+    }
+
+    #processEvents(birthEvents) {
         const patronymeCount = new Map();
+        const evolutionMap = new Map();
+
         birthEvents.forEach(event => {
-            if (event.personDetails?.surname) {
-                const count = patronymeCount.get(event.personDetails.surname) || 0;
-                patronymeCount.set(event.personDetails.surname, count + 1);
-            }
+            const surname = event.personDetails?.surname;
+            if (!surname || !event.date) return;
+
+            patronymeCount.set(surname, (patronymeCount.get(surname) || 0) + 1);
+            this.#updateEvolutionMap(evolutionMap, surname, event.date);
         });
 
-        // Créer le tableau des patronymes fréquents
-        const frequents = Array.from(patronymeCount.entries())
+        return [patronymeCount, evolutionMap];
+    }
+
+    #updateEvolutionMap(evolutionMap, surname, date) {
+        const year = parseInt(date.split('/')[2]);
+        if (isNaN(year)) return;
+
+        const period = `${Math.floor(year / 50) * 50}-${Math.floor(year / 50) * 50 + 49}`;
+        const periodData = evolutionMap.get(period) || new Map();
+        periodData.set(surname, (periodData.get(surname) || 0) + 1);
+        evolutionMap.set(period, periodData);
+    }
+
+    #createFrequentsArray(patronymeCount) {
+        return [...patronymeCount]
             .map(([surname, count]) => ({ surname, count }))
             .sort((a, b) => b.count - a.count);
+    }
 
-        // Préparer les données d'évolution par période
-        const evolutionMap = new Map();
-        birthEvents.forEach(event => {
-            if (event.date && event.personDetails?.surname) {
-                const year = parseInt(event.date.split('/')[2]);
-                if (!isNaN(year)) {
-                    const period = `${Math.floor(year / 50) * 50}-${Math.floor(year / 50) * 50 + 49}`;
-                    if (!evolutionMap.has(period)) {
-                        evolutionMap.set(period, new Map());
-                    }
-                    const periodData = evolutionMap.get(period);
-                    const count = periodData.get(event.personDetails.surname) || 0;
-                    periodData.set(event.personDetails.surname, count + 1);
-                }
-            }
-        });
-
-        // Convertir l'évolution en tableau
-        const evolution = Array.from(evolutionMap.entries())
-            .map(([period, data]) => {
-                const periodEntry = { period };
-                data.forEach((count, surname) => {
-                    periodEntry[surname] = count;
-                });
-                return periodEntry;
-            })
+    #createEvolutionArray(evolutionMap) {
+        return [...evolutionMap]
+            .map(([period, data]) => ({
+                period,
+                ...Object.fromEntries(data)
+            }))
             .sort((a, b) => a.period.localeCompare(b.period));
-
-        return { frequents, evolution };
     }
 
     getRecentEventsByType(events) {
         if (!events) return {};
     
         try {
-            const recentEvents = {
-                birth: [],
-                death: [],
-                marriage: []
-            };
-    
-            // Traiter chaque type d'événement séparément
-            for (const type of ['birth', 'death', 'marriage']) {
-                if (Array.isArray(events[type])) {
-                    recentEvents[type] = events[type]
-                        .filter(e => e && e.date && e.personDetails)
-                        .sort((a, b) => {
-                            const dateA = new Date(a.date.split('/').reverse().join('-'));
-                            const dateB = new Date(b.date.split('/').reverse().join('-'));
-                            return dateB - dateA;
-                        })
-                        .slice(0, 1);
-                }
-            }
-    
-            return recentEvents;
+            return ['birth', 'death', 'marriage'].reduce((acc, type) => {
+                acc[type] = Array.isArray(events[type]) 
+                    ? events[type]
+                        .filter(e => e?.date && e?.personDetails)
+                        .sort((a, b) => new Date(b.date.split('/').reverse().join('-')) - new Date(a.date.split('/').reverse().join('-')))
+                        .slice(0, 1)
+                    : [];
+                return acc;
+            }, {});
         } catch (error) {
             console.error('Erreur lors de la récupération des événements récents:', error);
             return {};
         }
     }
 
-    #getFirstName(fullName) {
-        if (!fullName) return '';
-        return fullName.split(' ')[0];
-    }
+    #createRecentEventsSection(recentEvents) {
+        const eventTypes = {
+            birth: 'Naissance',
+            death: 'Décès',
+            marriage: 'Mariage'
+        };
 
-    #createRecentEventsSection(recentEventsByType) {
-        let content = `
+        const eventsList = Object.entries(recentEvents)
+            .filter(([, events]) => events.length > 0)
+            .map(([type, [event]]) => 
+                `<li>${eventTypes[type]} : ${this.#formatPersonName(event)} (${event.date})</li>`
+            ).join('');
+
+        return `
             <div class="mt-2">
                 <h4 class="font-semibold">Derniers événements</h4>
-                <ul class="list-inside">`;
+                <ul class="list-inside">${eventsList}</ul>
+                </div>`;
+    }
     
-        if (recentEventsByType.birth.length > 0) {
-            const birth = recentEventsByType.birth[0];
-            content += `<li>Naissance : ${this.#getFirstName(birth.personDetails.name)} ${birth.personDetails.surname} (${birth.date})</li>`;
-        }
-    
-        if (recentEventsByType.death.length > 0) {
-            const death = recentEventsByType.death[0];
-            content += `<li>Décès : ${this.#getFirstName(death.personDetails.name)} ${death.personDetails.surname} (${death.date})</li>`;
-        }
-    
-        if (recentEventsByType.marriage.length > 0) {
-            const marriage = recentEventsByType.marriage[0];
-            content += `<li>Mariage : ${this.#getFirstName(marriage.personDetails.name)} ${marriage.personDetails.surname} (${marriage.date})</li>`;
-        }
-    
-        content += `
-                </ul>
-            </div>`;
-    
-        return content;
+    #formatPersonName(event) {
+        const firstName = event.personDetails.name.split(' ')[0];
+        return `${firstName} ${event.personDetails.surname}`;
     }
 
     #createPatronymesSection(patronymesData) {
         if (!patronymesData.frequents.length) return '';
 
-        let content = `
+        const frequentsList = patronymesData.frequents
+            .slice(0, 5)
+            .map((p, i) => `<li>${i + 1}. ${p.surname} (${p.count} ${this.#pluralize('mention', p.count)})</li>`)
+            .join('');
+
+        const evolutionList = patronymesData.evolution
+            .map(this.#formatEvolutionPeriod)
+            .filter(Boolean)
+            .join('');
+
+        return `
             <div class="mt-2 border-t pt-2">
                 <h4 class="font-semibold mb-2">Patronymes</h4>
                 <div class="mb-3">
                     <div class="text-xs text-gray-600 mb-1">(Les plus fréquents à la naissance)</div>
-                    <ul class="list-inside">
-                        ${patronymesData.frequents
-                            .slice(0, 5)
-                            .map((p, index) => `<li>${index + 1}. ${p.surname} (${p.count} ${this.#pluralize('mention', p.count)})</li>`)
-                            .join('')}
-                    </ul>
-                </div>`;
-    
-        if (patronymesData.evolution?.length > 0) {
-            content += `
+                    <ul class="list-inside">${frequentsList}</ul>
+                    </div>
+                ${evolutionList ? `
                 <div class="mb-2">
                     <div class="text-xs text-gray-600 mb-1">Répartition par période :</div>
-                    <div class="text-xs">
-                        ${patronymesData.evolution
-                            .map(e => {
-                                const entries = Object.entries(e)
-                                    .filter(([key]) => key !== 'period')
-                                    .filter(([, count]) => count > 0)
-                                    .sort((a, b) => b[1] - a[1])
-                                    .map(([surname, count]) => `${surname} (${count})`);
-                                
-                                if (entries.length === 0) return '';
-                                
-                                return `<div class="mb-1">
-                                    <span class="font-medium">${e.period}</span> : 
-                                    ${entries.join(', ')}
-                                </div>`;
-                            })
-                            .filter(content => content !== '')
-                            .join('')}
-                    </div>
-                </div>`;
-        }
+                    <div class="text-xs">${evolutionList}</div>
+                </div>` : ''}
+            </div>`;
+    }
 
-        content += `</div>`;
-        return content;
+    #formatEvolutionPeriod(period) {
+        const entries = Object.entries(period)
+            .filter(([key, count]) => key !== 'period' && count > 0)
+            .sort((a, b) => b[1] - a[1])
+            .map(([surname, count]) => `${surname} (${count})`);
+
+        return entries.length ? `
+            <div class="mb-1">
+                <span class="font-medium">${period.period}</span> : 
+                ${entries.join(', ')}
+            </div>` : '';
     }
 
     #pluralize(word, count) {
-        // Cas particuliers
-        if (word === 'décès') return 'Décès';
-        if (word === 'mention' && count <= 1) return 'mention';
-        if (word === 'mention' && count > 1) return 'mentions';
-        
-        // Pour les autres mots, ajouter 's' si count > 1
-        return count <= 1 ? word : `${word}s`;
+        const specialCases = {
+            'décès': 'Décès',
+            'mention': count <= 1 ? 'mention' : 'mentions'
+        };
+        return specialCases[word] || (count <= 1 ? word : `${word}s`);
     }
 }
-
 export const infoWindowContentManager = new InfoWindowContentManager();
