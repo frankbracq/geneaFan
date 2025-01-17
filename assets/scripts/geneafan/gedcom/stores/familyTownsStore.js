@@ -5,8 +5,8 @@ Fournit un calque de contexte global pour la carte
 */
 
 import { makeObservable, observable, action, computed, runInAction, autorun } from '../../common/stores/mobx-config.js';
-import MarkerManager from '../../tabs/familyMap/markerManager.js';
-import { infoWindowManager } from '../../tabs/familyMap/infoWindowManager.js';
+import MarkerDisplayManager from '../../tabs/familyMap/markerDisplayManager.js';
+import { infoWindowDisplayManager } from '../../tabs/familyMap/infoWindowDisplayManager.js';
 import { storeEvents, EVENTS } from './storeEvents.js';
 import { normalizeGeoString } from "../../utils/geo.js";
 import { TownStatisticsManager } from './townStatisticsManager';
@@ -14,7 +14,7 @@ import { infoWindowContentManager } from './infoWindowContentManager.js';
 
 class FamilyTownsStore {
     constructor() {
-        this.markerManager = new MarkerManager();
+        this.markerDisplayManager = new MarkerDisplayManager();
         this.townsData = new Map();
         this.disposers = new Map();
         this.isLoading = false;
@@ -252,7 +252,7 @@ class FamilyTownsStore {
 
     initialize(map) {
         this.map = map;
-        this.markerManager.initializeCluster(map, this.renderCluster.bind(this));
+        this.markerDisplayManager.initializeCluster(map, this.renderCluster.bind(this));
 
         if (this.townsData.size > 0) {
             this.updateMarkers();
@@ -262,8 +262,8 @@ class FamilyTownsStore {
     clearAllTowns() {
         runInAction(() => {
             this.townsData = new Map();
-            if (this.markerManager) {
-                this.markerManager.clearMarkers();
+            if (this.markerDisplayManager) {
+                this.markerDisplayManager.clearMarkers();
             }
         });
     }
@@ -287,7 +287,7 @@ class FamilyTownsStore {
         const key = `${townData.latitude}-${townData.longitude}-${townName}`;
         const position = new google.maps.LatLng(townData.latitude, townData.longitude);
 
-        const marker = this.markerManager.addMarker(
+        const marker = this.markerDisplayManager.addMarker(
             'familyTowns',
             key,
             position,
@@ -300,7 +300,7 @@ class FamilyTownsStore {
                     townData.townDisplay || townName,
                     townData
                 );
-                infoWindowManager.showInfoWindow(marker, content);
+                infoWindowDisplayManager.showInfoWindow(marker, content);
             }
         );
 
@@ -319,7 +319,7 @@ class FamilyTownsStore {
     }
 
     updateMarkers() {
-        this.markerManager.clearMarkers('familyTowns');
+        this.markerDisplayManager.clearMarkers('familyTowns');
         this.townsData.forEach((townData, townName) => {
             if (townData.latitude && townData.longitude) {
                 this.createMarker(townName, townData);
@@ -327,15 +327,15 @@ class FamilyTownsStore {
         });
 
         if (this.isVisible && this.map) {
-            this.markerManager.toggleLayerVisibility('familyTowns', true, this.map);
-            this.markerManager.addMarkersToCluster(this.map);
+            this.markerDisplayManager.toggleLayerVisibility('familyTowns', true, this.map);
+            this.markerDisplayManager.addMarkersToCluster(this.map);
         }
     }
 
     hasActiveMarkers() {
-        if (!this.markerManager) return false;
+        if (!this.markerDisplayManager) return false;
         let hasMarkers = false;
-        this.markerManager.layers.forEach(layerMarkers => {
+        this.markerDisplayManager.layers.forEach(layerMarkers => {
             layerMarkers.forEach(marker => {
                 if (marker.map !== null) {
                     hasMarkers = true;
@@ -346,12 +346,12 @@ class FamilyTownsStore {
     }
 
     getBounds() {
-        if (!this.markerManager) return null;
+        if (!this.markerDisplayManager) return null;
         
         const bounds = new google.maps.LatLngBounds();
         let hasMarkers = false;
 
-        this.markerManager.layers.forEach(layerMarkers => {
+        this.markerDisplayManager.layers.forEach(layerMarkers => {
             layerMarkers.forEach(marker => {
                 if (marker.map !== null) {
                     bounds.extend(marker.position);
@@ -366,9 +366,9 @@ class FamilyTownsStore {
     toggleVisibility(isVisible) {
         this.isVisible = isVisible;
         if (this.map) {
-            this.markerManager.toggleLayerVisibility('familyTowns', isVisible, this.map);
+            this.markerDisplayManager.toggleLayerVisibility('familyTowns', isVisible, this.map);
             if (isVisible) {
-                this.markerManager.addMarkersToCluster(this.map);
+                this.markerDisplayManager.addMarkersToCluster(this.map);
             }
         }
     }
@@ -409,8 +409,8 @@ class FamilyTownsStore {
     }
 
     cleanup() {
-        this.markerManager.clearMarkers();
-        this.markerManager.cleanup();
+        this.markerDisplayManager.clearMarkers();
+        this.markerDisplayManager.cleanup();
         this.map = null;
         this.disposers.forEach(disposer => disposer());
         this.disposers.clear();

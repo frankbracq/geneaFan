@@ -1,4 +1,9 @@
-class InfoWindowManager {
+// La classe gère principalement :
+    // - l'affichage/masquage des fenêtres d'info
+    // - le rendu du contenu
+    // - le positionnement à l'écran
+
+class InfoWindowDisplayManager {
     constructor() {
         this.currentInfoWindow = null;
     }
@@ -57,4 +62,4 @@ class InfoWindowManager {
     }
 }
 
-export const infoWindowManager = new InfoWindowManager();
+export const infoWindowDisplayManager = new InfoWindowDisplayManager();

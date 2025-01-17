@@ -152,8 +152,8 @@ class GoogleMapManager {
             // Initialiser l'état des switches
             ancestorLayerSwitch.checked = true;
             rootAncestorTownsStore.isVisible = true;
-            rootAncestorTownsStore.markerManager.toggleLayerVisibility('rootAncestors', true, rootAncestorTownsStore.map);
-            rootAncestorTownsStore.markerManager.addMarkersToCluster(rootAncestorTownsStore.map);
+            rootAncestorTownsStore.markerDisplayManager.toggleLayerVisibility('rootAncestors', true, rootAncestorTownsStore.map);
+            rootAncestorTownsStore.markerDisplayManager.addMarkersToCluster(rootAncestorTownsStore.map);
             
             // Ajouter le gestionnaire d'événements
             ancestorLayerSwitch.addEventListener('change', (e) => {
@@ -168,7 +168,7 @@ class GoogleMapManager {
             // Initialiser l'état des switches
             familyTownsSwitch.checked = false;
             familyTownsStore.isVisible = false;
-            familyTownsStore.markerManager.toggleLayerVisibility('familyTowns', false, familyTownsStore.map);
+            familyTownsStore.markerDisplayManager.toggleLayerVisibility('familyTowns', false, familyTownsStore.map);
             
             // Ajouter le gestionnaire d'événements
             familyTownsSwitch.addEventListener('change', (e) => {
@@ -176,7 +176,7 @@ class GoogleMapManager {
                 familyTownsStore.toggleVisibility(isChecked);
                 // Assurer que le clustering est mis à jour
                 if (isChecked) {
-                    familyTownsStore.markerManager.addMarkersToCluster(familyTownsStore.map);
+                    familyTownsStore.markerDisplayManager.addMarkersToCluster(familyTownsStore.map);
                 }
             });
         }

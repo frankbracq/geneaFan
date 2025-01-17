@@ -170,7 +170,7 @@ class InfoWindowContentManager {
             <div class="mt-2 border-t pt-2">
                 <h4 class="font-semibold mb-2">Patronymes</h4>
                 <div class="mb-3">
-                    <div class="text-xs text-gray-600 mb-1">Patronymes les plus fréquents à la naissance :</div>
+                    <div class="text-xs text-gray-600 mb-1">(Les plus fréquents à la naissance)</div>
                     <ul class="list-inside">
                         ${patronymesData.frequents
                             .slice(0, 5)

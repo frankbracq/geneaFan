@@ -1,10 +1,10 @@
 import { makeObservable, observable, action, autorun } from '../../common/stores/mobx-config.js';
-import MarkerManager from './markerManager.js';
-import { infoWindowManager } from './infoWindowManager.js';
+import MarkerDisplayManager from './markerDisplayManager.js';
+import { infoWindowDisplayManager } from './infoWindowDisplayManager.js';
 
 class RootAncestorTownsStore {
     constructor() {
-        this.markerManager = new MarkerManager();
+        this.markerDisplayManager = new MarkerDisplayManager();
         this.map = null;
         this.birthData = [];
         this.isVisible = true;
@@ -30,7 +30,7 @@ class RootAncestorTownsStore {
     initialize(map) {
         console.log('Initializing RootAncestorTownsStore with map');
         this.map = map;
-        this.markerManager.initializeCluster(map, this.renderCluster.bind(this));
+        this.markerDisplayManager.initializeCluster(map, this.renderCluster.bind(this));
 
         if (this.birthData.length > 0) {
             this.updateMarkers(this.birthData);
@@ -67,14 +67,14 @@ class RootAncestorTownsStore {
         const position = new google.maps.LatLng(location.lat, location.lng);
         const content = this.renderMarkerContent(location, births);
 
-        return this.markerManager.addMarker(
+        return this.markerDisplayManager.addMarker(
             'rootAncestors',
             key,
             position,
             { content, title: births.map(b => b.name).join(', ') },
             (marker) => {
                 const content = this.createInfoWindowContent(location, births, generations);
-                infoWindowManager.showInfoWindow(marker, content);
+                infoWindowDisplayManager.showInfoWindow(marker, content);
             }
         );
     }
@@ -93,7 +93,7 @@ class RootAncestorTownsStore {
     updateMarkers(birthData) {
         console.log('Updating markers with:', { dataCount: birthData?.length });
         this.birthData = birthData;
-        this.markerManager.clearMarkers('rootAncestors');
+        this.markerDisplayManager.clearMarkers('rootAncestors');
 
         const locationMap = this.groupBirthDataByLocation(birthData);
         locationMap.forEach((locationData) => {
@@ -101,18 +101,18 @@ class RootAncestorTownsStore {
         });
 
         if (this.isVisible && this.map) {
-            this.markerManager.toggleLayerVisibility('rootAncestors', true, this.map);
+            this.markerDisplayManager.toggleLayerVisibility('rootAncestors', true, this.map);
         }
     }
 
     clearMarkers() {
-        this.markerManager.clearMarkers('rootAncestors');
+        this.markerDisplayManager.clearMarkers('rootAncestors');
     }
 
     hasActiveMarkers() {
-        if (!this.markerManager) return false;
+        if (!this.markerDisplayManager) return false;
         let hasMarkers = false;
-        this.markerManager.layers.forEach(layerMarkers => {
+        this.markerDisplayManager.layers.forEach(layerMarkers => {
             layerMarkers.forEach(marker => {
                 if (marker.map !== null) {
                     hasMarkers = true;
@@ -123,12 +123,12 @@ class RootAncestorTownsStore {
     }
 
     getBounds() {
-        if (!this.markerManager) return null;
+        if (!this.markerDisplayManager) return null;
         
         const bounds = new google.maps.LatLngBounds();
         let hasMarkers = false;
 
-        this.markerManager.layers.forEach(layerMarkers => {
+        this.markerDisplayManager.layers.forEach(layerMarkers => {
             layerMarkers.forEach(marker => {
                 if (marker.map !== null) {
                     bounds.extend(marker.position);
@@ -144,9 +144,9 @@ class RootAncestorTownsStore {
     toggleVisibility(visible) {
         this.isVisible = visible;
         if (this.map) {
-            this.markerManager.toggleLayerVisibility('rootAncestors', visible, this.map);
+            this.markerDisplayManager.toggleLayerVisibility('rootAncestors', visible, this.map);
             if (visible) {
-                this.markerManager.addMarkersToCluster(this.map);
+                this.markerDisplayManager.addMarkersToCluster(this.map);
             }
         }
     }
@@ -267,7 +267,7 @@ class RootAncestorTownsStore {
     cleanup() {
         this.clearMarkers();
         this.map = null;
-        this.markerManager.cleanup();
+        this.markerDisplayManager.cleanup();
     }
 }
 

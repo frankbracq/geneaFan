@@ -1,6 +1,6 @@
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
 
-class MarkerManager {
+class MarkerDisplayManager {
     constructor() {
         this.layers = new Map();
         this.cluster = null;
@@ -134,4 +134,4 @@ class MarkerManager {
     }
 }
 
-export default MarkerManager;
+export default MarkerDisplayManager;
