@@ -3,56 +3,56 @@ class InfoWindowContentManager {
         if (!townName || !townData) return '';
     
         try {
-            const stats = townData.statistics;
-            const events = townData.events;
-            const birthCount = events.birth?.length || 0;
-            const deathCount = events.death?.length || 0;
-            const marriageCount = events.marriage?.length || 0;
+            const { statistics: stats, events } = townData;
+            const counts = {
+                birth: events.birth?.length || 0,
+                death: events.death?.length || 0,
+                marriage: events.marriage?.length || 0
+            };
             
-            let content = `
+            const baseContent = `
                 <div class="info-window-content">
                     <h3 class="text-lg font-bold mb-0">${townName}</h3>
                     <h4 class="text-gray-600 text-sm mb-2">(${townData.departement || '-'})</h4>
                     <div class="text-sm">
                         <div class="mt-2">
                             <ul class="list-inside">
-                                <li>${this.#pluralize('Naissance', birthCount)} : ${birthCount}</li>
-                                <li>Décès : ${deathCount}</li>
-                                <li>${this.#pluralize('Mariage', marriageCount)} : ${marriageCount}</li>
+                                <li>${this.#pluralize('Naissance', counts.birth)} : ${counts.birth}</li>
+                                <li>${this.#getDeathLine(counts.death, stats.localDeaths)}</li>
+                                <li>${this.#pluralize('Mariage', counts.marriage)} : ${counts.marriage}</li>
                             </ul>
                         </div>`;
     
-            // Modifier le compteur de décès s'il y a des décès de natifs
-            if (stats.localDeaths > 0) {
-                content = content.replace(
-                    `Décès : ${deathCount}`,
-                    `Décès : ${deathCount} (dont ${this.#pluralize('natif', stats.localDeaths)} : ${stats.localDeaths})`
-                );
-            }
-    
-            // Section des derniers événements
+            const sections = [];
+            
+            // Add recent events section if applicable
             const recentEventsByType = this.getRecentEventsByType(events);
             if (Object.values(recentEventsByType).some(events => events.length > 0)) {
-                content += this.#createRecentEventsSection(recentEventsByType);
+                sections.push(this.#createRecentEventsSection(recentEventsByType));
             }
 
-            // Section des patronymes (toujours l'inclure si des naissances existent)
-            if (birthCount > 0) {
+            // Add patronymes section if births exist
+            if (counts.birth > 0) {
                 const patronymesData = this.#preparePatronymesData(events.birth || []);
-                content += this.#createPatronymesSection(patronymesData);
+                sections.push(this.#createPatronymesSection(patronymesData));
             }
     
-            content += `
+            return `${baseContent}${sections.join('')}
                     </div>
                 </div>`;
     
-            return content;
         } catch (error) {
             console.error('Erreur lors de la création du contenu de l\'infoWindow:', error);
             return '<div class="error">Erreur lors du chargement des données</div>';
         }
     }
 
+    #getDeathLine(deathCount, localDeaths) {
+        return localDeaths > 0
+            ? `Décès : ${deathCount} (dont ${this.#pluralize('natif', localDeaths)} : ${localDeaths})`
+            : `Décès : ${deathCount}`;
+    }
+    
     #preparePatronymesData(birthEvents) {
         // Compter les occurrences de chaque patronyme
         const patronymeCount = new Map();
