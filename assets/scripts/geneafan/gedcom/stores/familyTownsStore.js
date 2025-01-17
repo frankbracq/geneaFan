@@ -10,6 +10,7 @@ import { infoWindowManager } from '../../tabs/familyMap/infoWindowManager.js';
 import { storeEvents, EVENTS } from './storeEvents.js';
 import { normalizeGeoString } from "../../utils/geo.js";
 import { TownStatisticsManager } from './townStatisticsManager';
+import { infoWindowContentManager } from './infoWindowContentManager.js';
 
 class FamilyTownsStore {
     constructor() {
@@ -295,12 +296,9 @@ class FamilyTownsStore {
                 title: townName
             },
             (marker) => {
-                const content = infoWindowManager.createInfoWindowContent(
+                const content = infoWindowContentManager.createInfoWindowContent(
                     townData.townDisplay || townName,
-                    [
-                        { label: 'Département', value: townData.departement },
-                        { label: 'Pays', value: townData.country }
-                    ]
+                    townData
                 );
                 infoWindowManager.showInfoWindow(marker, content);
             }
@@ -429,156 +427,6 @@ class FamilyTownsStore {
 
     get totalTowns() {
         return this.townsData.size;
-    }
-
-    // Info window
-    createInfoWindowContent(townName, townData) {
-        if (!townName || !townData) return '';
-    
-        try {
-            const stats = townData.statistics;
-            const events = townData.events;
-            
-            let content = `
-                <div class="info-window-content">
-                    <h3 class="text-lg font-bold mb-2">${townName}</h3>
-                    <div class="text-sm">
-                        <p><strong>Département:</strong> ${townData.departement || ''}</p>
-                        <p><strong>Pays:</strong> ${townData.country || ''}</p>
-                        
-                        <div class="mt-2">
-                            <h4 class="font-semibold">Statistiques</h4>
-                            <ul class="list-inside">
-                                <li>Naissances: ${events.birth?.length || 0}</li>
-                                <li>Décès: ${events.death?.length || 0}</li>
-                                <li>Mariages: ${events.marriage?.length || 0}</li>
-                            </ul>
-                        </div>`;
-    
-            if (stats.localDeaths > 0 || stats.externalDeaths > 0) {
-                content += `
-                        <div class="mt-2">
-                            <h4 class="font-semibold">Mobilité</h4>
-                            <p>Décès de natifs: ${stats.localDeaths}</p>
-                            <p>Décès d'extérieurs: ${stats.externalDeaths}</p>
-                        </div>`;
-            }
-    
-            // Ajouter les derniers événements s'ils existent
-            const recentEvents = this.getRecentEvents(events, 3);
-            if (recentEvents.length > 0) {
-                content += `
-                        <div class="mt-2">
-                            <h4 class="font-semibold">Derniers événements</h4>
-                            <ul class="list-inside">
-                                ${recentEvents.map(e => `
-                                    <li>${this.formatEvent(e)}</li>
-                                `).join('')}
-                            </ul>
-                        </div>`;
-            }
-    
-            // Ajouter les patronymes si disponibles
-            if (stats.patronymes?.frequents?.length > 0) {
-                content += this.createPatronymesSection(stats.patronymes);
-            }
-    
-            content += `
-                    </div>
-                </div>`;
-    
-            return content;
-        } catch (error) {
-            console.error('Erreur lors de la création du contenu de l\'infoWindow:', error);
-            return '<div class="error">Erreur lors du chargement des données</div>';
-        }
-    }
-
-    getRecentEvents(events, count) {
-        if (!events || !count) return [];
-    
-        try {
-            // Combine et trie tous les événements par date
-            const allEvents = [
-                ...(events.birth || []),
-                ...(events.death || []),
-                ...(events.marriage || [])
-            ].filter(e => e && e.date)
-             .sort((a, b) => {
-                 const dateA = new Date(a.date.split('/').reverse().join('-'));
-                 const dateB = new Date(b.date.split('/').reverse().join('-'));
-                 return dateB - dateA;
-             })
-             .slice(0, count);
-    
-            return allEvents;
-        } catch (error) {
-            console.error('Erreur lors de la récupération des événements récents:', error);
-            return [];
-        }
-    }
-
-    createPatronymesSection(patronymesData) {
-        if (!patronymesData?.frequents) return '';
-    
-        let content = `
-            <div class="mt-2">
-                <h4 class="font-semibold">Patronymes principaux</h4>
-                <ul class="list-inside">
-                    ${patronymesData.frequents
-                        .slice(0, 5)
-                        .map(p => `<li>${p.surname} (${p.count})</li>`)
-                        .join('')}
-                </ul>
-            </div>`;
-    
-        if (patronymesData.evolution?.length > 0) {
-            content += `
-                <div class="mt-2">
-                    <h4 class="font-semibold">Évolution historique</h4>
-                    <div class="text-xs">
-                        ${patronymesData.evolution
-                            .map(e => `
-                                <p>${e.period}: ${Object.entries(e)
-                                    .filter(([key]) => key !== 'period')
-                                    .filter(([, count]) => count > 0)
-                                    .map(([surname, count]) => `${surname} (${count})`)
-                                    .join(', ')}</p>
-                            `).join('')}
-                    </div>
-                </div>`;
-        }
-    
-        return content;
-    }
-
-    formatEvent(event) {
-        if (!event || !event.personDetails) return '';
-    
-        try {
-            const person = event.personDetails;
-            const date = event.date;
-            let description;
-    
-            switch (event.type) {
-                case 'birth':
-                    description = `Naissance de ${person.name} ${person.surname}`;
-                    break;
-                case 'death':
-                    description = `Décès de ${person.name} ${person.surname}`;
-                    break;
-                case 'marriage':
-                    description = `Mariage de ${person.name} ${person.surname}`;
-                    break;
-                default:
-                    description = `Événement: ${person.name} ${person.surname}`;
-            }
-    
-            return `${date} - ${description}`;
-        } catch (error) {
-            console.error('Erreur lors du formatage de l\'événement:', error);
-            return '';
-        }
     }
     
     updateTownsViaProxy = async () => {
