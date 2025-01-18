@@ -1,4 +1,5 @@
 class InfoWindowContentManager {
+    // Creates the content for an info window based on town name and data.
     createInfoWindowContent(townName, townData) {
         if (!townName || !townData) return '';
     
@@ -15,6 +16,7 @@ class InfoWindowContentManager {
         }
     }
 
+    // Gets the counts of different types of events.
     #getEventCounts(events) {
         return {
             birth: events.birth?.length || 0,
@@ -23,6 +25,7 @@ class InfoWindowContentManager {
             };
     }
     
+    // Creates the base content for the info window.
     #createBaseContent(townName, townData, counts, stats) {
         return `
             <div class="info-window-content">
@@ -38,6 +41,7 @@ class InfoWindowContentManager {
             </div>`;
     }
 
+    // Creates sections for the info window based on events and counts.
     #createSections(events, counts) {
         const sections = [];
         const recentEvents = this.getRecentEventsByType(events);
@@ -54,12 +58,14 @@ class InfoWindowContentManager {
         return sections;
     }
 
+    // Gets the death line content based on death count and local deaths.
     #getDeathLine(deathCount, localDeaths) {
         return localDeaths > 0
             ? `Décès : ${deathCount} (dont ${this.#pluralize('natif', localDeaths)} : ${localDeaths})`
             : `Décès : ${deathCount}`;
     }
     
+    // Prepares patronymes data based on birth events.
     #preparePatronymesData(birthEvents) {
         if (!birthEvents?.length) return { frequents: [], evolution: [] };
 
@@ -71,6 +77,7 @@ class InfoWindowContentManager {
         };
     }
 
+    // Processes birth events to count patronymes and their evolution over time.
     #processEvents(birthEvents) {
         const patronymeCount = new Map();
         const evolutionMap = new Map();
@@ -86,6 +93,7 @@ class InfoWindowContentManager {
         return [patronymeCount, evolutionMap];
     }
 
+    // Updates the evolution map with the given surname and date.
     #updateEvolutionMap(evolutionMap, surname, date) {
         const year = parseInt(date.split('/')[2]);
         if (isNaN(year)) return;
@@ -96,12 +104,14 @@ class InfoWindowContentManager {
         evolutionMap.set(period, periodData);
     }
 
+    // Creates an array of frequent patronymes from the patronyme count map.
     #createFrequentsArray(patronymeCount) {
         return [...patronymeCount]
             .map(([surname, count]) => ({ surname, count }))
             .sort((a, b) => b.count - a.count);
     }
 
+    // Creates an array of evolution data from the evolution map.
     #createEvolutionArray(evolutionMap) {
         return [...evolutionMap]
             .map(([period, data]) => ({
@@ -111,6 +121,7 @@ class InfoWindowContentManager {
             .sort((a, b) => a.period.localeCompare(b.period));
     }
 
+    // Gets recent events by type from the events object.
     getRecentEventsByType(events) {
         if (!events) return {};
     
@@ -130,6 +141,7 @@ class InfoWindowContentManager {
         }
     }
 
+    // Creates the recent events section for the info window.
     #createRecentEventsSection(recentEvents) {
         const eventTypes = {
             birth: 'Naissance',
@@ -150,11 +162,13 @@ class InfoWindowContentManager {
                 </div>`;
     }
     
+    // Formats the person's name from the event data.
     #formatPersonName(event) {
         const firstName = event.personDetails.name.split(' ')[0];
         return `${firstName} ${event.personDetails.surname}`;
     }
 
+    // Creates the patronymes section for the info window.
     #createPatronymesSection(patronymesData) {
         if (!patronymesData.frequents.length) return '';
 
@@ -183,6 +197,7 @@ class InfoWindowContentManager {
             </div>`;
     }
 
+    // Formats the evolution period data for display.
     #formatEvolutionPeriod(period) {
         const entries = Object.entries(period)
             .filter(([key, count]) => key !== 'period' && count > 0)
@@ -196,6 +211,7 @@ class InfoWindowContentManager {
             </div>` : '';
     }
 
+    // Pluralizes a word based on the count.
     #pluralize(word, count) {
         const specialCases = {
             'décès': 'Décès',

@@ -509,14 +509,14 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies) {
 
     const deathData = buildEventFallback(individualJson, deathTags, individualTowns).eventDetails;
     const deathYear = deathData.date ? extractYear(deathData.date) : "";
-    let currentYear = new Date().getFullYear();
+    const currentYear = new Date().getFullYear();
 
+    const processDeath = () => {
     if (!birthData.date) {
         deceased = true;
         formattedDeath = deathData.date ? generateEventDescription("DEAT", deathData, gender, null, true) : "Information on life and death unknown";
         addEvent("death", name, surname, deathData.date || "date inconnue", deathData.town || "", formattedDeath, "", [], birthData.date, individualEvents);
-    } else {
-        if (!deathData.date) {
+        } else if (!deathData.date) {
             const today = moment().format("DD/MM/YYYY");
             if (birthYear >= currentYear - 105) {
                 age = calculateAge(birthData.date);
@@ -534,13 +534,15 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies) {
             formattedDeath = generateEventDescription("DEAT", deathData, gender, age, true);
             addEvent("death", name, surname, deathData.date, deathData.town, formattedDeath, "", [], birthData.date, individualEvents);
         }
-    }
+    };
+
+    processDeath();
 
     const parentalFamily = getParentalFamily(individualJson.pointer, allFamilies, allIndividuals);
 
     familyTreeDataStore.addNodeToGenealogyGraph({
         id: individualJson.pointer,
-        name: name + ' ' + surname,
+        name: `${name} ${surname}`,
         birthDate: birthData.date,
         deathDate: deathData.date
     });
