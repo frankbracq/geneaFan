@@ -1,20 +1,20 @@
-class StoreEventBus {
+class StoreEvents {
     constructor() {
         this.listeners = new Map();
     }
 
-    subscribe(event, callback) {
+    subscribe(event, listener) {
         if (!this.listeners.has(event)) {
             this.listeners.set(event, new Set());
         }
-        this.listeners.get(event).add(callback);
-        
-        // Retourne une fonction de nettoyage
+        this.listeners.get(event).add(listener);
+
+        // Return disposer function
         return () => {
-            const callbacks = this.listeners.get(event);
-            if (callbacks) {
-                callbacks.delete(callback);
-                if (callbacks.size === 0) {
+            const eventListeners = this.listeners.get(event);
+            if (eventListeners) {
+                eventListeners.delete(listener);
+                if (eventListeners.size === 0) {
                     this.listeners.delete(event);
                 }
             }
@@ -22,44 +22,38 @@ class StoreEventBus {
     }
 
     emit(event, data) {
-        // console.log(`📢 Event émis: ${event}`, data ? 'avec données' : 'sans données');
-        const callbacks = this.listeners.get(event);
-        if (callbacks) {
-            callbacks.forEach(callback => {
+        const eventListeners = this.listeners.get(event);
+        if (eventListeners) {
+            eventListeners.forEach(listener => {
                 try {
-                    callback(data);
+                    listener(data);
                 } catch (error) {
-                    console.error(`🚨 Erreur lors du traitement de l'événement ${event}:`, error);
+                    console.error(`Error in event listener for ${event}:`, error);
                 }
             });
         }
     }
 
-    // Utilitaire pour le debugging
-    listSubscriptions() {
-        console.group('📋 Abonnements actuels');
-        this.listeners.forEach((callbacks, event) => {
-            console.log(`${event}: ${callbacks.size} listener(s)`);
-        });
-        console.groupEnd();
+    clear() {
+        this.listeners.clear();
     }
 }
 
-// Événements disponibles
 export const EVENTS = {
     INDIVIDUAL: {
-        ADDED: 'individual:added',
-        UPDATED: 'individual:updated',
-        REMOVED: 'individual:removed'
+        ADDED: 'individual:added'
+    },
+    INDIVIDUALS: {
+        BULK_ADDED: 'individuals:bulk_added'  // Nouvel événement pour le traitement par lots
     },
     CACHE: {
+        ERROR: 'cache:error',
         BUILT: 'cache:built',
         CLEARED: 'cache:cleared'
     },
     TOWN: {
-        ADDED: 'town:added',
         UPDATED: 'town:updated'
     }
 };
 
-export const storeEvents = new StoreEventBus();
+export const storeEvents = new StoreEvents();

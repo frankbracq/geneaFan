@@ -65,13 +65,75 @@ class FamilyTownsStore {
 
     // Event Management
     setupEventSubscriptions() {
-        const individualDisposer = storeEvents.subscribe(
-            EVENTS.INDIVIDUAL.ADDED,
-            ({id, data}) => {
-                this.updateTownEventsForIndividual(data);
+        const bulkIndividualsDisposer = storeEvents.subscribe(
+            EVENTS.INDIVIDUALS.BULK_ADDED,
+            (individuals) => {
+                console.time('processAllTownsEvents');
+                runInAction(() => {
+                    const townUpdates = new Map();
+    
+                    // Définir les types d'événements valides
+                    const validEventTypes = ['birth', 'death', 'marriage'];
+    
+                    // Collecter toutes les mises à jour de villes
+                    individuals.forEach(([id, individual]) => {
+                        individual.individualEvents?.forEach(event => {
+                            // Filtrer les événements non pertinents
+                            if (!validEventTypes.includes(event.type)) {
+                                return;
+                            }
+    
+                            if (!event.town) return;
+                            
+                            const normalizedTownName = normalizeGeoString(event.town);
+                            if (!normalizedTownName) return;
+                    
+                            if (!townUpdates.has(normalizedTownName)) {
+                                townUpdates.set(normalizedTownName, {
+                                    townData: { 
+                                        town: event.town,
+                                        townDisplay: event.town
+                                    },
+                                    events: []
+                                });
+                            }
+    
+                            // Enrichir l'événement avec les détails de la personne
+                            const enrichedEvent = {
+                                type: event.type,
+                                date: event.date,
+                                personId: individual.id,
+                                personDetails: {
+                                    name: individual.name,
+                                    surname: individual.surname,
+                                    gender: individual.gender,
+                                    birthDate: individual.birthDate,
+                                    deathDate: individual.deathDate,
+                                    birthPlace: individual.fanBirthPlace,
+                                    deathPlace: individual.fanDeathPlace,
+                                    occupation: individual.occupation
+                                }
+                            };
+    
+                            townUpdates.get(normalizedTownName).events.push(enrichedEvent);
+                        });
+                    });
+    
+                    // Appliquer toutes les mises à jour en une seule fois
+                    townUpdates.forEach((updateData, normalizedTownName) => {
+                        this.addOrUpdateTown(normalizedTownName, updateData.townData);
+                        const town = this.townsData.get(normalizedTownName);
+                        if (town) {
+                            updateData.events.forEach(event => {
+                                this.updateTownEvents(town, event);
+                            });
+                        }
+                    });
+                });
+                console.timeEnd('processAllTownsEvents');
             }
         );
-
+    
         const cacheDisposer = storeEvents.subscribe(
             EVENTS.CACHE.BUILT,
             () => {
@@ -79,7 +141,7 @@ class FamilyTownsStore {
                 this.finalizeAllTownsData();
             }
         );
-
+    
         const clearDisposer = storeEvents.subscribe(
             EVENTS.CACHE.CLEARED,
             () => {
@@ -87,8 +149,9 @@ class FamilyTownsStore {
                 this.clearAllTowns();
             }
         );
-
-        this.disposers.set('individual', individualDisposer);
+    
+        // Mettre à jour les disposers
+        this.disposers.set('bulkIndividuals', bulkIndividualsDisposer);
         this.disposers.set('cache', cacheDisposer);
         this.disposers.set('clear', clearDisposer);
     }

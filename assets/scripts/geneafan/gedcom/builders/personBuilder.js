@@ -28,6 +28,7 @@ import {
 // Stores
 import familyTreeDataStore from '../../tabs/familyTree/familyTreeDataStore.js';
 import gedcomConstantsStore from '../stores/gedcomConstantsStore.js';
+import familyIndices from '../stores/indices/familyIndices';
 
 
 const VALUE_OCCUPATION = "Occupation";
@@ -143,14 +144,20 @@ function processMarriages(
     individualPointer,
     allIndividuals,
     allFamilies,
-    individualTowns
+    individualTowns,
+    indices // Add indices parameter
 ) {
     if (!individualPointer || !_.isArray(allFamilies)) {
         return [];
     }
 
-    // Collect marriage information using getIndividualFamily
-    const individualFamilyInfo = getIndividualFamily(individualPointer, allFamilies, allIndividuals);
+    // Pass indices to getIndividualFamily
+    const individualFamilyInfo = getIndividualFamily(
+        individualPointer,
+        allIndividuals,
+        allFamilies,
+        indices
+    );
 
     const marriages = _.map(individualFamilyInfo.spouses, (spouseInfo, spouseId) => {
         const { details: spouseDetails, children, marriage } = spouseInfo;
@@ -187,12 +194,9 @@ function processMarriages(
         eventDetails = { ...eventDetails, eventId: '', spouseId };
 
         // Get the spouse's name
-        const spouseName = spouseDetails.name;
+        const spouseName = spouseDetails?.name || 'Unknown';
 
         // Generate the formatted marriage description
-        let gender = "";  // Assume that gender is determined elsewhere
-        let age = "";    // Assume that age is determined elsewhere
-
         const formattedMarriage = generateEventDescription(
             "MARR",
             {
@@ -200,8 +204,8 @@ function processMarriages(
                 spouseName: spouseName,
                 spouseId: spouseId
             },
-            gender,
-            age
+            "", // gender
+            "" // age
         );
 
         // Get the couple's details
@@ -210,7 +214,13 @@ function processMarriages(
             wife: spouseId
         };
 
-        return { formattedMarriage, children, spouseName, eventDetails, couple };
+        return { 
+            formattedMarriage, 
+            children: children || [], 
+            spouseName, 
+            eventDetails, 
+            couple 
+        };
     });
 
     return marriages;
@@ -309,66 +319,67 @@ export function extractBasicInfo(individualJson) {
 }
 
 /* Parental Family Members */
-function getParentalFamily(individualPointer, allFamilies, allIndividuals) {
-    // Find the family where the individual is a child
-    const parentFamily = allFamilies.find((family) =>
-        family.tree.some(
-            (node) => node.tag === "CHIL" && node.data === individualPointer
-        )
-    );
-
+function getParentalFamily(individualPointer, allIndividuals, indices) {
+    if (!indices || typeof indices.getParentalFamily !== 'function') {
+        console.error('Invalid indices object passed to getParentalFamily:', indices);
+        return { siblings: [], fatherId: null, motherId: null, siblingIds: [] };
+    }
+    
+    const parentFamily = indices.getParentalFamily(individualPointer);
+    
     if (!parentFamily) {
         return { siblings: [], fatherId: null, motherId: null, siblingIds: [] };
     }
 
-    // Extract the parents' IDs
-    const husband = parentFamily.tree.find((node) => node.tag === "HUSB")?.data;
-    const wife = parentFamily.tree.find((node) => node.tag === "WIFE")?.data;
+    // Extract parent IDs from the family record
+    const fatherId = parentFamily.tree.find(node => node.tag === "HUSB")?.data;
+    const motherId = parentFamily.tree.find(node => node.tag === "WIFE")?.data;
 
-    // Extract the siblings
+    // Extract and process siblings
     let siblings = parentFamily.tree
-        .filter((node) => node.tag === "CHIL" && node.data !== individualPointer)
-        .map((siblingNode) =>
-            getRelativeDetails(siblingNode.data, allIndividuals)
-        )
-        .filter((sibling) => sibling !== null);
+        .filter(node => node.tag === "CHIL" && node.data !== individualPointer)
+        .map(siblingNode => getRelativeDetails(siblingNode.data, allIndividuals))
+        .filter(Boolean);
 
     // Extract sibling IDs
-    let siblingIds = parentFamily.tree
-        .filter((node) => node.tag === "CHIL" && node.data !== individualPointer)
-        .map((siblingNode) => siblingNode.data);
+    const siblingIds = parentFamily.tree
+        .filter(node => node.tag === "CHIL" && node.data !== individualPointer)
+        .map(siblingNode => siblingNode.data);
 
-    // Sort the siblings by birth date, then by name if the birth date is unknown
+    // Sort siblings by birth date and name
     siblings = _.orderBy(
         siblings,
         [
-            (member) =>
-                member.birthDate
-                    ? new Date(member.birthDate.split("/").reverse().join("-"))
-                    : Infinity,
-            "name",
+            member => member.birthDate 
+                ? new Date(member.birthDate.split("/").reverse().join("-")) 
+                : Infinity,
+            "name"
         ],
         ["asc", "asc"]
     );
-    return { siblings, fatherId: husband, motherId: wife, siblingIds };
+
+    return { siblings, fatherId, motherId, siblingIds };
 }
 
 /* Individual family members */
-export function getIndividualFamily(individualPointer, allFamilies, allIndividuals) {
+function getIndividualFamily(individualPointer, allIndividuals, allFamilies, indices) {
+    if (!indices || typeof indices.getFamiliesAsParent !== 'function') {
+        console.error('Invalid indices object passed to getIndividualFamily:', indices);
+        return {
+            spouses: {},
+            children: {}
+        };
+    }
+
     const result = {
         spouses: {},
         children: {}
     };
 
-    // Trouver les familles où l'individu est un parent (HUSB ou WIFE)
-    const parentFamilies = _.filter(allFamilies, family =>
-        _.some(family.tree, node =>
-            (node.tag === "HUSB" || node.tag === "WIFE") && node.data === individualPointer
-        )
-    );
+    const parentFamilies = indices.getFamiliesAsParent(individualPointer) || [];
 
     _.forEach(parentFamilies, family => {
-        // Extraire les époux
+        // Extract spouses
         const spouses = _.map(
             _.filter(family.tree, node =>
                 (node.tag === "HUSB" || node.tag === "WIFE") && node.data !== individualPointer
@@ -376,13 +387,13 @@ export function getIndividualFamily(individualPointer, allFamilies, allIndividua
             spouseNode => spouseNode.data
         );
 
-        // Extraire les enfants
+        // Extract children
         const children = _.map(
             _.filter(family.tree, node => node.tag === "CHIL"),
             childNode => childNode.data
         );
 
-        // Extraire les informations de mariage
+        // Extract marriage information
         const marriageNode = _.find(family.tree, node => node.tag === "MARR");
         const marriageInfo = marriageNode ? {
             date: _.get(_.find(marriageNode.tree, { tag: "DATE" }), 'data', ''),
@@ -390,7 +401,7 @@ export function getIndividualFamily(individualPointer, allFamilies, allIndividua
             key: _.get(marriageNode, 'key', '')
         } : {};
 
-        // Ajouter les détails des époux, des enfants et des mariages
+        // Add spouse and children details
         _.forEach(spouses, spouseId => {
             if (!result.spouses[spouseId]) {
                 result.spouses[spouseId] = {
@@ -402,18 +413,21 @@ export function getIndividualFamily(individualPointer, allFamilies, allIndividua
 
             _.forEach(children, childId => {
                 const childDetails = getRelativeDetails(childId, allIndividuals);
-                result.spouses[spouseId].children.push(childDetails);
+                if (childDetails) {  // Only add if we got valid details
+                    result.spouses[spouseId].children.push(childDetails);
 
-                if (!result.children[childId]) {
-                    result.children[childId] = {
-                        details: childDetails,
-                        parents: []
-                    };
+                    if (!result.children[childId]) {
+                        result.children[childId] = {
+                            details: childDetails,
+                            parents: []
+                        };
+                    }
+                    result.children[childId].parents.push(individualPointer);
                 }
-                result.children[childId].parents.push(individualPointer);
             });
         });
     });
+
     return result;
 }
 
@@ -488,7 +502,7 @@ function calculateGeneration(individualPointer, allFamilies, cache = new Map()) 
     return generation;
 }
 
-export function buildIndividual(individualJson, allIndividuals, allFamilies) {
+export function buildIndividual(individualJson, allIndividuals, allFamilies, indices) {
     if (!individualJson) {
         return { id: null, name: "", surname: "", birth: {}, death: {} };
     }
@@ -538,7 +552,7 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies) {
 
     processDeath();
 
-    const parentalFamily = getParentalFamily(individualJson.pointer, allFamilies, allIndividuals);
+    const parentalFamily = getParentalFamily(individualJson.pointer, allIndividuals, indices);
 
     familyTreeDataStore.addNodeToGenealogyGraph({
         id: individualJson.pointer,
@@ -567,18 +581,20 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies) {
         ? formatSiblings(parentalFamily.siblings)
         : "";
 
-    const individualFamily = getIndividualFamily(
-        individualJson.pointer,
-        allFamilies,
-        allIndividuals
-    );
+        const individualFamily = getIndividualFamily(
+            individualJson.pointer,
+            allIndividuals,
+            allFamilies,
+            indices  // Pass the indices parameter here
+        );
 
-    const marriages = processMarriages(
-        individualJson.pointer,
-        allIndividuals,
-        allFamilies,
-        individualTowns
-    );
+        const marriages = processMarriages(
+            individualJson.pointer,
+            allIndividuals,
+            allFamilies,
+            individualTowns,
+            indices  // Pass indices here too if needed
+        );
 
     marriages.forEach((marriage) => {
         addEvent(

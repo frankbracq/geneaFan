@@ -1,5 +1,6 @@
 import { makeObservable, observable, action, computed, reaction, runInAction } from '../../common/stores/mobx-config.js';
 import _ from 'lodash';
+import FamilyIndices from './indices/familyIndices';
 import { buildIndividual } from '../builders/personBuilder.js';
 import configStore from '../../tabs/fanChart/fanConfigStore.js';
 import { TAGS, byTag } from './gedcomConstantsStore.js';
@@ -11,13 +12,21 @@ class GedcomDataStore {
     _hierarchy = null;
     familyEvents = [];
     isFileUploaded = false;
-    reactionDisposers = new Map();  // Nouveau: stockage des réactions
+    reactionDisposers = new Map();
+    isProcessing = false;
+    indices = new FamilyIndices();
 
     constructor() {
+        console.log('GedcomDataStore constructor called');
+        console.log('GedcomDataStore initializing with familyIndices:', FamilyIndices);
+        
+        this.familyIndices = FamilyIndices; // S'assurer que la référence est stockée
+
         makeObservable(this, {
             sourceData: observable,
             individualsCache: observable,
             _hierarchy: observable.ref,
+            familyIndices: observable.ref,
             familyEvents: observable,
             isFileUploaded: observable,
             reactionDisposers: observable, // Nouveau
@@ -48,7 +57,7 @@ class GedcomDataStore {
                     console.group('📥 Source JSON avant traitement');
                     console.log('Nombre d\'entrées:', json.length);
                     // Déconstruire le proxy du JSON source
-                    console.log('Contenu:', JSON.parse(JSON.stringify(json)));
+                    // console.log('Contenu:', JSON.parse(JSON.stringify(json)));
                     console.groupEnd();
         
                     this.buildIndividualsCache(json);
@@ -57,30 +66,34 @@ class GedcomDataStore {
                     // Log détaillé du cache
                     console.group('🗂️ Cache des individus après construction');
                     console.log('Nombre total d\'individus:', this.individualsCache.size);
-                    
+        
+                    const enableConsoleLogging = false; // Vous pouvez définir cette variable selon vos besoins
+        
                     this.individualsCache.forEach((individual, id) => {
                         // Déconstruire le proxy de chaque individu
                         const cleanIndividual = JSON.parse(JSON.stringify(individual));
-                        console.group(`👤 ${cleanIndividual.name} ${cleanIndividual.surname} (${id})`);
-                        
-                        if (cleanIndividual.individualEvents?.length > 0) {
-                            console.group('📅 Événements:');
-                            cleanIndividual.individualEvents.forEach(event => {
-                                console.log({
-                                    type: event.type,
-                                    date: event.date,
-                                    town: event.town,
-                                    formatted: event.formatted || ''
+        
+                        if (enableConsoleLogging) {
+                            console.group(`👤 ${cleanIndividual.name} ${cleanIndividual.surname} (${id})`);
+        
+                            if (cleanIndividual.individualEvents?.length > 0) {
+                                console.group('📅 Événements:');
+                                cleanIndividual.individualEvents.forEach(event => {
+                                    console.log({
+                                        type: event.type,
+                                        date: event.date,
+                                        town: event.town,
+                                        formatted: event.formatted || ''
+                                    });
                                 });
-                            });
+                                console.groupEnd();
+                            } else {
+                                console.log('Aucun événement');
+                            }
+        
                             console.groupEnd();
-                        } else {
-                            console.log('Aucun événement');
                         }
-                        
-                        console.groupEnd();
                     });
-                    
                     console.groupEnd();
                 }
             },
@@ -94,42 +107,74 @@ class GedcomDataStore {
     addIndividual = (id, data) => {
         runInAction(() => {
             this.individualsCache.set(id, data);
-            storeEvents.emit(EVENTS.INDIVIDUAL.ADDED, { id, data });
         });
     }
 
-    buildIndividualsCache(json) {
+    async buildIndividualsCache(json) {
         console.time("buildIndividualsCache");
-        const allIndividuals = _.filter(json, byTag(TAGS.INDIVIDUAL));
-        const allFamilies = _.filter(json, byTag(TAGS.FAMILY));
-
-        // Traiter les individus pour le cache
-        const newCache = new Map();
-        allIndividuals.forEach(individualJson => {
-            const individual = buildIndividual(individualJson, allIndividuals, allFamilies);
-            newCache.set(individualJson.pointer, individual);
-        });
-
-        // Mise à jour atomique du cache
-        runInAction(() => {
-            this.individualsCache = newCache;
+        
+        if (this.isProcessing) {
+            console.warn("Une construction de cache est déjà en cours");
+            return;
+        }
+        
+        this.isProcessing = true;
+        
+        try {
+            console.log('Starting buildIndividualsCache');
             
-            // Émettre les événements individuels après la mise à jour atomique
-            newCache.forEach((data, id) => {
-                storeEvents.emit(EVENTS.INDIVIDUAL.ADDED, { id, data });
+            // Un seul parcours du JSON pour extraire individus et familles
+            const { individuals, families } = json.reduce((acc, item) => {
+                if (item.tag === TAGS.INDIVIDUAL) acc.individuals.push(item);
+                else if (item.tag === TAGS.FAMILY) acc.families.push(item);
+                return acc;
+            }, { individuals: [], families: [] });
+    
+            // Initialiser les index de familles
+            console.log('Initializing family indices');
+            this.indices.initialize(families);
+    
+            // Mise à jour atomique du cache
+            runInAction(() => {
+                const newCache = new Map();
+                
+                for (const individualJson of individuals) {
+                    try {
+                        const individual = buildIndividual(
+                            individualJson,
+                            individuals,
+                            families,
+                            this.indices
+                        );
+                        newCache.set(individualJson.pointer, individual);
+                    } catch (error) {
+                        console.error(`Erreur traitement individu ${individualJson.pointer}:`, error);
+                    }
+                }
+    
+                this.individualsCache = newCache;
+                
+                // Émettre un seul événement avec tous les individus
+                const allIndividuals = Array.from(newCache.entries());
+                storeEvents.emit(EVENTS.INDIVIDUALS.BULK_ADDED, allIndividuals);
             });
-            
-            // Émettre l'événement de construction complète
-            storeEvents.emit(EVENTS.CACHE.BUILT, this.individualsCache);
-        });
-
-        // Calculer le nombre max de générations
-        const maxGenerations = this.calculateMaxGenerations(newCache, allFamilies);
-        configStore.setConfig({ maxGenerations: Math.min(maxGenerations, 8) });
-        configStore.setAvailableGenerations(maxGenerations);
-
-        console.timeEnd("buildIndividualsCache");
+    
+        } catch (error) {
+            console.error("Erreur lors de la construction du cache:", error);
+            storeEvents.emit(EVENTS.CACHE.ERROR, error);
+        } finally {
+            this.isProcessing = false;
+            console.timeEnd("buildIndividualsCache");
+        }
     }
+
+    // Temporairement commenté pour les tests de performance
+    // juste avant } catch (error) {
+            /*
+            const maxGenerations = this.calculateMaxGenerations(this.individualsCache, families);
+            configStore.setConfig({ maxGenerations: Math.min(maxGenerations, 8) });
+            configStore.setAvailableGenerations(maxGenerations);
+            */
 
     calculateMaxGenerations(individualsCache, allFamilies) {
         let maxGen = 0;
@@ -341,17 +386,24 @@ class GedcomDataStore {
     }
 
     // Reset State
-    clearAllState = () => {
+    clearAllState() {
+        console.log('Clearing all state in GedcomDataStore');
         runInAction(() => {
             this.sourceData = [];
             this.individualsCache = new Map();
             this._hierarchy = null;
             this.familyEvents = [];
             this.isFileUploaded = false;
-            this.clearReactions();
             
-            // Émettre l'événement de nettoyage
-            storeEvents.emit(EVENTS.CACHE.CLEARED);
+            // Use this.indices instead of familyIndices
+            if (this.indices) {
+                console.log('Clearing family indices');
+                this.indices.clear();
+            } else {
+                console.warn('Family indices not initialized during clearAllState');
+            }
+            
+            this.clearReactions();
         });
     }
 
