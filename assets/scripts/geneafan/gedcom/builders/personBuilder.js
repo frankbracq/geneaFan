@@ -28,8 +28,6 @@ import {
 // Stores
 import familyTreeDataStore from '../../tabs/familyTree/familyTreeDataStore.js';
 import gedcomConstantsStore from '../stores/gedcomConstantsStore.js';
-import familyIndices from '../stores/indices/familyIndices';
-
 
 const VALUE_OCCUPATION = "Occupation";
 const { TAGS } = gedcomConstantsStore;

@@ -8,7 +8,7 @@
  */
 
 import _ from 'lodash';
-import { extractYear, prefixedDate, calculateAge } from '../../utils/dates.js';
+import { prefixedDate, calculateAge } from '../../utils/dates.js';
 import { processDate } from '../parse.js';
 import gedcomDataStore from '../stores/gedcomDataStore.js';
 import gedcomConstantsStore from '../stores/gedcomConstantsStore.js';
@@ -16,7 +16,6 @@ import configStore from '../../tabs/fanChart/fanConfigStore.js';
 import familyTownsStore from '../stores/familyTownsStore.js';
 
 const { TAGS } = gedcomConstantsStore;
-
 /**
  * Processes an event's date and place information
  * @param {Object} event - The event object from the GEDCOM data
@@ -24,11 +23,15 @@ const { TAGS } = gedcomConstantsStore;
  * @returns {Object} Object containing event details and updated town list
  */
 export function processEventDatePlace(event, individualTowns) {
-    const familyTowns = familyTownsStore.getAllTowns();
-    const dateNode = event.tree.find((node) => node.tag === "DATE");
-    const date = dateNode ? processDate(dateNode.data) : "";
     const placeKey = event.key || "";
-    let placeDetails = familyTowns[placeKey] || {};
+    
+    // Utiliser directement les données géographiques statiques
+    const placeDetails = familyTownsStore.getGeoData(placeKey) || {};
+
+    const dateNode = event.tree.find((node) => node.tag === "DATE");
+    
+    // Mesurer le délai d'exécution de processDate
+    const date = dateNode ? processDate(dateNode.data) : "";
 
     if (!individualTowns[placeKey]) {
         individualTowns[placeKey] = {
@@ -50,19 +53,21 @@ export function processEventDatePlace(event, individualTowns) {
         individualTowns[placeKey] = town;
     }
 
+    const eventDetails = {
+        date: date,
+        town: placeDetails.town || "",
+        townDisplay: placeDetails.townDisplay || "",
+        departement: placeDetails.departement || "",
+        departementColor: placeDetails.departementColor || "",
+        country: placeDetails.country || "",
+        countryColor: placeDetails.countryColor || "",
+        latitude: placeDetails.latitude || "",
+        longitude: placeDetails.longitude || "",
+        placeKey: placeKey,
+    };
+
     return {
-        eventDetails: {
-            date: date,
-            town: placeDetails.town || "",
-            townDisplay: placeDetails.townDisplay || "",
-            departement: placeDetails.departement || "",
-            departementColor: placeDetails.departementColor || "",
-            country: placeDetails.country || "",
-            countryColor: placeDetails.countryColor || "",
-            latitude: placeDetails.latitude || "",
-            longitude: placeDetails.longitude || "",
-            placeKey: placeKey,
-        },
+        eventDetails,
         updatedTownList: individualTowns,
     };
 }

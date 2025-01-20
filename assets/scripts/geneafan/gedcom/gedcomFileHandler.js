@@ -389,21 +389,49 @@ function readAndProcessGedcomFile(file) {
 }
 
 function findYoungestIndividual(individuals) {
-    const individualsWithBirthDates = individuals.map((individual) => {
-        const birthDate = individual.birthDate;
-        let date;
-        if (birthDate.includes("/")) {
-            const [day, month, year] = birthDate.split("/").reverse();
-            date = new Date(year, month - 1, day || 1);
-        } else {
-            date = new Date(birthDate, 0, 1);
-        }
+    // Filter out individuals without birth dates first
+    const individualsWithBirthDates = individuals
+        .filter(individual => individual && individual.birthDate)
+        .map((individual) => {
+            const birthDate = individual.birthDate;
+            let date;
 
-        return {
-            id: individual.id,
-            birthDate: date,
-        };
-    });
+            try {
+                if (birthDate.includes("/")) {
+                    const [day, month, year] = birthDate.split("/").reverse();
+                    // Ensure we have valid numbers for the date
+                    if (year && !isNaN(year)) {
+                        date = new Date(parseInt(year), (month ? parseInt(month) - 1 : 0), day ? parseInt(day) : 1);
+                    } else {
+                        return null;
+                    }
+                } else if (birthDate && !isNaN(birthDate)) {
+                    // If birthDate is just a year
+                    date = new Date(parseInt(birthDate), 0, 1);
+                } else {
+                    return null;
+                }
+
+                // Validate that we got a valid date
+                if (isNaN(date.getTime())) {
+                    return null;
+                }
+
+                return {
+                    id: individual.id,
+                    birthDate: date,
+                };
+            } catch (error) {
+                console.warn(`Error processing birth date for individual ${individual.id}:`, error);
+                return null;
+            }
+        })
+        .filter(Boolean); // Remove any null entries
+
+    // If no valid individuals found, return null
+    if (individualsWithBirthDates.length === 0) {
+        return null;
+    }
 
     return _.maxBy(individualsWithBirthDates, "birthDate");
 }
@@ -503,7 +531,7 @@ async function onFileChange(data) {
         // Modifier cette partie pour gérer l'appel asynchrone
         let { individualsList } = await getIndividualsList();
         let individuals = individualsList;
-        
+
         individuals.forEach((individual) => {
             tomSelect.addOption({
                 value: individual.id,
@@ -513,17 +541,25 @@ async function onFileChange(data) {
 
         let rootId;
         const gedcomFileName = configStore.getConfig.gedcomFileName;
-        rootId = (gedcomFileName === "demo.ged") ? "@I111@" : findYoungestIndividual(individuals)?.id;
+        if (gedcomFileName === "demo.ged") {
+            rootId = "@I111@";
+        } else {
+            const youngestPerson = findYoungestIndividual(individuals);
+            rootId = youngestPerson ? youngestPerson.id : individuals[0]?.id;
+        }
 
         // Mise à jour du root et du nom
         const rootPerson = individuals.find((individual) => individual.id === rootId);
-        if (rootPerson) {
-            rootPersonStore.setRoot(rootId, { skipDraw: true });
-            rootPersonStore.setRootPersonName({
-                name: rootPerson.name,
-                surname: rootPerson.surname,
-            });
-            rootPersonStore.setTomSelectValue(rootId);
+        if (rootId) {
+            const rootPerson = individuals.find((individual) => individual.id === rootId);
+            if (rootPerson) {
+                rootPersonStore.setRoot(rootId, { skipDraw: true });
+                rootPersonStore.setRootPersonName({
+                    name: rootPerson.name,
+                    surname: rootPerson.surname,
+                });
+                rootPersonStore.setTomSelectValue(rootId);
+            }
         }
 
         [

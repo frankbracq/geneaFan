@@ -14,7 +14,10 @@ import { infoWindowContentManager } from './infoWindowContentManager.js';
 
 class FamilyTownsStore {
     constructor() {
+        this.eventsData = new Map();
+
         // Cache system
+        this.geoDataCache = null;
         this.markerConfigs = new Map(); // key: normalizedTownName -> {position, options}
         this.infoWindowContentCache = new Map(); // key: normalizedTownName -> content HTML
 
@@ -479,6 +482,8 @@ class FamilyTownsStore {
     clearAllTowns() {
         runInAction(() => {
             this.townsData.clear();
+            this.geoDataCache = null;
+            this.eventsData.clear();
             this.clearAllCaches();
             if (this.markerDisplayManager) {
                 this.markerDisplayManager.clearMarkers();
@@ -508,7 +513,46 @@ class FamilyTownsStore {
     }
 
     getAllTowns() {
-        return this.cleanData(Object.fromEntries(this.townsData));
+        const geoData = this.getGeoData();
+        const result = {};
+        
+        for (const [key, townGeo] of Object.entries(geoData)) {
+            const townEvents = this.eventsData.get(key) || {
+                birth: [],
+                death: [],
+                marriage: [],
+                burial: [],
+                occupation: [],
+                event: []
+            };
+
+            result[key] = {
+                ...townGeo,
+                events: townEvents
+            };
+        }
+        
+        return result;
+    }
+
+    // Méthode pour accéder aux données géographiques
+    getGeoData(townKey) {
+        if (!this.geoDataCache) {
+            this.geoDataCache = new Map();
+            this.townsData.forEach((townData, key) => {
+                this.geoDataCache.set(key, {
+                    town: townData.town,
+                    townDisplay: townData.townDisplay,
+                    departement: townData.departement,
+                    departementColor: townData.departementColor,
+                    country: townData.country,
+                    countryColor: townData.countryColor,
+                    latitude: townData.latitude,
+                    longitude: townData.longitude
+                });
+            });
+        }
+        return townKey ? this.geoDataCache.get(townKey) : Object.fromEntries(this.geoDataCache);
     }
 
     get totalTowns() {
@@ -585,11 +629,28 @@ class FamilyTownsStore {
             'event': 'event'
         };
 
+        const normalizedTownName = town.key || normalizeGeoString(town.town);
+        if (!normalizedTownName) return;
+
         const internalType = eventTypeMap[eventData.type];
-        if (!internalType || !town.events.hasOwnProperty(internalType)) {
+        if (!internalType) {
             console.warn(`Type d'événement non géré: ${eventData.type}`);
             return;
         }
+
+        // Initialiser les événements pour cette ville si nécessaire
+        if (!this.eventsData.has(normalizedTownName)) {
+            this.eventsData.set(normalizedTownName, {
+                birth: [],
+                death: [],
+                marriage: [],
+                burial: [],
+                occupation: [],
+                event: []
+            });
+        }
+
+        const townEvents = this.eventsData.get(normalizedTownName);
 
         const enrichedEvent = {
             ...eventData,
@@ -606,16 +667,18 @@ class FamilyTownsStore {
             }
         };
 
-        const existingEventIndex = town.events[internalType].findIndex(
+        // Mettre à jour ou ajouter l'événement
+        const existingEventIndex = townEvents[internalType].findIndex(
             e => e.personId === enrichedEvent.personId && e.date === enrichedEvent.date
         );
 
         if (existingEventIndex !== -1) {
-            town.events[internalType][existingEventIndex] = enrichedEvent;
+            townEvents[internalType][existingEventIndex] = enrichedEvent;
         } else {
-            town.events[internalType].push(enrichedEvent);
+            townEvents[internalType].push(enrichedEvent);
         }
 
+        // Mise à jour des statistiques si nécessaire
         TownStatisticsManager.updateTownStatistics(town, enrichedEvent);
     }
 }
