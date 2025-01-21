@@ -50,38 +50,6 @@ function calculateLocalStorageSize() {
     console.log('Total localStorage size in KB:', total / 1024);
 }
 
-// Function to update family towns via a proxy
-export async function updateFamilyTownsViaProxy() {
-    var alertElement = document.getElementById('alert');
-    var alertContent = document.getElementById('alert-content');
-
-    try {
-        // Affichage de l'alerte de début
-        alertContent.style.whiteSpace = 'pre-line';
-        alertContent.textContent = 'Mise à jour des coordonnées géographiques des communes mentionnées dans votre fichier...\nCela peut prendre une à deux minutes. Veuillez patienter...';
-        alertElement.classList.remove('d-none');
-        alertElement.classList.add('show');
-
-        // Appel direct de la méthode du store
-        await familyTownsStore.updateTownsViaProxy();
-
-        // Affichage de l'alerte de succès
-        alertElement.classList.remove('alert-primary');
-        alertElement.classList.add('alert-success');
-        alertContent.textContent = 'Mise à jour des coordonnées géographiques des communes terminée.';
-        setTimeout(() => {
-            alertElement.classList.add('d-none');
-        }, 1800);
-
-    } catch (error) {
-        // Gestion des erreurs
-        alertElement.classList.remove('alert-primary');
-        alertElement.classList.add('alert-danger');
-        alertContent.textContent = `Erreur dans la mise à jour des coordonnées géographiques: ${error.message}`;
-        throw error;
-    }
-}
-
 // Function to update individual towns from family towns
 export function updateIndividualTownsFromFamilyTowns(individualsCache) {
     const familyTowns = familyTownsStore.getAllTowns();

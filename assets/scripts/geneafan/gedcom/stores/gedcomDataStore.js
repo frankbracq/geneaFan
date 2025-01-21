@@ -158,6 +158,10 @@ class GedcomDataStore {
                 const allIndividuals = Array.from(newCache.entries());
                 storeEvents.emit(EVENTS.INDIVIDUALS.BULK_ADDED, allIndividuals);
             });
+
+            const maxGenerations = this.calculateMaxGenerations(this.individualsCache, families);
+            configStore.setConfig({ maxGenerations: Math.min(maxGenerations, 8) });
+            configStore.setAvailableGenerations(maxGenerations);
     
         } catch (error) {
             console.error("Erreur lors de la construction du cache:", error);

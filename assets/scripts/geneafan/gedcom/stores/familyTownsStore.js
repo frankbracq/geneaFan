@@ -45,6 +45,8 @@ class FamilyTownsStore {
             isLoading: observable,
             isVisible: observable,
             events: observable,
+            updateTownsViaProxy: action,
+            setIsLoading: action,
             setTownsData: action,
             addOrUpdateTown: action,         
             updateTown: action,
@@ -434,20 +436,45 @@ class FamilyTownsStore {
     }
 
     // Proxy Update Management
-    updateTownsViaProxy = async () => {
+    async updateTownsViaProxy() {
+        if (this.isLoading) {
+            console.warn("Une mise à jour est déjà en cours");
+            return;
+        }
+    
         try {
+            this.setIsLoading(true);
+            storeEvents.emit(EVENTS.TOWN.UPDATE_START);
+    
+            // Log l'état initial des villes
+            console.group('État initial des villes avant géocodage');
+            this.townsData.forEach((town, key) => {
+                console.log(`${key}:`, {
+                    town: town.town,
+                    latitude: town.latitude,
+                    longitude: town.longitude
+                });
+            });
+            console.groupEnd();
+    
             const townsToUpdate = {};
             let needsUpdate = false;
-
+    
             this.townsData.forEach((town, key) => {
                 if (!town.latitude || !town.longitude) {
                     townsToUpdate[key] = this.cleanData(town);
                     needsUpdate = true;
                 }
             });
-
-            if (!needsUpdate) return;
-
+    
+            console.log('Villes à mettre à jour:', townsToUpdate);
+    
+            if (!needsUpdate) {
+                console.log('Aucune ville ne nécessite de mise à jour');
+                storeEvents.emit(EVENTS.TOWN.UPDATE_COMPLETE);
+                return;
+            }
+    
             const response = await fetch('https://opencageproxy.genealogie.workers.dev/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -456,17 +483,39 @@ class FamilyTownsStore {
                     userId: localStorage.getItem('userId')
                 })
             });
-
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
+    
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+    
             const updatedTowns = await response.json();
+            console.log('Données reçues du proxy:', updatedTowns);
+    
             runInAction(() => {
                 Object.entries(updatedTowns).forEach(([key, data]) => {
+                    console.log(`Mise à jour de la ville ${key}:`, data);
                     this.updateTown(key, data);
                 });
             });
+    
+            // Log l'état final des villes
+            console.group('État final des villes après géocodage');
+            this.townsData.forEach((town, key) => {
+                console.log(`${key}:`, {
+                    town: town.town,
+                    latitude: town.latitude,
+                    longitude: town.longitude
+                });
+            });
+            console.groupEnd();
+    
+            storeEvents.emit(EVENTS.TOWN.UPDATE_COMPLETE);
         } catch (error) {
             console.error('Error updating towns:', error);
+            storeEvents.emit(EVENTS.TOWN.UPDATE_ERROR, error);
+            throw error;
+        } finally {
+            this.setIsLoading(false);
         }
     }
 
@@ -492,6 +541,10 @@ class FamilyTownsStore {
     }
 
     // Getters and Setters
+    setIsLoading(loading) {
+        this.isLoading = loading;
+    }
+
     setTownsData(towns) {
         runInAction(() => {
             this.townsData = new Map(Object.entries(towns));
@@ -502,7 +555,21 @@ class FamilyTownsStore {
         runInAction(() => {
             const town = this.townsData.get(key);
             if (town) {
-                this.townsData.set(key, { ...town, ...updates });
+                console.log(`Mise à jour de la ville ${key}:`, {
+                    avant: { ...town },
+                    miseAJour: updates,
+                });
+                
+                // S'assurer que toutes les propriétés sont correctement mises à jour
+                Object.entries(updates).forEach(([field, value]) => {
+                    if (value !== undefined && value !== null) {
+                        town[field] = value;
+                    }
+                });
+    
+                console.log('Après mise à jour:', this.townsData.get(key));
+            } else {
+                console.warn(`Tentative de mise à jour d'une ville inexistante: ${key}`);
             }
         });
     }

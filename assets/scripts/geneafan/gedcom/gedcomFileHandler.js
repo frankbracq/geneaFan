@@ -7,12 +7,12 @@ import rootPersonStore from '../common/stores/rootPersonStore.js';
 import authStore from '../common/stores/authStore.js';
 import gedcomDataStore from './stores/gedcomDataStore.js';
 import familyTownsStore from './stores/familyTownsStore.js';
+import { familyTownsUI } from './ui/familyTownsUI.js';
 import { FanChartManager } from '../tabs/fanChart/fanChartManager.js';
 import {
     clearAllStates,
 } from "../common/stores/state.js";
 import {
-    updateFamilyTownsViaProxy,
     updateIndividualTownsFromFamilyTowns,
 } from "../utils/utils.js";
 import { toJson, getIndividualsList } from "./parse.js";
@@ -507,7 +507,7 @@ async function onFileChange(data) {
         gedcomDataStore.setSourceData(result.json);
 
         try {
-            await updateFamilyTownsViaProxy();
+            await familyTownsStore.updateTownsViaProxy();
             updateIndividualTownsFromFamilyTowns(gedcomDataStore.getIndividualsCache());
             gedcomDataStore.setIndividualsCache(gedcomDataStore.getIndividualsCache());
         } catch (error) {

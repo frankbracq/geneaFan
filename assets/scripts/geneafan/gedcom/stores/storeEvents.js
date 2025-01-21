@@ -52,6 +52,9 @@ export const EVENTS = {
         CLEARED: 'cache:cleared'
     },
     TOWN: {
+        UPDATE_START: 'town:update:start',
+        UPDATE_COMPLETE: 'town:update:complete',
+        UPDATE_ERROR: 'town:update:error',
         UPDATED: 'town:updated'
     }
 };
