@@ -121,37 +121,38 @@ class PlaceProcessor {
     async getAllPlaces(json) {
         try {
             console.group('getAllPlaces - Processing locations');
-
+    
             // 1. Load geolocation cache
-            const geoCache = await this._getAllRecords();
+            const geoCache = await this._getTownsFromLocalStorage();
             console.log('Cache loaded:', Object.keys(geoCache).length, 'towns in cache');
-
+    
             // 2. Reset store for new file
             familyTownsStore.setTownsData({});
             console.log('Store reset');
-
-            // 3. Collect all towns from new GEDCOM file
+    
+            // 3. Collect all towns from new GEDCOM file 
             const individuals = json.filter(record => record.tag === gedcomConstantsStore.TAGS.INDIVIDUAL);
             for (const individual of individuals) {
+                // Cela va maintenant aussi traiter les coordonnées GEDCOM
                 this._processTree(individual.tree, null, individual);
             }
-
-            // 4. Get list of new towns
+    
+            // 4. Re-charger le cache qui a pu être mis à jour avec les coordonnées GEDCOM
+            const updatedCache = await this._getTownsFromLocalStorage();
+            
+            // 5. Get list of new towns
             const currentTowns = familyTownsStore.getAllTowns();
             console.log('New towns collected:', Object.keys(currentTowns).length, 'towns');
-
-            // 5. Update towns from cache and identify missing ones
-            const missingTowns = this._updateTownsFromCache(currentTowns, geoCache);
-
-            // 6. Update missing towns via proxy if needed
+    
+            // 6. Update towns from cache and identify missing ones
+            const missingTowns = this._updateTownsFromCache(currentTowns, updatedCache);
+    
+            // 7. Update missing towns via proxy if needed
             if (missingTowns.length > 0) {
                 console.log('Towns requiring geolocation:', missingTowns.length);
                 await familyTownsStore.updateTownsViaProxy();
             }
-
-            // 7. Save to localStorage
-            familyTownsStore.saveToLocalStorage();
-
+    
             console.groupEnd();
             return { json };
         } catch (error) {
@@ -225,13 +226,43 @@ class PlaceProcessor {
             if (mapNode && _.isArray(mapNode.tree)) {
                 const latiNode = _.find(mapNode.tree, { tag: "LATI" });
                 const longNode = _.find(mapNode.tree, { tag: "LONG" });
-                if (latiNode) {
+                if (latiNode && longNode) {
                     placeObj.latitude = parseFloat(latiNode.data.trim());
-                }
-                if (longNode) {
                     placeObj.longitude = parseFloat(longNode.data.trim());
+                    
+                    // Si les coordonnées sont valides, on met à jour le localStorage
+                    if (!isNaN(placeObj.latitude) && !isNaN(placeObj.longitude)) {
+                        this._updateLocalStorage(placeObj);
+                    }
                 }
             }
+        }
+    }
+
+    _updateLocalStorage(placeObj) {
+        const stored = localStorage.getItem('townsDB') || '{}';
+        try {
+            const townsDB = JSON.parse(stored);
+            const normalizedKey = normalizeGeoString(placeObj.town);
+            
+            // Ne pas écraser les données existantes si déjà présentes
+            if (!townsDB[normalizedKey]) {
+                townsDB[normalizedKey] = {
+                    town: placeObj.town,
+                    townDisplay: placeObj.townDisplay,
+                    departement: placeObj.departement,
+                    departementColor: placeObj.departementColor,
+                    country: placeObj.country,
+                    countryCode: placeObj.countryCode,
+                    countryColor: placeObj.countryColor,
+                    latitude: placeObj.latitude,
+                    longitude: placeObj.longitude
+                };
+                localStorage.setItem('townsDB', JSON.stringify(townsDB));
+                console.log(`Coordonnées GEDCOM pour ${placeObj.town} ajoutées au cache`);
+            }
+        } catch (error) {
+            console.error('Error updating localStorage with GEDCOM coordinates:', error);
         }
     }
 
@@ -245,7 +276,7 @@ class PlaceProcessor {
         return parts.join(", ");
     }
 
-    async _getAllRecords() {
+    async _getTownsFromLocalStorage() {
         return new Promise((resolve, reject) => {
             console.log('Accessing localStorage...');
             const storedData = localStorage.getItem("townsDB");

@@ -7,7 +7,6 @@ import rootPersonStore from '../common/stores/rootPersonStore.js';
 import authStore from '../common/stores/authStore.js';
 import gedcomDataStore from './stores/gedcomDataStore.js';
 import familyTownsStore from './stores/familyTownsStore.js';
-import { familyTownsUI } from './ui/familyTownsUI.js';
 import { FanChartManager } from '../tabs/fanChart/fanChartManager.js';
 import {
     clearAllStates,
@@ -500,19 +499,20 @@ async function onFileChange(data) {
     gedcomDataStore.setFileUploaded(true);
 
     try {
+        // Réinitialiser familyTownsStore
         familyTownsStore.setTownsData({});
 
+        // Traiter le fichier GEDCOM
         let json = toJson(data);
+        
+        // getAllPlaces gère déjà tout le processus de géocodage
         let result = await placeProcessor.getAllPlaces(json);
         gedcomDataStore.setSourceData(result.json);
 
-        try {
-            await familyTownsStore.updateTownsViaProxy();
-            updateIndividualTownsFromFamilyTowns(gedcomDataStore.getIndividualsCache());
-            gedcomDataStore.setIndividualsCache(gedcomDataStore.getIndividualsCache());
-        } catch (error) {
-            console.error("Error updating geolocation:", error);
-        }
+        // Mettre à jour les données des individus
+        updateIndividualTownsFromFamilyTowns(gedcomDataStore.getIndividualsCache());
+        gedcomDataStore.setIndividualsCache(gedcomDataStore.getIndividualsCache());
+
 
         const selectElement = document.getElementById("individual-select");
         selectElement.innerHTML = "";

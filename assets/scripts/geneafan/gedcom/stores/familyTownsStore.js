@@ -417,13 +417,68 @@ class FamilyTownsStore {
     loadFromLocalStorage = () => {
         try {
             const stored = localStorage.getItem('townsDB');
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                this.setTownsData(parsed);
+            if (!stored) {
+                console.log("Pas de cache de villes trouvé");
+                return;
             }
+    
+            const parsed = JSON.parse(stored);
+            const validTowns = {};
+    
+            // Validation des entrées
+            Object.entries(parsed).forEach(([key, townData]) => {
+                // Vérification des champs requis
+                if (!townData.town || !townData.townDisplay) {
+                    console.debug(`Town ${key} ignorée: données de base manquantes`);
+                    return;
+                }
+    
+                // Vérification des coordonnées
+                if (!townData.latitude || !townData.longitude || 
+                    isNaN(townData.latitude) || isNaN(townData.longitude)) {
+                    console.debug(`Town ${key} ignorée: coordonnées invalides ou manquantes`);
+                    return;
+                }
+    
+                validTowns[key] = {
+                    town: townData.town,
+                    townDisplay: townData.townDisplay,
+                    departement: townData.departement || '',
+                    departementColor: townData.departementColor || '',
+                    country: townData.country || '',
+                    countryCode: townData.countryCode || '',
+                    countryColor: townData.countryColor || '',
+                    latitude: townData.latitude,
+                    longitude: townData.longitude
+                };
+            });
+    
+            console.log(`Cache de villes chargé: ${Object.keys(validTowns).length} villes valides trouvées`);
+            this.setTownsData(validTowns);
+    
         } catch (error) {
-            console.error('Error loading from localStorage:', error);
+            console.error('Erreur lors du chargement depuis localStorage:', error);
+            // En cas d'erreur, on repart d'un état propre
+            this.setTownsData({});
         }
+    }
+
+    getStorageData() {
+        const result = {};
+        this.townsData.forEach((townData, key) => {
+            result[key] = {
+                town: townData.town,
+                townDisplay: townData.townDisplay,
+                departement: townData.departement,
+                departementColor: townData.departementColor,
+                country: townData.country,
+                countryCode: townData.countryCode,
+                countryColor: townData.countryColor,
+                latitude: townData.latitude,
+                longitude: townData.longitude
+            };
+        });
+        return result;
     }
 
     saveToLocalStorage = () => {
@@ -496,6 +551,9 @@ class FamilyTownsStore {
                     console.log(`Mise à jour de la ville ${key}:`, data);
                     this.updateTown(key, data);
                 });
+                
+                // Sauvegarder les mises à jour dans le localStorage
+                this.saveToLocalStorage();
             });
     
             // Log l'état final des villes
@@ -560,13 +618,19 @@ class FamilyTownsStore {
                     miseAJour: updates,
                 });
                 
-                // S'assurer que toutes les propriétés sont correctement mises à jour
+                // Mise à jour des propriétés
                 Object.entries(updates).forEach(([field, value]) => {
                     if (value !== undefined && value !== null) {
                         town[field] = value;
                     }
                 });
-    
+        
+                // Si les coordonnées ou données géographiques ont été mises à jour
+                if (updates.latitude || updates.longitude || 
+                    updates.departement || updates.country) {
+                    this.saveToLocalStorage();
+                }
+                
                 console.log('Après mise à jour:', this.townsData.get(key));
             } else {
                 console.warn(`Tentative de mise à jour d'une ville inexistante: ${key}`);
