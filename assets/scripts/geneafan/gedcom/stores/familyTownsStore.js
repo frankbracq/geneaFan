@@ -239,7 +239,7 @@ class FamilyTownsStore {
     // Town Data Management
     addOrUpdateTown(normalizedTownName, townData, eventData = null) {
         if (!normalizedTownName || !townData) {
-            console.warn('Clé ou données de ville manquantes');
+            console.warn('Missing key or town data');
             return;
         }
 
@@ -247,10 +247,42 @@ class FamilyTownsStore {
             let town = this.townsData.get(normalizedTownName);
     
             if (!town) {
-                town = this.createNewTownData(townData);
+                // Create new town with complete data structure including all event types
+                town = observable({
+                    town: townData.town || '',
+                    townDisplay: townData.townDisplay || townData.town || '',
+                    departement: townData.departement || '',
+                    departementColor: townData.departementColor || '',
+                    country: townData.country || '',
+                    countryCode: townData.countryCode || '',
+                    countryColor: townData.countryColor || '',
+                    latitude: townData.latitude || '',
+                    longitude: townData.longitude || '',
+                    events: observable({
+                        // GEDCOM event types
+                        BIRT: observable([]),
+                        DEAT: observable([]),
+                        MARR: observable([]),
+                        BURI: observable([]),
+                        OCCU: observable([]),
+                        EVEN: observable([]),
+                        // Normalized event types
+                        birth: observable([]),
+                        death: observable([]),
+                        marriage: observable([]),
+                        burial: observable([]),
+                        occupation: observable([]),
+                        event: observable([])
+                    }),
+                    statistics: TownStatisticsManager.createEmptyStatistics()
+                });
                 this.townsData.set(normalizedTownName, town);
             } else {
-                this.updateExistingTownData(town, townData);
+                Object.entries(townData).forEach(([field, value]) => {
+                    if (value !== undefined && value !== null && field !== 'events') {
+                        town[field] = value;
+                    }
+                });
             }
 
             if (eventData) {
@@ -260,6 +292,7 @@ class FamilyTownsStore {
 
             if (townData.latitude && townData.longitude) {
                 this.createMarkerConfig(normalizedTownName, town);
+                this.saveToLocalStorage();
             }
         });
     }
@@ -417,50 +450,43 @@ class FamilyTownsStore {
     loadFromLocalStorage = () => {
         try {
             const stored = localStorage.getItem('townsDB');
-            if (!stored) {
-                console.log("Pas de cache de villes trouvé");
-                return;
-            }
+            if (!stored) return {};
     
             const parsed = JSON.parse(stored);
             const validTowns = {};
+            const invalidKeys = [];
     
-            // Validation des entrées
             Object.entries(parsed).forEach(([key, townData]) => {
-                // Vérification des champs requis
-                if (!townData.town || !townData.townDisplay) {
-                    console.debug(`Town ${key} ignorée: données de base manquantes`);
+                if (!this._isValidTownData(townData)) {
+                    invalidKeys.push(key);
                     return;
                 }
-    
-                // Vérification des coordonnées
-                if (!townData.latitude || !townData.longitude || 
-                    isNaN(townData.latitude) || isNaN(townData.longitude)) {
-                    console.debug(`Town ${key} ignorée: coordonnées invalides ou manquantes`);
-                    return;
-                }
-    
-                validTowns[key] = {
-                    town: townData.town,
-                    townDisplay: townData.townDisplay,
-                    departement: townData.departement || '',
-                    departementColor: townData.departementColor || '',
-                    country: townData.country || '',
-                    countryCode: townData.countryCode || '',
-                    countryColor: townData.countryColor || '',
-                    latitude: townData.latitude,
-                    longitude: townData.longitude
-                };
+                validTowns[key] = townData;
             });
     
-            console.log(`Cache de villes chargé: ${Object.keys(validTowns).length} villes valides trouvées`);
-            this.setTownsData(validTowns);
+            if (invalidKeys.length > 0) {
+                const newCache = {...parsed};
+                invalidKeys.forEach(key => delete newCache[key]);
+                localStorage.setItem('townsDB', JSON.stringify(newCache));
+            }
     
+            this.setTownsData(validTowns);
+            return validTowns;
         } catch (error) {
             console.error('Erreur lors du chargement depuis localStorage:', error);
-            // En cas d'erreur, on repart d'un état propre
             this.setTownsData({});
+            return {};
         }
+    }
+    
+    _isValidTownData(townData) {
+        return townData && 
+               townData.town && 
+               typeof townData.town === 'string' &&
+               townData.latitude && 
+               !isNaN(townData.latitude) &&
+               townData.longitude && 
+               !isNaN(townData.longitude);
     }
 
     getStorageData() {
@@ -481,17 +507,30 @@ class FamilyTownsStore {
         return result;
     }
 
-    saveToLocalStorage = () => {
+    saveToLocalStorage() {
         try {
-            const data = this.getAllTowns();
-            localStorage.setItem('townsDB', JSON.stringify(data));
+            const storageData = {};
+            this.townsData.forEach((townData, key) => {
+                storageData[key] = {
+                    town: townData.town,
+                    townDisplay: townData.townDisplay,
+                    departement: townData.departement,
+                    departementColor: townData.departementColor,
+                    country: townData.country,
+                    countryCode: townData.countryCode,
+                    countryColor: townData.countryColor,
+                    latitude: townData.latitude,
+                    longitude: townData.longitude
+                };
+            });
+            localStorage.setItem('townsDB', JSON.stringify(storageData));
         } catch (error) {
             console.error('Error saving to localStorage:', error);
         }
     }
 
     // Proxy Update Management
-    async updateTownsViaProxy() {
+    async updateTownsViaProxy(townsToUpdate = null) {
         if (this.isLoading) {
             console.warn("Une mise à jour est déjà en cours");
             return;
@@ -501,30 +540,10 @@ class FamilyTownsStore {
             this.setIsLoading(true);
             storeEvents.emit(EVENTS.TOWN.UPDATE_START);
     
-            // Log l'état initial des villes
-            console.group('État initial des villes avant géocodage');
-            this.townsData.forEach((town, key) => {
-                console.log(`${key}:`, {
-                    town: town.town,
-                    latitude: town.latitude,
-                    longitude: town.longitude
-                });
-            });
-            console.groupEnd();
-    
-            const townsToUpdate = {};
-            let needsUpdate = false;
-    
-            this.townsData.forEach((town, key) => {
-                if (!town.latitude || !town.longitude) {
-                    townsToUpdate[key] = this.cleanData(town);
-                    needsUpdate = true;
-                }
-            });
-    
-            console.log('Villes à mettre à jour:', townsToUpdate);
-    
-            if (!needsUpdate) {
+            // Utiliser les villes fournies ou collecter celles qui nécessitent une mise à jour
+            const updates = townsToUpdate || this._collectTownsNeedingUpdate();
+            
+            if (Object.keys(updates).length === 0) {
                 console.log('Aucune ville ne nécessite de mise à jour');
                 storeEvents.emit(EVENTS.TOWN.UPDATE_COMPLETE);
                 return;
@@ -534,38 +553,21 @@ class FamilyTownsStore {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    familyTowns: townsToUpdate,
+                    familyTowns: updates,
                     userId: localStorage.getItem('userId')
                 })
             });
     
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
     
             const updatedTowns = await response.json();
-            console.log('Données reçues du proxy:', updatedTowns);
     
             runInAction(() => {
                 Object.entries(updatedTowns).forEach(([key, data]) => {
-                    console.log(`Mise à jour de la ville ${key}:`, data);
                     this.updateTown(key, data);
                 });
-                
-                // Sauvegarder les mises à jour dans le localStorage
                 this.saveToLocalStorage();
             });
-    
-            // Log l'état final des villes
-            console.group('État final des villes après géocodage');
-            this.townsData.forEach((town, key) => {
-                console.log(`${key}:`, {
-                    town: town.town,
-                    latitude: town.latitude,
-                    longitude: town.longitude
-                });
-            });
-            console.groupEnd();
     
             storeEvents.emit(EVENTS.TOWN.UPDATE_COMPLETE);
         } catch (error) {
@@ -576,6 +578,17 @@ class FamilyTownsStore {
             this.setIsLoading(false);
         }
     }
+
+    // Nouvelle méthode auxiliaire pour identifier les villes à mettre à jour
+_collectTownsNeedingUpdate() {
+    const updates = {};
+    this.townsData.forEach((town, key) => {
+        if (!town.latitude || !town.longitude || !town.departement || !town.country) {
+            updates[key] = this.cleanData(town);
+        }
+    });
+    return updates;
+}
 
     // Cleanup and Reset
     cleanup() {
@@ -742,76 +755,59 @@ class FamilyTownsStore {
     }
 
     // Event Processing
-    updateTownEvents(town, eventData) {
-        if (!eventData || !eventData.type) return;
+updateTownEvents(town, eventData) {
+    if (!eventData?.type || !town?.events) return;
 
-        const eventTypeMap = {
-            'BIRT': 'birth',
-            'birth': 'birth',
-            'DEAT': 'death',
-            'death': 'death',
-            'MARR': 'marriage',
-            'marriage': 'marriage',
-            'BURI': 'burial',
-            'burial': 'burial',
-            'OCCU': 'occupation',
-            'occupation': 'occupation',
-            'EVEN': 'event',
-            'event': 'event'
-        };
-
-        const normalizedTownName = town.key || normalizeGeoString(town.town);
-        if (!normalizedTownName) return;
-
-        const internalType = eventTypeMap[eventData.type];
-        if (!internalType) {
-            console.warn(`Type d'événement non géré: ${eventData.type}`);
-            return;
-        }
-
-        // Initialiser les événements pour cette ville si nécessaire
-        if (!this.eventsData.has(normalizedTownName)) {
-            this.eventsData.set(normalizedTownName, {
-                birth: [],
-                death: [],
-                marriage: [],
-                burial: [],
-                occupation: [],
-                event: []
-            });
-        }
-
-        const townEvents = this.eventsData.get(normalizedTownName);
-
+    // Store both GEDCOM and normalized versions
+    const origType = eventData.type;
+    if (town.events[origType]) {
         const enrichedEvent = {
             ...eventData,
-            type: internalType,
-            personDetails: {
-                name: eventData.personDetails?.name || '',
-                surname: eventData.personDetails?.surname || '',
-                gender: eventData.personDetails?.gender || '',
-                birthDate: eventData.personDetails?.birthDate || '',
-                deathDate: eventData.personDetails?.deathDate || '',
-                birthPlace: eventData.personDetails?.birthPlace || '',
-                deathPlace: eventData.personDetails?.deathPlace || '',
-                occupation: eventData.personDetails?.occupation || ''
-            }
+            personDetails: { ...eventData.personDetails }
         };
 
-        // Mettre à jour ou ajouter l'événement
-        const existingEventIndex = townEvents[internalType].findIndex(
+        const existingIndex = town.events[origType].findIndex(
             e => e.personId === enrichedEvent.personId && e.date === enrichedEvent.date
         );
 
-        if (existingEventIndex !== -1) {
-            townEvents[internalType][existingEventIndex] = enrichedEvent;
+        if (existingIndex !== -1) {
+            town.events[origType][existingIndex] = enrichedEvent;
         } else {
-            townEvents[internalType].push(enrichedEvent);
+            town.events[origType].push(enrichedEvent);
+        }
+    }
+
+    // Also store normalized version
+    const eventTypeMap = {
+        'BIRT': 'birth',
+        'DEAT': 'death',
+        'MARR': 'marriage',
+        'BURI': 'burial',
+        'OCCU': 'occupation',
+        'EVEN': 'event'
+    };
+
+    const normalizedType = eventTypeMap[origType] || origType;
+    if (town.events[normalizedType]) {
+        const enrichedEvent = {
+            ...eventData,
+            type: normalizedType,
+            personDetails: { ...eventData.personDetails }
+        };
+
+        const existingIndex = town.events[normalizedType].findIndex(
+            e => e.personId === enrichedEvent.personId && e.date === enrichedEvent.date
+        );
+
+        if (existingIndex !== -1) {
+            town.events[normalizedType][existingIndex] = enrichedEvent;
+        } else {
+            town.events[normalizedType].push(enrichedEvent);
         }
 
-        // Mise à jour des statistiques si nécessaire
         TownStatisticsManager.updateTownStatistics(town, enrichedEvent);
     }
+}
 }
 
 // Export d'une instance unique du store

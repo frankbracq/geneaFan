@@ -122,38 +122,60 @@ class PlaceProcessor {
         try {
             console.group('getAllPlaces - Processing locations');
     
-            // 1. Load geolocation cache
-            const geoCache = await this._getTownsFromLocalStorage();
-            console.log('Cache loaded:', Object.keys(geoCache).length, 'towns in cache');
+            // 1. Load and validate cache
+            const geoCache = await familyTownsStore.loadFromLocalStorage();
+            console.group('Cache initial:');
+            Object.entries(geoCache).forEach(([key, town]) => {
+                console.log(`${key}:`, {
+                    town: town.town,
+                    latitude: town.latitude,
+                    longitude: town.longitude,
+                    departement: town.departement,
+                    departementColor: town.departementColor,
+                    country: town.country,
+                    countryColor: town.countryColor
+                });
+            });
+            console.groupEnd();
     
-            // 2. Reset store for new file
-            familyTownsStore.setTownsData({});
-            console.log('Store reset');
-    
-            // 3. Collect all towns from new GEDCOM file 
+            // 2. Extract GEDCOM towns
             const individuals = json.filter(record => record.tag === gedcomConstantsStore.TAGS.INDIVIDUAL);
             for (const individual of individuals) {
-                // Cela va maintenant aussi traiter les coordonnées GEDCOM
                 this._processTree(individual.tree, null, individual);
             }
     
-            // 4. Re-charger le cache qui a pu être mis à jour avec les coordonnées GEDCOM
-            const updatedCache = await this._getTownsFromLocalStorage();
-            
-            // 5. Get list of new towns
+            // 3. Merge cache and GEDCOM data
             const currentTowns = familyTownsStore.getAllTowns();
-            console.log('New towns collected:', Object.keys(currentTowns).length, 'towns');
+            const townsToUpdate = new Map();
     
-            // 6. Update towns from cache and identify missing ones
-            const missingTowns = this._updateTownsFromCache(currentTowns, updatedCache);
+            Object.entries(currentTowns).forEach(([key, town]) => {
+                const cachedTown = geoCache[key];
+                if (cachedTown) {
+                    if (!town.latitude || !town.longitude || !town.departement || !town.country) {
+                        familyTownsStore.updateTown(key, {
+                            latitude: cachedTown.latitude || town.latitude,
+                            longitude: cachedTown.longitude || town.longitude,
+                            departement: cachedTown.departement || town.departement,
+                            departementColor: cachedTown.departementColor || town.departementColor,
+                            country: cachedTown.country || town.country,
+                            countryCode: cachedTown.countryCode || town.countryCode,
+                            countryColor: cachedTown.countryColor || town.countryColor
+                        });
+                    }
+                } else if (!town.latitude || !town.longitude || !town.departement || !town.country) {
+                    townsToUpdate.set(key, town);
+                }
+            });
     
-            // 7. Update missing towns via proxy if needed
-            if (missingTowns.length > 0) {
-                console.log('Towns requiring geolocation:', missingTowns.length);
-                await familyTownsStore.updateTownsViaProxy();
+            // 4. Update incomplete towns via proxy
+            if (townsToUpdate.size > 0) {
+                const townsForProxy = Object.fromEntries(townsToUpdate);
+                await familyTownsStore.updateTownsViaProxy(townsForProxy);
             }
     
-            console.groupEnd();
+            // Save final state
+            familyTownsStore.saveToLocalStorage();
+    
             return { json };
         } catch (error) {
             console.error("Error in getAllPlaces: ", error);
