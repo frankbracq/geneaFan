@@ -506,8 +506,10 @@ async function onFileChange(data) {
         let json = toJson(data);
         
         // getAllPlaces gère déjà tout le processus de géocodage
-        let result = await placeProcessor.getAllPlaces(json);
-        gedcomDataStore.setSourceData(result.json);
+        let sourceData= await placeProcessor.getAllPlaces(json);
+        console.log("sourceData from getAllPlaces:", sourceData.json);
+
+        gedcomDataStore.setSourceData(sourceData.json);
 
         // Mettre à jour les données des individus
         updateIndividualTownsFromFamilyTowns(gedcomDataStore.getIndividualsCache());

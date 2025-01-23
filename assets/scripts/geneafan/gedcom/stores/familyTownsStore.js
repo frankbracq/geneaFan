@@ -4,7 +4,7 @@ Traite tous types d'événements (naissances, mariages, décès)
 Fournit un calque de contexte global pour la carte
 */
 
-import { makeObservable, observable, action, computed, runInAction, autorun } from '../../common/stores/mobx-config.js';
+import { makeObservable, observable, action, computed, runInAction, autorun, toJS } from '../../common/stores/mobx-config.js';
 import MarkerDisplayManager from '../../tabs/familyMap/markerDisplayManager.js';
 import { infoWindowDisplayManager } from '../../tabs/familyMap/infoWindowDisplayManager.js';
 import { storeEvents, EVENTS } from './storeEvents.js';
@@ -242,7 +242,7 @@ class FamilyTownsStore {
             console.warn('Missing key or town data');
             return;
         }
-
+    
         runInAction(() => {
             let town = this.townsData.get(normalizedTownName);
     
@@ -277,45 +277,30 @@ class FamilyTownsStore {
                     statistics: TownStatisticsManager.createEmptyStatistics()
                 });
                 this.townsData.set(normalizedTownName, town);
+    
+                // Log the newly created town
+                console.log('New town created:', JSON.stringify(toJS(town), null, 2));
             } else {
                 Object.entries(townData).forEach(([field, value]) => {
                     if (value !== undefined && value !== null && field !== 'events') {
                         town[field] = value;
                     }
                 });
+    
+                // Log the updated town
+                // console.log('Town updated:', JSON.stringify(toJS(town), null, 2));
             }
-
+    
             if (eventData) {
                 this.invalidateCache(normalizedTownName);
                 this.updateTownEvents(town, eventData);
             }
-
-            if (townData.latitude && townData.longitude) {
+    
+            // On retire cet appel
+            /*if (townData.latitude && townData.longitude) {
                 this.createMarkerConfig(normalizedTownName, town);
                 this.saveToLocalStorage();
-            }
-        });
-    }
-
-    createNewTownData(townData) {
-        return observable({
-            town: townData.town || '',
-            townDisplay: townData.townDisplay || townData.town || '',
-            departement: townData.departement || '',
-            departementColor: townData.departementColor || '',
-            country: townData.country || '',
-            countryCode: townData.countryCode || '',
-            latitude: townData.latitude || '',
-            longitude: townData.longitude || '',
-            events: observable({
-                birth: observable([]),
-                death: observable([]),
-                marriage: observable([]),
-                burial: observable([]),
-                occupation: observable([]),
-                event: observable([])
-            }),
-            statistics: TownStatisticsManager.createEmptyStatistics()
+            }*/
         });
     }
 

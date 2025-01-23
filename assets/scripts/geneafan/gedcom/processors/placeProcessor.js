@@ -30,22 +30,22 @@ class PlaceProcessor {
         if (typeof s !== "string") {
             return "";
         }
-    
+
         let trimmed = s.trim().toUpperCase();
-    
+
         const isRepublican = gedcomConstantsStore.isRepublicanCalendar(trimmed);
         if (isRepublican) {
             trimmed = trimmed.substring(this.CALENDARS.REPUBLICAN.length).trim();
         } else if (gedcomConstantsStore.isGregorianCalendar(trimmed)) {
             trimmed = trimmed.substring(this.CALENDARS.GREGORIAN.length).trim();
         }
-    
+
         const split = trimmed.split(/\s+/);
         if (split.length === 0) {
             console.error("Error: No date parts found after trimming", trimmed);
             return "";
         }
-    
+
         let day, month, year;
         if (split.length === 3) {
             day = parseInt(split[0], 10);
@@ -61,7 +61,7 @@ class PlaceProcessor {
         } else if (split.length === 1) {
             year = parseInt(split[0], 10);
         }
-    
+
         if (isRepublican) {
             year += 1792;
         }
@@ -72,7 +72,7 @@ class PlaceProcessor {
         if (day > 0) {
             display = padTwoDigits(day) + "/" + display;
         }
-    
+
         return display;
     }
 
@@ -121,64 +121,55 @@ class PlaceProcessor {
     async getAllPlaces(json) {
         try {
             console.group('getAllPlaces - Processing locations');
-    
-            // 1. Load and validate cache
+
+            // 1. Load cache to use for enriching GEDCOM towns
             const geoCache = await familyTownsStore.loadFromLocalStorage();
-            console.group('Cache initial:');
-            Object.entries(geoCache).forEach(([key, town]) => {
-                console.log(`${key}:`, {
-                    town: town.town,
-                    latitude: town.latitude,
-                    longitude: town.longitude,
-                    departement: town.departement,
-                    departementColor: town.departementColor,
-                    country: town.country,
-                    countryColor: town.countryColor
-                });
-            });
-            console.groupEnd();
-    
-            // 2. Extract GEDCOM towns
+            console.log('geoCache:', geoCache); 
+            const gedcomTowns = new Map();
+
+            // 2. Extract GEDCOM towns basic info
             const individuals = json.filter(record => record.tag === gedcomConstantsStore.TAGS.INDIVIDUAL);
             for (const individual of individuals) {
-                this._processTree(individual.tree, null, individual);
+                this._collectTownsFromTree(individual.tree, gedcomTowns);
             }
-    
-            // 3. Merge cache and GEDCOM data
-            const currentTowns = familyTownsStore.getAllTowns();
+
+            // 3. For each GEDCOM town, enrich with cache data if available before creating
+            for (const [normalizedKey, placeInfo] of gedcomTowns) {
+                const cachedTown = geoCache[normalizedKey];
+                const townData = cachedTown ? {
+                    ...placeInfo,
+                    latitude: placeInfo.latitude || cachedTown.latitude,
+                    longitude: placeInfo.longitude || cachedTown.longitude,
+                    departement: placeInfo.departement || cachedTown.departement,
+                    departementColor: placeInfo.departementColor || cachedTown.departementColor,
+                    country: placeInfo.country || cachedTown.country,
+                    countryCode: placeInfo.countryCode || cachedTown.countryCode,
+                    countryColor: placeInfo.countryColor || cachedTown.countryColor
+                } : placeInfo;
+
+                familyTownsStore.addOrUpdateTown(normalizedKey, townData);
+            }
+
+            const familyTowns = familyTownsStore.getAllTowns();
+            console.log('familyTowns:', familyTowns);
+
+            // 4. Update incomplete GEDCOM towns via proxy
             const townsToUpdate = new Map();
-    
-            Object.entries(currentTowns).forEach(([key, town]) => {
-                const cachedTown = geoCache[key];
-                if (cachedTown) {
-                    if (!town.latitude || !town.longitude || !town.departement || !town.country) {
-                        familyTownsStore.updateTown(key, {
-                            latitude: cachedTown.latitude || town.latitude,
-                            longitude: cachedTown.longitude || town.longitude,
-                            departement: cachedTown.departement || town.departement,
-                            departementColor: cachedTown.departementColor || town.departementColor,
-                            country: cachedTown.country || town.country,
-                            countryCode: cachedTown.countryCode || town.countryCode,
-                            countryColor: cachedTown.countryColor || town.countryColor
-                        });
-                    }
-                } else if (!town.latitude || !town.longitude || !town.departement || !town.country) {
+            gedcomTowns.forEach((town, key) => {
+                if (!this._hasTownCompleteGeoData(town, geoCache[key])) {
                     townsToUpdate.set(key, town);
                 }
             });
-    
-            // 4. Update incomplete towns via proxy
+
             if (townsToUpdate.size > 0) {
-                const townsForProxy = Object.fromEntries(townsToUpdate);
-                await familyTownsStore.updateTownsViaProxy(townsForProxy);
+                console.log("Updating incomplete GEDCOM towns via proxy:", townsToUpdate);
+                await familyTownsStore.updateTownsViaProxy(Object.fromEntries(townsToUpdate));
             }
-    
-            // Save final state
-            familyTownsStore.saveToLocalStorage();
-    
+
+            console.groupEnd();
             return { json };
         } catch (error) {
-            console.error("Error in getAllPlaces: ", error);
+            console.error("Error in getAllPlaces:", error);
             console.groupEnd();
             throw error;
         }
@@ -211,8 +202,8 @@ class PlaceProcessor {
     }
 
     _extractAndSetDepartement(placeObj, code) {
-        let departementCode = code.startsWith('(') ? 
-            code.replace(/[()]/g, "") : 
+        let departementCode = code.startsWith('(') ?
+            code.replace(/[()]/g, "") :
             code.substring(0, 2);
 
         if (!isNaN(departementCode)) {
@@ -242,6 +233,8 @@ class PlaceProcessor {
         }
     }
 
+
+    // Vérifier l'intérêt de cette fonction
     _extractGeolocation(placeObj, tree) {
         if (_.isArray(tree)) {
             const mapNode = _.find(tree, { tag: "MAP" });
@@ -251,7 +244,7 @@ class PlaceProcessor {
                 if (latiNode && longNode) {
                     placeObj.latitude = parseFloat(latiNode.data.trim());
                     placeObj.longitude = parseFloat(longNode.data.trim());
-                    
+
                     // Si les coordonnées sont valides, on met à jour le localStorage
                     if (!isNaN(placeObj.latitude) && !isNaN(placeObj.longitude)) {
                         this._updateLocalStorage(placeObj);
@@ -266,7 +259,7 @@ class PlaceProcessor {
         try {
             const townsDB = JSON.parse(stored);
             const normalizedKey = normalizeGeoString(placeObj.town);
-            
+
             // Ne pas écraser les données existantes si déjà présentes
             if (!townsDB[normalizedKey]) {
                 townsDB[normalizedKey] = {
@@ -298,94 +291,30 @@ class PlaceProcessor {
         return parts.join(", ");
     }
 
-    async _getTownsFromLocalStorage() {
-        return new Promise((resolve, reject) => {
-            console.log('Accessing localStorage...');
-            const storedData = localStorage.getItem("townsDB");
-            if (storedData) {
-                try {
-                    const dbTowns = JSON.parse(storedData);
-                    console.log('Successfully parsed townsDB, found', Object.keys(dbTowns).length, 'towns');
-                    resolve(dbTowns);
-                } catch (error) {
-                    console.error("Error parsing JSON data:", error);
-                    resolve({});
-                }
-            } else {
-                console.log('No data found in townsDB');
-                resolve({});
-            }
-        });
-    }
-
-    _processTree(tree, parentNode, individual) {
+    // Fonction pour récupérer les villes à partir d'un individu
+    _collectTownsFromTree(tree, townsMap) {
         for (const node of tree) {
-            if (node.tag === "PLAC" && parentNode) {
-                let placeInfo = this.processPlace({ data: node.data, tree: node.tree });
-                let normalizedKey = normalizeGeoString(placeInfo.town);
-                if (!normalizedKey) continue;
-
-                parentNode.key = normalizedKey;
-                this._updateTownWithEventData(normalizedKey, placeInfo, parentNode, individual);
+            if (node.tag === "PLAC") {
+                const placeInfo = this.processPlace({ data: node.data, tree: node.tree });
+                const normalizedKey = normalizeGeoString(placeInfo.town);
+                if (normalizedKey) {
+                    townsMap.set(normalizedKey, placeInfo);
+                }
             }
 
-            if (node.tree && node.tree.length > 0) {
-                this._processTree(
-                    node.tree,
-                    ["BIRT", "DEAT", "BURI", "MARR", "OCCU", "EVEN"].includes(node.tag) ? node : parentNode,
-                    individual
-                );
+            if (node.tree?.length > 0) {
+                this._collectTownsFromTree(node.tree, townsMap);
             }
         }
     }
 
-    _updateTownWithEventData(normalizedKey, placeInfo, parentNode, individual) {
-        const dateNode = parentNode.tree?.find(n => n.tag === "DATE");
-        const eventDate = dateNode ? this.processDate(dateNode.data) : null;
-        const personData = extractBasicInfo(individual);
-
-        const eventData = {
-            type: parentNode.tag,
-            date: eventDate,
-            personId: individual.pointer,
-            personDetails: {
-                name: personData.name,
-                surname: personData.surname,
-                gender: personData.gender,
-                birthDate: '',
-                deathDate: '',
-                birthPlace: '',
-                deathPlace: '',
-                occupation: ''
-            }
-        };
-
-        familyTownsStore.addOrUpdateTown(normalizedKey, placeInfo, eventData);
+    _hasTownCompleteGeoData(town, cachedTown) {
+        const hasOwnData = town.latitude && town.longitude && town.departement && town.country;
+        const hasCachedData = cachedTown?.latitude && cachedTown?.longitude &&
+            cachedTown?.departement && cachedTown?.country;
+        return hasOwnData || hasCachedData;
     }
 
-    _updateTownsFromCache(currentTowns, geoCache) {
-        const missingTowns = [];
-
-        Object.entries(currentTowns).forEach(([key, town]) => {
-            const cachedTown = geoCache[key];
-            if (cachedTown) {
-                familyTownsStore.updateTown(key, {
-                    ...town,
-                    latitude: cachedTown.latitude || town.latitude,
-                    longitude: cachedTown.longitude || town.longitude,
-                    departement: cachedTown.departement || town.departement,
-                    departementColor: cachedTown.departementColor || town.departementColor,
-                    country: cachedTown.country || town.country,
-                    countryCode: cachedTown.countryCode || town.countryCode,
-                    countryColor: cachedTown.countryColor || town.countryColor
-                });
-            } else {
-                missingTowns.push(key);
-            }
-        });
-
-        return missingTowns;
-    }
 }
 
 export const placeProcessor = new PlaceProcessor();
