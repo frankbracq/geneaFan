@@ -123,18 +123,15 @@ class GedcomDataStore {
         try {
             console.log('Starting buildIndividualsCache');
             
-            // Un seul parcours du JSON pour extraire individus et familles
             const { individuals, families } = json.reduce((acc, item) => {
                 if (item.tag === TAGS.INDIVIDUAL) acc.individuals.push(item);
                 else if (item.tag === TAGS.FAMILY) acc.families.push(item);
                 return acc;
             }, { individuals: [], families: [] });
     
-            // Initialiser les index de familles
             console.log('Initializing family indices');
             this.indices.initialize(families);
     
-            // Mise à jour atomique du cache
             runInAction(() => {
                 const newCache = new Map();
                 
@@ -154,11 +151,13 @@ class GedcomDataStore {
     
                 this.individualsCache = newCache;
                 
-                // Émettre un seul événement avec tous les individus
+                // Log du cache complet
+                console.log('Cache complet des individus:', JSON.stringify(Array.from(this.individualsCache), null, 2));
+    
                 const allIndividuals = Array.from(newCache.entries());
                 storeEvents.emit(EVENTS.INDIVIDUALS.BULK_ADDED, allIndividuals);
             });
-
+    
             const maxGenerations = this.calculateMaxGenerations(this.individualsCache, families);
             configStore.setConfig({ maxGenerations: Math.min(maxGenerations, 8) });
             configStore.setAvailableGenerations(maxGenerations);
@@ -171,7 +170,7 @@ class GedcomDataStore {
             console.timeEnd("buildIndividualsCache");
         }
     }
-
+    
     // Temporairement commenté pour les tests de performance
     // juste avant } catch (error) {
             /*

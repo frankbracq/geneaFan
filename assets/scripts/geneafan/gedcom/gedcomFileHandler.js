@@ -504,17 +504,19 @@ async function onFileChange(data) {
 
         // Traiter le fichier GEDCOM
         let json = toJson(data);
+        console.log("JSON from GEDCOM file:", json);
         
-        // getAllPlaces gère déjà tout le processus de géocodage
-        let sourceData= await placeProcessor.getAllPlaces(json);
-        console.log("sourceData from getAllPlaces:", sourceData.json);
+        // Attendre la fin de du traitement des lieux dans getAllPlaces avant d'enregistrer les données source dans le store
+        let sourceData= await placeProcessor.processGedcomTowns(json);
+        // console.log("sourceData from getAllPlaces:", sourceData.json);
 
         gedcomDataStore.setSourceData(sourceData.json);
 
         // Mettre à jour les données des individus
         updateIndividualTownsFromFamilyTowns(gedcomDataStore.getIndividualsCache());
         gedcomDataStore.setIndividualsCache(gedcomDataStore.getIndividualsCache());
-
+        
+        console.log("Individuals cache updated:", gedcomDataStore.getIndividualsCache());
 
         const selectElement = document.getElementById("individual-select");
         selectElement.innerHTML = "";

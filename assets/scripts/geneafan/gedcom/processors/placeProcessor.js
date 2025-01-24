@@ -118,9 +118,9 @@ class PlaceProcessor {
         return placeObj;
     }
 
-    async getAllPlaces(json) {
+    async processGedcomTowns(json) {
         try {
-            console.group('getAllPlaces - Processing locations');
+            console.group('processGedcomTowns - Processing locations');
 
             // 1. Load cache to use for enriching GEDCOM towns
             const geoCache = await familyTownsStore.loadFromLocalStorage();
@@ -131,6 +131,7 @@ class PlaceProcessor {
             const individuals = json.filter(record => record.tag === gedcomConstantsStore.TAGS.INDIVIDUAL);
             for (const individual of individuals) {
                 this._collectTownsFromTree(individual.tree, gedcomTowns);
+                this._addPlaceKeysToEvents(individual.tree);
             }
 
             // 3. For each GEDCOM town, enrich with cache data if available before creating
@@ -176,6 +177,24 @@ class PlaceProcessor {
     }
 
     // Private helper methods
+    _addPlaceKeysToEvents(tree) {
+        const EVENT_TAGS = ['BIRT', 'DEAT', 'BURI', 'OCCU'];
+        
+        for (const node of tree) {
+            if (EVENT_TAGS.includes(node.tag) && node.tree) {
+                const placeNode = node.tree.find(child => child.tag === 'PLAC');
+                if (placeNode) {
+                    const placeInfo = this.processPlace({ data: placeNode.data, tree: placeNode.tree });
+                    node.placeKey = normalizeGeoString(placeInfo.town);
+                }
+            }
+            
+            if (node.tree?.length > 0) {
+                this._addPlaceKeysToEvents(node.tree);
+            }
+        }
+    }
+
     _findCountry(normalizedSegments) {
         for (const continent of this.countryData.continents) {
             for (const country of continent.countries) {
@@ -293,6 +312,7 @@ class PlaceProcessor {
 
     // Fonction pour récupérer les villes à partir d'un individu
     _collectTownsFromTree(tree, townsMap) {
+
         for (const node of tree) {
             if (node.tag === "PLAC") {
                 const placeInfo = this.processPlace({ data: node.data, tree: node.tree });

@@ -501,7 +501,10 @@ function calculateGeneration(individualPointer, allFamilies, cache = new Map()) 
 }
 
 export function buildIndividual(individualJson, allIndividuals, allFamilies, indices) {
+    console.log('Starting buildIndividual for:', individualJson?.pointer);
+    
     if (!individualJson) {
+        console.log('No individual data provided');
         return { id: null, name: "", surname: "", birth: {}, death: {} };
     }
 
@@ -512,9 +515,13 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies, ind
     let deceased = false;
 
     const { name, surname, gender, canSign, personLink } = extractBasicInfo(individualJson);
+    console.log('Basic info extracted:', { name, surname, gender });
+
     const { birthTags, deathTags } = handleEventTags();
 
     const birthData = buildEventFallback(individualJson, birthTags, individualTowns).eventDetails;
+    console.log('Birth data processed:', birthData);
+
     const birthYear = birthData.date ? extractYear(birthData.date) : "";
     const formattedBirth = generateEventDescription("BIRT", birthData, gender, age);
     addEvent("birth", name, surname, birthData.date, birthData.town, formattedBirth, "", [], birthData.date, individualEvents);
@@ -524,10 +531,10 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies, ind
     const currentYear = new Date().getFullYear();
 
     const processDeath = () => {
-    if (!birthData.date) {
-        deceased = true;
-        formattedDeath = deathData.date ? generateEventDescription("DEAT", deathData, gender, null, true) : "Information on life and death unknown";
-        addEvent("death", name, surname, deathData.date || "date inconnue", deathData.town || "", formattedDeath, "", [], birthData.date, individualEvents);
+        if (!birthData.date) {
+            deceased = true;
+            formattedDeath = deathData.date ? generateEventDescription("DEAT", deathData, gender, null, true) : "Information on life and death unknown";
+            addEvent("death", name, surname, deathData.date || "date inconnue", deathData.town || "", formattedDeath, "", [], birthData.date, individualEvents);
         } else if (!deathData.date) {
             const today = moment().format("DD/MM/YYYY");
             if (birthYear >= currentYear - 105) {
@@ -551,6 +558,7 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies, ind
     processDeath();
 
     const parentalFamily = getParentalFamily(individualJson.pointer, allIndividuals, indices);
+    console.log('Processing parental family:', parentalFamily);
 
     familyTreeDataStore.addNodeToGenealogyGraph({
         id: individualJson.pointer,
@@ -579,20 +587,20 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies, ind
         ? formatSiblings(parentalFamily.siblings)
         : "";
 
-        const individualFamily = getIndividualFamily(
-            individualJson.pointer,
-            allIndividuals,
-            allFamilies,
-            indices  // Pass the indices parameter here
-        );
+    const individualFamily = getIndividualFamily(
+        individualJson.pointer,
+        allIndividuals,
+        allFamilies,
+        indices
+    );
 
-        const marriages = processMarriages(
-            individualJson.pointer,
-            allIndividuals,
-            allFamilies,
-            individualTowns,
-            indices  // Pass indices here too if needed
-        );
+    const marriages = processMarriages(
+        individualJson.pointer,
+        allIndividuals,
+        allFamilies,
+        individualTowns,
+        indices
+    );
 
     marriages.forEach((marriage) => {
         addEvent(
@@ -683,6 +691,9 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies, ind
             occupations: processDetailedOccupations(individualJson)
         }
     };
+
+    console.log('Marriages processed:', marriages);
+    console.log('Stats computed:', stats);
 
     return {
         id: individualJson.pointer,

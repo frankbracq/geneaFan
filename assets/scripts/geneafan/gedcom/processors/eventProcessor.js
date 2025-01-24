@@ -16,6 +16,26 @@ import configStore from '../../tabs/fanChart/fanConfigStore.js';
 import familyTownsStore from '../stores/familyTownsStore.js';
 
 const { TAGS } = gedcomConstantsStore;
+
+function deproxyObject(obj) {
+    if (!obj) return null;
+    try {
+        return JSON.parse(JSON.stringify(obj));
+    } catch (e) {
+        // Pour les objets avec des valeurs non-sérialisables
+        if (Array.isArray(obj)) {
+            return obj.map(item => deproxyObject(item));
+        }
+        if (typeof obj === 'object') {
+            return Object.fromEntries(
+                Object.entries(obj)
+                    .map(([key, value]) => [key, deproxyObject(value)])
+            );
+        }
+        return obj;
+    }
+}
+
 /**
  * Processes an event's date and place information
  * @param {Object} event - The event object from the GEDCOM data
@@ -23,14 +43,11 @@ const { TAGS } = gedcomConstantsStore;
  * @returns {Object} Object containing event details and updated town list
  */
 export function processEventDatePlace(event, individualTowns) {
-    const placeKey = event.key || "";
+    const placeKey = event.placeKey || "";
+    const placeDetails = familyTownsStore.getGeoData(placeKey);
+    console.log(`Place details for key "${placeKey}":`, deproxyObject(placeDetails?.[placeKey]));
     
-    // Utiliser directement les données géographiques statiques
-    const placeDetails = familyTownsStore.getGeoData(placeKey) || {};
-
     const dateNode = event.tree.find((node) => node.tag === "DATE");
-    
-    // Mesurer le délai d'exécution de processDate
     const date = dateNode ? processDate(dateNode.data) : "";
 
     if (!individualTowns[placeKey]) {
@@ -43,7 +60,7 @@ export function processEventDatePlace(event, individualTowns) {
             country: placeDetails.country || "",
             countryColor: placeDetails.countryColor || "",
             latitude: placeDetails.latitude || "",
-            longitude: placeDetails.longitude || "",
+            longitude: placeDetails.longitude || ""
         };
     } else {
         let town = individualTowns[placeKey];
@@ -53,22 +70,20 @@ export function processEventDatePlace(event, individualTowns) {
         individualTowns[placeKey] = town;
     }
 
-    const eventDetails = {
-        date: date,
-        town: placeDetails.town || "",
-        townDisplay: placeDetails.townDisplay || "",
-        departement: placeDetails.departement || "",
-        departementColor: placeDetails.departementColor || "",
-        country: placeDetails.country || "",
-        countryColor: placeDetails.countryColor || "",
-        latitude: placeDetails.latitude || "",
-        longitude: placeDetails.longitude || "",
-        placeKey: placeKey,
-    };
-
     return {
-        eventDetails,
-        updatedTownList: individualTowns,
+        eventDetails: {
+            date,
+            town: placeDetails.town || "",
+            townDisplay: placeDetails.townDisplay || "",
+            departement: placeDetails.departement || "",
+            departementColor: placeDetails.departementColor || "",
+            country: placeDetails.country || "",
+            countryColor: placeDetails.countryColor || "",
+            latitude: placeDetails.latitude || "",
+            longitude: placeDetails.longitude || "",
+            placeKey
+        },
+        updatedTownList: individualTowns
     };
 }
 
@@ -119,6 +134,7 @@ export function generateEventDescription(eventType, eventData, gender, age, dece
     return `${additionalDetails} ${eventPlaceMarkup ? `${eventPlaceMarkup}` : ""}`;
 }
 
+
 /**
  * Builds an event object from event data
  * @param {Object} event - Raw event data
@@ -126,14 +142,27 @@ export function generateEventDescription(eventType, eventData, gender, age, dece
  * @returns {Object} Processed event details
  */
 export function buildEvent(event, individualTowns) {
-    if (!event) {
-        return {};
-    }
+    console.log('buildEvent input:', {
+        event: deproxyObject(event),
+        tree: event?.tree ? deproxyObject(event.tree) : null,
+        individualTowns: deproxyObject(individualTowns)
+    });
+
+    if (!event) return {};
+
+    const placeNode = event.tree.find(node => node.tag === "PLAC");
+    console.log('Found PLAC node:', placeNode ? deproxyObject(placeNode) : null);
 
     const { eventDetails, updatedIndividualTowns } = processEventDatePlace(
         event,
         individualTowns
     );
+
+    console.log('Event processing results:', {
+        eventDetails: deproxyObject(eventDetails),
+        updatedIndividualTowns: deproxyObject(updatedIndividualTowns)
+    });
+
     return { eventDetails, updatedIndividualTowns };
 }
 
@@ -145,16 +174,24 @@ export function buildEvent(event, individualTowns) {
  * @returns {Object} Event details with fallbacks for missing data
  */
 export function buildEventFallback(individualJson, tags, individualTowns) {
+    console.log('buildEventFallback input:', {
+        pointer: individualJson.pointer,
+        tags: deproxyObject(tags),
+        tree: deproxyObject(individualJson.tree)
+    });
+
     let firstEvent = null;
     for (let i = 0; i < tags.length; i++) {
         const tag = tags[i];
         const event = individualJson.tree.find((node) => node.tag === tag);
         if (event) {
+            console.log(`Found event for tag ${tag}:`, deproxyObject(event));
             firstEvent = event;
             break;
         }
     }
-    const { eventDetails, updatedIndividualTowns } = firstEvent
+
+    const result = firstEvent
         ? buildEvent(firstEvent, individualTowns)
         : {
             eventDetails: {
@@ -170,7 +207,9 @@ export function buildEventFallback(individualJson, tags, individualTowns) {
             },
             updatedIndividualTowns: individualTowns,
         };
-    return { eventDetails, updatedIndividualTowns };
+
+    console.log('buildEventFallback result:', deproxyObject(result));
+    return result;
 }
 
 /**

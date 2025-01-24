@@ -126,6 +126,8 @@ class FamilyTownsStore {
     
                     // Appliquer toutes les mises à jour en une seule fois
                     townUpdates.forEach((updateData, normalizedTownName) => {
+                        console.log('Mise à jour de la ville:', normalizedTownName);
+                        console.log('Données de la ville:', updateData);
                         this.addOrUpdateTown(normalizedTownName, updateData.townData);
                         const town = this.townsData.get(normalizedTownName);
                         if (town) {
