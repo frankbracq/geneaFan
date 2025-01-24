@@ -45,7 +45,7 @@ function deproxyObject(obj) {
 export function processEventDatePlace(event, individualTowns) {
     const placeKey = event.placeKey || "";
     const placeDetails = familyTownsStore.getGeoData(placeKey);
-    console.log(`Place details for key "${placeKey}":`, deproxyObject(placeDetails?.[placeKey]));
+    // console.log(`Place details for key "${placeKey}":`, deproxyObject(placeDetails?.[placeKey]));
     
     const dateNode = event.tree.find((node) => node.tag === "DATE");
     const date = dateNode ? processDate(dateNode.data) : "";
@@ -142,26 +142,26 @@ export function generateEventDescription(eventType, eventData, gender, age, dece
  * @returns {Object} Processed event details
  */
 export function buildEvent(event, individualTowns) {
-    console.log('buildEvent input:', {
-        event: deproxyObject(event),
-        tree: event?.tree ? deproxyObject(event.tree) : null,
-        individualTowns: deproxyObject(individualTowns)
-    });
+    // console.log('buildEvent input:', {
+    //    event: deproxyObject(event),
+    //    tree: event?.tree ? deproxyObject(event.tree) : null,
+    //    individualTowns: deproxyObject(individualTowns)
+    //});
 
     if (!event) return {};
 
     const placeNode = event.tree.find(node => node.tag === "PLAC");
-    console.log('Found PLAC node:', placeNode ? deproxyObject(placeNode) : null);
+    // console.log('Found PLAC node:', placeNode ? deproxyObject(placeNode) : null);
 
     const { eventDetails, updatedIndividualTowns } = processEventDatePlace(
         event,
         individualTowns
     );
 
-    console.log('Event processing results:', {
-        eventDetails: deproxyObject(eventDetails),
-        updatedIndividualTowns: deproxyObject(updatedIndividualTowns)
-    });
+    //console.log('Event processing results:', {
+    //    eventDetails: deproxyObject(eventDetails),
+    //    updatedIndividualTowns: deproxyObject(updatedIndividualTowns)
+    // });
 
     return { eventDetails, updatedIndividualTowns };
 }
@@ -174,18 +174,18 @@ export function buildEvent(event, individualTowns) {
  * @returns {Object} Event details with fallbacks for missing data
  */
 export function buildEventFallback(individualJson, tags, individualTowns) {
-    console.log('buildEventFallback input:', {
-        pointer: individualJson.pointer,
-        tags: deproxyObject(tags),
-        tree: deproxyObject(individualJson.tree)
-    });
+    // console.log('buildEventFallback input:', {
+    //    pointer: individualJson.pointer,
+    //    tags: deproxyObject(tags),
+    //    tree: deproxyObject(individualJson.tree)
+    // });
 
     let firstEvent = null;
     for (let i = 0; i < tags.length; i++) {
         const tag = tags[i];
         const event = individualJson.tree.find((node) => node.tag === tag);
         if (event) {
-            console.log(`Found event for tag ${tag}:`, deproxyObject(event));
+            // console.log(`Found event for tag ${tag}:`, deproxyObject(event));
             firstEvent = event;
             break;
         }
@@ -208,7 +208,7 @@ export function buildEventFallback(individualJson, tags, individualTowns) {
             updatedIndividualTowns: individualTowns,
         };
 
-    console.log('buildEventFallback result:', deproxyObject(result));
+    // console.log('buildEventFallback result:', deproxyObject(result));
     return result;
 }
 

@@ -281,7 +281,7 @@ class FamilyTownsStore {
                 this.townsData.set(normalizedTownName, town);
     
                 // Log the newly created town
-                console.log('New town created:', JSON.stringify(toJS(town), null, 2));
+                // console.log('New town created:', JSON.stringify(toJS(town), null, 2));
             } else {
                 Object.entries(townData).forEach(([field, value]) => {
                     if (value !== undefined && value !== null && field !== 'events') {

@@ -52,8 +52,8 @@ function calculateLocalStorageSize() {
 
 // Function to update individual towns from family towns
 export function updateIndividualTownsFromFamilyTowns(individualsCache) {
-    // const familyTowns = familyTownsStore.getAllTowns();
-    // console.log('Family towns:', familyTowns);
+    const familyTowns = familyTownsStore.getAllTowns();
+    console.log('Family towns:', familyTowns);
     
     individualsCache.forEach((individual) => {
         const individualTownKeys = Object.keys(individual.individualTowns || {});

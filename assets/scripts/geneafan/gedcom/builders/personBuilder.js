@@ -501,26 +501,37 @@ function calculateGeneration(individualPointer, allFamilies, cache = new Map()) 
 }
 
 export function buildIndividual(individualJson, allIndividuals, allFamilies, indices) {
-    console.log('Starting buildIndividual for:', individualJson?.pointer);
+    // console.log('Starting buildIndividual for:', individualJson?.pointer);
     
     if (!individualJson) {
         console.log('No individual data provided');
         return { id: null, name: "", surname: "", birth: {}, death: {} };
     }
 
-    let individualTowns = [];
+    let individualTowns = new Set(); // Use Set to avoid duplicates
     let individualEvents = [];
     let formattedDeath = "";
     let age;
     let deceased = false;
 
     const { name, surname, gender, canSign, personLink } = extractBasicInfo(individualJson);
-    console.log('Basic info extracted:', { name, surname, gender });
-
+    
     const { birthTags, deathTags } = handleEventTags();
 
     const birthData = buildEventFallback(individualJson, birthTags, individualTowns).eventDetails;
-    console.log('Birth data processed:', birthData);
+    
+    if (birthData.town) {
+        individualTowns.add({
+            name: birthData.town,
+            display: birthData.townDisplay || birthData.town,
+            departement: birthData.departement,
+            country: birthData.country,
+            coordinates: {
+                latitude: birthData.latitude,
+                longitude: birthData.longitude
+            }
+        });
+    }
 
     const birthYear = birthData.date ? extractYear(birthData.date) : "";
     const formattedBirth = generateEventDescription("BIRT", birthData, gender, age);
@@ -529,6 +540,19 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies, ind
     const deathData = buildEventFallback(individualJson, deathTags, individualTowns).eventDetails;
     const deathYear = deathData.date ? extractYear(deathData.date) : "";
     const currentYear = new Date().getFullYear();
+
+    if (deathData.town) {
+        individualTowns.add({
+            name: deathData.town,
+            display: deathData.townDisplay || deathData.town,
+            departement: deathData.departement,
+            country: deathData.country,
+            coordinates: {
+                latitude: deathData.latitude,
+                longitude: deathData.longitude
+            }
+        });
+    }
 
     const processDeath = () => {
         if (!birthData.date) {
@@ -558,7 +582,6 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies, ind
     processDeath();
 
     const parentalFamily = getParentalFamily(individualJson.pointer, allIndividuals, indices);
-    console.log('Processing parental family:', parentalFamily);
 
     familyTreeDataStore.addNodeToGenealogyGraph({
         id: individualJson.pointer,
@@ -602,7 +625,20 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies, ind
         indices
     );
 
-    marriages.forEach((marriage) => {
+    marriages.forEach(marriage => {
+        if (marriage.eventDetails.town) {
+            individualTowns.add({
+                name: marriage.eventDetails.town,
+                display: marriage.eventDetails.townDisplay || marriage.eventDetails.town,
+                departement: marriage.eventDetails.departement,
+                country: marriage.eventDetails.country,
+                coordinates: {
+                    latitude: marriage.eventDetails.latitude,
+                    longitude: marriage.eventDetails.longitude
+                }
+            });
+        }
+
         addEvent(
             "marriage",
             name,
@@ -633,6 +669,7 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies, ind
     });
 
     const formattedOccupations = processOccupations(individualJson);
+    const processedTowns = Array.from(individualTowns);
 
     const stats = {
         demography: {
@@ -692,9 +729,6 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies, ind
         }
     };
 
-    console.log('Marriages processed:', marriages);
-    console.log('Stats computed:', stats);
-
     return {
         id: individualJson.pointer,
         name,
@@ -714,7 +748,7 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies, ind
         motherId: parentalFamily.motherId,
         spouseIds: Object.keys(individualFamily.spouses),
         siblingIds: parentalFamily.siblingIds,
-        individualTowns,
+        individualTowns: processedTowns,
         individualEvents,
         formattedBirth,
         formattedDeath,

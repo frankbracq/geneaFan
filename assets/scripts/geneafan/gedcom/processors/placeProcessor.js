@@ -131,6 +131,7 @@ class PlaceProcessor {
             const individuals = json.filter(record => record.tag === gedcomConstantsStore.TAGS.INDIVIDUAL);
             for (const individual of individuals) {
                 this._collectTownsFromTree(individual.tree, gedcomTowns);
+                // Add place keys to events in json source data for later processing
                 this._addPlaceKeysToEvents(individual.tree);
             }
 
