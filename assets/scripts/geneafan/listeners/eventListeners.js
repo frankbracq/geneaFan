@@ -7,6 +7,7 @@ import {
 import { displayPersonDetailsUI } from "../tabs/fanChart/personDetailsDisplay.js";
 import { loadGedcomFile } from "../gedcom/gedcomFileHandler.js";
 import { Offcanvas, Tooltip } from "bootstrap";
+import { FamilyTownsUI } from '../gedcom/ui/familyTownsUI.js';
 
 // WeakMap to store event listener references
 const eventListenersMap = new WeakMap();
@@ -225,6 +226,8 @@ export const setupAllEventListeners = (authStore) => {
     eventListenersInitialized = true;
 
     const initializeEventListeners = () => {
+        new FamilyTownsUI(); 
+
         document.addEventListener("click", (event) => {
             closePopoverOnClickOutside(event);
         });

@@ -406,16 +406,16 @@ class FamilyTownsStore {
                             if (event) TownStatisticsManager.updateTownStatistics(town, event);
                         });
     
-                        console.log(`📊 ${normalizedTownName}:`,
-                            JSON.stringify({
-                                events: {
-                                    births: town.events.birth?.length || 0,
-                                    deaths: town.events.death?.length || 0,
-                                    marriages: town.events.marriage?.length || 0
-                                },
-                                stats: toJS(town.statistics)
-                            }, null, 2)
-                        );
+                        // console.log(`📊 ${normalizedTownName}:`,
+                        //    JSON.stringify({
+                        //        events: {
+                        //            births: town.events.birth?.length || 0,
+                        //            deaths: town.events.death?.length || 0,
+                        //            marriages: town.events.marriage?.length || 0
+                        //        },
+                        //        stats: toJS(town.statistics)
+                        //    }, null, 2)
+                        // );
                     });
                 } catch (error) {
                     console.error(`Erreur: ${normalizedTownName}:`, error);
@@ -562,22 +562,27 @@ class FamilyTownsStore {
     // Proxy Update Management
     async updateTownsViaProxy(townsToUpdate = null) {
         if (this.isLoading) {
-            console.warn("Une mise à jour est déjà en cours");
+            console.warn("⚠️ Une mise à jour est déjà en cours");
             return;
         }
     
         try {
+            console.log('🔄 Début de la mise à jour via proxy');
             this.setIsLoading(true);
+            
+            console.log('📣 Émission de UPDATE_START');
             storeEvents.emit(EVENTS.TOWN.UPDATE_START);
     
-            // Utiliser les villes fournies ou collecter celles qui nécessitent une mise à jour
             const updates = townsToUpdate || this._collectTownsNeedingUpdate();
             
             if (Object.keys(updates).length === 0) {
-                console.log('Aucune ville ne nécessite de mise à jour');
+                console.log('ℹ️ Aucune ville à mettre à jour');
+                console.log('📣 Émission de UPDATE_COMPLETE');
                 storeEvents.emit(EVENTS.TOWN.UPDATE_COMPLETE);
                 return;
             }
+    
+            console.log(`🔄 Mise à jour de ${Object.keys(updates).length} villes`);
     
             const response = await fetch('https://opencageproxy.genealogie.workers.dev/', {
                 method: 'POST',
@@ -588,9 +593,12 @@ class FamilyTownsStore {
                 })
             });
     
-            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
     
             const updatedTowns = await response.json();
+            console.log('✅ Données reçues du proxy:', Object.keys(updatedTowns).length);
     
             runInAction(() => {
                 Object.entries(updatedTowns).forEach(([key, data]) => {
@@ -599,13 +607,17 @@ class FamilyTownsStore {
                 this.saveToLocalStorage();
             });
     
+            console.log('📣 Émission de UPDATE_COMPLETE');
             storeEvents.emit(EVENTS.TOWN.UPDATE_COMPLETE);
+            
         } catch (error) {
-            console.error('Error updating towns:', error);
+            console.error('❌ Erreur lors de la mise à jour:', error);
+            console.log('📣 Émission de UPDATE_ERROR');
             storeEvents.emit(EVENTS.TOWN.UPDATE_ERROR, error);
             throw error;
         } finally {
             this.setIsLoading(false);
+            console.log('✅ Fin de updateTownsViaProxy');
         }
     }
 
