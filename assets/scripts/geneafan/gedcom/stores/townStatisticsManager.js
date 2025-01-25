@@ -60,24 +60,29 @@ export class TownStatisticsManager {
     }
 
     static updateEventCounters(stats, event, town) {
-        switch (event.type) {
+        if (!event?.type || !stats) return;
+    
+        switch (event.type.toLowerCase()) {
             case 'birth':
-                stats.birthCount++;
+            case 'birt':
+                stats.birthCount = (stats.birthCount || 0) + 1;
                 if (event.personDetails?.surname) {
                     this.updatePatronymeStats(stats, event.personDetails.surname, 
                         this.parseEventDate(event.date)?.getFullYear());
                 }
                 break;
             case 'death':
-                stats.deathCount++;
-                if (event.personDetails?.birthPlace === town.town) {
-                    stats.localDeaths++;
+            case 'deat':
+                stats.deathCount = (stats.deathCount || 0) + 1;
+                if (event.personDetails?.birthPlace === town?.town) {
+                    stats.localDeaths = (stats.localDeaths || 0) + 1;
                 } else {
-                    stats.externalDeaths++;
+                    stats.externalDeaths = (stats.externalDeaths || 0) + 1;
                 }
                 break;
             case 'marriage':
-                stats.marriageCount++;
+            case 'marr':
+                stats.marriageCount = (stats.marriageCount || 0) + 1;
                 break;
         }
     }

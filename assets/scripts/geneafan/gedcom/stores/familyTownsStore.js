@@ -383,7 +383,7 @@ class FamilyTownsStore {
     recalculateAllTownsStatistics() {
         runInAction(() => {
             console.log('🏘️ Début du recalcul des statistiques');
-            
+    
             let totalEvents = {
                 births: 0,
                 deaths: 0,
@@ -394,26 +394,29 @@ class FamilyTownsStore {
                 try {
                     town.statistics = TownStatisticsManager.createEmptyStatistics();
                     ['birth', 'death', 'marriage'].forEach(eventType => {
-                        const eventCount = town.events[eventType]?.length || 0;
-                        totalEvents[eventType + 's'] += eventCount;
-                        
-                        if (Array.isArray(town.events[eventType])) {
-                            town.events[eventType].forEach(event => {
-                                if (event) TownStatisticsManager.updateTownStatistics(town, event);
-                            });
+                        if (!town.events || !Array.isArray(town.events[eventType])) {
+                            console.warn(`Données manquantes pour ${eventType} dans ${normalizedTownName}`);
+                            return;
                         }
-                    });
     
-                    console.log(`📊 ${normalizedTownName}:`, 
-                        JSON.stringify({
-                            events: {
-                                births: town.events.birth?.length || 0,
-                                deaths: town.events.death?.length || 0,
-                                marriages: town.events.marriage?.length || 0
-                            },
-                            stats: toJS(town.statistics)
-                        }, null, 2)
-                    );
+                        const eventCount = town.events[eventType].length;
+                        totalEvents[eventType + 's'] += eventCount;
+    
+                        town.events[eventType].forEach(event => {
+                            if (event) TownStatisticsManager.updateTownStatistics(town, event);
+                        });
+    
+                        console.log(`📊 ${normalizedTownName}:`,
+                            JSON.stringify({
+                                events: {
+                                    births: town.events.birth?.length || 0,
+                                    deaths: town.events.death?.length || 0,
+                                    marriages: town.events.marriage?.length || 0
+                                },
+                                stats: toJS(town.statistics)
+                            }, null, 2)
+                        );
+                    });
                 } catch (error) {
                     console.error(`Erreur: ${normalizedTownName}:`, error);
                 }
@@ -429,7 +432,7 @@ class FamilyTownsStore {
         this.clearAllCaches();
         console.log('✅ Fin finalizeAllTownsData'); 
         
-        // Ne mettre à jour les markers que si la map est initialisée
+        // Mise à jour des markers par l'autorun lorsque la map est initialisée
         if (this.map && window.google) {
             this.updateMarkers();
         }
