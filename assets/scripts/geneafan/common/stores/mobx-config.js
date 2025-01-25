@@ -1,4 +1,4 @@
-import { configure, comparer, computed, makeAutoObservable, makeObservable, runInAction, autorun, reaction, action, observable, toJS } from 'mobx';
+import { configure, comparer, computed, makeAutoObservable, makeObservable, runInAction, autorun, reaction, action, observable, toJS, isObservable } from 'mobx';
 
 configure({
     enforceActions: 'never'
@@ -11,8 +11,9 @@ export {
     autorun,
     reaction,
     toJS,
+    isObservable,
     action,
     computed,
     comparer,
-    observable
+    observable,
 };

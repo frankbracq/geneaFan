@@ -4,7 +4,7 @@ Traite tous types d'événements (naissances, mariages, décès)
 Fournit un calque de contexte global pour la carte
 */
 
-import { makeObservable, observable, action, computed, runInAction, autorun, toJS } from '../../common/stores/mobx-config.js';
+import { makeObservable, observable, action, computed, runInAction, autorun, toJS, isObservable } from '../../common/stores/mobx-config.js';
 import MarkerDisplayManager from '../../tabs/familyMap/markerDisplayManager.js';
 import { infoWindowDisplayManager } from '../../tabs/familyMap/infoWindowDisplayManager.js';
 import { storeEvents, EVENTS } from './storeEvents.js';
@@ -137,6 +137,8 @@ class FamilyTownsStore {
                         }
                     });
                 });
+                const familyTowns = this.getAllTowns();
+                console.log('Family towns:', familyTowns);
                 console.timeEnd('processAllTownsEvents');
             }
         );
@@ -240,8 +242,14 @@ class FamilyTownsStore {
 
     // Town Data Management
     addOrUpdateTown(normalizedTownName, townData, eventData = null) {
+        console.log('📍 addOrUpdateTown - Début', {
+            normalizedTownName,
+            townData,
+            eventData
+        });
+        
         if (!normalizedTownName || !townData) {
-            console.warn('Missing key or town data');
+            console.warn('⚠️ Données manquantes:', { normalizedTownName, townData });
             return;
         }
     
@@ -249,7 +257,21 @@ class FamilyTownsStore {
             let town = this.townsData.get(normalizedTownName);
     
             if (!town) {
-                // Create new town with complete data structure including all event types
+                const eventTypes = {
+                    BIRT: observable([]),
+                    DEAT: observable([]),
+                    MARR: observable([]),
+                    BURI: observable([]),
+                    OCCU: observable([]),
+                    EVEN: observable([]),
+                    birth: observable([]),
+                    death: observable([]),
+                    marriage: observable([]),
+                    burial: observable([]),
+                    occupation: observable([]),
+                    event: observable([])
+                };
+    
                 town = observable({
                     town: townData.town || '',
                     townDisplay: townData.townDisplay || townData.town || '',
@@ -260,49 +282,46 @@ class FamilyTownsStore {
                     countryColor: townData.countryColor || '',
                     latitude: townData.latitude || '',
                     longitude: townData.longitude || '',
-                    events: observable({
-                        // GEDCOM event types
+                    events: eventTypes,
+                    statistics: TownStatisticsManager.createEmptyStatistics()
+                });
+                
+                console.log('🆕 Création nouvelle ville:', toJS(town));
+                this.townsData.set(normalizedTownName, town);
+            } else {
+                console.log('📝 Mise à jour ville existante:', normalizedTownName);
+                
+                if (!town.events || !isObservable(town.events)) {
+                    town.events = observable({
                         BIRT: observable([]),
                         DEAT: observable([]),
                         MARR: observable([]),
                         BURI: observable([]),
                         OCCU: observable([]),
                         EVEN: observable([]),
-                        // Normalized event types
                         birth: observable([]),
                         death: observable([]),
                         marriage: observable([]),
                         burial: observable([]),
                         occupation: observable([]),
                         event: observable([])
-                    }),
-                    statistics: TownStatisticsManager.createEmptyStatistics()
-                });
-                this.townsData.set(normalizedTownName, town);
-    
-                // Log the newly created town
-                // console.log('New town created:', JSON.stringify(toJS(town), null, 2));
-            } else {
+                    });
+                }
+                
                 Object.entries(townData).forEach(([field, value]) => {
                     if (value !== undefined && value !== null && field !== 'events') {
                         town[field] = value;
                     }
                 });
-    
-                // Log the updated town
-                // console.log('Town updated:', JSON.stringify(toJS(town), null, 2));
             }
     
             if (eventData) {
+                console.log('🎯 Traitement événement pour', normalizedTownName, eventData);
                 this.invalidateCache(normalizedTownName);
                 this.updateTownEvents(town, eventData);
             }
-    
-            // On retire cet appel
-            /*if (townData.latitude && townData.longitude) {
-                this.createMarkerConfig(normalizedTownName, town);
-                this.saveToLocalStorage();
-            }*/
+            
+            console.log('✅ Fin addOrUpdateTown pour', normalizedTownName);
         });
     }
 
@@ -644,25 +663,20 @@ _collectTownsNeedingUpdate() {
     }
 
     getAllTowns() {
-        const geoData = this.getGeoData();
         const result = {};
-        
-        for (const [key, townGeo] of Object.entries(geoData)) {
-            const townEvents = this.eventsData.get(key) || {
-                birth: [],
-                death: [],
-                marriage: [],
-                burial: [],
-                occupation: [],
-                event: []
-            };
-
+        this.townsData.forEach((townData, key) => {
             result[key] = {
-                ...townGeo,
-                events: townEvents
+                town: townData.town,
+                townDisplay: townData.townDisplay,
+                departement: townData.departement,
+                departementColor: townData.departementColor,
+                country: townData.country,
+                countryColor: townData.countryColor,
+                latitude: townData.latitude,
+                longitude: townData.longitude,
+                events: toJS(townData.events)  // Ajout des événements
             };
-        }
-        
+        });
         return result;
     }
 
@@ -742,59 +756,50 @@ _collectTownsNeedingUpdate() {
     }
 
     // Event Processing
-updateTownEvents(town, eventData) {
-    if (!eventData?.type || !town?.events) return;
-
-    // Store both GEDCOM and normalized versions
-    const origType = eventData.type;
-    if (town.events[origType]) {
+    updateTownEvents(town, eventData) {
+        if (!eventData?.type || !town?.events) {
+            console.log('❌ Événement ou structure invalide:', {eventData, town});
+            return;
+        }
+    
+        const eventTypeMap = {
+            'birth': ['BIRT', 'birth'],
+            'death': ['DEAT', 'death'],
+            'marriage': ['MARR', 'marriage'],
+            'burial': ['BURI', 'burial'],
+            'occupation': ['OCCU', 'occupation'],
+            'event': ['EVEN', 'event']
+        };
+    
+        const eventTypes = eventTypeMap[eventData.type];
+        if (!eventTypes) {
+            console.log('❌ Type d\'événement non reconnu:', eventData.type);
+            return;
+        }
+    
         const enrichedEvent = {
             ...eventData,
             personDetails: { ...eventData.personDetails }
         };
-
-        const existingIndex = town.events[origType].findIndex(
-            e => e.personId === enrichedEvent.personId && e.date === enrichedEvent.date
-        );
-
-        if (existingIndex !== -1) {
-            town.events[origType][existingIndex] = enrichedEvent;
-        } else {
-            town.events[origType].push(enrichedEvent);
-        }
+    
+        eventTypes.forEach(type => {
+            if (!Array.isArray(town.events[type])) {
+                town.events[type] = observable([]);
+            }
+    
+            const existingIndex = town.events[type].findIndex(
+                e => e.personId === enrichedEvent.personId && e.date === enrichedEvent.date
+            );
+    
+            if (existingIndex !== -1) {
+                town.events[type][existingIndex] = enrichedEvent;
+            } else {
+                town.events[type].push(enrichedEvent);
+            }
+        });
+    
+        console.log(`✅ Événement ${eventData.type} ajouté/mis à jour pour ${town.town}`);
     }
-
-    // Also store normalized version
-    const eventTypeMap = {
-        'BIRT': 'birth',
-        'DEAT': 'death',
-        'MARR': 'marriage',
-        'BURI': 'burial',
-        'OCCU': 'occupation',
-        'EVEN': 'event'
-    };
-
-    const normalizedType = eventTypeMap[origType] || origType;
-    if (town.events[normalizedType]) {
-        const enrichedEvent = {
-            ...eventData,
-            type: normalizedType,
-            personDetails: { ...eventData.personDetails }
-        };
-
-        const existingIndex = town.events[normalizedType].findIndex(
-            e => e.personId === enrichedEvent.personId && e.date === enrichedEvent.date
-        );
-
-        if (existingIndex !== -1) {
-            town.events[normalizedType][existingIndex] = enrichedEvent;
-        } else {
-            town.events[normalizedType].push(enrichedEvent);
-        }
-
-        TownStatisticsManager.updateTownStatistics(town, enrichedEvent);
-    }
-}
 }
 
 // Export d'une instance unique du store

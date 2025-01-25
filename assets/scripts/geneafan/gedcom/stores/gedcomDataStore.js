@@ -152,7 +152,7 @@ class GedcomDataStore {
                 this.individualsCache = newCache;
                 
                 // Log du cache complet
-                console.log('Cache complet des individus:', JSON.stringify(Array.from(this.individualsCache), null, 2));
+                // console.log('Cache complet des individus:', JSON.stringify(Array.from(this.individualsCache), null, 2));
     
                 const allIndividuals = Array.from(newCache.entries());
                 storeEvents.emit(EVENTS.INDIVIDUALS.BULK_ADDED, allIndividuals);
