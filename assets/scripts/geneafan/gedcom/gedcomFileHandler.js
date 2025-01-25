@@ -504,7 +504,7 @@ async function onFileChange(data) {
 
         // Traiter le fichier GEDCOM
         let json = toJson(data);
-        console.log("JSON from GEDCOM file:", json);
+        // console.log("JSON from GEDCOM file:", json);
         
         // Attendre la fin de du traitement des lieux dans getAllPlaces avant d'enregistrer les données source dans le store
         let sourceData= await placeProcessor.processGedcomTowns(json);

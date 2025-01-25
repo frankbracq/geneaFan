@@ -604,7 +604,7 @@ export function drawFan(currentRoot) {
     // Utiliser la hiérarchie existante du store
     const data = gedcomDataStore.getHierarchy();
 
-    console.log('Data:', data);
+    // console.log('Data:', data);
     
     if (data == null) {
         console.log("Data is null for drawFan. Exiting.");

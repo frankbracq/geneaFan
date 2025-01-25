@@ -112,6 +112,7 @@ class GedcomDataStore {
 
     async buildIndividualsCache(json) {
         console.time("buildIndividualsCache");
+        console.log('🔄 Début buildIndividualsCache');
         
         if (this.isProcessing) {
             console.warn("Une construction de cache est déjà en cours");
@@ -167,6 +168,8 @@ class GedcomDataStore {
             storeEvents.emit(EVENTS.CACHE.ERROR, error);
         } finally {
             this.isProcessing = false;
+            console.log('✅ Cache construit, émission de CACHE.BUILT');
+            storeEvents.emit(EVENTS.CACHE.BUILT);
             console.timeEnd("buildIndividualsCache");
         }
     }

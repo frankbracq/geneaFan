@@ -22,8 +22,10 @@ class StoreEvents {
     }
 
     emit(event, data) {
+        console.log(`🔔 Émission événement: ${event}`);
         const eventListeners = this.listeners.get(event);
         if (eventListeners) {
+            console.log(`📣 ${eventListeners.size} écouteur(s) trouvé(s) pour ${event}`);
             eventListeners.forEach(listener => {
                 try {
                     listener(data);
@@ -31,6 +33,8 @@ class StoreEvents {
                     console.error(`Error in event listener for ${event}:`, error);
                 }
             });
+        } else {
+            console.log(`⚠️ Aucun écouteur pour l'événement ${event}`);
         }
     }
 

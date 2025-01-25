@@ -72,6 +72,7 @@ class FamilyTownsStore {
     setupEventSubscriptions() {
         const bulkIndividualsDisposer = storeEvents.subscribe(
             EVENTS.INDIVIDUALS.BULK_ADDED,
+            
             (individuals) => {
                 console.time('processAllTownsEvents'); // Temps global
     
@@ -141,10 +142,13 @@ class FamilyTownsStore {
             }
         );
     
-        const cacheDisposer = storeEvents.subscribe(EVENTS.CACHE.BUILT, () => {
-            console.log('🏁 Cache des individus construit, finalisation des données des villes');
-            this.finalizeAllTownsData();
-        });
+        const cacheDisposer = storeEvents.subscribe(
+            EVENTS.CACHE.BUILT,
+            () => {
+                console.log('🔄 CACHE.BUILT reçu');
+                this.finalizeAllTownsData();
+            }
+        );
     
         const clearDisposer = storeEvents.subscribe(EVENTS.CACHE.CLEARED, () => {
             console.log('🧹 Nettoyage des données des villes');
@@ -233,11 +237,11 @@ class FamilyTownsStore {
 
     // Town Data Management
     addOrUpdateTown(normalizedTownName, townData, eventData = null) {
-        console.log('📍 addOrUpdateTown - Début', {
-            normalizedTownName,
-            townData,
-            eventData
-        });
+        // console.log('📍 addOrUpdateTown - Début', {
+        //    normalizedTownName,
+        //    townData,
+        //    eventData
+        //});
         
         if (!normalizedTownName || !townData) {
             console.warn('⚠️ Données manquantes:', { normalizedTownName, townData });
@@ -277,10 +281,10 @@ class FamilyTownsStore {
                     statistics: TownStatisticsManager.createEmptyStatistics()
                 });
                 
-                console.log('🆕 Création nouvelle ville:', toJS(town));
+                // console.log('🆕 Création nouvelle ville:', toJS(town));
                 this.townsData.set(normalizedTownName, town);
             } else {
-                console.log('📝 Mise à jour ville existante:', normalizedTownName);
+                // console.log('📝 Mise à jour ville existante:', normalizedTownName);
                 
                 if (!town.events || !isObservable(town.events)) {
                     town.events = observable({
@@ -312,7 +316,7 @@ class FamilyTownsStore {
                 this.updateTownEvents(town, eventData);
             }
             
-            console.log('✅ Fin addOrUpdateTown pour', normalizedTownName);
+            // console.log('✅ Fin addOrUpdateTown pour', normalizedTownName);
         });
     }
 
@@ -378,32 +382,58 @@ class FamilyTownsStore {
     // Stats and Data Management
     recalculateAllTownsStatistics() {
         runInAction(() => {
+            console.log('🏘️ Début du recalcul des statistiques');
+            
+            let totalEvents = {
+                births: 0,
+                deaths: 0,
+                marriages: 0
+            };
+    
             this.townsData.forEach((town, normalizedTownName) => {
                 try {
                     town.statistics = TownStatisticsManager.createEmptyStatistics();
-    
                     ['birth', 'death', 'marriage'].forEach(eventType => {
+                        const eventCount = town.events[eventType]?.length || 0;
+                        totalEvents[eventType + 's'] += eventCount;
+                        
                         if (Array.isArray(town.events[eventType])) {
                             town.events[eventType].forEach(event => {
-                                if (event) {
-                                    TownStatisticsManager.updateTownStatistics(town, event);
-                                }
+                                if (event) TownStatisticsManager.updateTownStatistics(town, event);
                             });
                         }
                     });
-                    
-                    this.invalidateCache(normalizedTownName);
+    
+                    console.log(`📊 ${normalizedTownName}:`, 
+                        JSON.stringify({
+                            events: {
+                                births: town.events.birth?.length || 0,
+                                deaths: town.events.death?.length || 0,
+                                marriages: town.events.marriage?.length || 0
+                            },
+                            stats: toJS(town.statistics)
+                        }, null, 2)
+                    );
                 } catch (error) {
-                    console.error(`Erreur lors du recalcul des statistiques pour la ville ${normalizedTownName}:`, error);
+                    console.error(`Erreur: ${normalizedTownName}:`, error);
                 }
             });
+    
+            console.log('📊 Total des événements:', totalEvents);
         });
     }
 
     finalizeAllTownsData() {
-        this.recalculateAllTownsStatistics();
+        console.log('🏁 Début finalizeAllTownsData');
+        this.recalculateAllTownsStatistics(); 
         this.clearAllCaches();
-        this.updateMarkers();
+        console.log('✅ Fin finalizeAllTownsData'); 
+        
+        // Ne mettre à jour les markers que si la map est initialisée
+        if (this.map && window.google) {
+            this.updateMarkers();
+        }
+        
         this.saveToLocalStorage();
     }
 
@@ -782,7 +812,7 @@ _collectTownsNeedingUpdate() {
             town.events[eventData.type].push(enrichedEvent);
         }
     
-        console.log(`✅ Event ${eventData.type} added/updated for ${town.town}`);
+        // console.log(`✅ Event ${eventData.type} added/updated for ${town.town}`);
     }
 }
 
