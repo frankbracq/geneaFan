@@ -288,33 +288,6 @@ class PlaceProcessor {
         }
     }
 
-    _updateLocalStorage(placeObj) {
-        const stored = localStorage.getItem('townsDB') || '{}';
-        try {
-            const townsDB = JSON.parse(stored);
-            const normalizedKey = normalizeGeoString(placeObj.town);
-
-            // Ne pas écraser les données existantes si déjà présentes
-            if (!townsDB[normalizedKey]) {
-                townsDB[normalizedKey] = {
-                    town: placeObj.town,
-                    townDisplay: placeObj.townDisplay,
-                    departement: placeObj.departement,
-                    departementColor: placeObj.departementColor,
-                    country: placeObj.country,
-                    countryCode: placeObj.countryCode,
-                    countryColor: placeObj.countryColor,
-                    latitude: placeObj.latitude,
-                    longitude: placeObj.longitude
-                };
-                localStorage.setItem('townsDB', JSON.stringify(townsDB));
-                console.log(`Coordonnées GEDCOM pour ${placeObj.town} ajoutées au cache`);
-            }
-        } catch (error) {
-            console.error('Error updating localStorage with GEDCOM coordinates:', error);
-        }
-    }
-
     _formatDisplayString(placeObj) {
         const parts = _.filter([
             placeObj.subdivision,
