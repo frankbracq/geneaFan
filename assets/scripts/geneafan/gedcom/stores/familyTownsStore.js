@@ -602,7 +602,10 @@ class FamilyTownsStore {
     
             runInAction(() => {
                 Object.entries(updatedTowns).forEach(([key, data]) => {
-                    this.updateTown(key, data);
+                    // Ne stocker que les villes avec coordonnées valides
+                    if (data.latitude && data.longitude) {
+                        this.updateTown(key, data);
+                    }
                 });
                 this.saveToLocalStorage();
             });
@@ -668,10 +671,10 @@ _collectTownsNeedingUpdate() {
         runInAction(() => {
             const town = this.townsData.get(key);
             if (town) {
-                console.log(`Mise à jour de la ville ${key}:`, {
-                    avant: { ...town },
-                    miseAJour: updates,
-                });
+                // console.log(`Mise à jour de la ville ${key}:`, {
+                //    avant: { ...town },
+                //    miseAJour: updates,
+                // });
                 
                 // Mise à jour des propriétés
                 Object.entries(updates).forEach(([field, value]) => {
@@ -686,7 +689,7 @@ _collectTownsNeedingUpdate() {
                     this.saveToLocalStorage();
                 }
                 
-                console.log('Après mise à jour:', this.townsData.get(key));
+                // console.log('Après mise à jour:', this.townsData.get(key));
             } else {
                 console.warn(`Tentative de mise à jour d'une ville inexistante: ${key}`);
             }

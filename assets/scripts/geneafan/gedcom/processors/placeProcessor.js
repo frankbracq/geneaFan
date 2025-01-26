@@ -122,20 +122,22 @@ class PlaceProcessor {
         try {
             console.group('processGedcomTowns - Processing locations');
 
-            // 1. Load cache to use for enriching GEDCOM towns
+            // 1. Chargement du cache et initialisation des structures
             const geoCache = await familyTownsStore.loadFromLocalStorage();
-            console.log('geoCache:', geoCache); 
             const gedcomTowns = new Map();
+            const validGedcomTowns = new Map(); // Stocke les villes bien renseignées (pour le cache)
+            const townsToUpdate = new Map(); // Stocke les villes à géocoder via proxy
 
-            // 2. Extract GEDCOM towns basic info
+            // 2. Collecte des villes du GEDCOM
             const individuals = json.filter(record => record.tag === gedcomConstantsStore.TAGS.INDIVIDUAL);
             for (const individual of individuals) {
                 this._collectTownsFromTree(individual.tree, gedcomTowns);
-                // Add place keys to events in json source data for later processing
                 this._addPlaceKeysToEvents(individual.tree);
             }
 
-            // 3. For each GEDCOM town, enrich with cache data if available before creating
+            familyTownsStore.clearAllTowns();
+
+            // 3. Traitement de chaque ville
             for (const [normalizedKey, placeInfo] of gedcomTowns) {
                 const cachedTown = geoCache[normalizedKey];
                 const townData = cachedTown ? {
@@ -150,29 +152,41 @@ class PlaceProcessor {
                 } : placeInfo;
 
                 familyTownsStore.addOrUpdateTown(normalizedKey, townData);
+
+                // Vérification de la validité des données
+                const isValidFrenchTown = townData.country === "France" &&
+                    townData.latitude &&
+                    townData.longitude &&
+                    townData.departement;
+
+                const isValidForeignTown = townData.country &&
+                    townData.country !== "France" &&
+                    townData.latitude &&
+                    townData.longitude;
+
+                // Répartition entre villes valides et à mettre à jour
+                if (isValidFrenchTown || isValidForeignTown) {
+                    validGedcomTowns.set(normalizedKey, townData);
+                } else if (!this._hasTownCompleteGeoData(townData, cachedTown)) {
+                    townsToUpdate.set(normalizedKey, townData);
+                }
+            }
+            console.log("Villes valides:", validGedcomTowns);
+            console.log("Villes à mettre à jour:", townsToUpdate);
+
+            // 4. Mise à jour du cache local avec les villes valides
+            if (validGedcomTowns.size > 0) {
+                familyTownsStore.saveToLocalStorage();
             }
 
-            const familyTowns = familyTownsStore.getAllTowns();
-            console.log('familyTowns:', familyTowns);
-
-            // 4. Update incomplete GEDCOM towns via proxy
-            const townsToUpdate = new Map();
-            gedcomTowns.forEach((town, key) => {
-                if (!this._hasTownCompleteGeoData(town, geoCache[key])) {
-                    townsToUpdate.set(key, town);
-                }
-            });
-
+            // 5. Géocodage des villes incomplètes via le proxy
             if (townsToUpdate.size > 0) {
-                console.log("Updating incomplete GEDCOM towns via proxy:", townsToUpdate);
                 await familyTownsStore.updateTownsViaProxy(Object.fromEntries(townsToUpdate));
             }
 
-            console.groupEnd();
             return { json };
         } catch (error) {
             console.error("Error in getAllPlaces:", error);
-            console.groupEnd();
             throw error;
         }
     }
@@ -180,7 +194,7 @@ class PlaceProcessor {
     // Private helper methods
     _addPlaceKeysToEvents(tree) {
         const EVENT_TAGS = ['BIRT', 'DEAT', 'BURI', 'OCCU'];
-        
+
         for (const node of tree) {
             if (EVENT_TAGS.includes(node.tag) && node.tree) {
                 const placeNode = node.tree.find(child => child.tag === 'PLAC');
@@ -189,7 +203,7 @@ class PlaceProcessor {
                     node.placeKey = normalizeGeoString(placeInfo.town);
                 }
             }
-            
+
             if (node.tree?.length > 0) {
                 this._addPlaceKeysToEvents(node.tree);
             }

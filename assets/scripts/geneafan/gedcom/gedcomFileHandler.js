@@ -18,6 +18,7 @@ import { toJson, getIndividualsList } from "./parse.js";
 import { placeProcessor } from './processors/placeProcessor.js';
 import { setupPersonLinkEventListener } from "../listeners/eventListeners.js";
 import { googleMapsStore } from '../tabs/familyMap/googleMapsStore.js';
+import { storeEvents, EVENTS } from './stores/storeEvents.js';
 
 /* Code to manage the upload of GEDCOM files to Cloudflare R2*/
 let isLoadingFile = false;
@@ -490,9 +491,12 @@ async function resetUIForNewGedcom() {
 }
 
 async function onFileChange(data) {
+    storeEvents.emit('process:start', 'Lecture du fichier GEDCOM...');
     handleTabsAndOverlay(true);
     clearAllStates();
     gedcomDataStore.clearAllState();
+
+    storeEvents.emit(EVENTS.PROCESS.START, 'Lecture du fichier GEDCOM...');
 
     // Toujours réinitialiser l'UI avant de charger un nouveau fichier
     await resetUIForNewGedcom();
@@ -503,15 +507,17 @@ async function onFileChange(data) {
         familyTownsStore.setTownsData({});
 
         // Traiter le fichier GEDCOM
+        storeEvents.emit(EVENTS.PROCESS.START, 'Analyse du fichier...');
         let json = toJson(data);
-        // console.log("JSON from GEDCOM file:", json);
         
         // Attendre la fin de du traitement des lieux dans getAllPlaces avant d'enregistrer les données source dans le store
-        let sourceData= await placeProcessor.processGedcomTowns(json);
-        // console.log("sourceData from getAllPlaces:", sourceData.json);
+        storeEvents.emit(EVENTS.PROCESS.START, 'Validation du géocodage des villes...');
+        let sourceData = await placeProcessor.processGedcomTowns(json);
 
+        storeEvents.emit(EVENTS.PROCESS.START, 'Construction des données...');
         gedcomDataStore.setSourceData(sourceData.json);
 
+        storeEvents.emit('process:start', 'Finalisation...');
         // Mettre à jour les données des individus
         updateIndividualTownsFromFamilyTowns(gedcomDataStore.getIndividualsCache());
         gedcomDataStore.setIndividualsCache(gedcomDataStore.getIndividualsCache());
@@ -578,8 +584,11 @@ async function onFileChange(data) {
             el.disabled = false;
         });
 
+        storeEvents.emit(EVENTS.PROCESS.COMPLETE);
+
     } catch (error) {
         console.error("General Error:", error);
+       storeEvents.emit(EVENTS.PROCESS.ERROR, error);
     } finally {
         handleTabsAndOverlay(false);
         setupPersonLinkEventListener();

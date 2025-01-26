@@ -60,6 +60,11 @@ export const EVENTS = {
         UPDATE_COMPLETE: 'town:update:complete',
         UPDATE_ERROR: 'town:update:error',
         UPDATED: 'town:updated'
+    },
+    PROCESS: {
+        START: 'process:start',
+        COMPLETE: 'process:complete',
+        ERROR: 'process:error'
     }
 };
 

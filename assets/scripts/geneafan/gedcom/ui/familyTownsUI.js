@@ -23,6 +23,14 @@ export class FamilyTownsUI {
             console.log('📣 Événement UPDATE_ERROR reçu dans UI', error);
             this.showErrorAlert(error);
         });
+
+        storeEvents.subscribe('process:start', (message) => {
+            this.showProcessingAlert(message);
+        });
+
+        storeEvents.subscribe('process:complete', () => {
+            this.hideAlert();
+        });
         
         console.log('✅ Écouteurs configurés:', storeEvents.listeners);
     }
@@ -87,5 +95,19 @@ export class FamilyTownsUI {
         alertElement.classList.add('alert-danger');
         alertContent.textContent = `Erreur: ${error.message}`;
         console.log('✅ Alerte d\'erreur affichée');
+    }
+
+    showProcessingAlert(message) {
+        const alertElement = document.getElementById('alert');
+        const alertContent = document.getElementById('alert-content');
+        
+        alertContent.textContent = message;
+        alertElement.classList.remove('d-none', 'alert-success', 'alert-danger');
+        alertElement.classList.add('show', 'alert-info');
+    }
+
+    hideAlert() {
+        const alertElement = document.getElementById('alert');
+        alertElement.classList.add('d-none');
     }
 }
