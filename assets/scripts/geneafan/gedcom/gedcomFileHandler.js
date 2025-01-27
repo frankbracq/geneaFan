@@ -517,10 +517,10 @@ async function onFileChange(data) {
         storeEvents.emit(EVENTS.PROCESS.START, 'Construction des données...');
         gedcomDataStore.setSourceData(sourceData.json);
 
-        storeEvents.emit('process:start', 'Finalisation...');
+        storeEvents.emit(EVENTS.PROCESS.START, 'Finalisation...');
         // Mettre à jour les données des individus
-        updateIndividualTownsFromFamilyTowns(gedcomDataStore.getIndividualsCache());
-        gedcomDataStore.setIndividualsCache(gedcomDataStore.getIndividualsCache());
+        // updateIndividualTownsFromFamilyTowns(gedcomDataStore.getIndividualsCache());
+        // gedcomDataStore.setIndividualsCache(gedcomDataStore.getIndividualsCache());
         
         console.log("Individuals cache updated:", gedcomDataStore.getIndividualsCache());
 
