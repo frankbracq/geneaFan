@@ -8,8 +8,7 @@
  */
 
 import _ from 'lodash';
-import { prefixedDate, calculateAge } from '../../utils/dates.js';
-import { processDate } from '../parse.js';
+import { dateProcessor } from './dateProcessor.js';
 import gedcomDataStore from '../stores/gedcomDataStore.js';
 import gedcomConstantsStore from '../stores/gedcomConstantsStore.js';
 import configStore from '../../tabs/fanChart/fanConfigStore.js';
@@ -48,7 +47,7 @@ export function processEventDatePlace(event, individualTowns) {
     // console.log(`Place details for key "${placeKey}":`, deproxyObject(placeDetails?.[placeKey]));
     
     const dateNode = event.tree.find((node) => node.tag === "DATE");
-    const date = dateNode ? processDate(dateNode.data) : "";
+    const date = dateNode ? dateProcessor.processDate(dateNode.data) : "";
 
     if (!individualTowns[placeKey]) {
         individualTowns[placeKey] = {
@@ -98,7 +97,7 @@ export function processEventDatePlace(event, individualTowns) {
  */
 export function generateEventDescription(eventType, eventData, gender, age, deceased) {
     let eventDate = eventData.date
-        ? prefixedDate(eventData.date)
+        ? dateProcessor.prefixedDate(eventData.date)
         : "le (date inconnue)";
     let eventPlace = eventData.townDisplay || "(lieu inconnu)";
     let townKey = eventData.placeKey || "unknown";
@@ -230,7 +229,7 @@ export function addEvent(type, name, surname, date, town, description, eventId =
 
     let ageAtEvent = null;
     if (birthDate) {
-        ageAtEvent = calculateAge(birthDate, date);
+        ageAtEvent = dateProcessor.calculateAge(birthDate, date);
     }
 
     const formattedAttendees = eventAttendees.map(attendee => `${attendee.name}`).join(', ');

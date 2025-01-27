@@ -6,8 +6,6 @@ import {
     normalizeGeoString,
     formatTownName
 } from "../../utils/geo.js";
-import { padTwoDigits } from "../../utils/utils.js";
-import { extractBasicInfo } from '../builders/personBuilder.js';
 
 // Stores
 import familyTownsStore from '../stores/familyTownsStore.js';
@@ -26,56 +24,6 @@ class PlaceProcessor {
         this.MONTHS_MAP = MONTHS_MAP;
     }
 
-    processDate(s) {
-        if (typeof s !== "string") {
-            return "";
-        }
-
-        let trimmed = s.trim().toUpperCase();
-
-        const isRepublican = gedcomConstantsStore.isRepublicanCalendar(trimmed);
-        if (isRepublican) {
-            trimmed = trimmed.substring(this.CALENDARS.REPUBLICAN.length).trim();
-        } else if (gedcomConstantsStore.isGregorianCalendar(trimmed)) {
-            trimmed = trimmed.substring(this.CALENDARS.GREGORIAN.length).trim();
-        }
-
-        const split = trimmed.split(/\s+/);
-        if (split.length === 0) {
-            console.error("Error: No date parts found after trimming", trimmed);
-            return "";
-        }
-
-        let day, month, year;
-        if (split.length === 3) {
-            day = parseInt(split[0], 10);
-            month = (isRepublican ?
-                this.MONTHS_MAP.REPUBLICAN[split[1]] :
-                this.MONTHS_MAP.GREGORIAN[split[1]]) || 0;
-            year = parseInt(split[2], 10);
-        } else if (split.length === 2) {
-            month = (isRepublican ?
-                this.MONTHS_MAP.REPUBLICAN[split[1]] :
-                this.MONTHS_MAP.GREGORIAN[split[1]]) || 0;
-            year = parseInt(split[1], 10);
-        } else if (split.length === 1) {
-            year = parseInt(split[0], 10);
-        }
-
-        if (isRepublican) {
-            year += 1792;
-        }
-        let display = year ? year.toString() : "";
-        if (month > 0) {
-            display = padTwoDigits(month) + "/" + display;
-        }
-        if (day > 0) {
-            display = padTwoDigits(day) + "/" + display;
-        }
-
-        return display;
-    }
-
     processPlace({ data: original, tree } = {}) {
         const segments = original.split(/\s*,\s*/);
         let placeObj = {
@@ -92,27 +40,18 @@ class PlaceProcessor {
             countryColor: "",
         };
 
-        // Normalize segments for country search
         const normalizedSegments = _.map(segments, (segment) => normalizeGeoString(segment));
-
-        // Find country in country data
         const countryMatch = this._findCountry(normalizedSegments);
         if (countryMatch) {
             this._applyCountryData(placeObj, countryMatch);
         }
 
-        // Process department data for France
         if (!placeObj.country || placeObj.country === "France") {
             this._processFrenchDepartement(placeObj, original);
         }
 
-        // Process subdivision and department
         this._processSubdivisionAndDepartement(placeObj, segments);
-
-        // Extract geolocation data if available
         this._extractGeolocation(placeObj, tree);
-
-        // Format final display string
         placeObj.display = this._formatDisplayString(placeObj);
 
         return placeObj;

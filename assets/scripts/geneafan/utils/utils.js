@@ -1,6 +1,6 @@
 import _ from 'lodash';
 import familyTownsStore from '../gedcom/stores/familyTownsStore.js';
-import { parseDate } from './dates.js';
+import { dateProcessor } from '../gedcom/processors/dateProcessor.js';
 
 export const memoize = (fn) => {
     const cache = new Map();
@@ -18,20 +18,21 @@ export const memoize = (fn) => {
 export function groupEvents(events, yearsGroup = 10) {
     // Parse and filter valid dates
     const validEvents = _.filter(events, event => {
-        const parsedDate = parseDate(event.date);
-        if (parsedDate.isValid()) {
-            event.parsedDate = parsedDate; // Attach parsed date to the event object
+        const parsedDate = dateProcessor.parseDate(event.date);
+        // parsedDate contient directement la propriété isValid
+        if (parsedDate.isValid) {
+            event.parsedDate = parsedDate.date; // On stocke l'objet Date
             return true;
         }
         return false;
     });
 
     // Sort events by date
-    const sortedEvents = _.sortBy(validEvents, event => event.parsedDate.toISOString());
+    const sortedEvents = _.sortBy(validEvents, event => event.parsedDate.getTime());
 
     // Group events by the specified number of years
     const groupedByYears = _.groupBy(sortedEvents, event => {
-        const yearStart = Math.floor(event.parsedDate.year() / yearsGroup) * yearsGroup;
+        const yearStart = Math.floor(event.parsedDate.getFullYear() / yearsGroup) * yearsGroup;
         // Format the start of the interval as "01/01/YYYY"
         return `01/01/${yearStart}`;
     });

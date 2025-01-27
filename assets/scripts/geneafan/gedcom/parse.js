@@ -2,14 +2,8 @@
 import _ from "lodash";
 import parseGedcom from "parse-gedcom";
 
-// Place processing
-import { placeProcessor } from './processors/placeProcessor.js';
-
-import {
-    extractYear,
-    calculateAge,
-    prefixedDate
-} from "../utils/dates.js";
+// Processors
+import { dateProcessor } from './processors/dateProcessor.js';
 
 import { statisticsService } from '../tabs/statistics/services/statisticsService.js';
 
@@ -20,9 +14,7 @@ import familyTreeDataStore from '../tabs/familyTree/familyTreeDataStore.js';
 import statisticsStore from '../tabs/statistics/statisticsStore.js';
 import gedcomConstantsStore from './stores/gedcomConstantsStore.js';
 
-const EMPTY = "";
-const VALUE_OCCUPATION = "Occupation";
-const { TAGS, VALUES, CALENDARS, MONTHS_MAP } = gedcomConstantsStore;
+const { TAGS, VALUES } = gedcomConstantsStore;
 
 function byTag(tag) {
     return gedcomConstantsStore.byTag(tag);
@@ -31,8 +23,6 @@ function byTag(tag) {
 function getFirst(array, def) {
     return _.get(array, 0, def);
 }
-
-const processDate = (s) => placeProcessor.processDate(s);
 
 function toJson(data) {
     const triggers = "[�]";
@@ -178,9 +168,9 @@ function extractDatesFromIndividual(individualJson) {
         [TAGS.DEATH, TAGS.BURIAL].includes(node.tag));
 
     const birthYear = birthNode ?
-        extractYear(processDate(birthNode.tree.find(byTag(TAGS.DATE))?.data)) : null;
+        dateProcessor.extractYear(dateProcessor.processDate(birthNode.tree.find(byTag(TAGS.DATE))?.data)) : null;
     const deathYear = deathNode ?
-        extractYear(processDate(deathNode.tree.find(byTag(TAGS.DATE))?.data)) : null;
+        dateProcessor.extractYear(dateProcessor.processDate(deathNode.tree.find(byTag(TAGS.DATE))?.data)) : null;
 
     return { birthYear, deathYear };
 }
@@ -217,7 +207,7 @@ function processMarriageAndChildrenStatistics(
                 .filter(byTag(TAGS.CHILD))
                 .map(child => {
                     const childNode = individualsCache.get(child.data);
-                    return childNode ? extractYear(childNode.birthDate) : null;
+                    return childNode ? dateProcessor.extractYear(childNode.birthDate) : null;
                 })
                 .filter(Boolean));
 
@@ -235,5 +225,4 @@ function processMarriageAndChildrenStatistics(
 export { 
     toJson, 
     getIndividualsList,
-    processDate
 };

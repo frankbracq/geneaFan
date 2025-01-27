@@ -1,4 +1,4 @@
-import { isValidDate } from "../../utils/dates.js";
+import { dateProcessor } from '../processors/dateProcessor.js';
 import { runInAction } from '../../common/stores/mobx-config.js';
 
 export class TownStatisticsManager {
@@ -45,11 +45,11 @@ export class TownStatisticsManager {
         
         const [day, month, year] = dateString.split('/').map(Number);
         const potentialDate = new Date(year, month - 1, day);
-        return isValidDate(potentialDate) ? potentialDate : null;
+        return dateProcessor.isValidDate(potentialDate) ? potentialDate : null;
     }
 
     static updateTimespan(stats, eventDate) {
-        if (!eventDate || !isValidDate(eventDate)) return;
+        if (!eventDate || !dateProcessor.isValidDate(eventDate)) return;
 
         if (!stats.timespan.firstEvent || eventDate < new Date(stats.timespan.firstEvent)) {
             stats.timespan.firstEvent = eventDate.toISOString();

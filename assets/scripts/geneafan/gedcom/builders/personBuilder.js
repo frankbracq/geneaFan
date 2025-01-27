@@ -1,25 +1,16 @@
 // External libraries
 import _ from "lodash";
-import moment from "moment";
 import jsonpointer from 'jsonpointer';
 
-// Utility functions
-import {
-    extractYear,
-    calculateAge,
-    prefixedDate
-} from "../../utils/dates.js";
-
+// Processors
+import { placeProcessor } from '../processors/placeProcessor.js';
+import { dateProcessor } from '../processors/dateProcessor.js';
 import { 
     handleEventTags, 
     buildEventFallback, 
     generateEventDescription, 
     addEvent
 } from '../processors/eventProcessor.js';
-
-import { processDate } from '../parse.js';
-
-import { placeProcessor } from '../processors/placeProcessor.js';
 
 import {
     normalizeGeoString,
@@ -73,10 +64,10 @@ function processDetailedOccupations(individualJson) {
             const dateNode = occNode.tree?.find(node => node.tag === TAGS.DATE);
             occupations.push({
                 value: formatOccupation(occNode.data),
-                date: dateNode ? processDate(dateNode.data) : null,
-                year: dateNode ? extractYear(processDate(dateNode.data)) : null,
+                date: dateNode ? dateProcessor.processDate(dateNode.data) : null,
+                year: dateNode ? dateProcessor.extractYear(dateProcessor.processDate(dateNode.data)) : null,
                 type: 'direct'
-            });
+            });            
         });
 
     individualJson.tree
@@ -94,8 +85,8 @@ function processDetailedOccupations(individualJson) {
             if (noteNode) {
                 occupations.push({
                     value: formatOccupation(noteNode.data),
-                    date: dateNode ? processDate(dateNode.data) : null,
-                    year: dateNode ? extractYear(processDate(dateNode.data)) : null,
+                    date: dateNode ? dateProcessor.processDate(dateNode.data) : null,
+                    year: dateNode ? dateProcessor.extractYear(dateProcessor.processDate(dateNode.data)) : null,
                     type: 'event'
                 });
             }
@@ -165,7 +156,7 @@ function processMarriages(
         
         if (marriage) {
             // Process date with processDate
-            eventDetails.date = marriage.date ? processDate(marriage.date) : "";
+            eventDetails.date = marriage.date ? dateProcessor.processDate(marriage.date) : "";
 
             // Process place using the same logic as in processTree
             if (marriage.place) {
@@ -233,15 +224,12 @@ function formatSiblings(siblings) {
 }
 
 function formatChild(child) {
-    const birthMoment = moment(child.birthDate, "DD/MM/YYYY");
-    const deathMoment = child.deathDate
-        ? moment(child.deathDate, "DD/MM/YYYY")
-        : null;
-    const ageAtDeath = deathMoment
-        ? ` à ${deathMoment.diff(birthMoment, "years")} ans`
+    const ageAtDeath = child.deathDate
+        ? ` à ${dateProcessor.calculateAge(child.birthDate, child.deathDate)} ans`
         : "";
-    return `${formatPersonLink(child.id, child.name)}${child.deathDate ? ` (†${child.deathDate}${ageAtDeath})` : ""
-        }`;
+    return `${formatPersonLink(child.id, child.name)}${
+        child.deathDate ? ` (†${child.deathDate}${ageAtDeath})` : ""
+    }`;
 }
 
 /**
@@ -447,11 +435,11 @@ function getRelativeDetails(individualID, allIndividuals) {
     const birthDateNode = birthEventNode
         ? birthEventNode.tree.find((node) => node.tag === "DATE")
         : null;
-    const birthDate = birthDateNode ? processDate(birthDateNode.data) : "";
+    const birthDate = birthDateNode ? dateProcessor.processDate(birthDateNode.data) : "";
     const deathDateNode = deathEventNode
         ? deathEventNode.tree.find((node) => node.tag === "DATE")
         : null;
-    const deathDate = deathDateNode ? processDate(deathDateNode.data) : "";
+        const deathDate = deathDateNode ? dateProcessor.processDate(deathDateNode.data) : "";
 
     return {
         id: individualID,
@@ -533,12 +521,12 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies, ind
         });
     }
 
-    const birthYear = birthData.date ? extractYear(birthData.date) : "";
+    const birthYear = birthData.date ? dateProcessor.extractYear(birthData.date) : "";
     const formattedBirth = generateEventDescription("BIRT", birthData, gender, age);
     addEvent("birth", name, surname, birthData.date, birthData.town, formattedBirth, "", [], birthData.date, individualEvents);
 
     const deathData = buildEventFallback(individualJson, deathTags, individualTowns).eventDetails;
-    const deathYear = deathData.date ? extractYear(deathData.date) : "";
+    const deathYear = deathData.date ? dateProcessor.extractYear(deathData.date) : "";
     const currentYear = new Date().getFullYear();
 
     if (deathData.town) {
@@ -560,9 +548,9 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies, ind
             formattedDeath = deathData.date ? generateEventDescription("DEAT", deathData, gender, null, true) : "Information on life and death unknown";
             addEvent("death", name, surname, deathData.date || "date inconnue", deathData.town || "", formattedDeath, "", [], birthData.date, individualEvents);
         } else if (!deathData.date) {
-            const today = moment().format("DD/MM/YYYY");
+            const today = dateProcessor.formatToday();
             if (birthYear >= currentYear - 105) {
-                age = calculateAge(birthData.date);
+                age = dateProcessor.calculateAge(birthData.date);
                 deceased = false;
                 formattedDeath = generateEventDescription("DEAT", { date: today, town: "" }, gender, age, false);
                 addEvent("today", name, surname, today, "", formattedDeath, "", [], birthData.date, individualEvents);
@@ -572,7 +560,7 @@ export function buildIndividual(individualJson, allIndividuals, allFamilies, ind
                 addEvent("death", name, surname, "date inconnue", "", formattedDeath, "", [], birthData.date, individualEvents);
             }
         } else {
-            age = calculateAge(birthData.date, deathData.date);
+            age = dateProcessor.calculateAge(birthData.date, deathData.date);
             deceased = true;
             formattedDeath = generateEventDescription("DEAT", deathData, gender, age, true);
             addEvent("death", name, surname, deathData.date, deathData.town, formattedDeath, "", [], birthData.date, individualEvents);

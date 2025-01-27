@@ -5,7 +5,7 @@ import { xml } from 'd3-fetch';
 import tinycolor from "tinycolor2";
 import _ from "lodash";
 import { mmToPixels } from '../../utils/utils.js';
-import { extractYear } from '../../utils/dates.js';
+import { dateProcessor } from '../../gedcom/processors/dateProcessor.js';
 import configStore from './fanConfigStore.js';
 import gedcomDataStore from '../../gedcom/stores/gedcomDataStore.js';
 
@@ -550,7 +550,7 @@ function createTextElements(g, defs, descendants, showMarriages) {
     if (showMarriages) {
         const getMarriageText = (d, includePlace) => {
             if (d.data.marriage && d.data.marriage.date && d.data.marriage.date.display) {
-                let text = extractYear(d.data.marriage.date.display);
+                let text = dateProcessor.extractYear(d.data.marriage.date.display);
                 if (includePlace && config.places.showPlaces && d.data.marriage.place && d.data.marriage.place.display) {
                     text += ' ' + d.data.marriage.place.display.split(/,| \(| \s\d/)[0];
                 }
