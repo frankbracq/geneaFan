@@ -15,32 +15,6 @@ export const memoize = (fn) => {
     };
 };
 
-export function groupEvents(events, yearsGroup = 10) {
-    // Parse and filter valid dates
-    const validEvents = _.filter(events, event => {
-        const parsedDate = dateProcessor.parseDate(event.date);
-        // parsedDate contient directement la propriété isValid
-        if (parsedDate.isValid) {
-            event.parsedDate = parsedDate.date; // On stocke l'objet Date
-            return true;
-        }
-        return false;
-    });
-
-    // Sort events by date
-    const sortedEvents = _.sortBy(validEvents, event => event.parsedDate.getTime());
-
-    // Group events by the specified number of years
-    const groupedByYears = _.groupBy(sortedEvents, event => {
-        const yearStart = Math.floor(event.parsedDate.getFullYear() / yearsGroup) * yearsGroup;
-        // Format the start of the interval as "01/01/YYYY"
-        return `01/01/${yearStart}`;
-    });
-
-    // Further group by event type within each year group
-    return _.mapValues(groupedByYears, eventsByDate => _.groupBy(eventsByDate, 'type'));
-}
-
 function calculateLocalStorageSize() {
     let total = 0;
     for (let key in localStorage) {
@@ -98,10 +72,6 @@ export function downloadJSON(data, filename) {
 
     // Ajouter l'élément de lien au document
     document.body.appendChild(downloadLink);
-}
-
-export function padTwoDigits(number) {
-    return number.toString().padStart(2, '0');
 }
 
 export function mmToPoints(mm) {

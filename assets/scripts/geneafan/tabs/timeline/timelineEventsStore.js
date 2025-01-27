@@ -1,11 +1,8 @@
 import { makeAutoObservable, action, computed, runInAction } from '../../common/stores/mobx-config.js';
-import { groupEvents } from "../../utils/utils.js";
+import _ from 'lodash';
+import { dateProcessor } from '../../gedcom/processors/dateProcessor.js';
 
-/**
- * Store responsible for managing timeline events data
- */
 class TimelineEventsStore {
-    // Core data
     events = [];
     groupedEvents = {};
 
@@ -14,36 +11,53 @@ class TimelineEventsStore {
             addEvent: action,
             clearEvents: action,
             setEvents: action,
-            
-            // Ne plus déclarer getEventsByType comme computed ici
             hasEvents: computed
         });
     }
 
-    // Computed properties avec la syntaxe getter
+    // Moved from utils.js and made private to the store
+    _groupEvents = (events, yearsGroup = 5) => {
+        // Parse and filter valid dates
+        const validEvents = _.filter(events, event => {
+            const parsedDate = dateProcessor.parseDate(event.date);
+            if (parsedDate.isValid) {
+                event.parsedDate = parsedDate.date;
+                return true;
+            }
+            return false;
+        });
+
+        // Sort events by date
+        const sortedEvents = _.sortBy(validEvents, event => event.parsedDate.getTime());
+
+        // Group events by the specified number of years
+        const groupedByYears = _.groupBy(sortedEvents, event => {
+            const yearStart = Math.floor(event.parsedDate.getFullYear() / yearsGroup) * yearsGroup;
+            return `01/01/${yearStart}`;
+        });
+
+        // Further group by event type within each year group
+        return _.mapValues(groupedByYears, eventsByDate => _.groupBy(eventsByDate, 'type'));
+    }
+
     get hasEvents() {
         return this.events.length > 0;
     }
 
-    // Transformer en getter pour computed
     get eventsByType() {
         return (type) => this.events.filter(event => event.type === type);
     }
 
-    // Actions
     addEvent = (event) => {
-        // Validation basique
         if (!event.type || !event.date || !event.name) {
             console.warn('Invalid event format:', event);
             return;
         }
 
-        // Éviter les doublons basés sur eventId si présent
         if (event.eventId && this.events.some(e => e.eventId === event.eventId)) {
             return;
         }
 
-        // Enrichir l'événement avec des valeurs par défaut si nécessaire
         const enrichedEvent = {
             ...event,
             town: event.town || "lieu inconnu",
@@ -73,9 +87,8 @@ class TimelineEventsStore {
         });
     }
 
-    // Helpers (préfixés avec _ pour indiquer qu'ils sont "privés")
     _updateGroupedEvents = () => {
-        this.groupedEvents = groupEvents(this.events, 5);
+        this.groupedEvents = this._groupEvents(this.events, 5);
     }
 
     _getAncestorBranchAndGeneration = (sosaNumber) => {
@@ -103,11 +116,8 @@ class TimelineEventsStore {
         }
     }
 
-    // Public getters
     getAllEvents = () => this.events;
     getGroupedEvents = () => this.groupedEvents;
-    
-    // On peut utiliser eventsByType comme ça : store.eventsByType('birth')
 }
 
 const timelineEventsStore = new TimelineEventsStore();
