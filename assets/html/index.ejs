@@ -229,9 +229,7 @@
 
     </header>
     <main>
-
         <div class="container">
-
             <!-- Tab content -->
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="tab1">
@@ -245,10 +243,11 @@
                                 </h5>
                             </div>
                         </div>
-                        <!-- Fan container class="col-12 container-fluid"-->
+                        <!-- Fan container -->
                         <div id="fanContainer" class="col-12 container-fluid">
                             <svg id="fan"></svg>
                         </div>
+                        
                         <!-- Offcanvas for fan settings -->
                         <div class="offcanvas offcanvas-start" tabindex="-1" id="fanParameters"
                             aria-labelledby="fanParametersLabel">
@@ -272,7 +271,6 @@
                                                 <label class="btn btn-outline-primary" for="fan-angle-360">360°</label>
                                             </div>
                                         </div>
-
                                         <!-- Paramètre du nombre de générations -->
                                         <div class="mb-3 parameter-row">
                                             <label class="form-label">Nombre de générations</label>
@@ -285,7 +283,6 @@
                                                 <label class="btn btn-outline-primary" for="max-generations-8">8</label>
                                             </div>
                                         </div>
-
                                         <!-- Paramètre d'affichage des mariages -->
                                         <div class="mb-3 parameter-row">
                                             <label class="form-label">Affichage des mariages</label>
@@ -300,7 +297,6 @@
                                                     for="showMarriages-false">Non</label>
                                             </div>
                                         </div>
-
                                         <!-- Autres paramètres -->
                                         <div class="mb-3 parameter-row">
                                             <label class="form-label">Orientation dynamique du texte</label>
@@ -350,6 +346,33 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Offcanvas for individuals -->
+                        <div class="offcanvas offcanvas-end" tabindex="-1" id="personDetails"
+                            aria-labelledby="personDetailsLabel">
+                            <div class="offcanvas-header">
+                                <h5 id="personDetailsLabel">name</h5>
+                                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                                    aria-label="Close"></button>
+                            </div>
+                            <div id="offCanvasBody" class="text-start" style="overflow-y: auto;">
+                                <div id="individualTimeline" class="text-start"></div>
+                            </div>
+                        </div>
+
+                        <div class="offcanvas offcanvas-start map-width" tabindex="-1" id="individualMapContainer"
+                            aria-labelledby="individualMapLabel">
+                            <div class="offcanvas-header">
+                                <h5 id="individualMapLabel">Carte</h5>
+                                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                                    aria-label="Close"></button>
+                            </div>
+                            <div class="offcanvas-body">
+                                <div id="individual-map-container" class="row flex-nowrap h-100">
+                                    <!-- La carte Google Maps sera injectée ici -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="tab-pane fade" id="tab2">
@@ -373,9 +396,8 @@
                                             <div class="list-group">
                                                 <div class="list-group-item">
                                                     <div class="d-flex justify-content-between align-items-center">
-                                                        <label class="form-check-label" for="layerAncestors">
-                                                            Villes des ancêtres
-                                                        </label>
+                                                        <label class="form-check-label" for="layerAncestors">Villes des
+                                                            ancêtres</label>
                                                         <div class="form-check form-switch">
                                                             <input class="form-check-input" type="checkbox"
                                                                 id="layerAncestors" checked>
@@ -384,9 +406,8 @@
                                                 </div>
                                                 <div class="list-group-item">
                                                     <div class="d-flex justify-content-between align-items-center">
-                                                        <label class="form-check-label" for="layerFamily">
-                                                            Toutes les villes familiales
-                                                        </label>
+                                                        <label class="form-check-label" for="layerFamily">Toutes les
+                                                            villes familiales</label>
                                                         <div class="form-check form-switch">
                                                             <input class="form-check-input" type="checkbox"
                                                                 id="layerFamily">
@@ -406,327 +427,288 @@
                             </div>
                         </div>
                     </div>
-                    <div class="tab-pane fade" id="tab3">
-                        <div class="row position-relative" id="treeDisplay"></div>
-                        <!-- Tree container -->
-                        <div class="col-12 container-fluid align-items-center mt-2" id="treeContainer"
-                            style="height: 95vh;"></div>
-                        <!-- Offcanvas for tree settings -->
-                        <div class="offcanvas offcanvas-start" tabindex="-1" id="treeParameters"
-                            aria-labelledby="treeParametersLabel">
-                            <div class="offcanvas-header">
-                                <h5 class="offcanvas-title" id="treeParametersLabel">Paramètres de l'arbre</h5>
-                                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                </div>
+                <div class="tab-pane fade" id="tab3">
+                    <div class="row position-relative" id="treeDisplay"></div>
+                    <!-- Tree container -->
+                    <div class="col-12 container-fluid align-items-center mt-2" id="treeContainer"
+                        style="height: 95vh;"></div>
+                    <!-- Offcanvas for tree settings -->
+                    <div class="offcanvas offcanvas-start" tabindex="-1" id="treeParameters"
+                        aria-labelledby="treeParametersLabel">
+                        <div class="offcanvas-header">
+                            <h5 class="offcanvas-title" id="treeParametersLabel">Paramètres de l'arbre</h5>
+                            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                                aria-label="Close"></button>
+                        </div>
+                        <div class="offcanvas-body">
+                            <div class="container-fluid">
+                                <div class="row">
+                                    <div class="col-12 mx-auto" id="treeParametersDisplay">
+                                        <div class="mb-3 parameter-row">
+                                            <label for="commonAncestor" class="form-label">Recherche</label>
+                                            <div class="btn-group" role="group">
+                                                <button type="button" id="commonAncestor"
+                                                    class="btn btn-primary">Ancêtre commun</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="tab4">
+                    <div class="horizontal-timeline" id="ascendantTimeline"></div>
+                </div>
+                <!-- Container for the Statistics tab -->
+                <div class="tab-pane fade statistics-container" id="tab5" role="tabpanel">
+                    <!-- Sticky Overview Section -->
+                    <div class="sticky-overview">
+                        <div class="container-fluid">
+                            <!-- Quick Navigation -->
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <nav class="nav nav-pills nav-fill small">
+                                        <a class="nav-link" href="#demography-section">Démographie</a>
+                                        <a class="nav-link" href="#geography-section">Géographie</a>
+                                        <a class="nav-link" href="#family-section">Relations Familiales</a>
+                                        <a class="nav-link" href="#timeline-section">Chronologie</a>
+                                    </nav>
+                                </div>
+                            </div>
+                            <!-- Overview Cards -->
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-muted mb-0">Nombre total d'individus</h6>
+                                            <h2 class="display-6 fw-bold mb-0" id="total-individuals">-</h2>
+                                            <small class="text-muted">personnes recensées</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-muted mb-0">Nombre de mariages</h6>
+                                            <h2 class="display-6 fw-bold mb-0" id="total-marriages">-</h2>
+                                            <small class="text-muted">unions enregistrées</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-muted mb-0">Moyenne d'enfants</h6>
+                                            <h2 class="display-6 fw-bold mb-0" id="avg-children">-</h2>
+                                            <small class="text-muted">par couple marié</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="card mb-3">
+                                        <div class="card-body">
+                                            <h6 class="card-title text-muted mb-0">Espérance de vie</h6>
+                                            <h2 class="display-6 fw-bold mb-0" id="avg-lifespan">-</h2>
+                                            <small class="text-muted">moyenne globale</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Scrollable Content -->
+                    <div class="statistics-content">
+                        <div class="container-fluid">
+                            <!-- Demography Section -->
+                            <div class="row mb-5" id="demography-section">
+                                <div class="col-12">
+                                    <h4 class="section-title">
+                                        <i class="bi bi-people-fill me-2"></i>
+                                        Démographie
+                                    </h4>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">Distribution des âges au décès</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="age-chart" class="chart-container"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">Évolution de l'espérance de vie</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="lifespan-chart" class="chart-container"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Geography Section -->
+                            <div class="row mb-5" id="geography-section">
+                                <div class="col-12">
+                                    <h4 class="section-title">
+                                        <i class="bi bi-geo-alt-fill me-2"></i>
+                                        Géographie
+                                    </h4>
+                                </div>
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">Distribution géographique des naissances et
+                                                migrations</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="birth-death-places-chart" class="chart-container"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Family Relations Section -->
+                            <div class="row mb-5" id="family-section">
+                                <div class="col-12">
+                                    <h4 class="section-title">
+                                        <i class="bi bi-diagram-3-fill me-2"></i>
+                                        Relations Familiales
+                                    </h4>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">Distribution des mariages par décennie</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="marriages-timeline-chart" class="chart-container"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">Taille des familles</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="family-size-chart" class="chart-container"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Timeline Section -->
+                            <div class="row mb-5" id="timeline-section">
+                                <div class="col-12">
+                                    <h4 class="section-title">
+                                        <i class="bi bi-calendar-event-fill me-2"></i>
+                                        Chronologie
+                                    </h4>
+                                </div>
+                                <div class="col-12">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h5 class="card-title mb-0">Distribution temporelle des événements</h5>
+                                        </div>
+                                        <div class="card-body">
+                                            <div id="events-timeline-chart" class="chart-container"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Modals -->
+                <div class="modal fade" id="emailModal" tabindex="-1" role="dialog" aria-labelledby="emailModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="emailModalLabel">Saisissez l'adresse à laquelle vous
+                                    souhaitez recevoir le PDF de l'éventail sans filigrane.</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
                                     aria-label="Close"></button>
                             </div>
-                            <div class="offcanvas-body">
-                                <div class="container-fluid">
-                                    <div class="row">
-                                        <div class="col-12 mx-auto" id="treeParametersDisplay">
-                                            <div class="mb-3 parameter-row">
-                                                <label for="commonAncestor" class="form-label">Recherche</label>
-                                                <div class="btn-group" role="group">
-                                                    <button type="button" id="commonAncestor"
-                                                        class="btn btn-primary">Ancêtre
-                                                        commun</button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="modal-body">
+                                <input type="email" class="form-control" id="userEmailInput"
+                                    placeholder="Votre adresse de courriel">
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-primary" id="email">Valider</button>
                             </div>
                         </div>
                     </div>
-                    <div class="tab-pane fade" id="tab4">
-                        <div class="horizontal-timeline" id="ascendantTimeline"></div>
-                    </div>
-                    <!-- Container for the Statistics tab -->
-                    <div class="tab-pane fade statistics-container" id="tab5" role="tabpanel">
-                        <!-- Sticky Overview Section -->
-                        <div class="sticky-overview">
-                            <div class="container-fluid">
-                                <!-- Quick Navigation -->
-                                <div class="row mb-3">
-                                    <div class="col-12">
-                                        <nav class="nav nav-pills nav-fill small">
-                                            <a class="nav-link" href="#demography-section">Démographie</a>
-                                            <a class="nav-link" href="#geography-section">Géographie</a>
-                                            <a class="nav-link" href="#family-section">Relations Familiales</a>
-                                            <a class="nav-link" href="#timeline-section">Chronologie</a>
-                                        </nav>
-                                    </div>
-                                </div>
-
-                                <!-- Overview Cards -->
-                                <div class="row">
-                                    <div class="col-md-3">
-                                        <div class="card mb-3">
-                                            <div class="card-body">
-                                                <h6 class="card-title text-muted mb-0">Nombre total d'individus
-                                                </h6>
-                                                <h2 class="display-6 fw-bold mb-0" id="total-individuals">-</h2>
-                                                <small class="text-muted">personnes recensées</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="card mb-3">
-                                            <div class="card-body">
-                                                <h6 class="card-title text-muted mb-0">Nombre de mariages</h6>
-                                                <h2 class="display-6 fw-bold mb-0" id="total-marriages">-</h2>
-                                                <small class="text-muted">unions enregistrées</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="card mb-3">
-                                            <div class="card-body">
-                                                <h6 class="card-title text-muted mb-0">Moyenne d'enfants</h6>
-                                                <h2 class="display-6 fw-bold mb-0" id="avg-children">-</h2>
-                                                <small class="text-muted">par couple marié</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <div class="card mb-3">
-                                            <div class="card-body">
-                                                <h6 class="card-title text-muted mb-0">Espérance de vie</h6>
-                                                <h2 class="display-6 fw-bold mb-0" id="avg-lifespan">-</h2>
-                                                <small class="text-muted">moyenne globale</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                </div>
+                <div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog"
+                    aria-labelledby="confirmationModalLabel" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="confirmationModalLabel">Confirmation</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
                             </div>
-                        </div>
-                        <!-- Scrollable Content -->
-                        <div class="statistics-content">
-                            <div class="container-fluid">
-                                <!-- Demography Section -->
-                                <div class="row mb-5" id="demography-section">
-                                    <div class="col-12">
-                                        <h4 class="section-title">
-                                            <i class="bi bi-people-fill me-2"></i>
-                                            Démographie
-                                        </h4>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="card">
-                                            <div class="card-header">
-                                                <h5 class="card-title mb-0">Distribution des âges au décès</h5>
-                                            </div>
-                                            <div class="card-body">
-                                                <div id="age-chart" class="chart-container"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="card">
-                                            <div class="card-header">
-                                                <h5 class="card-title mb-0">Évolution de l'espérance de vie</h5>
-                                            </div>
-                                            <div class="card-body">
-                                                <div id="lifespan-chart" class="chart-container"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Geography Section -->
-                                <div class="row mb-5" id="geography-section">
-                                    <div class="col-12">
-                                        <h4 class="section-title">
-                                            <i class="bi bi-geo-alt-fill me-2"></i>
-                                            Géographie
-                                        </h4>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="card">
-                                            <div class="card-header">
-                                                <h5 class="card-title mb-0">Distribution géographique des
-                                                    naissances et
-                                                    migrations</h5>
-                                            </div>
-                                            <div class="card-body">
-                                                <div id="birth-death-places-chart" class="chart-container">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Family Relations Section -->
-                                <div class="row mb-5" id="family-section">
-                                    <div class="col-12">
-                                        <h4 class="section-title">
-                                            <i class="bi bi-diagram-3-fill me-2"></i>
-                                            Relations Familiales
-                                        </h4>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="card">
-                                            <div class="card-header">
-                                                <h5 class="card-title mb-0">Distribution des mariages par
-                                                    décennie</h5>
-                                            </div>
-                                            <div class="card-body">
-                                                <div id="marriages-timeline-chart" class="chart-container">
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="card">
-                                            <div class="card-header">
-                                                <h5 class="card-title mb-0">Taille des familles</h5>
-                                            </div>
-                                            <div class="card-body">
-                                                <div id="family-size-chart" class="chart-container"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Timeline Section -->
-                                <div class="row mb-5" id="timeline-section">
-                                    <div class="col-12">
-                                        <h4 class="section-title">
-                                            <i class="bi bi-calendar-event-fill me-2"></i>
-                                            Chronologie
-                                        </h4>
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="card">
-                                            <div class="card-header">
-                                                <h5 class="card-title mb-0">Distribution temporelle des
-                                                    événements</h5>
-                                            </div>
-                                            <div class="card-body">
-                                                <div id="events-timeline-chart" class="chart-container"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="modal-body">
+                                Le fichier PDF de votre éventail sera envoyé dans quelques minutes à l'adresse indiquée.
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                             </div>
                         </div>
                     </div>
-                    <!-- Modals -->
-                    <div class="modal fade" id="emailModal" tabindex="-1" role="dialog"
-                        aria-labelledby="emailModalLabel" aria-hidden="true">
-                        <div class="modal-dialog" role="document">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="emailModalLabel">Saisissez l'adresse à laquelle
-                                        vous
-                                        souhaitez
-                                        recevoir le PDF de l'éventail sans filigrane.</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                </div>
 
-                                    </button>
-                                </div>
-                                <div class="modal-body">
-                                    <input type="email" class="form-control" id="userEmailInput"
-                                        placeholder="Votre adresse de courriel">
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-primary" id="email">Valider</button>
-                                </div>
+                <!-- Modal de Connexion -->
+                <div class="modal fade" id="signInModal" tabindex="-1" aria-labelledby="signInModalLabel"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="signInModalLabel">Se Connecter</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Fermer"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div id="sign-in"></div> <!-- Conteneur pour le formulaire de connexion -->
                             </div>
                         </div>
                     </div>
-                    <div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog"
-                        aria-labelledby="confirmationModalLabel" aria-hidden="true">
-                        <div class="modal-dialog" role="document">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="confirmationModalLabel">Confirmation</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">
+                </div>
 
-                                    </button>
-                                </div>
-                                <div class="modal-body">
-                                    Le fichier PDF de votre éventail sera envoyé dans quelques minutes à
-                                    l'adresse indiquée.
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary"
-                                        data-bs-dismiss="modal">Fermer</button>
-                                </div>
-                            </div>
-                        </div>
+                <!-- Élément pour le contenu dynamique (formulaire de connexion, commutateur d'organisations, etc.) -->
+
+                <!-- Offcanvas Places List -->
+                <div class="offcanvas offcanvas-end" tabindex="-1" id="placesListOffcanvas">
+                    <div class="offcanvas-header">
+                        <h5 class="offcanvas-title">Liste des lieux</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
                     </div>
-
-                    <!-- Modal de Connexion -->
-                    <div class="modal fade" id="signInModal" tabindex="-1" aria-labelledby="signInModalLabel"
-                        aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered">
-                            <div class="modal-content">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="signInModalLabel">Se Connecter</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                        aria-label="Fermer"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <div id="sign-in"></div> <!-- Conteneur pour le formulaire de connexion -->
-                                </div>
-                            </div>
+                    <div class="offcanvas-body">
+                        <!-- Recherche -->
+                        <div class="mb-3">
+                            <input type="text" class="form-control" id="searchPlace"
+                                placeholder="Rechercher un lieu...">
                         </div>
+
+                        <!-- Filtre département -->
+                        <div class="mb-3">
+                            <select class="form-select" id="departementFilter">
+                                <option value="">Tous les départements</option>
+                            </select>
+                        </div>
+
+                        <!-- Liste des lieux -->
+                        <div class="list-group" id="placesList"></div>
+
+                        <!-- Compteur -->
+                        <div class="mt-3 text-muted small" id="placesCounter"></div>
                     </div>
-
-
-                    <!-- Élément pour le contenu dynamique (formulaire de connexion, commutateur d'organisations, etc.) -->
-
-                    <!-- Offcanvas Places List -->
-                    <div class="offcanvas offcanvas-end" tabindex="-1" id="placesListOffcanvas">
-                        <div class="offcanvas-header">
-                            <h5 class="offcanvas-title">Liste des lieux</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-                        </div>
-                        <div class="offcanvas-body">
-                            <!-- Recherche -->
-                            <div class="mb-3">
-                                <input type="text" class="form-control" id="searchPlace"
-                                    placeholder="Rechercher un lieu...">
-                            </div>
-
-                            <!-- Filtre département -->
-                            <div class="mb-3">
-                                <select class="form-select" id="departementFilter">
-                                    <option value="">Tous les départements</option>
-                                </select>
-                            </div>
-
-                            <!-- Liste des lieux -->
-                            <div class="list-group" id="placesList"></div>
-
-                            <!-- Compteur -->
-                            <div class="mt-3 text-muted small" id="placesCounter"></div>
-                        </div>
-                    </div>
-                    <!-- Offcanvas for individuals -->
-                    <div class="offcanvas offcanvas-end" tabindex="-1" id="personDetails"
-                        aria-labelledby="personDetailsLabel">
-                        <div class="offcanvas-header">
-                            <h5 id="personDetailsLabel">name</h5>
-                            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                                aria-label="Close"></button>
-                        </div>
-                        <div id="offCanvasBody" class="text-start" style="overflow-y: auto;">
-                            <div id="individualTimeline" class="text-start"></div>
-                        </div>
-                    </div>
-
-                    <div class="offcanvas offcanvas-start map-width" tabindex="-1" id="individualMapContainer"
-                        aria-labelledby="individualMapLabel">
-                        <div class="offcanvas-header">
-                            <h5 id="individualMapLabel">Carte</h5>
-                            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                                aria-label="Close"></button>
-                        </div>
-                        <div class="offcanvas-body">
-                            <div class="row flex-nowrap" id="individualMap"></div>
-                        </div>
-                    </div>
+                </div>
+            </div>
+        </div>
     </main>
     <!-- Scripts -->
     <script>
