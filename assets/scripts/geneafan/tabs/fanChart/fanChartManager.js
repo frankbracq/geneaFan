@@ -4,6 +4,8 @@ import { draw } from "./fan.js";
 import rootPersonStore from "../../common/stores/rootPersonStore.js";
 import configStore from "./fanConfigStore.js";
 import { SVGPanZoomManager } from "./SVGPanZoomManager.js";
+import { storeEvents, EVENTS } from '../../gedcom/stores/storeEvents.js';
+
 
 export class FanChartManager {
     static panZoomInstance = null;
@@ -231,23 +233,27 @@ export class FanChartManager {
                 console.groupEnd();
                 return null;
             }
-
+    
             if (!skipCleanup) {
                 await this.cleanupExistingInstance();
             }
-
+    
             console.log('Drawing fan with root:', root);
             const drawResult = draw(root);
             if (!drawResult) {
                 throw new Error('Failed to draw fan');
             }
-
+    
             await this.displayFan();
             this.updateUIAfterRedraw();
-
+    
+            // Émettre l'événement après le dessin réussi
+            console.log('🎯 Fan chart drawn, emitting event');
+            storeEvents.emit(EVENTS.FAN.DRAWN);
+    
             console.groupEnd();
             return drawResult;
-
+    
         } catch (error) {
             this.handleError(error, 'draw');
             console.groupEnd();

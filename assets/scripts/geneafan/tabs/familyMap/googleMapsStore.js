@@ -1,7 +1,9 @@
 import { Offcanvas } from "bootstrap";
 import { makeObservable, observable, action, runInAction } from '../../common/stores/mobx-config.js';
+import { Loader } from "@googlemaps/js-api-loader";
 import { mapStatisticsStore } from './mapStatisticsStore.js';
 import { rootAncestorTownsStore } from './rootAncestorTownsStore.js';
+import { storeEvents, EVENTS } from '../../gedcom/stores/storeEvents.js';
 
 class GoogleMapsStore {
     constructor() {
@@ -10,6 +12,8 @@ class GoogleMapsStore {
         this.birthData = [];
         this.isTimelineActive = true;
         this.currentInfoWindow = null;
+        this.isApiLoaded = false;
+        this.apiLoadPromise = null;
 
         // Deux clés API distinctes
         this.mapsApiKey = "AIzaSyDu9Qz5YXRF6CTJ4vf-0s89BaVq_eh13YE";  // Pour la carte principale
@@ -33,26 +37,81 @@ class GoogleMapsStore {
             birthData: observable,
             isTimelineActive: observable,
             overviewMapVisible: observable,
+            isApiLoaded: observable,
             
             // Actions existantes
+            initializeApi: action,
+            initMap: action,
             processHierarchy: action,
             clearMap: action,
             activateMapMarkers: action,
         });
+
+        // Écouter l'événement de dessin de l'éventail
+        storeEvents.subscribe(EVENTS.FAN.DRAWN, () => {
+            console.log('🎯 Fan chart drawn, initializing Google Maps API');
+            this.initializeApi().catch(error => {
+                console.error('Failed to initialize Google Maps API:', error);
+            });
+        });
+    }
+
+    async initializeApi() {
+        if (this.isApiLoaded) {
+            return Promise.resolve();
+        }
+
+        if (this.apiLoadPromise) {
+            return this.apiLoadPromise;
+        }
+
+        console.group('🚀 Initialisation de l\'API Google Maps');
+        
+        const loader = new Loader({
+            apiKey: this.mapsApiKey,
+            version: "weekly",
+            libraries: ['marker']
+        });
+
+        this.apiLoadPromise = loader.load()
+            .then(() => {
+                runInAction(() => {
+                    this.isApiLoaded = true;
+                });
+                console.log('✅ API Google Maps chargée avec succès');
+                storeEvents.emit(EVENTS.MAPS.API_READY);
+            })
+            .catch((error) => {
+                console.error('❌ Failed to load Google Maps API:', error);
+                this.apiLoadPromise = null;
+                storeEvents.emit(EVENTS.MAPS.API_ERROR, { error });
+                throw error;
+            })
+            .finally(() => {
+                console.groupEnd();
+            });
+
+        return this.apiLoadPromise;
     }
 
     async initMap(elementId, options = {}) {
-        if (this.map) return this.map;
-    
+        if (!this.isApiLoaded) {
+            throw new Error('Google Maps API not initialized');
+        }
+
         try {
-            console.group('🗺️ Initialisation des cartes');
-    
+            console.group('🗺️ Initialisation de la carte');
+
             const mapElement = document.getElementById(elementId);
             if (!mapElement) {
                 throw new Error(`Element with id ${elementId} not found`);
             }
-    
-            // Configuration de base de la carte avec le mapId
+
+            if (this.map) {
+                await this.moveMapToContainer(elementId);
+                return this.map;
+            }
+
             const defaultOptions = {
                 mapId: this.MAP_ID,
                 zoom: 6.2,
@@ -67,32 +126,30 @@ class GoogleMapsStore {
                     position: google.maps.ControlPosition.TOP_CENTER
                 }
             };
-    
-            // Initialisation de la carte principale
+
             this.map = new google.maps.Map(mapElement, {
                 ...defaultOptions,
                 ...options
             });
-    
-            console.log('🗺️ Carte principale initialisée');
-    
-            // Initialisation des contrôles et écouteurs
-            this.#addMapControls();
-            this.#setupMapListeners();
-            this.#recordState();
-    
-            // Initialisation de la mini-carte
-            this.resizeObserver = await this.#initializeOverviewMap();
-    
-            console.log('✅ Initialisation complète réussie');
-            console.groupEnd();
+
+            await this.#initializeMapComponents();
+
+            console.log('✅ Carte initialisée avec succès');
             return this.map;
-    
+
         } catch (error) {
-            console.error('❌ Erreur lors de l\'initialisation:', error);
-            console.groupEnd();
+            console.error('❌ Erreur lors de l\'initialisation de la carte:', error);
             throw error;
+        } finally {
+            console.groupEnd();
         }
+    }
+    
+    async #initializeMapComponents() {
+        this.#addMapControls();
+        this.#setupMapListeners();
+        this.#recordState();
+        this.resizeObserver = await this.#initializeOverviewMap();
     }
 
     async processHierarchy(hierarchy) {

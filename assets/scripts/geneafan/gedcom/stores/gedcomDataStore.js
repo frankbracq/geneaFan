@@ -2,7 +2,6 @@ import { makeObservable, observable, action, computed, reaction, runInAction } f
 import _ from 'lodash';
 import FamilyIndices from './indices/familyIndices';
 import { buildIndividual } from '../builders/personBuilder.js';
-import configStore from '../../tabs/fanChart/fanConfigStore.js';
 import { TAGS, byTag } from './gedcomConstantsStore.js';
 import { storeEvents, EVENTS } from './storeEvents.js'; 
 
@@ -152,16 +151,16 @@ class GedcomDataStore {
     
                 this.individualsCache = newCache;
                 
-                // Log du cache complet
-                // console.log('Cache complet des individus:', JSON.stringify(Array.from(this.individualsCache), null, 2));
-    
                 const allIndividuals = Array.from(newCache.entries());
                 storeEvents.emit(EVENTS.INDIVIDUALS.BULK_ADDED, allIndividuals);
             });
     
+            // Calculer et émettre le nombre maximum de générations au lieu d'appeler directement configStore
             const maxGenerations = this.calculateMaxGenerations(this.individualsCache, families);
-            configStore.setConfig({ maxGenerations: Math.min(maxGenerations, 8) });
-            configStore.setAvailableGenerations(maxGenerations);
+            storeEvents.emit(EVENTS.GENERATIONS.MAX_CALCULATED, {
+                maxGenerations,
+                suggestedMax: Math.min(maxGenerations, 8)
+            });
     
         } catch (error) {
             console.error("Erreur lors de la construction du cache:", error);

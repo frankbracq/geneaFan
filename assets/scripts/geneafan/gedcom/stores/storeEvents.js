@@ -3,21 +3,33 @@ export const EVENTS = {
         ADDED: 'individual:added'
     },
     INDIVIDUALS: {
-        BULK_ADDED: 'individuals:bulk_added'  // Nouvel événement pour le traitement par lots
+        BULK_ADDED: 'individuals:bulk_added'
+    },
+    CONFIG: {
+        REQUESTED: 'config:requested',
+        PROVIDED: 'config:provided'
     },
     CACHE: {
         BUILT: 'cache:built',
         CLEARED: 'cache:cleared',
         ERROR: 'cache:error',
-        UPDATED: 'cache:updated'
+        UPDATED: 'cache:updated',
+        REQUESTED: 'cache:requested',
+        PROVIDED: 'cache:provided',
+        STATUS_REQUESTED: 'cache:status:requested',
+        STATUS_PROVIDED: 'cache:status:provided'
+    },
+    HIERARCHY: {
+        CHANGED: 'hierarchy:changed'
     },
     GENERATIONS: {
-        UPDATED: 'generations:updated'
+        UPDATED: 'generations:updated',
+        MAX_CALCULATED: 'generations:max_calculated' // Nouvel événement
     },
     ROOT: {
         CHANGED: 'root:changed',
         HIERARCHY_UPDATED: 'root:hierarchy:updated',
-        HIERARCHY_BUILT: 'root:hierarchy:built'  // Nouveau
+        HIERARCHY_BUILT: 'root:hierarchy:built'
     },
     TOWN: {
         UPDATE_START: 'town:update:start',
@@ -32,6 +44,13 @@ export const EVENTS = {
     },
     STORE: {
         READY: 'store:ready'
+    },
+    FAN: {
+        DRAWN: 'fan:drawn',
+    },
+    MAPS: {
+        API_READY: 'maps:api:ready',
+        API_ERROR: 'maps:api:error'
     }
 };
 
@@ -56,19 +75,6 @@ class StoreEventEmitter {
                 }
             }
         };
-    }
-
-    on(event, callback) {
-        if (!this.listeners.has(event)) {
-            this.listeners.set(event, new Set());
-        }
-        this.listeners.get(event).add(callback);
-    }
-
-    off(event, callback) {
-        if (this.listeners.has(event)) {
-            this.listeners.get(event).delete(callback);
-        }
     }
 
     emit(event, data) {

@@ -2,7 +2,7 @@ import { makeAutoObservable, action, reaction, runInAction, computed, comparer }
 import 'tom-select/dist/css/tom-select.css';
 import { FanChartManager } from "./fanChartManager.js";
 import _ from 'lodash';
-
+import { storeEvents, EVENTS } from '../../gedcom/stores/storeEvents.js'; 
 class ConfigStore {
     config = {
         fanAngle: 270,
@@ -96,10 +96,10 @@ class ConfigStore {
             setConfig: action,
             setGedcomFileName: action,
             queueSettingChange: action,
-            
+
             angle: computed,
             dimensions: computed,
-            
+
             configHistory: false,
             _rootChangeTimeout: false,
             _skipNextUpdate: false,
@@ -111,20 +111,28 @@ class ConfigStore {
             _isInitialDraw: false,
         });
 
+        // Écouter l'événement de calcul des générations maximales
+        storeEvents.subscribe(EVENTS.GENERATIONS.MAX_CALCULATED, ({ maxGenerations, suggestedMax }) => {
+            runInAction(() => {
+                this.setConfig({ maxGenerations: suggestedMax });
+                this.setAvailableGenerations(maxGenerations);
+            });
+        });
+
         // Écouteur d'événements pour le changement de root
         document.addEventListener('rootChange', () => {
             runInAction(() => {
                 console.group('🔄 Root Change Detection');
                 console.log('Setting root change flags');
-                
+
                 this._isRootChangeInProgress = true;
                 this._skipNextUpdate = true;
-                
+
                 if (this._rootChangeTimeout) {
                     console.log('Clearing previous root change timeout');
                     clearTimeout(this._rootChangeTimeout);
                 }
-                
+
                 this._rootChangeTimeout = setTimeout(() => {
                     runInAction(() => {
                         console.log('Resetting root change flags');
@@ -133,7 +141,7 @@ class ConfigStore {
                         this._isInitialDraw = false;
                     });
                 }, 100);
-                
+
                 console.groupEnd();
             });
         });
@@ -154,7 +162,7 @@ class ConfigStore {
                     console.log('⏭️ Skipping - Update in progress or subsequent root change');
                     return;
                 }
-                
+
                 if (previousParams && _.isEqual(params, previousParams)) {
                     console.log('⏭️ Skipping - No real changes');
                     return;
@@ -177,13 +185,13 @@ class ConfigStore {
                     const gen8Radio = document.getElementById('max-generations-8');
                     const gen8Label = document.querySelector('label[for="max-generations-8"]');
                     const gen7Radio = document.getElementById('max-generations-7');
-                    
+
                     if (gen8Radio && gen8Label && gen7Radio) {
                         if (availableGens < 8) {
                             // Désactiver l'option 8 générations
                             gen8Radio.disabled = true;
                             gen8Label.classList.add('disabled');
-                            
+
                             // Ajouter l'événement click sur le label
                             gen8Label.onclick = (e) => {
                                 e.preventDefault();
@@ -193,7 +201,7 @@ class ConfigStore {
                                     alertContent.textContent = "Votre fichier Gedcom comporte moins de 8 générations";
                                     alertElement.classList.remove('d-none');
                                     alertElement.classList.add('show');
-                                    
+
                                     // Cacher l'alerte après 3 secondes
                                     setTimeout(() => {
                                         alertElement.classList.remove('show');
@@ -201,7 +209,7 @@ class ConfigStore {
                                     }, 3000);
                                 }
                             };
-                            
+
                             // Toujours passer à 7 générations
                             this.setConfig({ maxGenerations: 7 });
                             gen7Radio.checked = true;
@@ -237,7 +245,7 @@ class ConfigStore {
 
     queueSettingChange = _.debounce(action(() => {
         if (this._batchUpdating) return;
-        
+
         console.log('Processing queued settings changes');
         this._pendingUpdates.clear();
         this.handleSettingChangeInternal();
@@ -254,20 +262,20 @@ class ConfigStore {
 
     handleSettingChangeInternal = action(() => {
         console.group('🛠️ handleSettingChangeInternal');
-        
+
         if (!this.config.gedcomFileName) {
             console.log('⏭️ Skipping config update: No GEDCOM file loaded');
             console.groupEnd();
             return false;
         }
-    
+
         // Permettre le dessin initial ou si le changement de root est terminé
         if (!this._isInitialDraw && this._isRootChangeInProgress) {
             console.log('⏭️ Skipping - Not initial draw and root change in progress');
             console.groupEnd();
             return false;
         }
-        
+
         console.log('✨ Applying config changes');
         if (this._isInitialDraw) {
             console.log('📌 Initial draw in progress');
@@ -278,7 +286,7 @@ class ConfigStore {
 
     batchUpdate = action((updates) => {
         if (this._batchUpdating) return;
-        
+
         this._batchUpdating = true;
         try {
             updates();

@@ -123,15 +123,14 @@ export function displayPersonDetailsUI(personDetails) {
     individualTimelineElement.innerHTML = "";
     individualTimelineElement.appendChild(container);
 
-    // Gestion de la carte Google Maps
-    if (!googleMapsStore.map) {
-        googleMapsStore.initMap("individualMap");
-    }
-
-    const individualTownKeys = Object.keys(individualTowns);
-    googleMapsStore.activateMapMarkers(individualTownKeys);
-
+    // Montrer l'offcanvas - il gérera lui-même l'état de la carte
     offcanvasManager.showOffCanvasDetails();
+
+    // Préparer les données des marqueurs si nécessaire
+    const individualTownKeys = Object.keys(individualTowns);
+    if (individualTownKeys.length > 0) {
+        googleMapsStore.activateMapMarkers(individualTownKeys);
+    }
 }
 
 function ordinalSuffixOf(i) {

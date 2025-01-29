@@ -1,5 +1,7 @@
 import { FanChartManager } from './fanChart/fanChartManager.js';
 import { googleMapManager } from './familyMap/googleMapManager.js';
+import { googleMapsStore } from './familyMap/googleMapsStore.js';
+import { storeEvents, EVENTS } from '../gedcom/stores/storeEvents.js';
 
 // Map des noms conviviaux pour les tabs
 const TAB_NAMES = {
@@ -66,7 +68,7 @@ export async function initializeTabs() {
 
     try {
         setupTabChangeTracking();
-        // Initialisation de l'éventail avec contrôle de visibilité
+        // Initialisation de l'éventail
         initializeTabOnVisible('#tab1', async () => {
             console.group('📊 Initialisation de l\'éventail');
             try {
@@ -78,18 +80,38 @@ export async function initializeTabs() {
             console.groupEnd();
         });
 
-        // Initialisation de la carte
+        // Initialisation de la carte - Modifié pour utiliser la nouvelle structure
         initializeTabOnVisible('#tab2', async () => {
             console.group('🗺️ Initialisation de la carte');
             try {
-                await googleMapManager.initialize();
-                console.log('✅ Carte initialisée avec succès');
+                // L'API sera déjà chargée grâce à l'événement FAN.DRAWN
+                // On initialise juste la carte principale ici
+                if (googleMapsStore.isApiLoaded) {
+                    await googleMapsStore.initMap("familyMap");
+                    googleMapManager.setupLayerControls();
+                    googleMapManager.setupEventListeners();
+                    console.log('✅ Carte initialisée avec succès');
+                } else {
+                    console.log('⏳ En attente du chargement de l\'API Google Maps');
+                    // On attend que l'API soit prête
+                    const apiReadyPromise = new Promise(resolve => {
+                        const disposer = storeEvents.subscribe(EVENTS.MAPS.API_READY, () => {
+                            resolve();
+                            disposer();
+                        });
+                    });
+                    await apiReadyPromise;
+                    await googleMapsStore.initMap("familyMap");
+                    googleMapManager.setupLayerControls();
+                    googleMapManager.setupEventListeners();
+                    console.log('✅ Carte initialisée avec succès après chargement de l\'API');
+                }
             } catch (error) {
                 console.error('❌ Erreur lors de l\'initialisation de la carte:', error);
             }
             console.groupEnd();
         });
-
+        
         // Initialisation de la Timeline avec import dynamique
         initializeTabOnVisible('#tab3', async () => {
             console.group('⏳ Initialisation de la timeline');

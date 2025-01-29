@@ -2,7 +2,6 @@ import { makeAutoObservable, action, reaction, runInAction } from 'mobx';
 import TomSelect from 'tom-select';
 import { updateFilename } from "../downloadManager.js";
 import { FanChartManager } from "../../tabs/fanChart/fanChartManager.js";
-import { draw } from "../../tabs/fanChart/fan.js";
 import gedcomDataStore from '../../gedcom/stores/gedcomDataStore.js';
 import { DownloadManager } from "../downloadManager.js";
 import configStore from '../../tabs/fanChart/fanConfigStore.js';
@@ -42,17 +41,17 @@ class RootPersonStore {
             }),
             async ({ root, hasCache }) => {
                 if (!root || !hasCache) return;
-
+        
                 try {
                     console.group('🔄 Root Change Reaction');
                     console.log('👉 Triggering buildHierarchy for root:', root);
-
+        
                     const newHierarchy = this.buildHierarchy(root);
                     console.log('✅ Hierarchy built and stored');
                     console.groupEnd();
-
+        
                     gedcomDataStore.setHierarchy(newHierarchy);
-
+        
                     if (!this._skipNextDraw) {
                         const drawResult = await FanChartManager.drawFanForRoot(root, false);
                         if (drawResult?.rootPersonName) {
@@ -60,12 +59,15 @@ class RootPersonStore {
                             runInAction(() => {
                                 this.rootPersonName = formattedName;
                             });
+                            // Émettre l'événement après que l'éventail est dessiné
+                            console.log('🎯 Fan chart drawn, emitting event');
+                            storeEvents.emit(EVENTS.FAN.DRAWN);
                         }
                     }
-
+        
                     this.updateHistory(root);
                     document.getElementById('initial-group').style.display = 'none';
-
+        
                 } catch (error) {
                     console.error("Error handling root change:", error);
                     console.groupEnd();
@@ -123,54 +125,6 @@ class RootPersonStore {
 
     setRootPersonName = action((name) => {
         this.rootPersonName = name;
-    });
-
-    handleRootChange = action(async (newRoot) => {
-        if (!newRoot) {
-            console.warn("Attempting to handle root change with undefined root");
-            return false;
-        }
-
-        try {
-            console.log('Starting fan drawing process with new root:', newRoot);
-
-            this.root = newRoot;
-
-            const svgElement = document.querySelector('#fan');
-            if (svgElement && FanChartManager.panZoomInstance) {
-                FanChartManager.panZoomInstance.destroy();
-                FanChartManager.panZoomInstance = null;
-            }
-
-            const drawResult = draw(this.root);
-            if (!drawResult) {
-                console.error("Failed to draw fan");
-                return false;
-            }
-
-            console.log('Fan drawn successfully, displaying');
-            await FanChartManager.displayFan();
-
-            if (drawResult.rootPersonName) {
-                const rootPersonName = this.formatName(drawResult.rootPersonName);
-                const filename = (__("Éventail généalogique de ") +
-                    rootPersonName +
-                    " créé sur genealog.ie"
-                ).replace(/[|&;$%@"<>()+,]/g, "");
-
-                updateFilename(filename);
-                this.setRootPersonName(rootPersonName);
-            }
-
-            document.getElementById('initial-group').style.display = 'none';
-            document.getElementById("loading").style.display = "none";
-            document.getElementById("overlay").classList.add("overlay-hidden");
-
-            return true;
-        } catch (error) {
-            console.error("Error in handleRootChange:", error);
-            return false;
-        }
     });
 
     buildHierarchy(currentRoot) {
