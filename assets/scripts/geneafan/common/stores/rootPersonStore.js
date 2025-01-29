@@ -4,9 +4,10 @@ import { updateFilename } from "../downloadManager.js";
 import { FanChartManager } from "../../tabs/fanChart/fanChartManager.js";
 import { draw } from "../../tabs/fanChart/fan.js";
 import gedcomDataStore from '../../gedcom/stores/gedcomDataStore.js';
-import { DownloadManager } from "../downloadManager.js"; 
+import { DownloadManager } from "../downloadManager.js";
 import configStore from '../../tabs/fanChart/fanConfigStore.js';
 import timelineEventsStore from '../../tabs/timeline/timelineEventsStore.js';
+import { storeEvents, EVENTS } from '../../gedcom/stores/storeEvents.js';
 
 class RootPersonStore {
     root = null;
@@ -34,8 +35,6 @@ class RootPersonStore {
             downloadManager: false
         });
 
-        // Réagir aux changements de root
-        // Reaction pour le changement de root
         reaction(
             () => ({
                 root: this.root,
@@ -43,19 +42,17 @@ class RootPersonStore {
             }),
             async ({ root, hasCache }) => {
                 if (!root || !hasCache) return;
-                
+
                 try {
                     console.group('🔄 Root Change Reaction');
                     console.log('👉 Triggering buildHierarchy for root:', root);
-                    
-                    // 1. Mettre à jour la hiérarchie
+
                     const newHierarchy = this.buildHierarchy(root);
                     console.log('✅ Hierarchy built and stored');
                     console.groupEnd();
-                    
+
                     gedcomDataStore.setHierarchy(newHierarchy);
-        
-                    // 2. Mettre à jour l'affichage si nécessaire
+
                     if (!this._skipNextDraw) {
                         const drawResult = await FanChartManager.drawFanForRoot(root, false);
                         if (drawResult?.rootPersonName) {
@@ -65,11 +62,10 @@ class RootPersonStore {
                             });
                         }
                     }
-        
-                    // 3. Mettre à jour l'historique
+
                     this.updateHistory(root);
                     document.getElementById('initial-group').style.display = 'none';
-        
+
                 } catch (error) {
                     console.error("Error handling root change:", error);
                     console.groupEnd();
@@ -82,7 +78,6 @@ class RootPersonStore {
             }
         );
 
-        // Reaction pour le DownloadManager
         reaction(
             () => this.rootPersonName,
             (newRootPersonName) => {
@@ -95,7 +90,6 @@ class RootPersonStore {
                         this.downloadManager = new DownloadManager(newRootPersonName);
                     }
 
-                    // Mettre à jour le nom de fichier
                     const filename = (__("Éventail généalogique de ") +
                         newRootPersonName +
                         " créé sur genealog.ie"
@@ -108,6 +102,13 @@ class RootPersonStore {
             }
         );
 
+        // Écouter les événements de construction du cache
+        storeEvents.subscribe(EVENTS.CACHE.BUILT, () => {
+            console.log('Cache built, updating root if necessary');
+            if (this.root) {
+                this.setRoot(this.root, { skipDraw: true });
+            }
+        });
     }
 
     setRoot = action((newRoot, options = {}) => {
@@ -116,8 +117,7 @@ class RootPersonStore {
         }
         this.root = newRoot;
         this.updateHistory(newRoot);
-        
-        // Émettre l'événement de changement de root
+
         document.dispatchEvent(new Event('rootChange'));
     });
 
@@ -134,7 +134,6 @@ class RootPersonStore {
         try {
             console.log('Starting fan drawing process with new root:', newRoot);
 
-            // S'assurer que le root est mis à jour avant d'appeler draw
             this.root = newRoot;
 
             const svgElement = document.querySelector('#fan');
@@ -143,7 +142,6 @@ class RootPersonStore {
                 FanChartManager.panZoomInstance = null;
             }
 
-            // Passer le root en paramètre à draw()
             const drawResult = draw(this.root);
             if (!drawResult) {
                 console.error("Failed to draw fan");
@@ -154,7 +152,6 @@ class RootPersonStore {
             await FanChartManager.displayFan();
 
             if (drawResult.rootPersonName) {
-                // Mise à jour du nom de fichier
                 const rootPersonName = this.formatName(drawResult.rootPersonName);
                 const filename = (__("Éventail généalogique de ") +
                     rootPersonName +
@@ -165,7 +162,6 @@ class RootPersonStore {
                 this.setRootPersonName(rootPersonName);
             }
 
-            // Mise à jour de l'interface
             document.getElementById('initial-group').style.display = 'none';
             document.getElementById("loading").style.display = "none";
             document.getElementById("overlay").classList.add("overlay-hidden");
@@ -189,7 +185,6 @@ class RootPersonStore {
 
         timelineEventsStore.clearEvents();
 
-        // Utiliser le cache des individus déjà construit
         const individualsCache = gedcomDataStore.getIndividualsCache()
 
         const buildRecursive = (
@@ -208,7 +203,6 @@ class RootPersonStore {
                 individualsCache.get(individualPointer) ||
                 this.createFictiveIndividual(individualPointer, sosa, height);
 
-            // Utiliser les événements individuels si disponibles
             if (individual.individualEvents && individual.individualEvents.length > 0) {
                 individual.individualEvents.forEach((event) => {
                     const validTypes = ['death', 'birth', 'marriage'];
@@ -298,7 +292,6 @@ class RootPersonStore {
             return obj;
         };
 
-        // Méthode privée déplacée dans la classe
         const hierarchy = buildRecursive(
             currentRoot,
             null,

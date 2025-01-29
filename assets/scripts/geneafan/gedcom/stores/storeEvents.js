@@ -1,4 +1,41 @@
-class StoreEvents {
+export const EVENTS = {
+    INDIVIDUAL: {
+        ADDED: 'individual:added'
+    },
+    INDIVIDUALS: {
+        BULK_ADDED: 'individuals:bulk_added'  // Nouvel événement pour le traitement par lots
+    },
+    CACHE: {
+        BUILT: 'cache:built',
+        CLEARED: 'cache:cleared',
+        ERROR: 'cache:error',
+        UPDATED: 'cache:updated'
+    },
+    GENERATIONS: {
+        UPDATED: 'generations:updated'
+    },
+    ROOT: {
+        CHANGED: 'root:changed',
+        HIERARCHY_UPDATED: 'root:hierarchy:updated',
+        HIERARCHY_BUILT: 'root:hierarchy:built'  // Nouveau
+    },
+    TOWN: {
+        UPDATE_START: 'town:update:start',
+        UPDATE_COMPLETE: 'town:update:complete',
+        UPDATE_ERROR: 'town:update:error',
+        UPDATED: 'town:updated'
+    },
+    PROCESS: {
+        START: 'process:start',
+        COMPLETE: 'process:complete',
+        ERROR: 'process:error'
+    },
+    STORE: {
+        READY: 'store:ready'
+    }
+};
+
+class StoreEventEmitter {
     constructor() {
         this.listeners = new Map();
     }
@@ -21,51 +58,30 @@ class StoreEvents {
         };
     }
 
+    on(event, callback) {
+        if (!this.listeners.has(event)) {
+            this.listeners.set(event, new Set());
+        }
+        this.listeners.get(event).add(callback);
+    }
+
+    off(event, callback) {
+        if (this.listeners.has(event)) {
+            this.listeners.get(event).delete(callback);
+        }
+    }
+
     emit(event, data) {
-        console.log(`🔔 Émission événement: ${event}`);
-        const eventListeners = this.listeners.get(event);
-        if (eventListeners) {
-            console.log(`📣 ${eventListeners.size} écouteur(s) trouvé(s) pour ${event}`);
-            eventListeners.forEach(listener => {
+        if (this.listeners.has(event)) {
+            this.listeners.get(event).forEach(callback => {
                 try {
-                    listener(data);
+                    callback(data);
                 } catch (error) {
                     console.error(`Error in event listener for ${event}:`, error);
                 }
             });
-        } else {
-            console.log(`⚠️ Aucun écouteur pour l'événement ${event}`);
         }
-    }
-
-    clear() {
-        this.listeners.clear();
     }
 }
 
-export const EVENTS = {
-    INDIVIDUAL: {
-        ADDED: 'individual:added'
-    },
-    INDIVIDUALS: {
-        BULK_ADDED: 'individuals:bulk_added'  // Nouvel événement pour le traitement par lots
-    },
-    CACHE: {
-        ERROR: 'cache:error',
-        BUILT: 'cache:built',
-        CLEARED: 'cache:cleared'
-    },
-    TOWN: {
-        UPDATE_START: 'town:update:start',
-        UPDATE_COMPLETE: 'town:update:complete',
-        UPDATE_ERROR: 'town:update:error',
-        UPDATED: 'town:updated'
-    },
-    PROCESS: {
-        START: 'process:start',
-        COMPLETE: 'process:complete',
-        ERROR: 'process:error'
-    }
-};
-
-export const storeEvents = new StoreEvents();
+export const storeEvents = new StoreEventEmitter();
