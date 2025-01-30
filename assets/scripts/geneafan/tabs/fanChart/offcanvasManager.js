@@ -61,29 +61,41 @@ class OffcanvasManager {
         personDetailsElement.addEventListener("hidden.bs.offcanvas", boundHandleOffcanvasHide);
     }
 
-    handleMapResize() {
-        if (!this.googleMapsReady) {
-            console.warn('🚫 Google Maps not ready during resize');
-            return;
-        }
-
-        const offCanvasBody = document.querySelector("#individualMapContainer .offcanvas-body");
-        const mapElement = document.getElementById("individualMap");
-        
-        if (!offCanvasBody || !mapElement) {
-            console.warn('Required elements not found');
-            return;
-        }
-
-        mapElement.style.height = `${offCanvasBody.clientHeight}px`;
-
+    async handleMapResize() {
         try {
-            googleMapsStore.moveMapToContainer("individualMap");
+            const offCanvasBody = document.querySelector("#individualMapContainer .offcanvas-body");
+            const mapElement = document.getElementById("individualMap");
+            
+            if (!offCanvasBody || !mapElement) {
+                console.warn('Required elements not found');
+                return;
+            }
+
+            mapElement.style.height = `${offCanvasBody.clientHeight}px`;
+
+            // On vérifie si l'API est prête
+            if (!googleMapsStore.isApiLoaded) {
+                await googleMapsStore.initializeApi();
+            }
+
+            // Si la carte n'existe pas, on l'initialise
+            if (!googleMapsStore.map) {
+                await googleMapsStore.initMap("individualMap");
+            } else {
+                // Sinon on déplace juste la carte dans le bon conteneur
+                googleMapsStore.moveMapToContainer("individualMap");
+            }
+
+            // Rafraîchir et centrer la carte
             google.maps.event.trigger(googleMapsStore.map, "resize");
             googleMapsStore.map.setCenter({ lat: 46.2276, lng: 2.2137 });
+
         } catch (error) {
             console.error('❌ Error handling map resize:', error);
-            mapElement.innerHTML = '<div class="alert alert-danger">Erreur lors de l\'affichage de la carte. Veuillez rafraîchir la page.</div>';
+            const mapElement = document.getElementById("individualMap");
+            if (mapElement) {
+                mapElement.innerHTML = '<div class="alert alert-danger">Erreur lors de l\'affichage de la carte. Veuillez rafraîchir la page.</div>';
+            }
         }
     }
 

@@ -41,13 +41,6 @@ class GoogleMapManager {
 
         this.disposers.add(hierarchyDisposer);
 
-        // Écouter l'état de l'API
-        const apiReadyDisposer = storeEvents.subscribe(EVENTS.MAPS.API_READY, () => {
-            console.log('✅ API Google Maps prête');
-            this.initialized = true;
-        });
-
-        this.disposers.add(apiReadyDisposer);
     }
 
     async updateMapWithHierarchy(hierarchy) {
@@ -76,37 +69,6 @@ class GoogleMapManager {
             console.error('❌ Erreur lors de la mise à jour de la carte:', error);
             console.groupEnd();
             throw error;
-        }
-    }
-
-    async initializeMap(containerId, options = {}) {
-        try {
-            return await googleMapsStore.initMap(containerId, options);
-        } catch (error) {
-            console.error('❌ Erreur lors de l\'initialisation de la carte:', error);
-            throw error;
-        }
-    }
-
-    setupEventListeners() {
-        const offcanvasElement = document.getElementById("individualMap");
-        if (offcanvasElement) {
-            offcanvasElement.addEventListener("shown.bs.offcanvas", () => {
-                this.initializeMap("individualMap").catch(error => {
-                    console.error('Failed to initialize map in offcanvas:', error);
-                });
-                this.adjustMapHeight();
-            });
-        }
-
-        const tabElement = document.querySelector('a[href="#tab2"]');
-        if (tabElement) {
-            tabElement.addEventListener('shown.bs.tab', () => {
-                if (googleMapsStore.map) {
-                    google.maps.event.trigger(googleMapsStore.map, 'resize');
-                    googleMapsStore.centerMapOnMarkers();
-                }
-            });
         }
     }
 
@@ -151,7 +113,7 @@ class GoogleMapManager {
         const offcanvasElement = document.getElementById("individualMap");
         if (offcanvasElement) {
             offcanvasElement.addEventListener("shown.bs.offcanvas", () => {
-                this.initializeMap("individualMap").catch(error => {
+                googleMapsStore.initMap("individualMap").catch(error => {
                     console.error('Failed to initialize map in offcanvas:', error);
                 });
                 this.adjustMapHeight();

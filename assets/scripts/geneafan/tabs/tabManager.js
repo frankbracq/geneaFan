@@ -13,20 +13,54 @@ const TAB_NAMES = {
 };
 
 function setupTabChangeTracking() {
-    let currentTab = null;
-
     // Écouter tous les événements de changement d'onglet
     document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(tabElement => {
         tabElement.addEventListener('shown.bs.tab', event => {
-            const newTabId = event.target.getAttribute('href').substring(1); // Enlever le #
-            const prevTabId = event.relatedTarget?.getAttribute('href')?.substring(1);
+            // Récupérer l'ID du contenu du tab (le div target) plutôt que l'href
+            const targetElement = document.querySelector(event.target.getAttribute('href'));
+            if (!targetElement) {
+                console.warn('Element cible non trouvé pour le tab');
+                return;
+            }
             
+            const prevTargetElement = event.relatedTarget ? 
+                document.querySelector(event.relatedTarget.getAttribute('href')) : 
+                null;
+            
+            const newTabId = targetElement.id;
+            const prevTabId = prevTargetElement?.id;
+
             const newTabName = TAB_NAMES[newTabId] || newTabId;
             const prevTabName = TAB_NAMES[prevTabId] || prevTabId || 'aucun onglet';
 
             console.group('📑 Changement d\'onglet');
             console.log(`↪️ ${prevTabName} → ${newTabName}`);
             console.groupEnd();
+
+            // Émettre l'événement de changement avec les détails
+            storeEvents.emit(EVENTS.TABS.CHANGED, {
+                newTab: {
+                    id: newTabId,
+                    name: newTabName
+                },
+                previousTab: {
+                    id: prevTabId,
+                    name: prevTabName
+                }
+            });
+
+            // Émettre les événements shown/hidden
+            storeEvents.emit(EVENTS.TABS.SHOWN, {
+                id: newTabId,
+                name: newTabName
+            });
+
+            if (prevTabId) {
+                storeEvents.emit(EVENTS.TABS.HIDDEN, {
+                    id: prevTabId,
+                    name: prevTabName
+                });
+            }
         });
     });
 }

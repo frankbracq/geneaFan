@@ -24,7 +24,7 @@ export const EVENTS = {
     },
     GENERATIONS: {
         UPDATED: 'generations:updated',
-        MAX_CALCULATED: 'generations:max_calculated' // Nouvel événement
+        MAX_CALCULATED: 'generations:max_calculated'
     },
     ROOT: {
         CHANGED: 'root:changed',
@@ -50,10 +50,19 @@ export const EVENTS = {
     },
     MAPS: {
         API_READY: 'maps:api:ready',
-        API_ERROR: 'maps:api:error'
+        API_ERROR: 'maps:api:error',
+        CONTAINER_CHANGE: 'maps:container:change',
+        OFFCANVAS_SHOWN: 'maps:offcanvas:shown',
+        OFFCANVAS_HIDDEN: 'maps:offcanvas:hidden',
+        TAB_SHOWN: 'maps:tab:shown',
+        TAB_HIDDEN: 'maps:tab:hidden'
+    },
+    TABS: {
+        CHANGED: 'tabs:changed',
+        SHOWN: 'tabs:shown',
+        HIDDEN: 'tabs:hidden'
     }
 };
-
 class StoreEventEmitter {
     constructor() {
         this.listeners = new Map();
