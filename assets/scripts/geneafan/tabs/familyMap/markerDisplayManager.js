@@ -52,33 +52,37 @@ class MarkerDisplayManager {
 
     addMarkersToCluster(map) {
         if (!this.cluster || !map) {
-            console.warn('Cluster or map not initialized');
+            console.warn('⚠️ Cluster ou carte non initialisée');
             return;
         }
-
+    
         const visibleMarkers = new Set();
-        this.layers.forEach((layerMarkers) => {
+        this.layers.forEach((layerMarkers, layerName) => {
             layerMarkers.forEach(marker => {
                 if (marker.map) {
                     visibleMarkers.add(marker);
                 }
             });
+    
+            console.log(`🗺️ Layer ${layerName}: ${layerMarkers.size} marqueurs chargés`);
         });
-
+    
         const markers = Array.from(visibleMarkers);
-        console.log('Total unique markers to be clustered:', markers.length);
-
+        console.log(`🔢 Nombre total de marqueurs à afficher: ${markers.length}`);
+    
         if (this.cluster) {
             this.cluster.setMap(null);
             this.cluster.clearMarkers();
         }
-
+    
         if (markers.length > 0) {
             this.cluster.addMarkers(markers);
             this.cluster.setMap(map);
-            console.log(`Cluster updated with ${markers.length} markers`);
+            console.log(`✅ Cluster mis à jour avec ${markers.length} marqueurs`);
+        } else {
+            console.log("⚠️ Aucun marqueur à afficher dans le cluster");
         }
-
+    
         this.activeMarkers = new Set(markers);
     }
 

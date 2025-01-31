@@ -1,6 +1,7 @@
 import { FanChartManager } from './fanChart/fanChartManager.js';
 import { googleMapManager } from './familyMap/googleMapManager.js';
 import { googleMapsStore } from './familyMap/googleMapsStore.js';
+import { offcanvasManager } from './fanChart/offcanvasManager.js';
 import { storeEvents, EVENTS } from '../gedcom/stores/storeEvents.js';
 
 // Map des noms conviviaux pour les tabs
@@ -19,7 +20,7 @@ function setupTabChangeTracking() {
             // Récupérer l'ID du contenu du tab (le div target) plutôt que l'href
             const targetElement = document.querySelector(event.target.getAttribute('href'));
             if (!targetElement) {
-                console.warn('Element cible non trouvé pour le tab');
+                console.warn('❌ Element cible non trouvé pour le tab');
                 return;
             }
             
@@ -35,34 +36,79 @@ function setupTabChangeTracking() {
 
             console.group('📑 Changement d\'onglet');
             console.log(`↪️ ${prevTabName} → ${newTabName}`);
+            console.log('🔍 Événement détaillé:', event);
             console.groupEnd();
 
-            // Émettre l'événement de changement avec les détails
-            storeEvents.emit(EVENTS.TABS.CHANGED, {
-                newTab: {
-                    id: newTabId,
-                    name: newTabName
-                },
-                previousTab: {
-                    id: prevTabId,
-                    name: prevTabName
-                }
-            });
+            const tabChangeEvent = {
+                newTab: { id: newTabId, name: newTabName },
+                previousTab: { id: prevTabId, name: prevTabName }
+            };
 
-            // Émettre les événements shown/hidden
-            storeEvents.emit(EVENTS.TABS.SHOWN, {
-                id: newTabId,
-                name: newTabName
-            });
+            console.log('📡 Emission de l\'événement EVENTS.TABS.CHANGED:', tabChangeEvent);
+            storeEvents.emit(EVENTS.TABS.CHANGED, tabChangeEvent);
+
+            const tabShownEvent = { id: newTabId, name: newTabName };
+            console.log('📡 Emission de l\'événement EVENTS.TABS.SHOWN:', tabShownEvent);
+            storeEvents.emit(EVENTS.TABS.SHOWN, tabShownEvent);
 
             if (prevTabId) {
-                storeEvents.emit(EVENTS.TABS.HIDDEN, {
-                    id: prevTabId,
-                    name: prevTabName
-                });
+                const tabHiddenEvent = { id: prevTabId, name: prevTabName };
+                console.log('📡 Emission de l\'événement EVENTS.TABS.HIDDEN:', tabHiddenEvent);
+                storeEvents.emit(EVENTS.TABS.HIDDEN, tabHiddenEvent);
             }
+
+            // 🎯 Ajout de la gestion spécifique pour la carte et l'Offcanvas
+            handleTabSpecificActions(newTabId, prevTabId);
         });
     });
+}
+
+storeEvents.subscribe(EVENTS.TABS.SHOWN, async ({ id }) => {
+    if (id === "tab2") {
+        console.group('🗺️ Activation de la carte');
+
+        try {
+            await googleMapsStore.resizeAndMoveMap("familyMap");
+            console.log('✅ Carte déplacée et redimensionnée');
+
+            googleMapManager.setupLayerControls();
+            googleMapManager.setupEventListeners();
+
+        } catch (error) {
+            console.error('❌ Erreur lors du chargement de la carte:', error);
+        }
+
+        console.groupEnd();
+    }
+});
+
+storeEvents.subscribe(EVENTS.TABS.HIDDEN, ({ id }) => {
+    if (id === "tab2") {
+        console.log(`🗺️ La carte est masquée, arrêt des mises à jour.`);
+        googleMapsStore.clearCurrentMarkers();
+    }
+});
+
+/**
+ * Gère les actions spécifiques lors du passage d'un onglet à un autre
+ */
+function handleTabSpecificActions(newTabId, prevTabId) {
+    if (newTabId === "tab2") {
+        console.log(`🗺️ Onglet "Carte" activé : déplacement et redimensionnement de la carte.`);
+        // googleMapsStore.resizeAndMoveMap("familyMap");
+    }
+
+    if (prevTabId === "tab2") {
+        console.log(`🔽 Onglet "Carte" masqué : suppression éventuelle des marqueurs.`);
+        googleMapsStore.clearCurrentMarkers();
+    }
+
+    if (newTabId === "tab1") {
+        const offcanvasElement = document.getElementById("individualMapContainer");
+
+        // ❌ Suppression du code qui forçait l'ouverture de l'Offcanvas
+        console.log("🔹 Retour sur l'onglet Éventail, mais pas d'ouverture automatique du Offcanvas.");
+    }
 }
 
 function initializeTabOnVisible(tabSelector, initCallback) {
@@ -110,38 +156,6 @@ export async function initializeTabs() {
                 console.log('✅ Éventail initialisé avec succès');
             } catch (error) {
                 console.error('❌ Erreur lors de l\'initialisation de l\'éventail:', error);
-            }
-            console.groupEnd();
-        });
-
-        // Initialisation de la carte - Modifié pour utiliser la nouvelle structure
-        initializeTabOnVisible('#tab2', async () => {
-            console.group('🗺️ Initialisation de la carte');
-            try {
-                // L'API sera déjà chargée grâce à l'événement FAN.DRAWN
-                // On initialise juste la carte principale ici
-                if (googleMapsStore.isApiLoaded) {
-                    await googleMapsStore.initMap("familyMap");
-                    googleMapManager.setupLayerControls();
-                    googleMapManager.setupEventListeners();
-                    console.log('✅ Carte initialisée avec succès');
-                } else {
-                    console.log('⏳ En attente du chargement de l\'API Google Maps');
-                    // On attend que l'API soit prête
-                    const apiReadyPromise = new Promise(resolve => {
-                        const disposer = storeEvents.subscribe(EVENTS.MAPS.API_READY, () => {
-                            resolve();
-                            disposer();
-                        });
-                    });
-                    await apiReadyPromise;
-                    await googleMapsStore.initMap("familyMap");
-                    googleMapManager.setupLayerControls();
-                    googleMapManager.setupEventListeners();
-                    console.log('✅ Carte initialisée avec succès après chargement de l\'API');
-                }
-            } catch (error) {
-                console.error('❌ Erreur lors de l\'initialisation de la carte:', error);
             }
             console.groupEnd();
         });

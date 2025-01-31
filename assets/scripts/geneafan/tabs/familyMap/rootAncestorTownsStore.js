@@ -59,14 +59,19 @@ class RootAncestorTownsStore {
 
     createMarker(location, births, generations) {
         if (!location || !location.lat || !location.lng) {
-            console.warn('Invalid location data', location);
+            console.warn('❌ Données de localisation invalides', location);
             return;
         }
-
+    
         const key = `${location.lat}-${location.lng}-${location.name}`;
         const position = new google.maps.LatLng(location.lat, location.lng);
         const content = this.renderMarkerContent(location, births);
-
+    
+        console.log(`📍 Création du marqueur: ${location.name}`);
+        console.log(`   ➝ Coordonnées: (${location.lat}, ${location.lng})`);
+        console.log(`   ➝ Nombre de personnes associées: ${births.length}`);
+        console.log(`   ➝ Générations concernées:`, Object.keys(generations));
+    
         return this.markerDisplayManager.addMarker(
             'rootAncestors',
             key,
@@ -91,18 +96,28 @@ class RootAncestorTownsStore {
     }
 
     updateMarkers(birthData) {
-        console.log('Updating markers with:', { dataCount: birthData?.length });
+        console.group(`🔄 Mise à jour des marqueurs des ancêtres (${birthData.length} lieux)`);
+    
         this.birthData = birthData;
         this.markerDisplayManager.clearMarkers('rootAncestors');
-
+    
         const locationMap = this.groupBirthDataByLocation(birthData);
-        locationMap.forEach((locationData) => {
+        console.log(`📍 Nombre de lieux uniques détectés: ${locationMap.size}`);
+    
+        locationMap.forEach((locationData, index) => {
+            console.log(`🏠 Lieu #${index + 1}: ${locationData.location.name} (${locationData.location.lat}, ${locationData.location.lng})`);
             this.createMarker(locationData.location, locationData.births, locationData.generations);
         });
-
+    
         if (this.isVisible && this.map) {
+            console.log(`📡 Affichage des marqueurs des ancêtres sur la carte`);
             this.markerDisplayManager.toggleLayerVisibility('rootAncestors', true, this.map);
+            this.markerDisplayManager.addMarkersToCluster(this.map);
+        } else {
+            console.log("⚠️ Layer 'rootAncestors' désactivé, les marqueurs ne sont pas affichés");
         }
+    
+        console.groupEnd();
     }
 
     clearMarkers() {

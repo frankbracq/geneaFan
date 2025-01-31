@@ -49,10 +49,25 @@ class GoogleMapsStore {
 
         // Écouter l'événement de dessin de l'éventail
         storeEvents.subscribe(EVENTS.FAN.DRAWN, () => {
-            console.log('🎯 Fan chart drawn, initializing Google Maps API');
-            this.initializeApi().catch(error => {
-                console.error('Failed to initialize Google Maps API:', error);
-            });
+            console.log("🎯 Fan chart drawn, vérification du besoin de déplacement de la carte");
+        
+            const activeTab = document.querySelector(".tab-pane.active");
+            const offcanvasElement = document.getElementById("individualMapContainer");
+        
+            if (activeTab && activeTab.id === "tab2") {
+                console.log("🗺️ Fan chart drawn, mais tab2 est actif → Déplacement de la carte vers `familyMap`");
+                googleMapsStore.initializeApi();
+                googleMapsStore.resizeAndMoveMap("familyMap");
+                return;
+            }
+        
+            if (offcanvasElement && offcanvasElement.classList.contains("show")) {
+                console.log("🗺️ Fan chart drawn, Offcanvas ouvert → Déplacement de la carte vers `individualMap`");
+                googleMapsStore.initializeApi();
+                googleMapsStore.resizeAndMoveMap("individualMap");
+            } else {
+                console.log("🚫 Fan chart drawn, mais ni tab2 ni l'Offcanvas ne sont actifs → Pas de déplacement de la carte");
+            }
         });
     }
 
@@ -334,22 +349,141 @@ class GoogleMapsStore {
         }
     }
 
+    // Déplacement de la carte
     moveMapToContainer(containerId) {
         const mapContainer = document.getElementById(containerId);
-        if (!mapContainer || !this.map) return;
-
-        const mapDiv = this.map.getDiv();
-        if (mapContainer === mapDiv.parentNode) {
+        if (!mapContainer || !this.map) {
+            console.warn(`❌ Impossible de déplacer la carte : conteneur "${containerId}" introuvable ou carte non initialisée.`);
             return;
         }
-
+    
+        const mapDiv = this.map.getDiv();
+        const currentParent = mapDiv.parentNode;
+    
+        // Vérifier la hiérarchie DOM
+        if (mapDiv.contains(mapContainer) || mapContainer.contains(mapDiv)) {
+            console.log(`⚠️ Conflit de hiérarchie détecté pour ${containerId}, redimensionnement uniquement`);
+            google.maps.event.trigger(this.map, "resize");
+            return;
+        }
+    
+        // Procéder au déplacement
+        mapContainer.appendChild(mapDiv);
+        google.maps.event.trigger(this.map, "resize");
+    }
+    
+    moveMapToContainer1(containerId) {
+        const mapContainer = document.getElementById(containerId);
+        if (!mapContainer || !this.map) {
+            console.warn(`❌ Impossible de déplacer la carte : conteneur "${containerId}" introuvable ou carte non initialisée.`);
+            return;
+        }
+    
+        const mapDiv = this.map.getDiv();
+        const currentParent = mapDiv.parentNode;
+    
+        console.group(`📍 Déplacement de la carte`);
+        console.log(`🔎 Conteneur cible: ${containerId}`);
+        console.log(`📌 Conteneur actuel:`, currentParent ? currentParent.id || 'Sans ID' : 'null');
+    
+        // Vérification plus précise - comparer les éléments DOM réels
+        if (currentParent === mapContainer) {
+            console.log(`⚠️ La carte est déjà dans ${containerId}, redimensionnement uniquement.`);
+            google.maps.event.trigger(this.map, "resize");
+            console.groupEnd();
+            return;
+        }
+    
         try {
+            console.log(`🔄 Déplacement de la carte vers ${containerId}`);
             mapContainer.appendChild(mapDiv);
             google.maps.event.trigger(this.map, "resize");
+            console.log(`✅ Déplacement réussi vers ${containerId}`);
         } catch (error) {
-            console.error(`Failed to move map to container ${containerId}:`, error);
+            console.error(`❌ Erreur lors du déplacement de la carte vers ${containerId}:`, error);
+        } finally {
+            console.groupEnd();
         }
     }
+    
+    /*
+    moveMapToContainer1(containerId) {
+        const mapContainer = document.getElementById(containerId);
+        if (!mapContainer || !this.map) {
+            console.warn(`❌ Impossible de déplacer la carte : conteneur "${containerId}" introuvable ou carte non initialisée.`);
+            return;
+        }
+    
+        const mapDiv = this.map.getDiv();
+        const currentParent = mapDiv.parentNode;
+    
+        console.group(`📍 Déplacement de la carte`);
+        console.log(`🔎 Conteneur cible: ${containerId}`);
+        console.log(`📌 Conteneur actuel:`, currentParent ? currentParent.id || 'Sans ID' : 'null');
+    
+        // ✅ Vérifier si la carte est déjà dans le bon conteneur
+        if (mapContainer.contains(mapDiv)) {
+            console.warn(`⚠️ La carte est déjà dans ${containerId}, pas besoin de déplacement.`);
+            console.groupEnd();
+            return;
+        }
+    
+        try {
+            console.log(`🔄 Déplacement de la carte vers ${containerId}`);
+            mapContainer.appendChild(mapDiv);
+            google.maps.event.trigger(this.map, "resize");
+            console.log(`✅ Déplacement réussi vers ${containerId}`);
+        } catch (error) {
+            console.error(`❌ Erreur lors du déplacement de la carte vers ${containerId}:`, error);
+        } finally {
+            console.groupEnd();
+        }
+    }
+    */
+    
+    
+
+    async resizeAndMoveMap(containerId) {
+        try {
+            console.group(`📍 Déplacement et redimensionnement de la carte vers ${containerId}`);
+    
+            const mapContainer = document.getElementById(containerId);
+            if (!mapContainer) {
+                console.warn(`❌ Conteneur ${containerId} introuvable`);
+                return;
+            }
+    
+            // Vérifier si c'est un Offcanvas et s'il est visible
+            const offcanvasElement = document.querySelector(`#${containerId}.offcanvas`);
+            if (offcanvasElement && !offcanvasElement.classList.contains("show")) {
+                console.warn(`🚫 Impossible de déplacer la carte : l'Offcanvas ${containerId} est fermé.`);
+                return;
+            }
+    
+            // Vérifier et initialiser l'API si nécessaire
+            if (!this.isApiLoaded) {
+                await this.initializeApi();
+            }
+    
+            // Si la carte n'existe pas encore, on l'initialise
+            if (!this.map) {
+                console.log("🗺️ Initialisation de la carte...");
+                await this.initMap(containerId);
+            } else {
+                console.log("🔄 Déplacement de la carte...");
+                this.moveMapToContainer(containerId);
+            }
+    
+            // Redimensionner et centrer la carte
+            google.maps.event.trigger(this.map, "resize");
+            this.map.setCenter({ lat: 46.2276, lng: 2.2137 });
+    
+            console.groupEnd();
+        } catch (error) {
+            console.error(`❌ Erreur lors du déplacement de la carte vers ${containerId}:`, error);
+        }
+    }    
+    
 
     // Gestion de l'historique
     #setupMapListeners() {
