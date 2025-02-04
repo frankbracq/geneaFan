@@ -12,19 +12,18 @@ class GoogleMapManager {
 
         console.log('🔍 GoogleMapManager: Initialisation du constructor');
 
-        // Observer les changements de hiérarchie
         const hierarchyDisposer = autorun(() => {
             try {
                 const hierarchy = gedcomDataStore.getHierarchy();
                 console.log('🔄 Autorun déclenché pour la hiérarchie:', 
-                    hierarchy ? 'présente' : 'absent');
+                    hierarchy ? 'présente' : 'absente');
 
-                if (googleMapsStore.isApiLoaded && hierarchy && googleMapsStore.map) {
+                if (this.initialized && hierarchy && googleMapsStore.map) {
                     console.log('✨ Mise à jour de la carte avec la nouvelle hiérarchie');
                     this.updateMapWithHierarchy(hierarchy);
                 } else {
                     console.log('⏳ En attente de l\'initialisation complète', {
-                        apiLoaded: googleMapsStore.isApiLoaded,
+                        managerInitialized: this.initialized,
                         hasHierarchy: !!hierarchy,
                         hasMap: !!googleMapsStore.map
                     });
@@ -40,29 +39,65 @@ class GoogleMapManager {
         });
 
         this.disposers.add(hierarchyDisposer);
+    }
 
+    async initialize() {
+        if (this.initialized) return;
+
+        try {
+            console.group('🚀 Initialisation de Google Maps');
+
+            // 1. Initialiser l'API Google Maps
+            await googleMapsStore.initializeApi();
+
+            // 2. Créer la carte
+            const map = await googleMapsStore.initMap('familyMap');
+
+            // 3. Attendre que la carte soit complètement chargée
+            await new Promise(resolve => {
+                google.maps.event.addListenerOnce(map, 'idle', resolve);
+            });
+
+            // 4. Initialiser les stores avec la carte
+            rootAncestorTownsStore.initialize(map);
+            familyTownsStore.initialize(map);
+
+            // 5. Configurer les contrôles de calques
+            this.setupLayerControls();
+
+            // 6. Ajouter les écouteurs d'événements
+            this.setupEventListeners();
+
+            // 7. Initialiser la liste des lieux
+            googleMapsStore.initializePlacesList();
+
+            // 8. Mise à jour avec les données de hiérarchie si présentes
+            const currentHierarchy = gedcomDataStore.getHierarchy();
+            if (currentHierarchy) {
+                await this.updateMapWithHierarchy(currentHierarchy);
+            }
+
+            this.initialized = true;
+            console.log('✅ Initialisation terminée avec succès');
+            console.groupEnd();
+        } catch (error) {
+            console.error("❌ Échec de l'initialisation:", error);
+            console.groupEnd();
+            throw error;
+        }
     }
 
     async updateMapWithHierarchy(hierarchy) {
         try {
             console.group('📍 Mise à jour de la carte');
-            
             if (!googleMapsStore.map) {
                 console.warn('⚠️ La carte n\'est pas encore prête');
                 console.groupEnd();
                 return;
             }
-    
-            // Initialiser les stores avec la carte
-            rootAncestorTownsStore.initialize(googleMapsStore.map);
-            familyTownsStore.initialize(googleMapsStore.map);
-    
-            console.log('🔄 Traitement de la hiérarchie...');
+
             await googleMapsStore.processHierarchy(hierarchy);
-    
-            // Ajouter les markers au cluster après le traitement
             rootAncestorTownsStore.markerDisplayManager.addMarkersToCluster(googleMapsStore.map);
-            
             console.log('✅ Mise à jour terminée');
             console.groupEnd();
         } catch (error) {
@@ -73,53 +108,25 @@ class GoogleMapManager {
     }
 
     setupLayerControls() {
-        // Configuration du switch pour les ancêtres
-        const ancestorLayerSwitch = document.getElementById('layerAncestors');
-        if (ancestorLayerSwitch) {
-            // Initialiser l'état des switches
-            ancestorLayerSwitch.checked = true;
-            rootAncestorTownsStore.isVisible = true;
-            rootAncestorTownsStore.markerDisplayManager.toggleLayerVisibility('rootAncestors', true, rootAncestorTownsStore.map);
-            rootAncestorTownsStore.markerDisplayManager.addMarkersToCluster(rootAncestorTownsStore.map);
-            
-            // Ajouter le gestionnaire d'événements
-            ancestorLayerSwitch.addEventListener('change', (e) => {
-                const isChecked = e.target.checked;
-                rootAncestorTownsStore.toggleVisibility(isChecked);
-            });
+        if (!rootAncestorTownsStore.markerDisplayManager.isInitialized()) {
+            console.warn('⚠️ MarkerDisplayManager pas encore initialisé');
+            return;
         }
 
-        // Configuration du switch pour les villes familiales
+        const ancestorLayerSwitch = document.getElementById('layerAncestors');
+        if (ancestorLayerSwitch) {
+            ancestorLayerSwitch.checked = true;
+            rootAncestorTownsStore.toggleVisibility(true);
+        }
+
         const familyTownsSwitch = document.getElementById('layerFamily');
         if (familyTownsSwitch) {
-            // Initialiser l'état des switches
             familyTownsSwitch.checked = false;
-            familyTownsStore.isVisible = false;
-            familyTownsStore.markerDisplayManager.toggleLayerVisibility('familyTowns', false, familyTownsStore.map);
-            
-            // Ajouter le gestionnaire d'événements
-            familyTownsSwitch.addEventListener('change', (e) => {
-                const isChecked = e.target.checked;
-                familyTownsStore.toggleVisibility(isChecked);
-                // Assurer que le clustering est mis à jour
-                if (isChecked) {
-                    familyTownsStore.markerDisplayManager.addMarkersToCluster(familyTownsStore.map);
-                }
-            });
+            familyTownsStore.toggleVisibility(false);
         }
     }
 
     setupEventListeners() {
-        const offcanvasElement = document.getElementById("individualMap");
-        if (offcanvasElement) {
-            offcanvasElement.addEventListener("shown.bs.offcanvas", () => {
-                googleMapsStore.initMap("individualMap").catch(error => {
-                    console.error('Failed to initialize map in offcanvas:', error);
-                });
-                this.adjustMapHeight();
-            });
-        }
-
         const tabElement = document.querySelector('a[href="#tab2"]');
         if (tabElement) {
             tabElement.addEventListener('shown.bs.tab', () => {
@@ -131,29 +138,11 @@ class GoogleMapManager {
         }
     }
 
-    adjustMapHeight() {
-        const offCanvas = document.getElementById("individualMap");
-        const offCanvasHeader = document.querySelector("#individualMap .offcanvas-header");
-        const mapId = document.getElementById("mapid");
-
-        if (offCanvas && offCanvasHeader && mapId) {
-            const offCanvasHeight = offCanvas.clientHeight;
-            const headerHeight = offCanvasHeader.clientHeight;
-            const mapHeight = offCanvasHeight - headerHeight;
-            mapId.style.height = `${mapHeight}px`;
-        }
-    }    
-    
     cleanup() {
-        // Nettoyer les stores
         rootAncestorTownsStore.cleanup();
         familyTownsStore.cleanup();
-        
-        // Nettoyer les écouteurs d'événements
         this.disposers.forEach(disposer => disposer());
         this.disposers.clear();
-        
-        // Réinitialiser les propriétés
         this.initialized = false;
     }
 }

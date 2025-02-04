@@ -1,8 +1,9 @@
 import { FanChartManager } from './fanChart/fanChartManager.js';
 import { googleMapManager } from './familyMap/googleMapManager.js';
 import { googleMapsStore } from './familyMap/googleMapsStore.js';
-import { offcanvasManager } from './fanChart/offcanvasManager.js';
 import { storeEvents, EVENTS } from '../gedcom/stores/storeEvents.js';
+import { rootAncestorTownsStore } from './familyMap/rootAncestorTownsStore.js';
+import { familyTownsStore } from '../gedcom/stores/familyTownsStore.js';
 
 // Map des noms conviviaux pour les tabs
 const TAB_NAMES = {
@@ -14,20 +15,18 @@ const TAB_NAMES = {
 };
 
 function setupTabChangeTracking() {
-    // Écouter tous les événements de changement d'onglet
     document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(tabElement => {
         tabElement.addEventListener('shown.bs.tab', event => {
-            // Récupérer l'ID du contenu du tab (le div target) plutôt que l'href
             const targetElement = document.querySelector(event.target.getAttribute('href'));
             if (!targetElement) {
-                console.warn('❌ Element cible non trouvé pour le tab');
+                console.warn('❌ Élément cible non trouvé pour le tab');
                 return;
             }
-            
+
             const prevTargetElement = event.relatedTarget ? 
                 document.querySelector(event.relatedTarget.getAttribute('href')) : 
                 null;
-            
+
             const newTabId = targetElement.id;
             const prevTabId = prevTargetElement?.id;
 
@@ -36,29 +35,15 @@ function setupTabChangeTracking() {
 
             console.group('📑 Changement d\'onglet');
             console.log(`↪️ ${prevTabName} → ${newTabName}`);
-            console.log('🔍 Événement détaillé:', event);
             console.groupEnd();
 
-            const tabChangeEvent = {
-                newTab: { id: newTabId, name: newTabName },
-                previousTab: { id: prevTabId, name: prevTabName }
-            };
-
-            console.log('📡 Emission de l\'événement EVENTS.TABS.CHANGED:', tabChangeEvent);
-            storeEvents.emit(EVENTS.TABS.CHANGED, tabChangeEvent);
-
-            const tabShownEvent = { id: newTabId, name: newTabName };
-            console.log('📡 Emission de l\'événement EVENTS.TABS.SHOWN:', tabShownEvent);
-            storeEvents.emit(EVENTS.TABS.SHOWN, tabShownEvent);
+            // Émission des événements pour la gestion globale
+            storeEvents.emit(EVENTS.TABS.CHANGED, { newTab: { id: newTabId, name: newTabName }, previousTab: { id: prevTabId, name: prevTabName } });
+            storeEvents.emit(EVENTS.TABS.SHOWN, { id: newTabId, name: newTabName });
 
             if (prevTabId) {
-                const tabHiddenEvent = { id: prevTabId, name: prevTabName };
-                console.log('📡 Emission de l\'événement EVENTS.TABS.HIDDEN:', tabHiddenEvent);
-                storeEvents.emit(EVENTS.TABS.HIDDEN, tabHiddenEvent);
+                storeEvents.emit(EVENTS.TABS.HIDDEN, { id: prevTabId, name: prevTabName });
             }
-
-            // 🎯 Ajout de la gestion spécifique pour la carte et l'Offcanvas
-            handleTabSpecificActions(newTabId, prevTabId);
         });
     });
 }
@@ -74,6 +59,10 @@ storeEvents.subscribe(EVENTS.TABS.SHOWN, async ({ id }) => {
             googleMapManager.setupLayerControls();
             googleMapManager.setupEventListeners();
 
+            // ✅ Ajout de la réactivation des marqueurs après déplacement
+            console.log("📍 Réactivation des marqueurs après changement d'onglet");
+            googleMapsStore.activateMapMarkers();
+
         } catch (error) {
             console.error('❌ Erreur lors du chargement de la carte:', error);
         }
@@ -88,28 +77,6 @@ storeEvents.subscribe(EVENTS.TABS.HIDDEN, ({ id }) => {
         googleMapsStore.clearCurrentMarkers();
     }
 });
-
-/**
- * Gère les actions spécifiques lors du passage d'un onglet à un autre
- */
-function handleTabSpecificActions(newTabId, prevTabId) {
-    if (newTabId === "tab2") {
-        console.log(`🗺️ Onglet "Carte" activé : déplacement et redimensionnement de la carte.`);
-        // googleMapsStore.resizeAndMoveMap("familyMap");
-    }
-
-    if (prevTabId === "tab2") {
-        console.log(`🔽 Onglet "Carte" masqué : suppression éventuelle des marqueurs.`);
-        googleMapsStore.clearCurrentMarkers();
-    }
-
-    if (newTabId === "tab1") {
-        const offcanvasElement = document.getElementById("individualMapContainer");
-
-        // ❌ Suppression du code qui forçait l'ouverture de l'Offcanvas
-        console.log("🔹 Retour sur l'onglet Éventail, mais pas d'ouverture automatique du Offcanvas.");
-    }
-}
 
 function initializeTabOnVisible(tabSelector, initCallback) {
     console.group(`📑 Configuration de l'initialisation pour ${tabSelector}`);
@@ -148,6 +115,7 @@ export async function initializeTabs() {
 
     try {
         setupTabChangeTracking();
+
         // Initialisation de l'éventail
         initializeTabOnVisible('#tab1', async () => {
             console.group('📊 Initialisation de l\'éventail');
@@ -156,6 +124,22 @@ export async function initializeTabs() {
                 console.log('✅ Éventail initialisé avec succès');
             } catch (error) {
                 console.error('❌ Erreur lors de l\'initialisation de l\'éventail:', error);
+            }
+            console.groupEnd();
+        });
+
+        initializeTabOnVisible('#tab2', async () => {
+            console.group('🗺️ Initialisation de la carte');
+            try {
+                await googleMapManager.initialize();  // Appel unique pour centraliser l'initialisation
+                
+                // Déplacement et redimensionnement après l'initialisation complète
+                await googleMapsStore.resizeAndMoveMap("familyMap");
+                googleMapsStore.activateMapMarkers();
+        
+                console.log('✅ Carte initialisée dans tab2');
+            } catch (error) {
+                console.error('❌ Erreur lors de l\'initialisation de la carte:', error);
             }
             console.groupEnd();
         });

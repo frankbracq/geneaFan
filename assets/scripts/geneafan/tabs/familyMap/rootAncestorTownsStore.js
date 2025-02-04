@@ -40,20 +40,24 @@ class RootAncestorTownsStore {
     renderCluster({ count, position }) {
         const element = document.createElement('div');
         element.className = 'cluster-marker';
-        element.style.background = '#9333ea';
-        element.style.borderRadius = '50%';
-        element.style.width = `${Math.min(count * 3, 20) * 2}px`;
-        element.style.height = `${Math.min(count * 3, 20) * 2}px`;
-        element.style.color = 'white';
-        element.style.display = 'flex';
-        element.style.alignItems = 'center';
-        element.style.justifyContent = 'center';
+        element.style.cssText = `
+            background: #9333ea;
+            border-radius: 50%;
+            width: ${Math.min(count * 3, 20) * 2}px;
+            height: ${Math.min(count * 3, 20) * 2}px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        `;
         element.textContent = count;
-        element.style.border = '2px solid white';
-
+    
         return new google.maps.marker.AdvancedMarkerElement({
             position,
-            content: element
+            content: element,
+            zIndex: 1000
         });
     }
 
@@ -67,10 +71,10 @@ class RootAncestorTownsStore {
         const position = new google.maps.LatLng(location.lat, location.lng);
         const content = this.renderMarkerContent(location, births);
     
-        console.log(`📍 Création du marqueur: ${location.name}`);
-        console.log(`   ➝ Coordonnées: (${location.lat}, ${location.lng})`);
-        console.log(`   ➝ Nombre de personnes associées: ${births.length}`);
-        console.log(`   ➝ Générations concernées:`, Object.keys(generations));
+        // console.log(`📍 Création du marqueur: ${location.name}`);
+        // console.log(`   ➝ Coordonnées: (${location.lat}, ${location.lng})`);
+        // console.log(`   ➝ Nombre de personnes associées: ${births.length}`);
+        // console.log(`   ➝ Générations concernées:`, Object.keys(generations));
     
         return this.markerDisplayManager.addMarker(
             'rootAncestors',
@@ -96,25 +100,29 @@ class RootAncestorTownsStore {
     }
 
     updateMarkers(birthData) {
-        console.group(`🔄 Mise à jour des marqueurs des ancêtres (${birthData.length} lieux)`);
+        if (!this.map || !birthData?.length) {
+            console.log('⚠️ Pas de données ou de carte disponible pour la mise à jour des marqueurs');
+            return;
+        }
     
+        console.group(`🔄 Mise à jour des marqueurs des ancêtres (${birthData.length} lieux)`);
         this.birthData = birthData;
         this.markerDisplayManager.clearMarkers('rootAncestors');
     
         const locationMap = this.groupBirthDataByLocation(birthData);
         console.log(`📍 Nombre de lieux uniques détectés: ${locationMap.size}`);
     
-        locationMap.forEach((locationData, index) => {
-            console.log(`🏠 Lieu #${index + 1}: ${locationData.location.name} (${locationData.location.lat}, ${locationData.location.lng})`);
+        // Créer tous les markers d'abord
+        locationMap.forEach((locationData) => {
             this.createMarker(locationData.location, locationData.births, locationData.generations);
         });
     
+        // Puis les ajouter au cluster si la couche est visible
         if (this.isVisible && this.map) {
-            console.log(`📡 Affichage des marqueurs des ancêtres sur la carte`);
+            // S'assurer que les markers sont visibles avant de les ajouter au cluster
             this.markerDisplayManager.toggleLayerVisibility('rootAncestors', true, this.map);
+            // Puis les ajouter au cluster
             this.markerDisplayManager.addMarkersToCluster(this.map);
-        } else {
-            console.log("⚠️ Layer 'rootAncestors' désactivé, les marqueurs ne sont pas affichés");
         }
     
         console.groupEnd();

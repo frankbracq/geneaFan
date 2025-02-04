@@ -46,29 +46,6 @@ class GoogleMapsStore {
             clearMap: action,
             activateMapMarkers: action,
         });
-
-        // Écouter l'événement de dessin de l'éventail
-        storeEvents.subscribe(EVENTS.FAN.DRAWN, () => {
-            console.log("🎯 Fan chart drawn, vérification du besoin de déplacement de la carte");
-        
-            const activeTab = document.querySelector(".tab-pane.active");
-            const offcanvasElement = document.getElementById("individualMapContainer");
-        
-            if (activeTab && activeTab.id === "tab2") {
-                console.log("🗺️ Fan chart drawn, mais tab2 est actif → Déplacement de la carte vers `familyMap`");
-                googleMapsStore.initializeApi();
-                googleMapsStore.resizeAndMoveMap("familyMap");
-                return;
-            }
-        
-            if (offcanvasElement && offcanvasElement.classList.contains("show")) {
-                console.log("🗺️ Fan chart drawn, Offcanvas ouvert → Déplacement de la carte vers `individualMap`");
-                googleMapsStore.initializeApi();
-                googleMapsStore.resizeAndMoveMap("individualMap");
-            } else {
-                console.log("🚫 Fan chart drawn, mais ni tab2 ni l'Offcanvas ne sont actifs → Pas de déplacement de la carte");
-            }
-        });
     }
 
     async initializeApi() {
@@ -113,20 +90,21 @@ class GoogleMapsStore {
         if (!this.isApiLoaded) {
             throw new Error('Google Maps API not initialized');
         }
-
+    
         try {
             console.group('🗺️ Initialisation de la carte');
-
+    
             const mapElement = document.getElementById(elementId);
             if (!mapElement) {
                 throw new Error(`Element with id ${elementId} not found`);
             }
-
+    
+            // Nettoyage de la carte existante si elle existe
             if (this.map) {
-                await this.moveMapToContainer(elementId);
-                return this.map;
+                await this.cleanup();
+                this.map = null;
             }
-
+    
             const defaultOptions = {
                 mapId: this.MAP_ID,
                 zoom: 6.2,
@@ -141,17 +119,17 @@ class GoogleMapsStore {
                     position: google.maps.ControlPosition.TOP_CENTER
                 }
             };
-
+    
             this.map = new google.maps.Map(mapElement, {
                 ...defaultOptions,
                 ...options
             });
-
+    
             await this.#initializeMapComponents();
-
+    
             console.log('✅ Carte initialisée avec succès');
             return this.map;
-
+    
         } catch (error) {
             console.error('❌ Erreur lors de l\'initialisation de la carte:', error);
             throw error;
@@ -205,7 +183,7 @@ class GoogleMapsStore {
     
             processNode(hierarchy);
             
-            // console.log('🎯 Données extraites pour les markers:', birthData);
+            console.log('🎯 Données extraites pour les markers:', birthData);
             
             // Mettre à jour les markers
             if (birthData.length > 0) {
@@ -225,10 +203,15 @@ class GoogleMapsStore {
 
     activateMapMarkers() {
         if (!this.map) {
-            console.log('Pas de carte disponible');
+            console.warn('❌ Carte non disponible pour activer les marqueurs.');
             return;
         }
-
+    
+        if (!rootAncestorTownsStore.hasActiveMarkers()) {
+            console.warn('⚠️ Aucun marqueur actif à afficher.');
+            return;
+        }
+    
         rootAncestorTownsStore.updateMarkers(this.birthData, this.isTimelineActive, this.currentYear);
         this.centerMapOnMarkers();
     }
@@ -349,142 +332,13 @@ class GoogleMapsStore {
         }
     }
 
-    // Déplacement de la carte
-    moveMapToContainer(containerId) {
-        const mapContainer = document.getElementById(containerId);
-        if (!mapContainer || !this.map) {
-            console.warn(`❌ Impossible de déplacer la carte : conteneur "${containerId}" introuvable ou carte non initialisée.`);
-            return;
-        }
-    
-        const mapDiv = this.map.getDiv();
-        const currentParent = mapDiv.parentNode;
-    
-        // Vérifier la hiérarchie DOM
-        if (mapDiv.contains(mapContainer) || mapContainer.contains(mapDiv)) {
-            console.log(`⚠️ Conflit de hiérarchie détecté pour ${containerId}, redimensionnement uniquement`);
+    async resizeAndMoveMap() {
+        if (this.map) {
             google.maps.event.trigger(this.map, "resize");
-            return;
-        }
-    
-        // Procéder au déplacement
-        mapContainer.appendChild(mapDiv);
-        google.maps.event.trigger(this.map, "resize");
-    }
-    
-    moveMapToContainer1(containerId) {
-        const mapContainer = document.getElementById(containerId);
-        if (!mapContainer || !this.map) {
-            console.warn(`❌ Impossible de déplacer la carte : conteneur "${containerId}" introuvable ou carte non initialisée.`);
-            return;
-        }
-    
-        const mapDiv = this.map.getDiv();
-        const currentParent = mapDiv.parentNode;
-    
-        console.group(`📍 Déplacement de la carte`);
-        console.log(`🔎 Conteneur cible: ${containerId}`);
-        console.log(`📌 Conteneur actuel:`, currentParent ? currentParent.id || 'Sans ID' : 'null');
-    
-        // Vérification plus précise - comparer les éléments DOM réels
-        if (currentParent === mapContainer) {
-            console.log(`⚠️ La carte est déjà dans ${containerId}, redimensionnement uniquement.`);
-            google.maps.event.trigger(this.map, "resize");
-            console.groupEnd();
-            return;
-        }
-    
-        try {
-            console.log(`🔄 Déplacement de la carte vers ${containerId}`);
-            mapContainer.appendChild(mapDiv);
-            google.maps.event.trigger(this.map, "resize");
-            console.log(`✅ Déplacement réussi vers ${containerId}`);
-        } catch (error) {
-            console.error(`❌ Erreur lors du déplacement de la carte vers ${containerId}:`, error);
-        } finally {
-            console.groupEnd();
+            this.centerMapOnMarkers();
         }
     }
     
-    /*
-    moveMapToContainer1(containerId) {
-        const mapContainer = document.getElementById(containerId);
-        if (!mapContainer || !this.map) {
-            console.warn(`❌ Impossible de déplacer la carte : conteneur "${containerId}" introuvable ou carte non initialisée.`);
-            return;
-        }
-    
-        const mapDiv = this.map.getDiv();
-        const currentParent = mapDiv.parentNode;
-    
-        console.group(`📍 Déplacement de la carte`);
-        console.log(`🔎 Conteneur cible: ${containerId}`);
-        console.log(`📌 Conteneur actuel:`, currentParent ? currentParent.id || 'Sans ID' : 'null');
-    
-        // ✅ Vérifier si la carte est déjà dans le bon conteneur
-        if (mapContainer.contains(mapDiv)) {
-            console.warn(`⚠️ La carte est déjà dans ${containerId}, pas besoin de déplacement.`);
-            console.groupEnd();
-            return;
-        }
-    
-        try {
-            console.log(`🔄 Déplacement de la carte vers ${containerId}`);
-            mapContainer.appendChild(mapDiv);
-            google.maps.event.trigger(this.map, "resize");
-            console.log(`✅ Déplacement réussi vers ${containerId}`);
-        } catch (error) {
-            console.error(`❌ Erreur lors du déplacement de la carte vers ${containerId}:`, error);
-        } finally {
-            console.groupEnd();
-        }
-    }
-    */
-    
-    
-
-    async resizeAndMoveMap(containerId) {
-        try {
-            console.group(`📍 Déplacement et redimensionnement de la carte vers ${containerId}`);
-    
-            const mapContainer = document.getElementById(containerId);
-            if (!mapContainer) {
-                console.warn(`❌ Conteneur ${containerId} introuvable`);
-                return;
-            }
-    
-            // Vérifier si c'est un Offcanvas et s'il est visible
-            const offcanvasElement = document.querySelector(`#${containerId}.offcanvas`);
-            if (offcanvasElement && !offcanvasElement.classList.contains("show")) {
-                console.warn(`🚫 Impossible de déplacer la carte : l'Offcanvas ${containerId} est fermé.`);
-                return;
-            }
-    
-            // Vérifier et initialiser l'API si nécessaire
-            if (!this.isApiLoaded) {
-                await this.initializeApi();
-            }
-    
-            // Si la carte n'existe pas encore, on l'initialise
-            if (!this.map) {
-                console.log("🗺️ Initialisation de la carte...");
-                await this.initMap(containerId);
-            } else {
-                console.log("🔄 Déplacement de la carte...");
-                this.moveMapToContainer(containerId);
-            }
-    
-            // Redimensionner et centrer la carte
-            google.maps.event.trigger(this.map, "resize");
-            this.map.setCenter({ lat: 46.2276, lng: 2.2137 });
-    
-            console.groupEnd();
-        } catch (error) {
-            console.error(`❌ Erreur lors du déplacement de la carte vers ${containerId}:`, error);
-        }
-    }    
-    
-
     // Gestion de l'historique
     #setupMapListeners() {
         this.map.addListener('zoom_changed', () => this.#recordState());
@@ -804,15 +658,27 @@ class GoogleMapsStore {
     }
 
     cleanup() {
+        if (this.map) {
+            // Cleanup des contrôles de la carte
+            // La carte elle-même sera détruite quand le conteneur sera vidé
+            google.maps.event.clearInstanceListeners(this.map);
+        }
+    
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
             this.resizeObserver = null;
         }
     
+        // Nettoyage de la mini-carte
         const wrapper = document.getElementById('overview-map-wrapper');
         if (wrapper) {
             wrapper.remove();
         }
+    
+        // Réinitialisation des états
+        this.overviewMapVisible = false;
+        this.history = [];
+        this.redoStack = [];
     }
 }
 

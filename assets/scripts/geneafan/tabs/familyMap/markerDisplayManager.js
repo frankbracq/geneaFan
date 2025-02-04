@@ -1,5 +1,4 @@
-import { MarkerClusterer } from "@googlemaps/markerclusterer";
-
+import { MarkerClusterer, SuperClusterAlgorithm } from "@googlemaps/markerclusterer";
 class MarkerDisplayManager {
     constructor() {
         this.layers = new Map();
@@ -7,16 +6,27 @@ class MarkerDisplayManager {
         this.activeMarkers = new Set();
     }
 
+    isInitialized() {
+        return this.map !== null && this.cluster !== null;
+    }
+
     initializeCluster(map, renderFn) {
         if (this.cluster) {
             this.cluster.setMap(null);
         }
-
+    
         this.cluster = new MarkerClusterer({
             map,
             markers: [],
+            algorithm: new SuperClusterAlgorithm({
+                radius: 60,
+                maxZoom: 16,
+                minPoints: 2
+            }),
             renderer: {
-                render: renderFn
+                render: ({ count, position }) => {
+                    return renderFn({ count, position });
+                }
             }
         });
     }
@@ -51,39 +61,31 @@ class MarkerDisplayManager {
     }
 
     addMarkersToCluster(map) {
-        if (!this.cluster || !map) {
+        if (!this.isInitialized()) {
             console.warn('⚠️ Cluster ou carte non initialisée');
             return;
         }
     
-        const visibleMarkers = new Set();
-        this.layers.forEach((layerMarkers, layerName) => {
+        let markersToAdd = [];
+        this.layers.forEach(layerMarkers => {
             layerMarkers.forEach(marker => {
-                if (marker.map) {
-                    visibleMarkers.add(marker);
+                if (marker.map !== null) {
+                    markersToAdd.push(marker);
                 }
             });
-    
-            console.log(`🗺️ Layer ${layerName}: ${layerMarkers.size} marqueurs chargés`);
         });
     
-        const markers = Array.from(visibleMarkers);
-        console.log(`🔢 Nombre total de marqueurs à afficher: ${markers.length}`);
+        console.log(`📊 Ajout de ${markersToAdd.length} markers au cluster`);
+        console.log('Premier marker :', markersToAdd[0]); // Pour vérifier la structure
     
-        if (this.cluster) {
-            this.cluster.setMap(null);
-            this.cluster.clearMarkers();
+        if (markersToAdd.length === 0) {
+            console.warn('⚠️ Aucun marqueur à afficher dans le cluster');
+            return;
         }
     
-        if (markers.length > 0) {
-            this.cluster.addMarkers(markers);
-            this.cluster.setMap(map);
-            console.log(`✅ Cluster mis à jour avec ${markers.length} marqueurs`);
-        } else {
-            console.log("⚠️ Aucun marqueur à afficher dans le cluster");
-        }
-    
-        this.activeMarkers = new Set(markers);
+        this.cluster.clearMarkers();
+        this.cluster.addMarkers(markersToAdd);
+        console.log('✅ Markers ajoutés au cluster');
     }
 
     toggleLayerVisibility(layerName, visible, map) {
