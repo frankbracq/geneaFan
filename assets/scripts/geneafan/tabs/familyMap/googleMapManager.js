@@ -117,12 +117,20 @@ class GoogleMapManager {
         if (ancestorLayerSwitch) {
             ancestorLayerSwitch.checked = true;
             rootAncestorTownsStore.toggleVisibility(true);
+            
+            ancestorLayerSwitch.addEventListener('change', (e) => {
+                rootAncestorTownsStore.toggleVisibility(e.target.checked);
+            });
         }
 
         const familyTownsSwitch = document.getElementById('layerFamily');
         if (familyTownsSwitch) {
             familyTownsSwitch.checked = false;
             familyTownsStore.toggleVisibility(false);
+            
+            familyTownsSwitch.addEventListener('change', (e) => {
+                familyTownsStore.toggleVisibility(e.target.checked);
+            });
         }
     }
 
