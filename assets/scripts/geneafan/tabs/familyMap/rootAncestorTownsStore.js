@@ -1,4 +1,4 @@
-import { makeObservable, observable, action, autorun } from '../../common/stores/mobx-config.js';
+import { makeObservable, observable, action } from '../../common/stores/mobx-config.js';
 import MarkerDisplayManager from './markerDisplayManager.js';
 import { infoWindowDisplayManager } from './infoWindowDisplayManager.js';
 

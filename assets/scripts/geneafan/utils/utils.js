@@ -1,6 +1,5 @@
 import _ from 'lodash';
 import familyTownsStore from '../gedcom/stores/familyTownsStore.js';
-import { dateProcessor } from '../gedcom/processors/dateProcessor.js';
 
 export const memoize = (fn) => {
     const cache = new Map();
