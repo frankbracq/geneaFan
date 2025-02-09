@@ -1,0 +1,74 @@
+// Tab2 (map) styles
+#familyMap {
+    height: 100%;
+    width: 100%;
+    min-height: 400px;
+    position: relative;  // Ajouté pour le contexte de positionnement
+
+    @media (min-width: 768px) {
+        height: 100vh;
+    }
+}
+
+.map-controls {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: white;
+    padding: 10px;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.3);
+}
+
+// Google Maps
+.custom-marker {
+    cursor: pointer;
+    opacity: 0.9;
+    transition: transform 0.2s ease;
+}
+
+.custom-marker:hover {
+    transform: scale(1.1);
+    opacity: 1;
+}
+
+.cluster-marker {
+    cursor: pointer;
+    opacity: 0.9;
+    transition: transform 0.2s ease;
+}
+
+.cluster-marker:hover {
+    transform: scale(1.1);
+    opacity: 1;
+}
+
+// Nouveaux styles pour les marqueurs de patronymes
+.surname-town-marker {
+    background: #F4B400;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.surname-cluster-marker {
+    background: #F4B400;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+} 

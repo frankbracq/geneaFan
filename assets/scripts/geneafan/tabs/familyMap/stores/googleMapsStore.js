@@ -1,9 +1,9 @@
 import { Offcanvas } from "bootstrap";
-import { makeObservable, observable, action, runInAction } from '../../common/stores/mobx-config.js';
+import { makeObservable, observable, action, runInAction } from '../../../common/stores/mobx-config.js';
 import { Loader } from "@googlemaps/js-api-loader";
-import { mapStatisticsStore } from './mapStatisticsStore.js';
-import { rootAncestorTownsStore } from './rootAncestorTownsStore.js';
-import { storeEvents, EVENTS } from '../../gedcom/stores/storeEvents.js';
+import { mapStatisticsStore } from '../mapStatisticsStore.js';
+import { rootAncestorTownsStore } from '../rootAncestorTownsStore.js';
+import { storeEvents, EVENTS } from '../../../gedcom/stores/storeEvents.js';
 
 class GoogleMapsStore {
     constructor() {

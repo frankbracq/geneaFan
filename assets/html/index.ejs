@@ -412,8 +412,15 @@
                                                     </div>
                                                 </div>
                                                 <div class="list-group-item">
+                                                    <!-- Première ligne : Label seul -->
+                                                    <div class="mb-2">
+                                                        Villes par noms de famille
+                                                    </div>
+                                                    <!-- Deuxième ligne : Select et Switch -->
                                                     <div class="d-flex justify-content-between align-items-center">
-                                                        <label class="form-check-label" for="layerSurnames">Villes par noms de famille</label>
+                                                        <select class="form-select form-select-sm me-2" id="surnameFilter" disabled style="width: auto;">
+                                                            <option value="">Sélectionner un patronyme...</option>
+                                                        </select>
                                                         <div class="form-check form-switch">
                                                             <input class="form-check-input" type="checkbox" id="layerSurnames">
                                                         </div>

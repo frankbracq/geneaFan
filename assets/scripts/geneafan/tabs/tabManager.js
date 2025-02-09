@@ -1,6 +1,6 @@
 import { FanChartManager } from './fanChart/fanChartManager.js';
 import { googleMapManager } from './familyMap/googleMapManager.js';
-import { googleMapsStore } from './familyMap/googleMapsStore.js';
+import { googleMapsStore } from './familyMap/stores/googleMapsStore.js';
 import { storeEvents, EVENTS } from '../gedcom/stores/storeEvents.js';
 import { rootAncestorTownsStore } from './familyMap/rootAncestorTownsStore.js';
 import { familyTownsStore } from '../gedcom/stores/familyTownsStore.js';

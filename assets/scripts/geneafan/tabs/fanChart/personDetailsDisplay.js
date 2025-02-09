@@ -1,5 +1,3 @@
-// MobX state management
-// import { googleMapsStore } from "../familyMap/googleMapsStore.js";
 import { offcanvasManager } from "./offcanvasManager.js";
 
 // Utility libraries
@@ -11,7 +9,6 @@ export function displayPersonDetailsUI(personDetails) {
         personLink,
         formattedOccupations,
         formattedSiblings,
-        individualTowns,
         individualEvents,
         deceased,
     } = personDetails.data;
@@ -124,15 +121,8 @@ export function displayPersonDetailsUI(personDetails) {
     individualTimelineElement.innerHTML = "";
     individualTimelineElement.appendChild(container);
 
-    // Montrer l'offcanvas - il gérera lui-même l'état de la carte
-
     offcanvasManager.showOffCanvasDetails();
     console.log("🔍 ouverture offcanvas pour", id);
-    // Préparer les données des marqueurs si nécessaire
-    //const individualTownKeys = Object.keys(individualTowns);
-    //if (individualTownKeys.length > 0) {
-    //    googleMapsStore.activateMapMarkers(individualTownKeys);
-    //}
 }
 
 function ordinalSuffixOf(i) {
