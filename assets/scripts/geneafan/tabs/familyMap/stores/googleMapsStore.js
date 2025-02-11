@@ -183,7 +183,7 @@ class GoogleMapsStore {
     
             processNode(hierarchy);
             
-            console.log('🎯 Données extraites pour les markers:', birthData);
+            // console.log('🎯 Données extraites pour les markers:', birthData);
             
             // Mettre à jour les markers
             if (birthData.length > 0) {

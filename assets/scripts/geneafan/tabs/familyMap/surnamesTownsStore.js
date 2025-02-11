@@ -1,5 +1,6 @@
 import { makeObservable, observable, action, reaction } from '../../common/stores/mobx-config.js';
 import { infoWindowDisplayManager } from './infoWindowDisplayManager.js';
+import { infoWindowContentManager } from '../../gedcom/stores/infoWindowContentManager.js';
 import familyTownsStore from '../../gedcom/stores/familyTownsStore.js';
 import MarkerDisplayManager from './markerDisplayManager.js';
 
@@ -32,6 +33,31 @@ class SurnamesTownsStore {
 
     initialize(map) {
         this.map = map;
+        this.markerDisplayManager.initializeCluster(map, this.createClusterMarker);
+    }
+
+    createClusterMarker({ count, position }) {
+        const div = document.createElement('div');
+        div.className = 'surname-cluster-marker';
+        div.style.cssText = `
+            background: #F4B400;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        `;
+        div.innerHTML = `<span>${count}</span>`;
+        
+        return new google.maps.marker.AdvancedMarkerElement({
+            position,
+            content: div
+        });
     }
 
     setSurname(surname) {
@@ -44,13 +70,11 @@ class SurnamesTownsStore {
     }
 
     createMarkerConfig(townName, townData) {
-        if (!townData.coordinates) return null;
-
         const config = {
-            position: new google.maps.LatLng(townData.coordinates.lat, townData.coordinates.lng),
+            position: new google.maps.LatLng(townData.latitude, townData.longitude),
             options: {
                 content: this.createMarkerElement(townData),
-                title: townName
+                title: townData.townDisplay || townData.town
             }
         };
         
@@ -63,17 +87,13 @@ class SurnamesTownsStore {
         
         if (!config) {
             config = this.createMarkerConfig(townName, townData);
-            if (!config) return null;
         }
 
         return this.markerDisplayManager.addMarker(
             'surnames',
             townName,
             config.position,
-            {
-                content: this.createMarkerElement(townData),
-                title: townName
-            },
+            config.options,
             (marker) => this.handleMarkerClick(marker, townName, townData)
         );
     }
@@ -86,11 +106,7 @@ class SurnamesTownsStore {
             if (surnameEvents.length > 0) {
                 townsWithSurname.set(townName, {
                     ...townData,
-                    events: surnameEvents,
-                    coordinates: {
-                        lat: townData.latitude,
-                        lng: townData.longitude
-                    }
+                    events: surnameEvents
                 });
             }
         });
@@ -112,8 +128,11 @@ class SurnamesTownsStore {
     }
 
     updateMarkers(townsData) {
-        this.markerDisplayManager.toggleLayerVisibility('surnames', false, this.map);
-        this.markerConfigs.clear();
+        if (!this.map) return;
+
+        if (!this.markerDisplayManager.isInitialized()) {
+            this.markerDisplayManager.initializeCluster(this.map, this.createClusterMarker);
+        }
 
         townsData.forEach((townData, townName) => {
             this.getOrCreateMarker(townName, townData);
@@ -125,17 +144,84 @@ class SurnamesTownsStore {
     createMarkerElement(townData) {
         const div = document.createElement('div');
         div.className = 'surname-town-marker';
+        div.style.cssText = `
+            background: #F4B400;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        `;
         div.innerHTML = `<span>${townData.events.length}</span>`;
         return div;
     }
 
     handleMarkerClick(marker, townName, townData) {
-        const content = infoWindowDisplayManager.createInfoWindowContent(
-            townName,
-            [
-                { label: "Événements", value: townData.events.length },
-                { label: "Patronyme", value: this.currentSurname }
-            ]
+        console.log('🏁 Données originales de la ville:', {
+            ...townData,
+            events: {
+                all: townData.events,
+                birth: townData.events.filter(e => e.type === 'birth'),
+                death: townData.events.filter(e => e.type === 'death'),
+                marriage: townData.events.filter(e => e.type === 'marriage')
+            }
+        });
+        console.log('👉 Patronyme recherché:', this.currentSurname);
+
+        const events = townData.events || [];
+        const groupedEvents = {
+            birth: events.filter(e => e.type === 'birth'),
+            death: events.filter(e => e.type === 'death'),
+            marriage: events.filter(e => e.type === 'marriage')
+        };
+
+        const filteredEvents = {
+            birth: groupedEvents.birth.filter(e => e.personDetails?.surname === this.currentSurname),
+            death: groupedEvents.death.filter(e => e.personDetails?.surname === this.currentSurname),
+            marriage: groupedEvents.marriage.filter(e => 
+                e.personDetails?.surname === this.currentSurname || 
+                e.spouseDetails?.surname === this.currentSurname
+            )
+        };
+
+        const nativeDeaths = filteredEvents.death.filter(deathEvent => {
+            const isNative = filteredEvents.birth.some(birthEvent => 
+                birthEvent.personDetails?.id === deathEvent.personDetails?.id
+            );
+            console.log('👶 Vérification natif décédé:', {
+                personId: deathEvent.personDetails?.id,
+                surname: deathEvent.personDetails?.surname,
+                isNative
+            });
+            return isNative;
+        }).length;
+
+        const filteredData = {
+            ...townData,
+            events: filteredEvents,
+            localBirths: filteredEvents.birth.length,
+            localDeaths: filteredEvents.death.length,
+            nativeDeaths: nativeDeaths,
+            localMarriages: filteredEvents.marriage.length,
+            filter: `Patronyme : ${this.currentSurname}`
+        };
+
+        console.log('📊 Statistiques finales:', {
+            patronyme: this.currentSurname,
+            naissances: filteredData.localBirths,
+            deces: filteredData.localDeaths,
+            natifsDecedes: filteredData.nativeDeaths,
+            mariages: filteredData.localMarriages
+        });
+
+        const content = infoWindowContentManager.createInfoWindowContent(
+            townData.townDisplay || townData.town,
+            filteredData
         );
 
         infoWindowDisplayManager.showInfoWindow(marker, content);
@@ -161,12 +247,14 @@ class SurnamesTownsStore {
         const surnamesCount = new Map();
         
         familyTownsStore.townsData.forEach(townData => {
-            townData.events.birth?.forEach(event => {
-                const surname = event.personDetails?.surname;
-                if (surname) {
-                    surnamesCount.set(surname, (surnamesCount.get(surname) || 0) + 1);
-                }
-            });
+            if (townData.events && townData.events.birth) {
+                townData.events.birth.forEach(event => {
+                    const surname = event.personDetails?.surname;
+                    if (surname) {
+                        surnamesCount.set(surname, (surnamesCount.get(surname) || 0) + 1);
+                    }
+                });
+            }
         });
 
         const sortedSurnames = [...surnamesCount.entries()]
@@ -181,6 +269,10 @@ class SurnamesTownsStore {
                 ).join('')}
             `;
         }
+    }
+
+    isInitialized() {
+        return this.map && this.markerDisplayManager.isInitialized();
     }
 }
 

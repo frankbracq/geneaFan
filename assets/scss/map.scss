@@ -18,57 +18,62 @@
     background: white;
     padding: 10px;
     border-radius: 4px;
-    box-shadow: 0 2px 6px rgba(0,0,0,.3);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
 }
 
-// Google Maps
-.custom-marker {
-    cursor: pointer;
-    opacity: 0.9;
-    transition: transform 0.2s ease;
-}
-
-.custom-marker:hover {
-    transform: scale(1.1);
-    opacity: 1;
-}
-
-.cluster-marker {
-    cursor: pointer;
-    opacity: 0.9;
-    transition: transform 0.2s ease;
-}
-
-.cluster-marker:hover {
-    transform: scale(1.1);
-    opacity: 1;
-}
-
-// Nouveaux styles pour les marqueurs de patronymes
-.surname-town-marker {
-    background: #F4B400;
+// Styles de base pour tous les marqueurs
+%marker-base {
     border-radius: 50%;
-    width: 24px;
-    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 12px;
     border: 2px solid white;
     box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    cursor: pointer;
+    opacity: 0.9;
+    transition: transform 0.2s ease;
+
+    &:hover {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+}
+
+// Styles de base pour les marqueurs individuels
+%single-marker {
+    @extend %marker-base;
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+}
+
+// Styles de base pour les clusters
+%cluster-marker {
+    @extend %marker-base;
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+}
+
+// Marqueurs de patronymes
+.surname-town-marker {
+    @extend %single-marker;
+    background: #F4B400;
 }
 
 .surname-cluster-marker {
+    @extend %cluster-marker;
     background: #F4B400;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 14px;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+// Marqueurs de villes
+.town-marker {
+    @extend %single-marker;
+    background: #4B5563;
+}
+
+.town-cluster-marker {
+    @extend %cluster-marker;
+    background: #4B5563;
 } 

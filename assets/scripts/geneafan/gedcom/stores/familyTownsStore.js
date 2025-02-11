@@ -161,41 +161,52 @@ class FamilyTownsStore {
     }    
 
     // Marker Configuration Management
-    createMarkerConfig(normalizedTownName, townData) {
-        if (!townData.latitude || !townData.longitude) return null;
-
+    createMarkerConfig(townName, townData) {
         const config = {
             position: new google.maps.LatLng(townData.latitude, townData.longitude),
             options: {
-                content: this.createMarkerContent(townData.departementColor),
+                content: this.createMarkerElement(townData),
                 title: townData.townDisplay || townData.town
             }
         };
         
-        this.markerConfigs.set(normalizedTownName, config);
+        this.markerConfigs.set(townName, config);
         return config;
     }
 
-    getOrCreateMarker(normalizedTownName) {
-        let config = this.markerConfigs.get(normalizedTownName);
-        const townData = this.townsData.get(normalizedTownName);
-        
-        if (!townData) {
-            console.warn(`Données manquantes pour la ville: ${normalizedTownName}`);
-            return null;
-        }
+    createMarkerElement(townData) {
+        const div = document.createElement('div');
+        div.className = 'family-town-marker';
+        div.style.cssText = `
+            background: #4B5563;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        `;
+        div.innerHTML = `<span>${townData.events.length}</span>`;
+        return div;
+    }
 
+    getOrCreateMarker(townName, townData) {
+        let config = this.markerConfigs.get(townName);
+        
         if (!config) {
-            config = this.createMarkerConfig(normalizedTownName, townData);
-            if (!config) return null;
+            config = this.createMarkerConfig(townName, townData);
         }
 
         return this.markerDisplayManager.addMarker(
             'familyTowns',
-            normalizedTownName,
+            townName,
             config.position,
             config.options,
-            (marker) => this.handleMarkerClick(marker, normalizedTownName)
+            (marker) => this.handleMarkerClick(marker, townName, townData)
         );
     }
 
@@ -354,28 +365,25 @@ class FamilyTownsStore {
     }
 
     updateMarkers() {
-        this.markerDisplayManager.clearMarkers('familyTowns');
-        
-        this.townsData.forEach((townData, normalizedTownName) => {
-            if (townData.latitude && townData.longitude) {
-                this.getOrCreateMarker(normalizedTownName);
-            }
+        if (!this.map) return;
+
+        if (!this.markerDisplayManager.isInitialized()) {
+            this.markerDisplayManager.initializeCluster(this.map, this.createClusterMarker);
+        }
+
+        this.townsData.forEach((townData, townName) => {
+            this.getOrCreateMarker(townName, townData);
         });
 
-        if (this.isVisible && this.map) {
-            this.markerDisplayManager.toggleLayerVisibility('familyTowns', true, this.map);
-            this.markerDisplayManager.addMarkersToCluster(this.map);
-        }
+        this.markerDisplayManager.toggleLayerVisibility('familyTowns', true, this.map);
     }
 
     // Visibility Management
-    toggleVisibility(isVisible) {
-        this.isVisible = isVisible;
-        if (this.map) {
-            this.markerDisplayManager.toggleLayerVisibility('familyTowns', isVisible, this.map);
-            if (isVisible) {
-                this.markerDisplayManager.addMarkersToCluster(this.map);
-            }
+    toggleVisibility(visible) {
+        if (visible) {
+            this.updateMarkers();
+        } else {
+            this.markerDisplayManager.toggleLayerVisibility('familyTowns', false, this.map);
         }
     }
 
@@ -432,8 +440,9 @@ class FamilyTownsStore {
         this.clearAllCaches();
         console.log('✅ Fin finalizeAllTownsData'); 
         
-        // Mise à jour des markers par l'autorun lorsque la map est initialisée
-        if (this.map && window.google) {
+        // Mettre à jour les marqueurs après la finalisation des données
+        if (this.map) {
+            console.log('📍 Mise à jour des marqueurs après finalisation');
             this.updateMarkers();
         }
         
@@ -745,35 +754,36 @@ _collectTownsNeedingUpdate() {
 
     // Map Initialization and Management
     initialize(map) {
+        console.log('🎯 Initialisation de FamilyTownsStore');
         this.map = map;
-        this.markerDisplayManager.initializeCluster(map, this.renderCluster.bind(this));
+        this.markerDisplayManager.initializeCluster(map, this.createClusterMarker);
 
-        if (this.townsData.size > 0) {
-            this.updateMarkers();
+        if (!this.markerDisplayManager.isInitialized()) {
+            console.warn('❌ Échec de l’init du clustering');
         }
     }
 
-    renderCluster({ count, position }) {
-        const element = document.createElement('div');
-        element.className = 'cluster-marker';
-        element.style.cssText = `
+    createClusterMarker({ count, position }) {
+        const div = document.createElement('div');
+        div.className = 'family-cluster-marker';
+        div.style.cssText = `
             background: #4B5563;
+            width: 40px;
+            height: 40px;
             border-radius: 50%;
-            width: ${Math.min(count * 3, 20) * 2}px;
-            height: ${Math.min(count * 3, 20) * 2}px;
             border: 2px solid white;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 12px;
+            font-size: 14px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         `;
-        element.textContent = String(count);
-
+        div.innerHTML = `<span>${count}</span>`;
+        
         return new google.maps.marker.AdvancedMarkerElement({
             position,
-            content: element,
-            zIndex: Number(google.maps.Marker.MAX_ZINDEX) + count
+            content: div
         });
     }
 

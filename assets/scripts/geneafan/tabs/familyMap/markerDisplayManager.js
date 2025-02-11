@@ -19,7 +19,7 @@ class MarkerDisplayManager {
             map,
             markers: [],
             algorithm: new SuperClusterAlgorithm({
-                radius: 60,
+                radius: 80,
                 maxZoom: 16,
                 minPoints: 2
             }),
@@ -41,22 +41,24 @@ class MarkerDisplayManager {
     addMarker(layerName, key, position, options, onClickCallback = null) {
         this.addLayer(layerName);
         const layerMarkers = this.layers.get(layerName);
-
+    
         if (!layerMarkers.has(key)) {
             const marker = new google.maps.marker.AdvancedMarkerElement({
                 position,
-                map: null,
+                map: null, // Important : Initialement, le marker est "invisible"
                 ...options
             });
-
+    
             if (onClickCallback) {
                 marker.addListener('click', () => onClickCallback(marker));
             }
-
+    
             layerMarkers.set(key, marker);
-            // console.log(`Added marker to layer ${layerName}, total markers in layer: ${layerMarkers.size}`);
+            console.log(`✅ Marqueur ajouté à ${layerName}:`, key, marker);
+        } else {
+            console.warn(`⚠️ Marqueur déjà existant : ${key}`);
         }
-
+    
         return layerMarkers.get(key);
     }
 
@@ -75,8 +77,7 @@ class MarkerDisplayManager {
             });
         });
     
-        console.log(`📊 Ajout de ${markersToAdd.length} markers au cluster`);
-        console.log('Premier marker :', markersToAdd[0]); // Pour vérifier la structure
+        console.log(`📊 Tentative d'ajout de ${markersToAdd.length} marqueurs au cluster`);
     
         if (markersToAdd.length === 0) {
             console.warn('⚠️ Aucun marqueur à afficher dans le cluster');
