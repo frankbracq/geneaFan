@@ -162,8 +162,16 @@ class FamilyTownsStore {
 
     // Marker Configuration Management
     createMarkerConfig(townName, townData) {
+        if (!townData?.latitude || !townData?.longitude) {
+            console.warn(`⚠️ Données de ville invalides pour ${townName}`);
+            return null;
+        }
+
         const config = {
-            position: new google.maps.LatLng(townData.latitude, townData.longitude),
+            position: new google.maps.LatLng(
+                Number(townData.latitude), 
+                Number(townData.longitude)
+            ),
             options: {
                 content: this.createMarkerElement(townData),
                 title: townData.townDisplay || townData.town
@@ -195,18 +203,24 @@ class FamilyTownsStore {
     }
 
     getOrCreateMarker(townName, townData) {
-        let config = this.markerConfigs.get(townName);
-        
-        if (!config) {
-            config = this.createMarkerConfig(townName, townData);
+        if (!townData) {
+            console.warn(`⚠️ Données manquantes pour la ville ${townName}`);
+            return null;
         }
 
+        let config = this.markerConfigs.get(townName);
+    
+        if (!config) {
+            config = this.createMarkerConfig(townName, townData);
+            if (!config) return null;
+        }
+    
         return this.markerDisplayManager.addMarker(
             'familyTowns',
             townName,
             config.position,
             config.options,
-            (marker) => this.handleMarkerClick(marker, townName, townData)
+            (marker) => this.handleMarkerClick(marker, townName)
         );
     }
 

@@ -83,17 +83,11 @@ class SurnamesTownsStore {
     }
 
     getOrCreateMarker(townName, townData) {
-        let config = this.markerConfigs.get(townName);
-        
-        if (!config) {
-            config = this.createMarkerConfig(townName, townData);
-        }
-
-        return this.markerDisplayManager.addMarker(
+        return this.markerDisplayManager.getOrCreateMarker(
             'surnames',
             townName,
-            config.position,
-            config.options,
+            townData,
+            (data) => this.createMarkerElement(data),
             (marker) => this.handleMarkerClick(marker, townName, townData)
         );
     }
@@ -228,10 +222,12 @@ class SurnamesTownsStore {
     }
 
     toggleVisibility(visible) {
+        const layerName = 'surnames';
+        
         if (visible && this.currentSurname) {
             this.updateMarkersForSurname(this.currentSurname);
         } else {
-            this.markerDisplayManager.toggleLayerVisibility('surnames', false, this.map);
+            this.markerDisplayManager.toggleLayerVisibility(layerName, false, this.map);
         }
     }
 

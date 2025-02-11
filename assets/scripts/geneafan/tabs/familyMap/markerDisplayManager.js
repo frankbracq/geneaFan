@@ -4,6 +4,7 @@ class MarkerDisplayManager {
         this.layers = new Map();
         this.cluster = null;
         this.activeMarkers = new Set();
+        this.markerConfigs = new Map();
     }
 
     isInitialized() {
@@ -131,6 +132,44 @@ class MarkerDisplayManager {
         this.activeMarkers.clear();
     }
 
+    createMarkerConfig(townName, townData, createMarkerElementFn) {
+        if (!townData?.latitude || !townData?.longitude) {
+            console.warn(`⚠️ Données de ville invalides pour ${townName}`);
+            return null;
+        }
+
+        const config = {
+            position: new google.maps.LatLng(
+                Number(townData.latitude),
+                Number(townData.longitude)
+            ),
+            options: {
+                content: createMarkerElementFn(townData),
+                title: townData.townDisplay || townData.town
+            }
+        };
+        
+        this.markerConfigs.set(townName, config);
+        return config;
+    }
+
+    getOrCreateMarker(layerName, townName, townData, createMarkerElementFn, onClickCallback) {
+        let config = this.markerConfigs.get(townName);
+        
+        if (!config) {
+            config = this.createMarkerConfig(townName, townData, createMarkerElementFn);
+            if (!config) return null;
+        }
+
+        return this.addMarker(
+            layerName,
+            townName,
+            config.position,
+            config.options,
+            onClickCallback
+        );
+    }
+
     cleanup() {
         this.clearMarkers();
         if (this.cluster) {
@@ -138,6 +177,7 @@ class MarkerDisplayManager {
         }
         this.cluster = null;
         this.activeMarkers.clear();
+        this.markerConfigs.clear();
     }
 }
 
