@@ -161,13 +161,16 @@ class MarkerDisplayManager {
             if (!config) return null;
         }
 
-        return this.addMarker(
+        const marker = this.addMarker(
             layerName,
             townName,
             config.position,
             config.options,
             onClickCallback
         );
+        
+        console.log(`🔍 Ajout du marqueur dans layers['rootAncestors']:`, layerName, marker);
+        return marker;
     }
 
     cleanup() {
