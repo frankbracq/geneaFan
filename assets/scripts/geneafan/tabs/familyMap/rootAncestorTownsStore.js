@@ -10,12 +10,12 @@ class RootAncestorTownsStore {
         this.isVisible = true;
         this.styles = {
             colors: {
-                paternal: '#1e40af', // blue-800
-                maternal: '#be185d', // pink-800
-                mixed: '#9333ea'     // purple-700
+                paternal: '#1e40af',
+                maternal: '#be185d',
+                mixed: '#9333ea'
             }
         };
-
+    
         makeObservable(this, {
             birthData: observable,
             map: observable.ref,
@@ -25,35 +25,13 @@ class RootAncestorTownsStore {
             clearMarkers: action,
             toggleVisibility: action
         });
-
-        autorun(() => {
-            console.log("👀 Surveillance de birthData :", rootAncestorTownsStore.birthData);
-            if (rootAncestorTownsStore.birthData.length > 0 && rootAncestorTownsStore.map) {
-                console.log("🔄 Auto-mise à jour des marqueurs suite à un changement de birthData");
-                rootAncestorTownsStore.updateMarkers(rootAncestorTownsStore.birthData);
-            }
-        });
-    }
-
-    initialize(map) {
-        console.log('✅ Initialisation de RootAncestorTownsStore');
-        this.map = map;
-        console.log("🟢 Cluster initialisé dans RootAncestorTownsStore");
-        this.markerDisplayManager.initializeCluster(map, this.createClusterMarker.bind(this));
-    
-        if (this.birthData.length > 0) {
-            console.log("🔄 Forçage de la mise à jour des marqueurs après l'ouverture de la carte");
-            this.updateMarkers(this.birthData);
-        } else {
-            console.log("⚠️ Aucun birthData disponible après initialisation, attente d'une mise à jour");
-        }
     }
 
     createClusterMarker({ count, position }) {
         const div = document.createElement('div');
         div.className = 'cluster-marker';
         div.style.cssText = `
-            background: #9333ea;
+            background: ${this.styles.colors.mixed};
             border-radius: 50%;
             width: ${Math.min(count * 3, 20) * 2}px;
             height: ${Math.min(count * 3, 20) * 2}px;
@@ -73,29 +51,10 @@ class RootAncestorTownsStore {
         });
     }
 
-
-    renderCluster({ count, position }) {
-        const element = document.createElement('div');
-        element.className = 'cluster-marker';
-        element.style.cssText = `
-            background: #9333ea;
-            border-radius: 50%;
-            width: ${Math.min(count * 3, 20) * 2}px;
-            height: ${Math.min(count * 3, 20) * 2}px;
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        `;
-        element.textContent = count;
-    
-        return new google.maps.marker.AdvancedMarkerElement({
-            position,
-            content: element,
-            zIndex: 1000
-        });
+    initialize(map) {
+        console.log('✅ Initialisation de RootAncestorTownsStore');
+        this.map = map;
+        this.markerDisplayManager.initializeCluster(map, this.createClusterMarker.bind(this));
     }
 
     createMarker(location, births, generations) {
@@ -134,9 +93,55 @@ class RootAncestorTownsStore {
         element.style.height = '16px';
         element.style.border = '1px solid #1e40af';
         return element;
+     }
+
+     updateMarkers(birthData) {
+        if (!this.map || !birthData?.length) {
+            console.warn('⚠️ Carte ou données absentes');
+            return;
+        }
+    
+        console.log(`🔄 Mise à jour des marqueurs pour ${birthData.length} lieux.`);
+        this.birthData = birthData;
+        this.markerDisplayManager.clearMarkers('rootAncestors');
+    
+        const locationMap = this.groupBirthDataByLocation(birthData);
+        console.log(`📍 Nombre de lieux uniques: ${locationMap.size}`);
+    
+        // Créer les marqueurs directement
+        locationMap.forEach((locationData) => {
+            if (!this.isValidLocationData(locationData)) return;
+    
+            const position = new google.maps.LatLng(
+                locationData.location.lat,
+                locationData.location.lng
+            );
+    
+            this.markerDisplayManager.addMarker(
+                'rootAncestors',
+                locationData.location.name,
+                position,
+                {
+                    content: this.createMarkerElement(locationData),
+                    title: locationData.births.map(b => b.name).join(', ')
+                },
+                (marker) => {
+                    const content = this.createInfoWindowContent(
+                        locationData.location,
+                        locationData.births,
+                        locationData.generations
+                    );
+                    infoWindowDisplayManager.showInfoWindow(marker, content);
+                }
+            );
+        });
+    
+        if (this.isVisible) {
+            this.markerDisplayManager.toggleLayerVisibility('rootAncestors', true, this.map);
+        }
     }
 
-    updateMarkers(birthData) {
+    updateMarkers1(birthData) {
         if (!this.map || !birthData?.length) {
             console.warn('⚠️ Carte ou données absentes, attente d’une mise à jour...');
             return;  // ❌ Ne force plus la mise à jour avec un timeout
@@ -177,6 +182,25 @@ class RootAncestorTownsStore {
     }
 
     getOrCreateMarker(locationData) {
+        const key = `${locationData.location.lat}-${locationData.location.lng}-${locationData.location.name}`;
+        const position = new google.maps.LatLng(locationData.location.lat, locationData.location.lng);
+        
+        return this.markerDisplayManager.addMarker(
+            'rootAncestors',
+            key,
+            position,
+            { 
+                content: this.createMarkerElement(locationData),
+                title: locationData.births.map(b => b.name).join(', ')
+            },
+            (marker) => {
+                const content = this.createInfoWindowContent(locationData.location, locationData.births, locationData.generations);
+                infoWindowDisplayManager.showInfoWindow(marker, content);
+            }
+        );
+    }
+
+    getOrCreateMarker1(locationData) {
         return this.markerDisplayManager.getOrCreateMarker(
             'rootAncestors',
             locationData.location.name,

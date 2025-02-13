@@ -99,7 +99,7 @@ class GoogleMapManager {
             }
 
             await googleMapsStore.processHierarchy(hierarchy);
-            rootAncestorTownsStore.markerDisplayManager.addMarkersToCluster(googleMapsStore.map);
+            // rootAncestorTownsStore.markerDisplayManager.addMarkersToCluster(googleMapsStore.map);
             console.log('✅ Mise à jour terminée');
             console.groupEnd();
         } catch (error) {

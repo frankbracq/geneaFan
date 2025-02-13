@@ -182,16 +182,6 @@ class GoogleMapsStore {
             };
     
             processNode(hierarchy);
-            
-            // console.log('🎯 Données extraites pour les markers:', birthData);
-            
-            // Mettre à jour les markers
-            if (birthData.length > 0) {
-                rootAncestorTownsStore.updateMarkers(birthData);
-                console.log('✅ Markers mis à jour');
-            } else {
-                console.warn('⚠️ Pas de données de naissance à afficher');
-            }
     
             console.groupEnd();
         } catch (error) {
@@ -207,12 +197,6 @@ class GoogleMapsStore {
             return;
         }
     
-        if (!rootAncestorTownsStore.hasActiveMarkers()) {
-            console.warn('⚠️ Aucun marqueur actif à afficher.');
-            return;
-        }
-    
-        rootAncestorTownsStore.updateMarkers(this.birthData, this.isTimelineActive, this.currentYear);
         this.centerMapOnMarkers();
     }
 
