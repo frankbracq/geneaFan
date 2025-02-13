@@ -44,44 +44,35 @@ class GoogleMapManager {
 
     async initialize() {
         if (this.initialized) return;
-
+    
         try {
             console.group('🚀 Initialisation de Google Maps');
-
-            // 1. Initialiser l'API Google Maps
+    
             await googleMapsStore.initializeApi();
-
-            // 2. Créer la carte
             const map = await googleMapsStore.initMap('familyMap');
-
-            // 3. Attendre que la carte soit complètement chargée
             await new Promise(resolve => {
                 google.maps.event.addListenerOnce(map, 'idle', resolve);
             });
-
+    
             // 4. Initialiser les stores avec la carte
-            rootAncestorTownsStore.initialize(map);
-            familyTownsStore.initialize(map);
-            surnamesTownsStore.initialize(map);
-
-            // 5. Configurer les contrôles de calques
-            this.setupLayerControls();
-
-            // 6. Ajouter les écouteurs d'événements
-            this.setupEventListeners();
-
-            // 7. Initialiser la liste des lieux
-            googleMapsStore.initializePlacesList();
-
-            // 8. Mise à jour avec les données de hiérarchie si présentes
-            const currentHierarchy = gedcomDataStore.getHierarchy();
-            if (currentHierarchy) {
-                await this.updateMapWithHierarchy(currentHierarchy);
+            await Promise.all([
+                rootAncestorTownsStore.initialize(map),
+                familyTownsStore.initialize(map),
+                surnamesTownsStore.initialize(map)
+            ]);
+    
+            // 5. S'assurer que les données sont chargées
+            const hierarchy = gedcomDataStore.getHierarchy();
+            if (hierarchy) {
+                await rootAncestorTownsStore.processHierarchy(hierarchy);
+                // Activer la visibilité seulement après le chargement des données
+                rootAncestorTownsStore.toggleVisibility(true);
             }
-
-            this.initialized = true;
-            console.log('✅ Initialisation terminée avec succès');
-            console.groupEnd();
+    
+            // 6. Configurer les contrôles de calques
+            this.setupLayerControls();
+            
+            // Le reste du code...
         } catch (error) {
             console.error("❌ Échec de l'initialisation:", error);
             console.groupEnd();
@@ -97,9 +88,9 @@ class GoogleMapManager {
                 console.groupEnd();
                 return;
             }
-
-            await googleMapsStore.processHierarchy(hierarchy);
-            // rootAncestorTownsStore.markerDisplayManager.addMarkersToCluster(googleMapsStore.map);
+    
+            // Utilisation de la nouvelle méthode dans rootAncestorTownsStore
+            await rootAncestorTownsStore.processHierarchy(hierarchy);
             console.log('✅ Mise à jour terminée');
             console.groupEnd();
         } catch (error) {
@@ -115,18 +106,18 @@ class GoogleMapManager {
             return;
         }
     
-        // Calque des ancêtres (inchangé)
+        // Calque des ancêtres
         const ancestorLayerSwitch = document.getElementById('layerAncestors');
         if (ancestorLayerSwitch) {
-            ancestorLayerSwitch.checked = true;
-            rootAncestorTownsStore.toggleVisibility(true);
+            // Synchroniser avec l'état actuel
+            ancestorLayerSwitch.checked = rootAncestorTownsStore.isVisible;
             
             ancestorLayerSwitch.addEventListener('change', (e) => {
                 rootAncestorTownsStore.toggleVisibility(e.target.checked);
             });
         }
     
-        // Calque des villes familiales (inchangé)
+        // Calque des villes familiales
         const familyTownsSwitch = document.getElementById('layerFamily');
         if (familyTownsSwitch) {
             familyTownsSwitch.checked = false;

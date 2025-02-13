@@ -23,8 +23,68 @@ class RootAncestorTownsStore {
             initialize: action,
             updateMarkers: action,
             clearMarkers: action,
-            toggleVisibility: action
+            toggleVisibility: action,
+            processHierarchy: action  // Ajout de la nouvelle méthode
         });
+    }
+
+    async processHierarchy(hierarchy) {
+        try {
+            console.group('📍 Traitement de la hiérarchie pour les villes des ancêtres');
+            
+            if (!hierarchy) {
+                console.warn('⚠️ Hiérarchie invalide ou manquante');
+                return;
+            }
+
+            const birthData = [];
+            const processNode = (node, depth = 0) => {
+                const birthInfo = node.stats?.demography?.birthInfo;
+                
+                if (birthInfo?.place?.coordinates?.latitude) {
+                    birthData.push({
+                        id: node.id,
+                        name: `${node.name} ${node.surname}`,
+                        birthYear: node.birthYear,
+                        generation: node.generation || 0,
+                        sosa: node.sosa || 1,
+                        location: {
+                            lat: birthInfo.place.coordinates.latitude,
+                            lng: birthInfo.place.coordinates.longitude,
+                            name: node.fanBirthPlace,
+                            departement: birthInfo.place.departement
+                        }
+                    });
+                }
+    
+                if (node.children && Array.isArray(node.children)) {
+                    node.children.forEach(child => processNode(child, depth + 1));
+                }
+            };
+    
+            processNode(hierarchy);
+            
+            if (birthData.length > 0) {
+                await this.updateMarkers(birthData);
+                console.log('✅ Marqueurs mis à jour avec', birthData.length, 'lieux de naissance');
+            } else {
+                console.warn('⚠️ Aucun lieu de naissance trouvé dans la hiérarchie');
+            }
+    
+            console.groupEnd();
+            return birthData;
+
+        } catch (error) {
+            console.error('❌ Erreur lors du traitement de la hiérarchie:', error);
+            console.groupEnd();
+            throw error;
+        }
+    }
+
+    initialize(map) {
+        console.log('✅ Initialisation de RootAncestorTownsStore');
+        this.map = map;
+        this.markerDisplayManager.initializeCluster(map, this.createClusterMarker.bind(this));
     }
 
     createClusterMarker({ count, position }) {
@@ -51,10 +111,13 @@ class RootAncestorTownsStore {
         });
     }
 
-    initialize(map) {
-        console.log('✅ Initialisation de RootAncestorTownsStore');
-        this.map = map;
-        this.markerDisplayManager.initializeCluster(map, this.createClusterMarker.bind(this));
+    centerMapOnMarkers() {
+        if (!this.map) return;
+        
+        const bounds = this.getBounds();
+        if (bounds) {
+            this.map.fitBounds(bounds);
+        }
     }
 
     createMarker(location, births, generations) {
@@ -95,7 +158,7 @@ class RootAncestorTownsStore {
         return element;
      }
 
-     updateMarkers(birthData) {
+     async updateMarkers(birthData) {
         if (!this.map || !birthData?.length) {
             console.warn('⚠️ Carte ou données absentes');
             return;
@@ -108,23 +171,19 @@ class RootAncestorTownsStore {
         const locationMap = this.groupBirthDataByLocation(birthData);
         console.log(`📍 Nombre de lieux uniques: ${locationMap.size}`);
     
-        // Créer les marqueurs directement
         locationMap.forEach((locationData) => {
             if (!this.isValidLocationData(locationData)) return;
     
-            const position = new google.maps.LatLng(
-                locationData.location.lat,
-                locationData.location.lng
-            );
-    
-            this.markerDisplayManager.addMarker(
+            // Utiliser getOrCreateMarker au lieu de addMarker
+            this.markerDisplayManager.getOrCreateMarker(
                 'rootAncestors',
                 locationData.location.name,
-                position,
                 {
-                    content: this.createMarkerElement(locationData),
-                    title: locationData.births.map(b => b.name).join(', ')
+                    latitude: locationData.location.lat,
+                    longitude: locationData.location.lng,
+                    townDisplay: locationData.location.name
                 },
+                (data) => this.createMarkerElement(locationData),
                 (marker) => {
                     const content = this.createInfoWindowContent(
                         locationData.location,
@@ -138,42 +197,6 @@ class RootAncestorTownsStore {
     
         if (this.isVisible) {
             this.markerDisplayManager.toggleLayerVisibility('rootAncestors', true, this.map);
-        }
-    }
-
-    updateMarkers1(birthData) {
-        if (!this.map || !birthData?.length) {
-            console.warn('⚠️ Carte ou données absentes, attente d’une mise à jour...');
-            return;  // ❌ Ne force plus la mise à jour avec un timeout
-        }
-    
-        console.log(`🔄 Mise à jour des marqueurs pour ${birthData.length} lieux.`);
-        this.birthData = birthData;
-        this.markerDisplayManager.clearMarkers('rootAncestors');
-    
-        const locationMap = this.groupBirthDataByLocation(birthData);
-        console.log(`📍 Nombre de lieux uniques: ${locationMap.size}`);
-    
-        locationMap.forEach((locationData) => {
-            if (this.isValidLocationData(locationData)) {
-                this.getOrCreateMarker(locationData);
-            } else {
-                console.warn(`⚠️ Données invalides pour:`, locationData);
-            }
-        });
-    
-        if (this.isVisible) {
-            this.markerDisplayManager.toggleLayerVisibility('rootAncestors', true, this.map);
-            console.log("🟢 Clustering actif ?", this.markerDisplayManager.isInitialized());
-    
-            if (!this.markerDisplayManager.isInitialized()) {
-                console.warn("⚠️ Clustering non initialisé, annulation de l'ajout des marqueurs au cluster.");
-                return;
-            }
-    
-            console.log("📊 Ajout des marqueurs au cluster...");
-            this.markerDisplayManager.addMarkersToCluster(this.map);
-            console.log("✅ Marqueurs ajoutés au cluster !");
         }
     }
 
@@ -197,20 +220,6 @@ class RootAncestorTownsStore {
                 const content = this.createInfoWindowContent(locationData.location, locationData.births, locationData.generations);
                 infoWindowDisplayManager.showInfoWindow(marker, content);
             }
-        );
-    }
-
-    getOrCreateMarker1(locationData) {
-        return this.markerDisplayManager.getOrCreateMarker(
-            'rootAncestors',
-            locationData.location.name,
-            {
-                latitude: locationData.location.lat,
-                longitude: locationData.location.lng,
-                townDisplay: locationData.location.name
-            },
-            (data) => this.createMarkerElement(data),
-            (marker) => this.handleMarkerClick(marker, locationData)
         );
     }
 

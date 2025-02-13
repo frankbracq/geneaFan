@@ -16,20 +16,32 @@ class MarkerDisplayManager {
             this.cluster.setMap(null);
         }
     
+        // Configuration plus agressive du clustering
         this.cluster = new MarkerClusterer({
             map,
             markers: [],
             algorithm: new SuperClusterAlgorithm({
-                radius: 80,
-                maxZoom: 16,
-                minPoints: 2
+                radius: 60,          // Réduire le rayon pour regrouper plus facilement
+                maxZoom: 15,         // Niveau de zoom max où le clustering est actif
+                minPoints: 2,        // Nombre minimum de points pour former un cluster
+                minZoom: 1,          // Niveau de zoom minimum où le clustering commence
             }),
+            onClusterClick: (event, cluster, map) => {
+                const zoom = map.getZoom() || 0;
+                map.setZoom(zoom + 1);
+                map.setCenter(cluster.position);
+            },
             renderer: {
                 render: ({ count, position }) => {
                     return renderFn({ count, position });
                 }
             }
         });
+    
+        // Forcer la mise à jour du clustering
+        if (map) {
+            google.maps.event.trigger(map, 'zoom_changed');
+        }
     }
 
     addLayer(layerName) {
@@ -70,7 +82,7 @@ class MarkerDisplayManager {
         }
     
         let markersToAdd = [];
-        this.layers.forEach(layerMarkers => {
+        this.layers.forEach((layerMarkers, layerName) => {
             layerMarkers.forEach(marker => {
                 if (marker.map !== null) {
                     markersToAdd.push(marker);
@@ -86,7 +98,24 @@ class MarkerDisplayManager {
         }
     
         this.cluster.clearMarkers();
-        this.cluster.addMarkers(markersToAdd);
+        
+        // Vérifier que tous les marqueurs ont une position valide
+        const validMarkers = markersToAdd.filter(marker => {
+            if (!marker.position) {
+                console.warn('⚠️ Marqueur sans position détecté');
+                return false;
+            }
+            return true;
+        });
+    
+        console.log(`📍 Ajout de ${validMarkers.length} marqueurs valides au cluster`);
+        this.cluster.addMarkers(validMarkers);
+        
+        // Forcer la mise à jour du clustering
+        if (map) {
+            google.maps.event.trigger(map, 'zoom_changed');
+        }
+        
         console.log('✅ Markers ajoutés au cluster');
     }
 
@@ -97,13 +126,16 @@ class MarkerDisplayManager {
             if (this.cluster && !visible) {
                 this.cluster.clearMarkers();
             }
-
+    
             layerMarkers.forEach(marker => {
                 marker.map = visible ? map : null;
             });
-
+    
             if (visible && map) {
+                console.log(`🔄 Mise à jour du clustering pour ${layerName}`);
                 this.addMarkersToCluster(map);
+                // Forcer un rafraîchissement du clustering
+                google.maps.event.trigger(map, 'zoom_changed');
             }
         }
     }

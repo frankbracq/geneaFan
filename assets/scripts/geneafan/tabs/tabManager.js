@@ -53,15 +53,17 @@ storeEvents.subscribe(EVENTS.TABS.SHOWN, async ({ id }) => {
         console.group('🗺️ Activation de la carte');
 
         try {
-            await googleMapsStore.resizeAndMoveMap("familyMap");
+            await googleMapsStore.resizeAndMoveMap();  // Suppression du paramètre "familyMap"
             console.log('✅ Carte déplacée et redimensionnée');
 
             googleMapManager.setupLayerControls();
             googleMapManager.setupEventListeners();
 
-            // ✅ Ajout de la réactivation des marqueurs après déplacement
+            // Utilisation de rootAncestorTownsStore pour le centrage
             console.log("📍 Réactivation des marqueurs après changement d'onglet");
-            googleMapsStore.activateMapMarkers();
+            if (rootAncestorTownsStore.hasActiveMarkers()) {
+                rootAncestorTownsStore.centerMapOnMarkers();
+            }
 
         } catch (error) {
             console.error('❌ Erreur lors du chargement de la carte:', error);
@@ -74,7 +76,8 @@ storeEvents.subscribe(EVENTS.TABS.SHOWN, async ({ id }) => {
 storeEvents.subscribe(EVENTS.TABS.HIDDEN, ({ id }) => {
     if (id === "tab2") {
         console.log(`🗺️ La carte est masquée, arrêt des mises à jour.`);
-        googleMapsStore.clearCurrentMarkers();
+        rootAncestorTownsStore.toggleVisibility(false);
+        familyTownsStore.toggleVisibility(false);
     }
 });
 
@@ -131,12 +134,17 @@ export async function initializeTabs() {
         initializeTabOnVisible('#tab2', async () => {
             console.group('🗺️ Initialisation de la carte');
             try {
-                await googleMapManager.initialize();  // Appel unique pour centraliser l'initialisation
+                // Initialisation de la carte
+                await googleMapManager.initialize();
                 
-                // Déplacement et redimensionnement après l'initialisation complète
-                await googleMapsStore.resizeAndMoveMap("familyMap");
-                googleMapsStore.activateMapMarkers();
-        
+                // Redimensionnement
+                await googleMapsStore.resizeAndMoveMap();
+                
+                // Centrage sur les marqueurs si nécessaire (maintenant géré par rootAncestorTownsStore)
+                if (rootAncestorTownsStore.hasActiveMarkers()) {
+                    rootAncestorTownsStore.centerMapOnMarkers();
+                }
+                
                 console.log('✅ Carte initialisée dans tab2');
             } catch (error) {
                 console.error('❌ Erreur lors de l\'initialisation de la carte:', error);

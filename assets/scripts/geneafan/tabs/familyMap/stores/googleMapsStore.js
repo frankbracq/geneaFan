@@ -8,12 +8,9 @@ import { storeEvents, EVENTS } from '../../../gedcom/stores/storeEvents.js';
 class GoogleMapsStore {
     constructor() {
         this.map = null;
-        this.currentYear = null;
-        this.birthData = [];
-        this.isTimelineActive = true;
-        this.currentInfoWindow = null;
         this.isApiLoaded = false;
         this.apiLoadPromise = null;
+        this.isTimelineActive = true;
 
         // Deux clés API distinctes
         this.mapsApiKey = "AIzaSyDu9Qz5YXRF6CTJ4vf-0s89BaVq_eh13YE";  // Pour la carte principale
@@ -33,8 +30,6 @@ class GoogleMapsStore {
 
         makeObservable(this, {
             map: observable,
-            currentYear: observable,
-            birthData: observable,
             isTimelineActive: observable,
             overviewMapVisible: observable,
             isApiLoaded: observable,
@@ -42,9 +37,6 @@ class GoogleMapsStore {
             // Actions existantes
             initializeApi: action,
             initMap: action,
-            processHierarchy: action,
-            clearMap: action,
-            activateMapMarkers: action,
         });
     }
 
@@ -145,74 +137,6 @@ class GoogleMapsStore {
         this.resizeObserver = await this.#initializeOverviewMap();
     }
 
-    async processHierarchy(hierarchy) {
-        try {
-            console.group('📍 Mise à jour de la carte avec la hiérarchie');
-            console.log('🌳 Données de la hiérarchie:', hierarchy);
-            
-            // Extraire les données des lieux de naissance
-            const birthData = [];
-            
-            const processNode = (node, depth = 0) => {
-                const birthInfo = node.stats?.demography?.birthInfo;
-                // console.log('📌 Traitement du nœud:', {
-                //    name: node.name,
-                //    birthInfo: birthInfo
-                //});
-    
-                if (birthInfo?.place?.coordinates?.latitude) {
-                    birthData.push({
-                        id: node.id,
-                        name: `${node.name} ${node.surname}`,
-                        birthYear: node.birthYear,
-                        generation: node.generation || 0,
-                        sosa: node.sosa || 1,
-                        location: {
-                            lat: birthInfo.place.coordinates.latitude,
-                            lng: birthInfo.place.coordinates.longitude,
-                            name: node.fanBirthPlace,
-                            departement: birthInfo.place.departement
-                        }
-                    });
-                }
-    
-                if (node.children && Array.isArray(node.children)) {
-                    node.children.forEach(child => processNode(child, depth + 1));
-                }
-            };
-    
-            processNode(hierarchy);
-    
-            console.groupEnd();
-        } catch (error) {
-            console.error('❌ Erreur lors du traitement de la hiérarchie:', error);
-            console.groupEnd();
-            throw error;
-        }
-    }
-
-    activateMapMarkers() {
-        if (!this.map) {
-            console.warn('❌ Carte non disponible pour activer les marqueurs.');
-            return;
-        }
-    
-        this.centerMapOnMarkers();
-    }
-
-    clearCurrentMarkers() {
-        rootAncestorTownsStore.clearMarkers();
-    }
-
-    centerMapOnMarkers() {
-        if (this.map && rootAncestorTownsStore.hasActiveMarkers()) {
-            const bounds = rootAncestorTownsStore.getBounds();
-            if (bounds) {
-                this.map.fitBounds(bounds);
-            }
-        }
-    }
-
     // Gestion de la liste des lieux
     initializePlacesList() {
         this.placesListOffcanvas = new Offcanvas(document.getElementById('placesListOffcanvas'));
@@ -224,7 +148,9 @@ class GoogleMapsStore {
 
     getUniquePlaces() {
         const places = new Map();
-        this.birthData.forEach(birth => {
+        rootAncestorTownsStore.birthData.forEach(birth => {
+            if (!birth.location) return;
+            
             const key = `${birth.location.lat}-${birth.location.lng}`;
             if (!places.has(key)) {
                 places.set(key, {
@@ -319,7 +245,6 @@ class GoogleMapsStore {
     async resizeAndMoveMap() {
         if (this.map) {
             google.maps.event.trigger(this.map, "resize");
-            this.centerMapOnMarkers();
         }
     }
     
@@ -643,8 +568,6 @@ class GoogleMapsStore {
 
     cleanup() {
         if (this.map) {
-            // Cleanup des contrôles de la carte
-            // La carte elle-même sera détruite quand le conteneur sera vidé
             google.maps.event.clearInstanceListeners(this.map);
         }
     
@@ -653,13 +576,11 @@ class GoogleMapsStore {
             this.resizeObserver = null;
         }
     
-        // Nettoyage de la mini-carte
         const wrapper = document.getElementById('overview-map-wrapper');
         if (wrapper) {
             wrapper.remove();
         }
     
-        // Réinitialisation des états
         this.overviewMapVisible = false;
         this.history = [];
         this.redoStack = [];
