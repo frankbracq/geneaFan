@@ -1,49 +1,67 @@
 import { MarkerClusterer, SuperClusterAlgorithm } from "@googlemaps/markerclusterer";
+
+/**
+ * Manages the display and clustering of markers on a Google Map
+ */
 class MarkerDisplayManager {
     constructor() {
+        // Map of layers containing markers (key: layerName, value: Map of markers)
         this.layers = new Map();
+        // Cluster instance for grouping markers
         this.cluster = null;
+        // Set of currently active markers
         this.activeMarkers = new Set();
+        // Cache for marker configurations
         this.markerConfigs = new Map();
     }
 
+    /**
+     * Check if the manager is properly initialized
+     */
     isInitialized() {
         return this.map !== null && this.cluster !== null;
     }
 
+    /**
+     * Initialize the marker clusterer with specific configuration
+     * @param {google.maps.Map} map - Google Maps instance
+     * @param {Function} renderFn - Function to render cluster markers
+     */
     initializeCluster(map, renderFn) {
         if (this.cluster) {
-            this.cluster.setMap(null);
-        }
-    
-        // Configuration plus agressive du clustering
-        this.cluster = new MarkerClusterer({
-            map,
-            markers: [],
-            algorithm: new SuperClusterAlgorithm({
-                radius: 60,          // Réduire le rayon pour regrouper plus facilement
-                maxZoom: 15,         // Niveau de zoom max où le clustering est actif
-                minPoints: 2,        // Nombre minimum de points pour former un cluster
-                minZoom: 1,          // Niveau de zoom minimum où le clustering commence
-            }),
-            onClusterClick: (event, cluster, map) => {
-                const zoom = map.getZoom() || 0;
-                map.setZoom(zoom + 1);
-                map.setCenter(cluster.position);
-            },
-            renderer: {
-                render: ({ count, position }) => {
-                    return renderFn({ count, position });
+            console.warn("⚠️ Cluster already exists, clearing markers...");
+            this.cluster.clearMarkers();
+        } else {
+            console.log("🚀 Creating new Google Maps cluster");
+            this.cluster = new MarkerClusterer({
+                map,
+                markers: [],
+                algorithm: new SuperClusterAlgorithm({
+                    radius: 60,
+                    maxZoom: 15,
+                    minPoints: 2,
+                    minZoom: 1,
+                }),
+                onClusterClick: (event, cluster, map) => {
+                    const zoom = map.getZoom() || 0;
+                    map.setZoom(zoom + 1);
+                    map.setCenter(cluster.position);
+                },
+                renderer: {
+                    render: ({ count, position }) => {
+                        return renderFn({ count, position });
+                    }
                 }
-            }
-        });
-    
-        // Forcer la mise à jour du clustering
-        if (map) {
-            google.maps.event.trigger(map, 'zoom_changed');
+            });
         }
+    
+        console.log("🚀 Google Maps cluster initialized");   
     }
 
+    /**
+     * Add a new layer to manage markers
+     * @param {string} layerName - Name of the layer
+     */
     addLayer(layerName) {
         if (!this.layers.has(layerName)) {
             this.layers.set(layerName, new Map());
@@ -51,6 +69,14 @@ class MarkerDisplayManager {
         }
     }
 
+    /**
+     * Add a marker to a specific layer
+     * @param {string} layerName - Target layer
+     * @param {string} key - Unique identifier for the marker
+     * @param {google.maps.LatLng} position - Marker position
+     * @param {Object} options - Marker options
+     * @param {Function} onClickCallback - Click event handler
+     */
     addMarker(layerName, key, position, options, onClickCallback = null) {
         this.addLayer(layerName);
         const layerMarkers = this.layers.get(layerName);
@@ -58,7 +84,7 @@ class MarkerDisplayManager {
         if (!layerMarkers.has(key)) {
             const marker = new google.maps.marker.AdvancedMarkerElement({
                 position,
-                map: null, // Important : Initialement, le marker est "invisible"
+                map: null, // Initially invisible
                 ...options
             });
     
@@ -67,17 +93,19 @@ class MarkerDisplayManager {
             }
     
             layerMarkers.set(key, marker);
-            console.log(`✅ Marqueur ajouté à ${layerName}:`, key, marker);
-        } else {
-            console.warn(`⚠️ Marqueur déjà existant : ${key}`);
+            console.log(`✅ Added marker to ${layerName}:`, key, marker);
         }
     
         return layerMarkers.get(key);
     }
 
+    /**
+     * Add markers to the cluster
+     * @param {google.maps.Map} map - Google Maps instance
+     */
     addMarkersToCluster(map) {
         if (!this.isInitialized()) {
-            console.warn('⚠️ Cluster ou carte non initialisée');
+            console.warn('⚠️ Cluster or map not initialized');
             return;
         }
     
@@ -90,35 +118,42 @@ class MarkerDisplayManager {
             });
         });
     
-        console.log(`📊 Tentative d'ajout de ${markersToAdd.length} marqueurs au cluster`);
+        console.log(`📊 Attempting to add ${markersToAdd.length} markers to cluster`);
     
         if (markersToAdd.length === 0) {
-            console.warn('⚠️ Aucun marqueur à afficher dans le cluster');
+            console.warn('⚠️ No markers to display in cluster');
+            return;
+        }
+    
+        if (!this.cluster) {
+            console.error("❌ Cluster is not initialized properly!");
             return;
         }
     
         this.cluster.clearMarkers();
         
-        // Vérifier que tous les marqueurs ont une position valide
         const validMarkers = markersToAdd.filter(marker => {
             if (!marker.position) {
-                console.warn('⚠️ Marqueur sans position détecté');
+                console.warn('⚠️ Marker without position detected');
                 return false;
             }
             return true;
         });
     
-        console.log(`📍 Ajout de ${validMarkers.length} marqueurs valides au cluster`);
+        console.log(`📍 Adding ${validMarkers.length} valid markers to cluster`);
         this.cluster.addMarkers(validMarkers);
+    
+        google.maps.event.trigger(map, 'zoom_changed');
         
-        // Forcer la mise à jour du clustering
-        if (map) {
-            google.maps.event.trigger(map, 'zoom_changed');
-        }
-        
-        console.log('✅ Markers ajoutés au cluster');
+        console.log('✅ Markers added to cluster');
     }
 
+    /**
+     * Toggle visibility of a layer
+     * @param {string} layerName - Target layer
+     * @param {boolean} visible - Visibility state
+     * @param {google.maps.Map} map - Google Maps instance
+     */
     toggleLayerVisibility(layerName, visible, map) {
         console.log(`Toggling visibility for layer ${layerName} to ${visible}`);
         const layerMarkers = this.layers.get(layerName);
@@ -140,6 +175,10 @@ class MarkerDisplayManager {
         }
     }
 
+    /**
+     * Clear markers from specific layer or all layers
+     * @param {string} layerName - Target layer (optional)
+     */
     clearMarkers(layerName = null) {
         console.log(`Clearing markers${layerName ? ` for layer ${layerName}` : ' for all layers'}`);
 
@@ -164,6 +203,12 @@ class MarkerDisplayManager {
         this.activeMarkers.clear();
     }
 
+    /**
+     * Create marker configuration
+     * @param {string} townName - Name of the town
+     * @param {Object} townData - Town data
+     * @param {Function} createMarkerElementFn - Function to create marker element
+     */
     createMarkerConfig(townName, townData, createMarkerElementFn) {
         if (!townData?.latitude || !townData?.longitude) {
             console.warn(`⚠️ Données de ville invalides pour ${townName}`);
@@ -185,6 +230,14 @@ class MarkerDisplayManager {
         return config;
     }
 
+    /**
+     * Get existing marker or create new one
+     * @param {string} layerName - Target layer
+     * @param {string} townName - Name of the town
+     * @param {Object} townData - Town data
+     * @param {Function} createMarkerElementFn - Function to create marker element
+     * @param {Function} onClickCallback - Click event handler
+     */
     getOrCreateMarker(layerName, townName, townData, createMarkerElementFn, onClickCallback) {
         let config = this.markerConfigs.get(townName);
         
@@ -205,6 +258,9 @@ class MarkerDisplayManager {
         return marker;
     }
 
+    /**
+     * Cleanup resources
+     */
     cleanup() {
         this.clearMarkers();
         if (this.cluster) {

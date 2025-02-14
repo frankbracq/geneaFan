@@ -1,5 +1,5 @@
 import _ from 'lodash';
-import familyTownsStore from '../gedcom/stores/familyTownsStore.js';
+import familyTownsStore from '../tabs/familyMap/stores/familyTownsStore.js';
 
 export const memoize = (fn) => {
     const cache = new Map();

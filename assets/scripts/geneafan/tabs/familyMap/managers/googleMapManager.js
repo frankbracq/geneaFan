@@ -1,10 +1,9 @@
-import { googleMapsStore } from './stores/googleMapsStore.js';
-import { rootAncestorTownsStore } from './rootAncestorTownsStore.js';
-import surnamesTownsStore from './surnamesTownsStore.js';
-import gedcomDataStore from '../../gedcom/stores/gedcomDataStore.js';
-import familyTownsStore from '../../gedcom/stores/familyTownsStore.js';
-import { autorun } from '../../common/stores/mobx-config.js';
-import { storeEvents, EVENTS } from '../../gedcom/stores/storeEvents.js';
+import gedcomDataStore from '../../../gedcom/stores/gedcomDataStore.js';
+import { googleMapsStore } from '../stores/googleMapsStore.js';
+import { rootAncestorTownsStore } from '../stores/rootAncestorTownsStore.js';
+import surnamesTownsStore from '../stores/surnamesTownsStore.js';
+import familyTownsStore from '../stores/familyTownsStore.js';
+import { autorun } from '../../../common/stores/mobx-config.js';
 
 class GoogleMapManager {
     constructor() {

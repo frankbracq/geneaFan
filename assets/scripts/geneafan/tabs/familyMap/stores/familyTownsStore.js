@@ -1,36 +1,42 @@
-/*
-Gère l'ensemble des villes du fichier GEDCOM
-Traite tous types d'événements (naissances, mariages, décès)
-Fournit un calque de contexte global pour la carte
-*/
+import { makeObservable, observable, action, computed, runInAction, autorun, toJS, isObservable } from '../../../common/stores/mobx-config.js';
+import MarkerDisplayManager from '../managers/markerDisplayManager.js';
+import { infoWindowDisplayManager } from '../managers/infoWindowDisplayManager.js';
+import { storeEvents, EVENTS } from '../../../gedcom/stores/storeEvents.js';
+import { normalizeGeoString } from "../../../utils/geo.js";
+import { TownStatisticsManager } from '../../../gedcom/stores/townStatisticsManager.js';
+import { infoWindowContentManager } from '../managers/infoWindowContentManager.js';
 
-import { makeObservable, observable, action, computed, runInAction, autorun, toJS, isObservable } from '../../common/stores/mobx-config.js';
-import MarkerDisplayManager from '../../tabs/familyMap/markerDisplayManager.js';
-import { infoWindowDisplayManager } from '../../tabs/familyMap/infoWindowDisplayManager.js';
-import { storeEvents, EVENTS } from './storeEvents.js';
-import { normalizeGeoString } from "../../utils/geo.js";
-import { TownStatisticsManager } from './townStatisticsManager';
-import { infoWindowContentManager } from './infoWindowContentManager.js';
-
+/**
+ * Manage the display of all towns mentioned in the GEDCOM file
+ * 
+ * Key responsibilities:
+ * - Manages all towns from GEDCOM file
+ * - Processes all types of genealogical events (births, marriages, deaths)
+ * - Provides a global context layer for the map
+ * - Handles geocoding and marker management
+ * - Manages caching and data persistence
+ */
 class FamilyTownsStore {
     constructor() {
+        // Primary data storage
         this.eventsData = new Map();
 
-        // Cache system
-        this.geoDataCache = null;
-        this.markerConfigs = new Map(); // key: normalizedTownName -> {position, options}
-        this.infoWindowContentCache = new Map(); // key: normalizedTownName -> content HTML
+        // Caching systems for performance optimization
+        this.geoDataCache = null;                     // Cache for geographical data
+        this.markerConfigs = new Map();               // Stores marker configurations by town
+        this.infoWindowContentCache = new Map();      // Caches info window HTML content
 
-        // Core data and managers
+        // Core infrastructure
         this.markerDisplayManager = new MarkerDisplayManager();
-        this.townsData = new Map();
-        this.disposers = new Map();
+        this.townsData = new Map();                   // Primary town data storage
+        this.disposers = new Map();                   // Cleanup handlers
 
-        // States
+        // State management
         this.isLoading = false;
         this.isVisible = false;
         this.map = null;
 
+        // Observable event collections by type
         this.events = observable({
             birth: observable([]),    
             death: observable([]),    
@@ -40,6 +46,7 @@ class FamilyTownsStore {
             event: observable([]) 
         });
     
+        // MobX configuration
         makeObservable(this, {
             townsData: observable,
             isLoading: observable,
@@ -58,7 +65,7 @@ class FamilyTownsStore {
             totalTowns: computed
         });
     
-        // Important: Keep the autorun for reactive marker updates
+        // Automatic marker updates when data changes
         autorun(() => {
             if (this.map && (this.townsData.size > 0 || this.isVisible)) {
                 this.updateMarkers();
@@ -68,21 +75,25 @@ class FamilyTownsStore {
         this.setupEventSubscriptions();
     }
 
-    // Event Management
+    /**
+     * Sets up event listeners for GEDCOM data processing
+     * Handles bulk individual additions, cache events, and cleanup
+     */
     setupEventSubscriptions() {
+        // Handle bulk addition of individuals
         const bulkIndividualsDisposer = storeEvents.subscribe(
             EVENTS.INDIVIDUALS.BULK_ADDED,
             
             (individuals) => {
-                console.time('processAllTownsEvents'); // Temps global
+                console.time('processAllTownsEvents');
     
                 runInAction(() => {
                     const townUpdates = new Map();
-    
-                    console.time('processIndividuals'); // Temps pour traiter les individus
+                    console.time('processIndividuals');
     
                     const validEventTypes = ['birth', 'death', 'marriage'];
     
+                    // Process each individual's events
                     individuals.forEach(([id, individual]) => {
                         individual.individualEvents?.forEach(event => {
                             if (!validEventTypes.includes(event.type)) return;
@@ -91,6 +102,7 @@ class FamilyTownsStore {
                             const normalizedTownName = normalizeGeoString(event.town);
                             if (normalizedTownName === 'lieu_inconnu') return;
     
+                            // Initialize town data if needed
                             if (!townUpdates.has(normalizedTownName)) {
                                 townUpdates.set(normalizedTownName, {
                                     townData: {
@@ -101,6 +113,7 @@ class FamilyTownsStore {
                                 });
                             }
     
+                            // Enrich event with individual details
                             const enrichedEvent = {
                                 type: event.type,
                                 date: event.date,
@@ -121,10 +134,10 @@ class FamilyTownsStore {
                         });
                     });
     
-                    console.timeEnd('processIndividuals'); // Fin de traitement des individus
+                    console.timeEnd('processIndividuals');
+                    console.time('applyTownUpdates');
     
-                    console.time('applyTownUpdates'); // Temps pour appliquer les mises à jour
-    
+                    // Apply accumulated updates
                     townUpdates.forEach((updateData, normalizedTownName) => {
                         this.addOrUpdateTown(normalizedTownName, updateData.townData);
                         const town = this.townsData.get(normalizedTownName);
@@ -135,35 +148,43 @@ class FamilyTownsStore {
                         }
                     });
     
-                    console.timeEnd('applyTownUpdates'); // Fin des mises à jour
+                    console.timeEnd('applyTownUpdates');
                 });
     
-                console.timeEnd('processAllTownsEvents'); // Fin du traitement global
+                console.timeEnd('processAllTownsEvents');
             }
         );
     
+        // Handle cache build completion
         const cacheDisposer = storeEvents.subscribe(
             EVENTS.CACHE.BUILT,
             () => {
-                console.log('🔄 CACHE.BUILT reçu');
+                console.log('🔄 Cache built received');
                 this.finalizeAllTownsData();
             }
         );
     
+        // Handle cache clearing
         const clearDisposer = storeEvents.subscribe(EVENTS.CACHE.CLEARED, () => {
-            console.log('🧹 Nettoyage des données des villes');
+            console.log('🧹 Clearing town data');
             this.clearAllTowns();
         });
     
+        // Store disposers for cleanup
         this.disposers.set('bulkIndividuals', bulkIndividualsDisposer);
         this.disposers.set('cache', cacheDisposer);
         this.disposers.set('clear', clearDisposer);
     }    
 
-    // Marker Configuration Management
+    /**
+     * Creates marker configuration for a town
+     * @param {string} townName - Normalized town name
+     * @param {Object} townData - Town data including coordinates
+     * @returns {Object|null} Marker configuration or null if invalid data
+     */
     createMarkerConfig(townName, townData) {
         if (!townData?.latitude || !townData?.longitude) {
-            console.warn(`⚠️ Données de ville invalides pour ${townName}`);
+            console.warn(`⚠️ Invalid town data for ${townName}`);
             return null;
         }
 
@@ -818,17 +839,21 @@ _collectTownsNeedingUpdate() {
         infoWindowDisplayManager.showInfoWindow(marker, content);
     }
 
-    // Event Processing
+    /**
+     * Processes and adds/updates events for a town
+     * Handles event deduplication and standardization
+     * @param {Object} town - Town object
+     * @param {Object} eventData - Event data to process
+     */
     updateTownEvents(town, eventData) {
         if (!eventData?.type || !town?.events) {
             console.log('❌ Invalid event or town structure:', { eventData, town });
             return;
         }
     
-        // Standardiser les types d'événements à utiliser uniquement en minuscules
+        // Standardize event types to lowercase only
         const validEventTypes = ['birth', 'death', 'marriage', 'burial', 'occupation', 'event'];
     
-        // Vérifier si le type d'événement est valide
         if (!validEventTypes.includes(eventData.type)) {
             console.log('❌ Unrecognized event type:', eventData.type);
             return;
@@ -839,7 +864,7 @@ _collectTownsNeedingUpdate() {
             personDetails: { ...eventData.personDetails }
         };
     
-        // Ajouter ou mettre à jour l'événement dans le type standardisé
+        // Add or update event in standardized type
         if (!Array.isArray(town.events[eventData.type])) {
             town.events[eventData.type] = observable([]);
         }
@@ -853,10 +878,8 @@ _collectTownsNeedingUpdate() {
         } else {
             town.events[eventData.type].push(enrichedEvent);
         }
-    
-        // console.log(`✅ Event ${eventData.type} added/updated for ${town.town}`);
     }
 }
 
-// Export d'une instance unique du store
+// Export singleton instance
 export default new FamilyTownsStore();

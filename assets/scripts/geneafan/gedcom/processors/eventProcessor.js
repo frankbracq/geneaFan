@@ -12,7 +12,7 @@ import { dateProcessor } from './dateProcessor.js';
 import gedcomDataStore from '../stores/gedcomDataStore.js';
 import gedcomConstantsStore from '../stores/gedcomConstantsStore.js';
 import configStore from '../../tabs/fanChart/fanConfigStore.js';
-import familyTownsStore from '../stores/familyTownsStore.js';
+import familyTownsStore from '../../tabs/familyMap/stores/familyTownsStore.js';
 
 const { TAGS } = gedcomConstantsStore;
 

@@ -1,9 +1,9 @@
 import { FanChartManager } from './fanChart/fanChartManager.js';
-import { googleMapManager } from './familyMap/googleMapManager.js';
+import { googleMapManager } from './familyMap/managers/googleMapManager.js';
 import { googleMapsStore } from './familyMap/stores/googleMapsStore.js';
 import { storeEvents, EVENTS } from '../gedcom/stores/storeEvents.js';
-import { rootAncestorTownsStore } from './familyMap/rootAncestorTownsStore.js';
-import { familyTownsStore } from '../gedcom/stores/familyTownsStore.js';
+import { rootAncestorTownsStore } from './familyMap/stores/rootAncestorTownsStore.js';
+import familyTownsStore from './familyMap/stores/familyTownsStore.js';
 
 // Map des noms conviviaux pour les tabs
 const TAB_NAMES = {

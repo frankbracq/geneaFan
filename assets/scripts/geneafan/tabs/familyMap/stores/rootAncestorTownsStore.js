@@ -1,18 +1,34 @@
-import { makeObservable, observable, action, autorun } from '../../common/stores/mobx-config.js';
-import MarkerDisplayManager from './markerDisplayManager.js';
-import { infoWindowDisplayManager } from './infoWindowDisplayManager.js';
+import { makeObservable, observable, action, autorun } from '../../../common/stores/mobx-config.js';
+import MarkerDisplayManager from '../managers/markerDisplayManager.js';
+import { infoWindowDisplayManager } from '../managers/infoWindowDisplayManager.js';
 
+/**
+ * Manages the display of ancestor birth locations on the map for the current root person
+ * Each time a new person is selected as root, this store processes their ancestor tree
+ * to display birth locations with different colors for paternal and maternal lines
+ * 
+ * Key features:
+ * - Processes birth locations from the root person's ancestor tree
+ * - Colors markers based on lineage (blue for paternal, pink for maternal, purple for mixed)
+ * - Handles marker clustering for dense areas
+ * - Updates dynamically when root person changes
+ */
 class RootAncestorTownsStore {
     constructor() {
+        // Core data and managers
+        this.birthData = [];
         this.markerDisplayManager = new MarkerDisplayManager();
         this.map = null;
-        this.birthData = [];
+        
+        // Visibility state
         this.isVisible = true;
+
+        // Style configuration for different branches
         this.styles = {
             colors: {
-                paternal: '#1e40af',
-                maternal: '#be185d',
-                mixed: '#9333ea'
+                paternal: '#1e40af',  // Blue for paternal line
+                maternal: '#be185d',  // Pink for maternal line
+                mixed: '#9333ea'      // Purple for mixed locations
             }
         };
     
@@ -24,23 +40,30 @@ class RootAncestorTownsStore {
             updateMarkers: action,
             clearMarkers: action,
             toggleVisibility: action,
-            processHierarchy: action  // Ajout de la nouvelle méthode
+            processHierarchy: action
         });
     }
 
+    /**
+     * Process the entire genealogical hierarchy
+     * @param {Object} hierarchy - Family tree hierarchy
+     * @returns {Array} Processed birth locations
+     */
     async processHierarchy(hierarchy) {
         try {
-            console.group('📍 Traitement de la hiérarchie pour les villes des ancêtres');
-            
+            console.group('📍 Processing ancestor towns hierarchy');
+    
             if (!hierarchy) {
-                console.warn('⚠️ Hiérarchie invalide ou manquante');
+                console.warn('⚠️ Invalid or missing hierarchy');
                 return;
             }
-
+    
             const birthData = [];
+            
+            // Recursive function to process each node in the hierarchy
             const processNode = (node, depth = 0) => {
                 const birthInfo = node.stats?.demography?.birthInfo;
-                
+    
                 if (birthInfo?.place?.coordinates?.latitude) {
                     birthData.push({
                         id: node.id,
@@ -57,36 +80,51 @@ class RootAncestorTownsStore {
                     });
                 }
     
+                // Process children recursively
                 if (node.children && Array.isArray(node.children)) {
                     node.children.forEach(child => processNode(child, depth + 1));
                 }
             };
     
             processNode(hierarchy);
-            
+            this.birthData = birthData;
+    
             if (birthData.length > 0) {
-                await this.updateMarkers(birthData);
-                console.log('✅ Marqueurs mis à jour avec', birthData.length, 'lieux de naissance');
+                console.log('✅ Birth data extracted for', birthData.length, 'locations');
             } else {
-                console.warn('⚠️ Aucun lieu de naissance trouvé dans la hiérarchie');
+                console.warn('⚠️ No birth locations found in hierarchy');
             }
     
             console.groupEnd();
             return birthData;
-
+    
         } catch (error) {
-            console.error('❌ Erreur lors du traitement de la hiérarchie:', error);
+            console.error('❌ Error processing hierarchy:', error);
             console.groupEnd();
             throw error;
         }
     }
 
+    /**
+     * Initialize the store with a map instance
+     * @param {google.maps.Map} map - Google Maps instance
+     */
     initialize(map) {
-        console.log('✅ Initialisation de RootAncestorTownsStore');
+        console.log("🚀 Initialisation de rootAncestorTownsStore");
         this.map = map;
-        this.markerDisplayManager.initializeCluster(map, this.createClusterMarker.bind(this));
+        
+        if (!this.markerDisplayManager.isInitialized()) {
+            console.warn("⚠️ Initialisation du clustering...");
+            this.markerDisplayManager.initializeCluster(map, this.createClusterMarker);
+        }
     }
 
+    /**
+     * Create a cluster marker for grouped locations
+     * @param {Object} param0 - Cluster parameters
+     * @param {number} param0.count - Number of markers in cluster
+     * @param {google.maps.LatLng} param0.position - Cluster position
+     */
     createClusterMarker({ count, position }) {
         const div = document.createElement('div');
         div.className = 'cluster-marker';
@@ -111,6 +149,9 @@ class RootAncestorTownsStore {
         });
     }
 
+    /**
+     * Center the map on all visible markers
+     */
     centerMapOnMarkers() {
         if (!this.map) return;
         
@@ -120,6 +161,12 @@ class RootAncestorTownsStore {
         }
     }
 
+    /**
+     * Create a single marker for a location
+     * @param {Object} location - Location data
+     * @param {Array} births - Birth events at this location
+     * @param {Object} generations - Generation information
+     */
     createMarker(location, births, generations) {
         if (!location || !location.lat || !location.lng) {
             console.warn('❌ Données de localisation invalides', location);
@@ -158,7 +205,11 @@ class RootAncestorTownsStore {
         return element;
      }
 
-     async updateMarkers(birthData) {
+    /**
+     * Update all markers on the map
+     * @param {Array} birthData - Array of birth location data
+     */
+    async updateMarkers(birthData) {
         if (!this.map || !birthData?.length) {
             console.warn('⚠️ Carte ou données absentes');
             return;
@@ -282,12 +333,21 @@ class RootAncestorTownsStore {
         this.isVisible = visible;
         if (this.map) {
             this.markerDisplayManager.toggleLayerVisibility('rootAncestors', visible, this.map);
-            if (visible) {
-                this.markerDisplayManager.addMarkersToCluster(this.map);
+            if (visible && this.birthData && this.birthData.length > 0) {
+                console.warn(`⚠️ Ajout des marqueurs au cluster dans toggleVisibility (${this.birthData.length} marqueurs)`);
+                this.updateMarkers(this.birthData);
+                setTimeout(() => {
+                    this.markerDisplayManager.addMarkersToCluster(this.map);
+                }, 200); // ⏳ Petit délai pour garantir que les markers sont bien en place
             }
         }
     }
-
+    
+    /**
+     * Group birth data by location
+     * @param {Array} data - Birth data array
+     * @returns {Map} Grouped data by location
+     */
     groupBirthDataByLocation(data) {
         return new Map(
             data.reduce((acc, birth) => {
@@ -379,11 +439,21 @@ class RootAncestorTownsStore {
         return new Map([...grouped.entries()].sort((a, b) => a[0] - b[0]));
     }
 
+    /**
+     * Determine branch type from SOSA number
+     * @param {number} sosa - SOSA-Stradonitz number
+     * @returns {string} Branch type ('paternal', 'maternal', or 'unknown')
+     */
     determineBranchFromSosa(sosa) {
         if (!sosa) return 'unknown';
         return sosa % 2 === 0 ? 'paternal' : 'maternal';
     }
 
+    /**
+     * Get color based on branch types in a location
+     * @param {Array} births - Birth events at location
+     * @returns {string} Color code for marker
+     */
     getBranchColor(births) {
         if (!births || births.length === 0) return this.styles.colors.mixed;
 

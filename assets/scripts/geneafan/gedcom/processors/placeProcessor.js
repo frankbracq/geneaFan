@@ -8,7 +8,7 @@ import {
 } from "../../utils/geo.js";
 
 // Stores
-import familyTownsStore from '../stores/familyTownsStore.js';
+import familyTownsStore from '../../tabs/familyMap/stores/familyTownsStore.js';
 import gedcomConstantsStore from '../stores/gedcomConstantsStore.js';
 
 // Data

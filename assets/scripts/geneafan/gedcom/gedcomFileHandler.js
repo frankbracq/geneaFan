@@ -6,7 +6,7 @@ import configStore from '../tabs/fanChart/fanConfigStore.js';
 import rootPersonStore from '../common/stores/rootPersonStore.js';
 import authStore from '../common/stores/authStore.js';
 import gedcomDataStore from './stores/gedcomDataStore.js';
-import familyTownsStore from './stores/familyTownsStore.js';
+import familyTownsStore from '../tabs/familyMap/stores/familyTownsStore.js';
 import { FanChartManager } from '../tabs/fanChart/fanChartManager.js';
 import {
     clearAllStates,
