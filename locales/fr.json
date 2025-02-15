@@ -42,7 +42,7 @@
         "title": "Genealogies",
         "description": "Générateur d'éventail généalogique",
         "view_fan_chart": "Ascendance",
-        "view_family_map": "Lieux",
+        "view_family_map": "Map",
         "view_family_tree": "Arbre",
         "view_ascendant_timeline": "Chronologie",
         "view_statistics": "Statistiques",
@@ -198,6 +198,8 @@
         "genealogical_fan": "Éventail généalogique",
         "discover_fan": "Cliquez ici pour découvrir l'éventail généalogique",
         "tooltip_full_screen": "Plein écran",
-        "tooltip_fan_parameters": "Affichez les paramètres de l'éventail"
+        "tooltip_fan_parameters": "Affichez les paramètres de l'éventail",
+        "tooltip_map_parameters": "Select towns to display on the map"
+      
     }
 }
