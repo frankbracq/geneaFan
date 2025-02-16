@@ -7,6 +7,7 @@ import rootPersonStore from '../../common/stores/rootPersonStore.js';
  * Store responsible for managing the timeline visualization.
  * Automatically synchronizes with root person changes and manages the horizontal timeline display.
  */
+
 class TimelineStore {
     // State management
     status = 'idle'; // 'idle' | 'loading' | 'success' | 'error'
@@ -33,6 +34,7 @@ class TimelineStore {
         this.rootReactionDisposer = reaction(
             () => rootPersonStore.root,
             async (newRoot) => {
+                console.log("🔄 Reaction root déclenchée", newRoot);
                 if (newRoot) {
                     await this.updateTimelineForRoot();
                 } else {
@@ -60,12 +62,9 @@ class TimelineStore {
 
     // Actions
     setStatus(newStatus, error = null) {
+        console.log(`🔄 Changement de status: ${this.status} -> ${newStatus}`);
         this.status = newStatus;
         this.errorMessage = error;
-
-        if (process.env.NODE_ENV === 'development' && error) {
-            console.error('Timeline error:', error);
-        }
     }
 
     generateTimelineEvents() {
@@ -114,21 +113,30 @@ class TimelineStore {
     }
 
     async updateTimelineForRoot() {
+        console.log("🔄 Début updateTimelineForRoot");
         try {
             runInAction(() => {
                 this.setStatus('loading');
             });
 
+            console.log("📊 Nombre d'événements:", timelineEventsStore.events.length);
+            console.log("📊 hasEvents:", timelineEventsStore.hasEvents);
+
             if (timelineEventsStore.hasEvents) {
-                // Mettre à jour le DOM avec le nouveau contenu
                 const timelineElement = document.getElementById("ascendantTimeline");
+                console.log("🔍 Élément timeline trouvé:", timelineElement !== null);
+                
                 if (timelineElement) {
-                    // Nettoyer l'instance précédente si elle existe
                     this.cleanupTimelineInstance();
                     
-                    timelineElement.innerHTML = this.currentTimelineHTML;
-                    // Réinitialiser la timeline horizontale
+                    const html = this.currentTimelineHTML;
+                    console.log("📝 HTML généré, longueur:", html.length);
+                    
+                    timelineElement.innerHTML = html;
+                    
                     await this.initializeHorizontalTimeline();
+                    console.log("✅ Timeline horizontale initialisée");
+                    
                     this.setStatus('success');
                 } else {
                     throw new Error('Timeline container not found');
@@ -137,12 +145,13 @@ class TimelineStore {
                 this.setStatus('success');
             }
         } catch (error) {
+            console.error("❌ Erreur dans updateTimelineForRoot:", error);
             runInAction(() => {
                 this.setStatus('error', error.message);
             });
         }
     }
-
+    
     async initializeHorizontalTimeline() {
         try {
             if (!window.jQuery) {

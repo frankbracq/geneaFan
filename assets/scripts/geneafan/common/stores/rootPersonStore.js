@@ -41,17 +41,17 @@ class RootPersonStore {
             }),
             async ({ root, hasCache }) => {
                 if (!root || !hasCache) return;
-        
+
                 try {
                     console.group('🔄 Root Change Reaction');
                     console.log('👉 Triggering buildHierarchy for root:', root);
-        
+
                     const newHierarchy = this.buildHierarchy(root);
                     console.log('✅ Hierarchy built and stored');
                     console.groupEnd();
-        
+
                     gedcomDataStore.setHierarchy(newHierarchy);
-        
+
                     if (!this._skipNextDraw) {
                         const drawResult = await FanChartManager.drawFanForRoot(root, false);
                         if (drawResult?.rootPersonName) {
@@ -64,10 +64,10 @@ class RootPersonStore {
                             storeEvents.emit(EVENTS.FAN.DRAWN);
                         }
                     }
-        
+
                     this.updateHistory(root);
                     document.getElementById('initial-group').style.display = 'none';
-        
+
                 } catch (error) {
                     console.error("Error handling root change:", error);
                     console.groupEnd();
@@ -158,16 +158,25 @@ class RootPersonStore {
                 this.createFictiveIndividual(individualPointer, sosa, height);
 
             if (individual.individualEvents && individual.individualEvents.length > 0) {
+                console.group(`📅 Collecte des événements pour ${individual.name || 'Individu'} (Sosa: ${sosa})`);
                 individual.individualEvents.forEach((event) => {
                     const validTypes = ['death', 'birth', 'marriage'];
                     if (validTypes.includes(event.type)) {
+                        // console.log(`✓ Ajout événement ${event.type}:`, {
+                        //     date: event.date,
+                        //     lieu: event.town,
+                        //     type: event.type
+                        // });
                         timelineEventsStore.addEvent({
                             ...event,
                             id: individualPointer,
                             sosa,
                         });
+                    } else {
+                        // console.log(`⚠️ Type d'événement ignoré:`, event.type);
                     }
                 });
+                console.groupEnd();
             }
 
             let obj = {

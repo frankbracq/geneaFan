@@ -49,14 +49,26 @@ class TimelineEventsStore {
     }
 
     addEvent = (event) => {
+        console.group(`🔄 Traitement événement pour ${event.name || 'Inconnu'}`);
+        
         if (!event.type || !event.date || !event.name) {
-            console.warn('Invalid event format:', event);
+            console.warn('❌ Format d\'événement invalide:', event);
+            console.groupEnd();
             return;
         }
 
         if (event.eventId && this.events.some(e => e.eventId === event.eventId)) {
+            console.log('⚠️ Événement déjà existant, ignoré');
+            console.groupEnd();
             return;
         }
+
+        console.log('📝 Enrichissement de l\'événement:', {
+            type: event.type,
+            date: event.date,
+            name: event.name,
+            sosa: event.sosa
+        });
 
         const enrichedEvent = {
             ...event,
@@ -71,6 +83,9 @@ class TimelineEventsStore {
             this.events.push(enrichedEvent);
             this._updateGroupedEvents();
         });
+        
+        console.log('✅ Événement ajouté avec succès');
+        console.groupEnd();
     }
 
     setEvents = (events) => {

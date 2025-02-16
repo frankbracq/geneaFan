@@ -9,8 +9,8 @@ import familyTownsStore from './familyMap/stores/familyTownsStore.js';
 const TAB_NAMES = {
     'tab1': 'Éventail',
     'tab2': 'Carte',
-    'tab3': 'Timeline',
-    'tab4': 'Documents',
+    'tab3': 'Tree',
+    'tab4': 'Timeline',
     'tab5': 'Statistiques'
 };
 
@@ -153,11 +153,12 @@ export async function initializeTabs() {
         });
         
         // Initialisation de la Timeline avec import dynamique
-        initializeTabOnVisible('#tab3', async () => {
+        initializeTabOnVisible('#tab4', async () => {
             console.group('⏳ Initialisation de la timeline');
             try {
-                const { TimelineManager } = await import('./timeline/timelineManager.js');
-                new TimelineManager();
+                const { timelineManager } = await import('./timeline/timelineManager.js');
+                console.log('TimelineManager importé avec succès');
+                await timelineManager.updateTimelineForRoot();
                 console.log('✅ Timeline initialisée avec succès');
             } catch (error) {
                 console.error('❌ Erreur lors de l\'initialisation de la timeline:', error);

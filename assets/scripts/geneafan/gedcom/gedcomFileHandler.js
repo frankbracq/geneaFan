@@ -551,8 +551,8 @@ async function onFileChange(data) {
 
         let rootId;
         const gedcomFileName = configStore.getConfig.gedcomFileName;
-        if (gedcomFileName === "demo.ged") {
-            rootId = "@I111@";
+        if (gedcomFileName === "Arbre_Robin_Keller_7G_25-10-2023.ged") {
+            rootId = "@I124@"; //@I111@"; 
         } else {
             const youngestPerson = findYoungestIndividual(individuals);
             rootId = youngestPerson ? youngestPerson.id : individuals[0]?.id;
