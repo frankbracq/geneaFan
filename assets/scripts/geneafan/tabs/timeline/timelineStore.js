@@ -7,6 +7,7 @@ import rootPersonStore from '../../common/stores/rootPersonStore.js';
  * Store responsible for managing the timeline visualization.
  * Automatically synchronizes with root person changes and manages the horizontal timeline display.
  */
+
 class TimelineStore {
     // State management
     status = 'idle'; // 'idle' | 'loading' | 'success' | 'error'
