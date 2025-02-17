@@ -35,7 +35,7 @@ class StatisticsManager {
 
             // Initialisation du store
             console.log('Initialisation du statisticsStore...');
-            this.statisticsStore.initialize();
+            await this.statisticsStore.initialize();
 
             // S'abonner aux mises à jour
             console.log('Configuration des abonnements aux mises à jour...');
@@ -56,7 +56,7 @@ class StatisticsManager {
             console.log('Initialisation des graphiques...');
             this.cleanupContainers();
             this.updateBasicStats();
-            this.createDemographyCharts();
+            await this.createDemographyCharts();
             this.initializeNavigation();
 
             if (!this.initialized) {
@@ -67,25 +67,22 @@ class StatisticsManager {
 
         } catch (error) {
             console.error('❌ Erreur lors de l\'initialisation:', error);
+            throw error;
         }
 
         console.groupEnd();
     }
 
+
     dispose() {
         if (this.initialized) {
-            Object.keys(this.charts).forEach(key => {
-                d3.select(`#${key}-chart`).selectAll('*').remove();
-            });
-            this.charts = {};
+            this.cleanupContainers();
             window.removeEventListener('resize', this.resize);
-            this.initialized = false;
-            
-            // Nettoyage du store
             if (this.statisticsStore) {
                 this.statisticsStore.dispose();
                 this.statisticsStore = null;
             }
+            this.initialized = false;
         }
     }
     
@@ -125,7 +122,12 @@ class StatisticsManager {
     }
 
     updateBasicStats(stats = null) {
-        stats = stats || statisticsStore.getStatistics('family');
+        if (!this.statisticsStore) {
+            console.warn('Statistics store not initialized');
+            return;
+        }
+        
+        stats = stats || this.statisticsStore.getStatistics('family');
         if (!stats?.demography) return;
 
         const format = (value, decimals = 1) => {
@@ -142,6 +144,7 @@ class StatisticsManager {
         d3.select('#avg-lifespan').text(`${format(avgLifeExpectancy, 1)} ans`);
     }
 
+
     updateCharts(newStats) {
         if (!this.initialized || newStats?.scope !== 'family') return;
 
@@ -155,7 +158,12 @@ class StatisticsManager {
     }
 
     createDemographyCharts() {
-        const stats = statisticsStore.getStatistics('family');
+        if (!this.statisticsStore) {
+            console.warn('Statistics store not initialized');
+            return;
+        }
+
+        const stats = this.statisticsStore.getStatistics('family');
         if (!stats?.demography) {
             console.warn('No family demography statistics available');
             return;
@@ -173,21 +181,26 @@ class StatisticsManager {
     }
 
     createGenderDistributionChart() {
-        const stats = statisticsStore.getStatistics('family')?.demography?.gender;
+        if (!this.statisticsStore) {
+            console.warn('Statistics store not initialized');
+            return;
+        }
+    
+        const stats = this.statisticsStore.getStatistics('family')?.demography?.gender;
         if (!stats) return;
-
+    
         const container = d3.select('#gender-chart');
         const width = this.getContainerWidth(container);
         const height = this.getContainerHeight(width, true);
         const radius = Math.min(width, height) / 2;
-
+    
         const svg = this.createSvg(container, width, height, true);
-
+    
         const data = [
             { name: 'Hommes', value: stats.male || 0 },
             { name: 'Femmes', value: stats.female || 0 }
         ].filter(d => d.value > 0);
-
+    
         if (data.length > 0) {
             this.createPieChart(svg, data, radius);
             this.charts.gender = { svg, width, height };
@@ -195,11 +208,22 @@ class StatisticsManager {
     }
 
     createAgeDistributionChart() {
-        const stats = statisticsStore.getStatistics('family');
-        if (!stats?.demography?.mortality?.byCentury) return;
-    
+        if (!this.statisticsStore) {
+            console.warn('Statistics store not initialized');
+            return;
+        }
+
+        const stats = this.statisticsStore.getStatistics('family');
+        if (!stats?.demography?.mortality?.byCentury) {
+            console.warn('No mortality statistics available');
+            return;
+        }
+
         const container = d3.select('#age-chart');
-        if (!container.node()) return;
+        if (!container.node()) {
+            console.warn('Age chart container not found');
+            return;
+        }
     
         // Nettoyer le conteneur
         container.selectAll('*').remove();
@@ -414,8 +438,16 @@ class StatisticsManager {
     }
 
     createLifeExpectancyChart() {
-        const stats = statisticsStore.getStatistics('family');
-        if (!stats?.demography?.lifeExpectancy?.byDecade) return;
+        if (!this.statisticsStore) {
+            console.warn('Statistics store not initialized');
+            return;
+        }
+
+        const stats = this.statisticsStore.getStatistics('family');
+        if (!stats?.demography?.lifeExpectancy?.byDecade) {
+            console.warn('No life expectancy statistics available');
+            return;
+        }
 
         const container = d3.select('#lifespan-chart');
         const width = this.getContainerWidth(container);
@@ -587,15 +619,19 @@ class StatisticsManager {
     }
 
     createBirthDeathPlacesChart() {
-        const stats = statisticsStore.getStatistics()?.geography;
+        if (!this.statisticsStore) {
+            console.warn('Statistics store not initialized');
+            return;
+        }
+    
+        const stats = this.statisticsStore.getStatistics()?.geography;
         if (!stats?.birthPlaces) {
             console.warn('No geographic statistics available');
             return;
         }
-
+    
         const container = d3.select('#birth-death-places-chart');
         container.selectAll('*').remove();
-
         // Préparer les données : filtrer les lieux avec plus d'une naissance
         const data = Object.entries(stats.birthPlaces)
             .map(([place, stats]) => ({
@@ -863,14 +899,21 @@ class StatisticsManager {
 
 
     resize() {
-        if (!this.initialized) return;
-
-        this.cleanupContainers();
-
-        // Appeler directement les méthodes de création de graphiques
-        this.createAgeDistributionChart();
-        this.createLifeExpectancyChart();
-        this.createBirthDeathPlacesChart();  // <- Correction ici
+        if (!this.initialized || !this.statisticsStore) {
+            console.warn('Manager not initialized or store not available');
+            return;
+        }
+    
+        try {
+            this.cleanupContainers();
+    
+            // Appeler directement les méthodes de création de graphiques
+            this.createAgeDistributionChart();
+            this.createLifeExpectancyChart();
+            this.createBirthDeathPlacesChart();
+        } catch (error) {
+            console.error('Error during resize:', error);
+        }
     }
 
     destroy() {

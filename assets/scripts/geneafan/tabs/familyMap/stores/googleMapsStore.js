@@ -37,6 +37,7 @@ class GoogleMapsStore {
             // Actions existantes
             initializeApi: action,
             initMap: action,
+            centerMapOnMarkers: action
         });
     }
 
@@ -135,6 +136,44 @@ class GoogleMapsStore {
         this.#setupMapListeners();
         this.#recordState();
         this.resizeObserver = await this.#initializeOverviewMap();
+    }
+
+    centerMapOnMarkers() {
+        if (!this.map) {
+            console.warn('❌ Carte non initialisée');
+            return;
+        }
+    
+        const bounds = new google.maps.LatLngBounds();
+        let hasMarkers = false;
+    
+        // Collecter tous les marqueurs visibles
+        if (rootAncestorTownsStore.markers) {
+            rootAncestorTownsStore.markers.forEach(marker => {
+                if (marker.getVisible()) {
+                    bounds.extend(marker.getPosition());
+                    hasMarkers = true;
+                }
+            });
+        }
+    
+        if (hasMarkers) {
+            this.map.fitBounds(bounds);
+            
+            // Ajuster le zoom si nécessaire
+            const listener = google.maps.event.addListenerOnce(this.map, 'idle', () => {
+                if (this.map.getZoom() > 12) {
+                    this.map.setZoom(12);
+                }
+            });
+            
+            console.log('✅ Carte centrée sur les marqueurs');
+        } else {
+            // Si aucun marqueur, revenir à la vue par défaut de la France
+            this.map.setCenter({ lat: 46.2276, lng: 2.2137 });
+            this.map.setZoom(6.2);
+            console.log('ℹ️ Aucun marqueur visible, retour à la vue par défaut');
+        }
     }
 
     // Gestion de la liste des lieux
