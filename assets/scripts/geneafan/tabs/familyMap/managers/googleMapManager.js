@@ -1,3 +1,4 @@
+import { observable } from '../../../common/stores/mobx-config.js';
 import gedcomDataStore from '../../../gedcom/stores/gedcomDataStore.js';
 import { googleMapsStore } from '../stores/googleMapsStore.js';
 import { rootAncestorTownsStore } from '../stores/rootAncestorTownsStore.js';
@@ -108,10 +109,12 @@ class GoogleMapManager {
         // Calque des ancêtres
         const ancestorLayerSwitch = document.getElementById('layerAncestors');
         if (ancestorLayerSwitch) {
-            // Synchroniser avec l'état actuel
-            ancestorLayerSwitch.checked = rootAncestorTownsStore.isVisible;
+            // Synchroniser avec l'état sauvegardé
+            ancestorLayerSwitch.checked = googleMapsStore.layerStates.ancestors ?? true;
+            rootAncestorTownsStore.toggleVisibility(ancestorLayerSwitch.checked);
             
             ancestorLayerSwitch.addEventListener('change', (e) => {
+                googleMapsStore.setLayerState('ancestors', e.target.checked);
                 rootAncestorTownsStore.toggleVisibility(e.target.checked);
             });
         }
@@ -119,10 +122,11 @@ class GoogleMapManager {
         // Calque des villes familiales
         const familyTownsSwitch = document.getElementById('layerFamily');
         if (familyTownsSwitch) {
-            familyTownsSwitch.checked = false;
-            familyTownsStore.toggleVisibility(false);
+            familyTownsSwitch.checked = googleMapsStore.layerStates.family ?? false;
+            familyTownsStore.toggleVisibility(familyTownsSwitch.checked);
             
             familyTownsSwitch.addEventListener('change', (e) => {
+                googleMapsStore.setLayerState('family', e.target.checked);
                 familyTownsStore.toggleVisibility(e.target.checked);
             });
         }
@@ -132,14 +136,16 @@ class GoogleMapManager {
         const surnameFilter = document.getElementById('surnameFilter');
         
         if (surnamesLayerSwitch && surnameFilter) {
-            surnamesLayerSwitch.checked = false;
-            surnameFilter.disabled = true;
-
+            surnamesLayerSwitch.checked = googleMapsStore.layerStates.surnames ?? false;
+            surnameFilter.disabled = !googleMapsStore.layerStates.surnames;
+            surnamesTownsStore.toggleVisibility(surnamesLayerSwitch.checked);
+    
             surnamesLayerSwitch.addEventListener('change', (e) => {
+                googleMapsStore.setLayerState('surnames', e.target.checked);
                 surnameFilter.disabled = !e.target.checked;
                 surnamesTownsStore.toggleVisibility(e.target.checked);
             });
-
+    
             surnameFilter.addEventListener('change', (e) => {
                 surnamesTownsStore.setSurname(e.target.value);
             });
@@ -166,6 +172,7 @@ class GoogleMapManager {
         this.disposers.clear();
         this.initialized = false;
         this.map = null;
+        this.saveLayerStates();
     }
 }
 

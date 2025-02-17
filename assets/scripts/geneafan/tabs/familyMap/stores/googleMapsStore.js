@@ -28,17 +28,29 @@ class GoogleMapsStore {
         this.history = [];
         this.redoStack = [];
 
+        // État des calques avec valeurs par défaut
+        this.layerStates = observable({
+            ancestors: true,    // Calque des ancêtres activé par défaut
+            family: false,      // Calque des villes familiales désactivé par défaut
+            surnames: false     // Calque des patronymes désactivé par défaut
+        });
+
         makeObservable(this, {
             map: observable,
             isTimelineActive: observable,
             overviewMapVisible: observable,
             isApiLoaded: observable,
+            layerStates: observable,
             
             // Actions existantes
             initializeApi: action,
             initMap: action,
-            centerMapOnMarkers: action
+            centerMapOnMarkers: action,
+            setLayerState: action
         });
+
+        // Charger l'état sauvegardé des calques
+        this.loadLayerStates();
     }
 
     async initializeApi() {
@@ -174,6 +186,38 @@ class GoogleMapsStore {
             this.map.setZoom(6.2);
             console.log('ℹ️ Aucun marqueur visible, retour à la vue par défaut');
         }
+    }
+
+    // Gestion de l'état des calques
+    loadLayerStates() {
+        try {
+            const saved = localStorage.getItem('mapLayerStates');
+            if (saved) {
+                const states = JSON.parse(saved);
+                runInAction(() => {
+                    // Fusionner avec les valeurs par défaut
+                    this.layerStates = {
+                        ...this.layerStates,
+                        ...states
+                    };
+                });
+            }
+        } catch (error) {
+            console.error('Erreur lors du chargement des états des calques:', error);
+        }
+    }
+    
+    saveLayerStates() {
+        try {
+            localStorage.setItem('mapLayerStates', JSON.stringify(this.layerStates));
+        } catch (error) {
+            console.error('Erreur lors de la sauvegarde des états des calques:', error);
+        }
+    }
+    
+    setLayerState(layer, state) {
+        this.layerStates[layer] = state;
+        this.saveLayerStates();
     }
 
     // Gestion de la liste des lieux
