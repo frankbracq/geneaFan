@@ -249,12 +249,8 @@ module.exports = (env, argv) => {
                         exclude: /node_modules/,
                     },
                     {
-                        test: /\.css$/, // CSS from node_modules
-                        include: /node_modules/,
-                        use: [
-                            'style-loader',
-                            'css-loader'
-                        ]
+                        test: /\.css$/,
+                        use: ['style-loader', 'css-loader']
                     },
                     {
                         test: /\.js$/,

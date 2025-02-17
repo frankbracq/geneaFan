@@ -2,10 +2,10 @@ import { initializeAuth } from './auth.js';
 import { initializeTabs } from '../tabs/tabManager.js';
 import { setupEventListeners } from './events.js';
 import { v4 as uuidv4 } from 'uuid';
+import OnboardingManager from '../onboarding/OnboardingManager.js';
 
 export async function setupCore() {
-    console.log('Core setup started');
-    
+    console.group('🚀 Initialisation du core');
     try {
         setupBeforeUnload();
         await initializeDOMContent();
@@ -15,11 +15,20 @@ export async function setupCore() {
         // Unique call to initializeTabs
         await initializeTabs();
         
+        // Initialisation de l'onboarding
+        console.log('OnboardingManager prototype:', OnboardingManager.prototype);
+        const onboarding = new OnboardingManager();
+        console.log('✅ Onboarding Manager initialized');
+        
         setupEventListeners();
         handleUrlParameters();
         hideOverlay();
+
+        console.log('✅ Core initialized');
+        console.groupEnd();
     } catch (error) {
-        console.error("Error in core setup:", error);
+        console.error('Error in core setup:', error);
+        console.groupEnd();
         throw error;
     }
 }
