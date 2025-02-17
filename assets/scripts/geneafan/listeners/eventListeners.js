@@ -8,6 +8,7 @@ import { displayPersonDetailsUI } from "../tabs/fanChart/personDetailsDisplay.js
 import { loadGedcomFile } from "../gedcom/gedcomFileHandler.js";
 import { Offcanvas, Tooltip } from "bootstrap";
 import { FamilyTownsUI } from '../gedcom/ui/familyTownsUI.js';
+import { EVENTS, storeEvents } from '../gedcom/stores/storeEvents.js';
 
 // WeakMap to store event listener references
 const eventListenersMap = new WeakMap();
@@ -226,16 +227,7 @@ export const setupAllEventListeners = (authStore) => {
     eventListenersInitialized = true;
 
     const initializeEventListeners = () => {
-        new FamilyTownsUI(); 
-
-        document.addEventListener("click", (event) => {
-            closePopoverOnClickOutside(event);
-        });
-
-        window.addEventListener("resize", () => {
-            console.log("=== Browser Resize ===");
-            console.log("Window dimensions:", window.innerWidth, "x", window.innerHeight);
-        });
+        console.group('EventListeners: Initializing...'); // Debug
 
         // Configuration des écouteurs globaux
         setupIndividualSelectorListener();
@@ -249,8 +241,31 @@ export const setupAllEventListeners = (authStore) => {
         }, 0);
 
         setupProtectedFeatureEventListeners(authStore);
+
+        // Émettre l'événement de chargement initial immédiatement
+        console.log('EventListeners: Emitting APP_LOADED'); // Debug
+        storeEvents.emit(EVENTS.ONBOARDING.APP_LOADED);
+
+        // Émettre l'événement lors du chargement d'un GEDCOM
+        document.addEventListener('gedcomLoaded', () => {
+            console.log('EventListeners: GEDCOM loaded, emitting GEDCOM_UPLOADED'); // Debug
+            storeEvents.emit(EVENTS.ONBOARDING.GEDCOM_UPLOADED);
+        });
+
+        // Émettre l'événement lors du changement d'onglet
+        document.querySelectorAll('.nav-link').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', (e) => {
+                const tabId = e.target.getAttribute('href').substring(1);
+                console.log('EventListeners: Tab opened:', tabId); // Debug
+                storeEvents.emit(EVENTS.ONBOARDING.TAB_OPENED, tabId);
+            });
+        });
+
+        console.log('✅ Event listeners initialized');
+        console.groupEnd();
     };
 
+    // Si le document est déjà chargé, initialiser immédiatement
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", initializeEventListeners);
     } else {

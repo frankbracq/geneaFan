@@ -2,7 +2,7 @@ import { makeObservable, observable, action, computed, reaction, runInAction } f
 import _ from 'lodash';
 import FamilyIndices from './indices/familyIndices';
 import { buildIndividual } from '../builders/personBuilder.js';
-import { TAGS, byTag } from './gedcomConstantsStore.js';
+import { TAGS } from './gedcomConstantsStore.js';
 import { storeEvents, EVENTS } from './storeEvents.js'; 
 
 class GedcomDataStore {

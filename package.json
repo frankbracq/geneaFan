@@ -43,6 +43,7 @@
     "bootstrap5-toggle": "^5.0.4",
     "core-js": "^3.35.1",
     "d3": "^7.9.0",
+    "driver": "^1.0.0",
     "fast-json-patch": "^3.1.1",
     "jquery": "^3.5.1",
     "jsdom": "^24.1.0",

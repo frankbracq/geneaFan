@@ -61,6 +61,12 @@ export const EVENTS = {
         CHANGED: 'tabs:changed',
         SHOWN: 'tabs:shown',
         HIDDEN: 'tabs:hidden'
+    },
+    ONBOARDING: {
+        APP_LOADED: 'onboarding:app_loaded',
+        GEDCOM_UPLOADED: 'onboarding:gedcom_uploaded',
+        TAB_OPENED: 'onboarding:tab_opened',
+        TOUR_COMPLETED: 'onboarding:tour_completed'
     }
 };
 class StoreEventEmitter {
