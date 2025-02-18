@@ -41,33 +41,23 @@ class RootPersonStore {
             }),
             async ({ root, hasCache }) => {
                 if (!root || !hasCache) return;
-
+        
                 try {
                     console.group('🔄 Root Change Reaction');
                     console.log('👉 Triggering buildHierarchy for root:', root);
-
+        
                     const newHierarchy = this.buildHierarchy(root);
                     console.log('✅ Hierarchy built and stored');
                     console.groupEnd();
-
+        
                     gedcomDataStore.setHierarchy(newHierarchy);
-
-                    if (!this._skipNextDraw) {
-                        const drawResult = await FanChartManager.drawFanForRoot(root, false);
-                        if (drawResult?.rootPersonName) {
-                            const formattedName = this.formatName(drawResult.rootPersonName);
-                            runInAction(() => {
-                                this.rootPersonName = formattedName;
-                            });
-                            // Émettre l'événement après que l'éventail est dessiné
-                            console.log('🎯 Fan chart drawn, emitting event from rootPersonStore');
-                            storeEvents.emit(EVENTS.ONBOARDING.FAN_DRAWN);
-                        }
-                    }
-
+                    
+                    // Émettre un événement de changement de racine
+                    storeEvents.emit(EVENTS.ROOT.CHANGED, { root, skipDraw: this._skipNextDraw });
+        
                     this.updateHistory(root);
                     document.getElementById('initial-group').style.display = 'none';
-
+        
                 } catch (error) {
                     console.error("Error handling root change:", error);
                     console.groupEnd();

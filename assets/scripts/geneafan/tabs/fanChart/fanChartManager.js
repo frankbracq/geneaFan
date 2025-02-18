@@ -16,6 +16,20 @@ export class FanChartManager {
     static initialize() {
         console.log("Initializing fan chart...");
         this.setupEventListeners();
+        
+        // Ajouter l'écouteur pour le changement de racine
+        storeEvents.subscribe(EVENTS.ROOT.CHANGED, async ({ root, skipDraw }) => {
+            if (!skipDraw) {
+                const drawResult = await this.drawFanForRoot(root, false);
+                if (drawResult?.rootPersonName) {
+                    rootPersonStore.setRootPersonName(
+                        rootPersonStore.formatName(drawResult.rootPersonName)
+                    );
+                    storeEvents.emit(EVENTS.ONBOARDING.FAN_DRAWN);
+                }
+            }
+        });
+    
         return this;
     }
 
