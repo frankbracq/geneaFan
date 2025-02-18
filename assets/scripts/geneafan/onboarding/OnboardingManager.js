@@ -99,8 +99,6 @@ const TOUR_CONFIG = {
 
 class OnboardingManager {
     constructor(options = {}) {
-        console.log('OnboardingManager: Initialisation...');
-
         this.options = {
             forceTour: false,
             ...options
@@ -118,6 +116,8 @@ class OnboardingManager {
             doneBtnText: 'Terminer'
         };
 
+        // Garde en mémoire le tour actif
+        this.activeTourType = null;
         this.setupTours();
     }
 
@@ -131,8 +131,10 @@ class OnboardingManager {
                 console.log(`OnboardingManager: Should start ${tourType}?`, shouldStartTour);
                 
                 if (shouldStartTour) {
-                    // Pas de setTimeout pour éviter les race conditions
-                    this.startTour(tourType);
+                    // On attend que le tour démarre
+                    this.startTour(tourType).catch(error => {
+                        console.error(`OnboardingManager: Failed to start ${tourType} tour:`, error);
+                    });
                 }
             });
         });
@@ -154,12 +156,6 @@ class OnboardingManager {
         return config.condition(this);
     }
 
-    getCurrentTour(element) {
-        // Détermine le type de tour en cours à partir de l'élément actuel
-        return Object.entries(TOUR_CONFIG).find(([, config]) =>
-            config.steps.some(step => step.element === element)
-        )?.[0];
-    }
 
     verifyDOMElements(steps) {
         console.log('OnboardingManager: Verifying DOM elements...');
@@ -221,13 +217,20 @@ class OnboardingManager {
                     });
                 },
                 onComplete: () => {
-                    console.log('OnboardingManager: Tour completed!', this.activeTourType);
+                    console.log('OnboardingManager: Tour completion triggered!', {
+                        tourType: this.activeTourType,
+                        hasDriver: !!this.driver,
+                        currentStep: this.driver ? this.driver.currentStep : null
+                    });
+                    
                     if (this.activeTourType) {
                         this.markTourAsShown(this.activeTourType);
                         storeEvents.emit(EVENTS.ONBOARDING.TOUR_COMPLETED, { 
                             tourType: this.activeTourType 
                         });
+                        console.log('OnboardingManager: Tour marked as shown and event emitted');
                     }
+                    
                     this.cleanup();
                 },
                 onClose: () => {
@@ -249,8 +252,16 @@ class OnboardingManager {
     }
 
     cleanup() {
+        const previousTourType = this.activeTourType;
         this.driver = null;
         this.activeTourType = null;
+        console.log('OnboardingManager: Cleaned up tour:', previousTourType);
+        
+        console.log('OnboardingManager: Tour state after cleanup:', {
+            driver: this.driver,
+            activeTourType: this.activeTourType,
+            hasSeenTour: previousTourType ? this.hasTourBeenShown(previousTourType) : null
+        });
     }
 
     async waitForElements(steps, maxAttempts = 5, interval = 1000) {
@@ -303,7 +314,41 @@ class OnboardingManager {
             this.activeTourType = tourType;
             
             // Pas besoin d'ajouter onNext car on utilise onHighlightStarted/onDeselected
-            this.driver.setSteps(config.steps);
+            // Modifier les étapes pour ajouter une logique spéciale à la dernière étape
+            const lastStepIndex = config.steps.length - 1;
+            
+            const enhancedSteps = config.steps.map((step, index) => ({
+                ...step,
+                popover: {
+                    ...step.popover,
+                    doneBtnText: index === lastStepIndex ? 'Terminer' : undefined,
+                },
+                onDeselected: () => {
+                    console.log(`OnboardingManager: Step ${index + 1}/${config.steps.length} deselected`);
+                    
+                    // Si c'est la dernière étape, on termine le tour
+                    if (index === lastStepIndex) {
+                        console.log('OnboardingManager: Last step deselected, completing tour');
+                        
+                        // Utiliser un setTimeout pour s'assurer que l'événement onDeselected est terminé
+                        setTimeout(() => {
+                            if (this.activeTourType && this.driver) {
+                                console.log('OnboardingManager: Triggering tour completion');
+                                this.markTourAsShown(this.activeTourType);
+                                storeEvents.emit(EVENTS.ONBOARDING.TOUR_COMPLETED, { 
+                                    tourType: this.activeTourType 
+                                });
+                                
+                                // Utiliser destroy() pour terminer proprement le tour
+                                this.driver.destroy();
+                                this.cleanup();
+                            }
+                        }, 100);
+                    }
+                }
+            }));
+            
+            this.driver.setSteps(enhancedSteps);
             this.driver.drive();
 
             storeEvents.emit(EVENTS.ONBOARDING.TOUR_STARTED, { tourType });
@@ -320,22 +365,13 @@ class OnboardingManager {
     }
 
     isWelcomeTourActive() {
-        // Vérifie si le tour de bienvenue est actuellement en cours
-        return this.driver &&
-            this.getCurrentActiveTour() === 'welcome';
+        // Version simplifiée utilisant directement activeTourType
+        return this.driver && this.activeTourType === 'welcome';
     }
 
     getCurrentActiveTour() {
-        if (!this.driver) return null;
-
-        // Trouve le tour actif en comparant les étapes actuelles avec les configs
-        const currentSteps = this.driver.steps;
-        for (const [tourType, config] of Object.entries(TOUR_CONFIG)) {
-            if (JSON.stringify(config.steps) === JSON.stringify(currentSteps)) {
-                return tourType;
-            }
-        }
-        return null;
+        // Utilise directement activeTourType s'il est défini
+        return this.activeTourType;
     }
 
     hasTourBeenShown(tourType) {
