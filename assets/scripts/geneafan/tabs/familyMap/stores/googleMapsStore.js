@@ -76,12 +76,12 @@ class GoogleMapsStore {
                     this.isApiLoaded = true;
                 });
                 console.log('✅ API Google Maps chargée avec succès');
-                storeEvents.emit(EVENTS.MAPS.API_READY);
+                storeEvents.emit(EVENTS.VISUALIZATIONS.MAP.API_READY)
             })
             .catch((error) => {
                 console.error('❌ Failed to load Google Maps API:', error);
                 this.apiLoadPromise = null;
-                storeEvents.emit(EVENTS.MAPS.API_ERROR, { error });
+                storeEvents.emit(EVENTS.VISUALIZATIONS.MAP.API_ERROR, { error });
                 throw error;
             })
             .finally(() => {

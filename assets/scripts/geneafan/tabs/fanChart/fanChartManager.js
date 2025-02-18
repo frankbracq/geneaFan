@@ -262,8 +262,8 @@ export class FanChartManager {
             this.updateUIAfterRedraw();
     
             // Émettre l'événement après le dessin réussi
-            console.log('🎯 Fan chart drawn, emitting event');
-            storeEvents.emit(EVENTS.FAN.DRAWN);
+            console.log('🎯 Fan chart drawn, emitting event VISUALIZATIONS.FAN.DRAWN');
+            storeEvents.emit(EVENTS.VISUALIZATIONS.FAN.DRAWN);
     
             console.groupEnd();
             return drawResult;

@@ -9,30 +9,41 @@ export class FamilyTownsUI {
     setupEventListeners() {
         console.log('🎧 Configuration des écouteurs d\'événements FamilyTownsUI');
         
-        storeEvents.subscribe(EVENTS.TOWN.UPDATE_START, () => {
-            console.log('📣 Événement UPDATE_START reçu dans UI');
+        const TOWNS_EVENTS = EVENTS.VISUALIZATIONS.MAP.TOWNS;
+        
+        storeEvents.subscribe(TOWNS_EVENTS.UPDATE_START, () => {
+            console.log('📣 Événement towns:update:start reçu dans UI');
             this.showLoadingAlert();
         });
 
-        storeEvents.subscribe(EVENTS.TOWN.UPDATE_COMPLETE, () => {
-            console.log('📣 Événement UPDATE_COMPLETE reçu dans UI');
+        storeEvents.subscribe(TOWNS_EVENTS.UPDATE_COMPLETE, () => {
+            console.log('📣 Événement towns:update:complete reçu dans UI');
             this.showSuccessAlert();
         });
 
-        storeEvents.subscribe(EVENTS.TOWN.UPDATE_ERROR, (error) => {
-            console.log('📣 Événement UPDATE_ERROR reçu dans UI', error);
+        storeEvents.subscribe(TOWNS_EVENTS.UPDATE_ERROR, (error) => {
+            console.log('📣 Événement towns:update:error reçu dans UI', error);
             this.showErrorAlert(error);
         });
 
-        storeEvents.subscribe('process:start', (message) => {
+        // Ces événements sont toujours valides car ils font partie du processus global
+        storeEvents.subscribe(EVENTS.PROCESS.START, (message) => {
             this.showProcessingAlert(message);
         });
 
-        storeEvents.subscribe('process:complete', () => {
+        storeEvents.subscribe(EVENTS.PROCESS.COMPLETE, () => {
             this.hideAlert();
         });
         
-        console.log('✅ Écouteurs configurés:', storeEvents.listeners);
+        // Garder temporairement les anciens événements pour la rétrocompatibilité
+        storeEvents.subscribe(EVENTS.TOWN.UPDATE_START, () => this.showLoadingAlert());
+        storeEvents.subscribe(EVENTS.TOWN.UPDATE_COMPLETE, () => this.showSuccessAlert());
+        storeEvents.subscribe(EVENTS.TOWN.UPDATE_ERROR, (error) => this.showErrorAlert(error));
+        
+        console.log('✅ Écouteurs configurés avec nouveaux événements:', {
+            newEvents: TOWNS_EVENTS,
+            legacyEvents: EVENTS.TOWN
+        });
     }
 
     showLoadingAlert() {
@@ -101,6 +112,8 @@ export class FamilyTownsUI {
         const alertElement = document.getElementById('alert');
         const alertContent = document.getElementById('alert-content');
         
+        if (!alertElement || !alertContent) return;
+        
         alertContent.textContent = message;
         alertElement.classList.remove('d-none', 'alert-success', 'alert-danger');
         alertElement.classList.add('show', 'alert-info');
@@ -108,6 +121,8 @@ export class FamilyTownsUI {
 
     hideAlert() {
         const alertElement = document.getElementById('alert');
-        alertElement.classList.add('d-none');
+        if (alertElement) {
+            alertElement.classList.add('d-none');
+        }
     }
 }

@@ -37,30 +37,35 @@ function setupTabChangeTracking() {
             console.log(`↪️ ${prevTabName} → ${newTabName}`);
             console.groupEnd();
 
-            // Émission des événements pour la gestion globale
-            storeEvents.emit(EVENTS.TABS.CHANGED, { newTab: { id: newTabId, name: newTabName }, previousTab: { id: prevTabId, name: prevTabName } });
-            storeEvents.emit(EVENTS.TABS.SHOWN, { id: newTabId, name: newTabName });
+            // Émission des événements avec la nouvelle structure UI.TABS
+            storeEvents.emit(EVENTS.UI.TABS.CHANGED, { 
+                newTab: { id: newTabId, name: newTabName }, 
+                previousTab: { id: prevTabId, name: prevTabName } 
+            });
+            storeEvents.emit(EVENTS.UI.TABS.SHOWN, { id: newTabId, name: newTabName });
 
             if (prevTabId) {
-                storeEvents.emit(EVENTS.TABS.HIDDEN, { id: prevTabId, name: prevTabName });
+                storeEvents.emit(EVENTS.UI.TABS.HIDDEN, { id: prevTabId, name: prevTabName });
             }
+
+            // Émettre aussi l'événement onboarding si nécessaire
+            storeEvents.emit(EVENTS.ONBOARDING.TOUR_STARTED, { tabId: newTabId });
         });
     });
 }
 
-storeEvents.subscribe(EVENTS.TABS.SHOWN, async ({ id }) => {
+// Mise à jour des écouteurs d'événements pour utiliser UI.TABS
+storeEvents.subscribe(EVENTS.UI.TABS.SHOWN, async ({ id }) => {
     if (id === "tab2") {
         console.group('🗺️ Activation de la carte');
 
         try {
-            await googleMapsStore.resizeAndMoveMap();  // Suppression du paramètre "familyMap"
+            await googleMapsStore.resizeAndMoveMap();
             console.log('✅ Carte déplacée et redimensionnée');
 
             googleMapManager.setupLayerControls();
             googleMapManager.setupEventListeners();
 
-            // Utilisation de rootAncestorTownsStore pour le centrage
-            console.log("📍 Réactivation des marqueurs après changement d'onglet");
             if (rootAncestorTownsStore.hasActiveMarkers()) {
                 rootAncestorTownsStore.centerMapOnMarkers();
             }
@@ -73,7 +78,7 @@ storeEvents.subscribe(EVENTS.TABS.SHOWN, async ({ id }) => {
     }
 });
 
-storeEvents.subscribe(EVENTS.TABS.HIDDEN, ({ id }) => {
+storeEvents.subscribe(EVENTS.UI.TABS.HIDDEN, ({ id }) => {
     if (id === "tab2") {
         console.log(`🗺️ La carte est masquée, arrêt des mises à jour.`);
         rootAncestorTownsStore.toggleVisibility(false);
