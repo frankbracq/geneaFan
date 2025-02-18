@@ -41,23 +41,23 @@ const TOUR_CONFIG = {
             const isFirstVisit = manager.isFirstVisit();
             const isWelcomeTourActive = manager.isWelcomeTourActive();
             const hasSeenTour = manager.hasTourBeenShown('fanDrawn');
-            
+
             console.log({
                 isFirstVisit,
                 isWelcomeTourActive,
                 hasSeenTour,
                 hasDriver: !!manager.driver
             });
-            
+
             // Montrer le tour si :
             // - Ce n'est PAS la première visite (tour de bienvenue déjà vu)
             // - Le tour de bienvenue n'est PAS actif
             // - Le tour fanDrawn n'a PAS encore été vu
             const shouldShowTour = !isFirstVisit && !isWelcomeTourActive && !hasSeenTour;
-            
+
             console.log('Should show tour:', shouldShowTour);
             console.groupEnd();
-            
+
             return shouldShowTour;
         },
         steps: [
@@ -100,7 +100,7 @@ const TOUR_CONFIG = {
 class OnboardingManager {
     constructor(options = {}) {
         console.log('OnboardingManager: Initialisation...');
-        
+
         this.options = {
             forceTour: false,
             ...options
@@ -126,21 +126,37 @@ class OnboardingManager {
             storeEvents.subscribe(config.event, () => {
                 console.log(`OnboardingManager: ${tourType} event received`);
                 
-                if (config.condition(this) && !this.hasTourBeenShown(tourType)) {
-                    console.log(`OnboardingManager: Starting ${tourType} tour`);
-                    setTimeout(() => {
-                        this.startTour(tourType);
-                    }, 500);
-                } else {
-                    console.log(`OnboardingManager: Skipping ${tourType} tour`);
+                // Vérification plus stricte des conditions
+                const shouldStartTour = this.shouldStartTour(tourType);
+                console.log(`OnboardingManager: Should start ${tourType}?`, shouldStartTour);
+                
+                if (shouldStartTour) {
+                    // Pas de setTimeout pour éviter les race conditions
+                    this.startTour(tourType);
                 }
             });
         });
     }
 
+    shouldStartTour(tourType) {
+        if (this.options.forceTour) return true;
+        
+        const config = TOUR_CONFIG[tourType];
+        if (!config) return false;
+
+        // Vérifie si le tour a déjà été montré
+        const hasBeenShown = this.hasTourBeenShown(tourType);
+        if (hasBeenShown && !this.options.forceTour) {
+            console.log(`OnboardingManager: ${tourType} already shown`);
+            return false;
+        }
+
+        return config.condition(this);
+    }
+
     getCurrentTour(element) {
         // Détermine le type de tour en cours à partir de l'élément actuel
-        return Object.entries(TOUR_CONFIG).find(([, config]) => 
+        return Object.entries(TOUR_CONFIG).find(([, config]) =>
             config.steps.some(step => step.element === element)
         )?.[0];
     }
@@ -148,7 +164,7 @@ class OnboardingManager {
     verifyDOMElements(steps) {
         console.log('OnboardingManager: Verifying DOM elements...');
         const missingElements = [];
-        
+
         steps.forEach((step, index) => {
             const element = document.querySelector(step.element);
             console.log(`Element ${step.element} exists:`, !!element, {
@@ -156,7 +172,7 @@ class OnboardingManager {
                 title: step.popover.title,
                 visible: element ? this.isElementVisible(element) : false
             });
-            
+
             if (!element || !this.isElementVisible(element)) {
                 missingElements.push({
                     index,
@@ -167,12 +183,12 @@ class OnboardingManager {
                 });
             }
         });
-        
+
         if (missingElements.length > 0) {
             console.error('OnboardingManager: Missing or hidden DOM elements:', missingElements);
             return false;
         }
-        
+
         console.log('OnboardingManager: All DOM elements present and visible');
         return true;
     }
@@ -180,11 +196,11 @@ class OnboardingManager {
     isElementVisible(element) {
         const style = window.getComputedStyle(element);
         const rect = element.getBoundingClientRect();
-        
-        return style.display !== 'none' 
-            && style.visibility !== 'hidden' 
+
+        return style.display !== 'none'
+            && style.visibility !== 'hidden'
             && style.opacity !== '0'
-            && rect.width > 0 
+            && rect.width > 0
             && rect.height > 0;
     }
 
@@ -192,20 +208,36 @@ class OnboardingManager {
         try {
             const driverInstance = driver({
                 ...this.driverOptions,
-                onComplete: (element) => {
-                    const tourType = this.getCurrentTour(element);
-                    if (tourType) {
-                        this.markTourAsShown(tourType);
-                        storeEvents.emit(EVENTS.ONBOARDING.TOUR_COMPLETED, { tourType });
-                    }
-                    this.driver = null; // Nettoyer l'instance
+                onHighlightStarted: (element) => {
+                    console.log('OnboardingManager: Step started', { 
+                        element, 
+                        tourType: this.activeTourType 
+                    });
                 },
-                onClose: (element) => {
-                    const tourType = this.getCurrentTour(element);
-                    if (tourType) {
-                        storeEvents.emit(EVENTS.ONBOARDING.TOUR_CANCELLED, { tourType });
+                onDeselected: (element) => {
+                    console.log('OnboardingManager: Step completed', { 
+                        element, 
+                        tourType: this.activeTourType 
+                    });
+                },
+                onComplete: () => {
+                    console.log('OnboardingManager: Tour completed!', this.activeTourType);
+                    if (this.activeTourType) {
+                        this.markTourAsShown(this.activeTourType);
+                        storeEvents.emit(EVENTS.ONBOARDING.TOUR_COMPLETED, { 
+                            tourType: this.activeTourType 
+                        });
                     }
-                    this.driver = null; // Nettoyer l'instance
+                    this.cleanup();
+                },
+                onClose: () => {
+                    console.log('OnboardingManager: Tour closed manually', this.activeTourType);
+                    if (this.activeTourType) {
+                        storeEvents.emit(EVENTS.ONBOARDING.TOUR_CANCELLED, { 
+                            tourType: this.activeTourType 
+                        });
+                    }
+                    this.cleanup();
                 }
             });
 
@@ -216,21 +248,36 @@ class OnboardingManager {
         }
     }
 
-    startTour(tourType) {
-        console.log('OnboardingManager: Starting tour:', tourType);
+    cleanup() {
+        this.driver = null;
+        this.activeTourType = null;
+    }
+
+    async waitForElements(steps, maxAttempts = 5, interval = 1000) {
+        console.log('OnboardingManager: Waiting for elements to be visible...');
         
-        // Si un tour est déjà en cours, on l'arrête
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            console.log(`OnboardingManager: Attempt ${attempt}/${maxAttempts}`);
+            
+            if (this.verifyDOMElements(steps)) {
+                console.log('OnboardingManager: All elements are now visible');
+                return true;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, interval));
+        }
+        
+        console.error('OnboardingManager: Elements not visible after all attempts');
+        return false;
+    }
+
+    async startTour(tourType) {
+        console.log('OnboardingManager: Starting tour:', tourType);
+
         if (this.driver) {
             console.log('OnboardingManager: Stopping current tour');
             this.driver.destroy();
             this.driver = null;
-        }
-
-        // Création d'une nouvelle instance de driver
-        this.driver = this.createDriver();
-        if (!this.driver) {
-            console.error('OnboardingManager: Failed to create driver instance');
-            return;
         }
 
         const config = TOUR_CONFIG[tourType];
@@ -240,21 +287,30 @@ class OnboardingManager {
         }
 
         try {
-            if (!this.verifyDOMElements(config.steps)) {
-                console.error(`OnboardingManager: Cannot start ${tourType} tour - missing or hidden DOM elements`);
+            const elementsReady = await this.waitForElements(config.steps);
+            if (!elementsReady) {
+                console.error(`OnboardingManager: Cannot start ${tourType} tour - elements not ready`);
                 return;
             }
+
+            this.driver = this.createDriver();
+            if (!this.driver) {
+                console.error('OnboardingManager: Failed to create driver instance');
+                return;
+            }
+
+            // Stocke le type de tour actif
+            this.activeTourType = tourType;
             
+            // Pas besoin d'ajouter onNext car on utilise onHighlightStarted/onDeselected
             this.driver.setSteps(config.steps);
             this.driver.drive();
+
             storeEvents.emit(EVENTS.ONBOARDING.TOUR_STARTED, { tourType });
             console.log(`OnboardingManager: ${tourType} tour started successfully`);
         } catch (error) {
             console.error('OnboardingManager: Error during tour start:', error);
-            if (this.driver) {
-                this.driver.destroy();
-                this.driver = null;
-            }
+            this.cleanup();
         }
     }
 
@@ -265,13 +321,13 @@ class OnboardingManager {
 
     isWelcomeTourActive() {
         // Vérifie si le tour de bienvenue est actuellement en cours
-        return this.driver && 
-               this.getCurrentActiveTour() === 'welcome';
+        return this.driver &&
+            this.getCurrentActiveTour() === 'welcome';
     }
 
     getCurrentActiveTour() {
         if (!this.driver) return null;
-        
+
         // Trouve le tour actif en comparant les étapes actuelles avec les configs
         const currentSteps = this.driver.steps;
         for (const [tourType, config] of Object.entries(TOUR_CONFIG)) {
@@ -287,7 +343,31 @@ class OnboardingManager {
     }
 
     markTourAsShown(tourType) {
-        localStorage.setItem(`geneafan_has_seen_${tourType}_tour`, 'true');
+        if (!tourType) {
+            console.error('OnboardingManager: Cannot mark tour as shown - no tourType provided');
+            return;
+        }
+
+        const key = `geneafan_has_seen_${tourType}_tour`;
+        try {
+            localStorage.setItem(key, 'true');
+            const storedValue = localStorage.getItem(key);
+            
+            if (storedValue !== 'true') {
+                throw new Error('Storage verification failed');
+            }
+            
+            console.log(`OnboardingManager: ${tourType} tour marked as shown`);
+        } catch (error) {
+            console.error('OnboardingManager: Failed to mark tour as shown:', error);
+            // Tentative de récupération
+            try {
+                sessionStorage.setItem(key, 'true');
+                console.log('OnboardingManager: Fallback to sessionStorage successful');
+            } catch (sessionError) {
+                console.error('OnboardingManager: Complete storage failure:', sessionError);
+            }
+        }
     }
 
     resetTour(tourType) {
