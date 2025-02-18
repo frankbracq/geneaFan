@@ -93,7 +93,7 @@ class MarkerDisplayManager {
             }
     
             layerMarkers.set(key, marker);
-            console.log(`✅ Added marker to ${layerName}:`, key, marker);
+            // console.log(`✅ Added marker to ${layerName}:`, key, marker);
         }
     
         return layerMarkers.get(key);
@@ -254,7 +254,7 @@ class MarkerDisplayManager {
             onClickCallback
         );
         
-        console.log(`🔍 Ajout du marqueur dans layers['rootAncestors']:`, layerName, marker);
+        // console.log(`🔍 Ajout du marqueur dans layers['rootAncestors']:`, layerName, marker);
         return marker;
     }
 

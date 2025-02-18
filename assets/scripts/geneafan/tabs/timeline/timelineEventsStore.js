@@ -49,7 +49,7 @@ class TimelineEventsStore {
     }
 
     addEvent = (event) => {
-        console.group(`🔄 Traitement événement pour ${event.name || 'Inconnu'}`);
+        // console.group(`🔄 Traitement événement pour ${event.name || 'Inconnu'}`);
         
         if (!event.type || !event.date || !event.name) {
             console.warn('❌ Format d\'événement invalide:', event);
@@ -63,12 +63,12 @@ class TimelineEventsStore {
             return;
         }
 
-        console.log('📝 Enrichissement de l\'événement:', {
-            type: event.type,
-            date: event.date,
-            name: event.name,
-            sosa: event.sosa
-        });
+        // console.log('📝 Enrichissement de l\'événement:', {
+        //    type: event.type,
+        //    date: event.date,
+        //    name: event.name,
+        //    sosa: event.sosa
+        // });
 
         const enrichedEvent = {
             ...event,
@@ -84,7 +84,7 @@ class TimelineEventsStore {
             this._updateGroupedEvents();
         });
         
-        console.log('✅ Événement ajouté avec succès');
+        // console.log('✅ Événement ajouté avec succès');
         console.groupEnd();
     }
 

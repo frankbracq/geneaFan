@@ -41,6 +41,10 @@ function urlGenerator(lang, page) {
 module.exports = (env, argv) => {
     const isProduction = argv.mode === 'production';
 
+    if (!isProduction) {
+        process.env.WEBPACK_DEV_SERVER = true;
+        require('webpack').performance = { hints: false };
+    }
     const babelConf = {
         loader: 'babel-loader',
         options: {
@@ -78,9 +82,13 @@ module.exports = (env, argv) => {
                 globalObject: 'self'
             },
             stats: {
-                errorDetails: true,
-                children: true,
-            },
+    errorDetails: true,
+    children: true,
+    performance: false,
+    moduleTrace: false,
+    warningsFilter: /exceeded the size limit/
+},
+
             optimization: {
                 splitChunks: {
                     chunks: 'all',
@@ -118,9 +126,11 @@ module.exports = (env, argv) => {
                 ],
             },
             performance: {
-                hints: 'warning',
-                maxAssetSize: 200000,
-                maxEntrypointSize: 400000,
+                hints: false, // Désactive temporairement les warnings
+                // Si vous préférez garder les warnings mais avec des limites plus élevées :
+                // hints: 'warning',
+                // maxAssetSize: 1024 * 1024,      // 1MB
+                // maxEntrypointSize: 2048 * 1024,  // 2MB
             },
             resolve: {
                 fallback: {
@@ -139,12 +149,16 @@ module.exports = (env, argv) => {
             },
             // Webpack Dev Server configuration
             devServer: {
-                static: path.join(__dirname, 'dist'), // Serve static files from dist folder
-                port: port,  // Use a different port for each locale
-                open: true,  // Automatically open the app in the default browser
-                hot: true,  // Enable Hot Module Replacement (HMR)
+                static: path.join(__dirname, 'dist'),
+                port: port,
+                open: true,
+                hot: true,
                 client: {
-                    logging: 'info',  // Show logs in the browser console
+                    logging: 'info',
+                    overlay: {
+                        errors: true,
+                        warnings: false  // N'affiche que les erreurs, pas les warnings
+                    }
                 },
             },
             module: {

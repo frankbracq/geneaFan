@@ -60,8 +60,8 @@ class RootPersonStore {
                                 this.rootPersonName = formattedName;
                             });
                             // Émettre l'événement après que l'éventail est dessiné
-                            console.log('🎯 Fan chart drawn, emitting event');
-                            storeEvents.emit(EVENTS.FAN.DRAWN);
+                            console.log('🎯 Fan chart drawn, emitting event from rootPersonStore');
+                            storeEvents.emit(EVENTS.ONBOARDING.FAN_DRAWN);
                         }
                     }
 
@@ -158,7 +158,7 @@ class RootPersonStore {
                 this.createFictiveIndividual(individualPointer, sosa, height);
 
             if (individual.individualEvents && individual.individualEvents.length > 0) {
-                console.group(`📅 Collecte des événements pour ${individual.name || 'Individu'} (Sosa: ${sosa})`);
+                // console.group(`📅 Collecte des événements pour ${individual.name || 'Individu'} (Sosa: ${sosa})`);
                 individual.individualEvents.forEach((event) => {
                     const validTypes = ['death', 'birth', 'marriage'];
                     if (validTypes.includes(event.type)) {
@@ -176,7 +176,7 @@ class RootPersonStore {
                         // console.log(`⚠️ Type d'événement ignoré:`, event.type);
                     }
                 });
-                console.groupEnd();
+                // console.groupEnd();
             }
 
             let obj = {

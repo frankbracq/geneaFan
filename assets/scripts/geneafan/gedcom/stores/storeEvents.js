@@ -65,6 +65,7 @@ export const EVENTS = {
     ONBOARDING: {
         APP_LOADED: 'onboarding:app_loaded',
         GEDCOM_UPLOADED: 'onboarding:gedcom_uploaded',
+        FAN_DRAWN: 'onboarding:fan_drawn',
         TAB_OPENED: 'onboarding:tab_opened',
         TOUR_COMPLETED: 'onboarding:tour_completed'
     }

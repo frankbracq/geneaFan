@@ -1,4 +1,6 @@
-import rootPersonStore from "../common/stores/rootPersonStore.js"; // Nouveau import
+import { Offcanvas, Tooltip, Dropdown } from "bootstrap";
+import { EVENTS, storeEvents } from '../gedcom/stores/storeEvents.js';
+import rootPersonStore from "../common/stores/rootPersonStore.js"; 
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
 import {
     setupResponsiveTabs,
@@ -6,9 +8,8 @@ import {
 } from "./responsiveTabs.js";
 import { displayPersonDetailsUI } from "../tabs/fanChart/personDetailsDisplay.js";
 import { loadGedcomFile } from "../gedcom/gedcomFileHandler.js";
-import { Offcanvas, Tooltip } from "bootstrap";
 import { FamilyTownsUI } from '../gedcom/ui/familyTownsUI.js';
-import { EVENTS, storeEvents } from '../gedcom/stores/storeEvents.js';
+
 
 // WeakMap to store event listener references
 const eventListenersMap = new WeakMap();
@@ -201,6 +202,55 @@ function setupTabAndUIEventListeners() {
     setupTooltips();
 }
 
+function setupAutoOpenGedcomMenu() {
+    const gedcomMenu = document.getElementById('gedcomMenu');
+    const dropdownMenu = document.querySelector('.dropdown-menu[aria-labelledby="gedcomMenu"]');
+    
+    if (gedcomMenu && dropdownMenu) {
+        console.log('Setting up auto-open GEDCOM menu...');
+        
+        // Créer l'instance du dropdown
+        const dropdownInstance = new Dropdown(gedcomMenu);
+        
+        // Ouvrir le menu automatiquement
+        setTimeout(() => {
+            dropdownInstance.show();
+        }, 500); // Petit délai pour assurer que tout est bien chargé
+        
+        // Gérer la fermeture au clic extérieur
+        document.addEventListener('click', (event) => {
+            // Vérifier si le clic est en dehors du menu et de son contenu
+            const isClickInside = gedcomMenu.contains(event.target) || 
+                                dropdownMenu.contains(event.target);
+                                
+            // Si le clic est en dehors et que le menu est ouvert
+            if (!isClickInside && dropdownMenu.classList.contains('show')) {
+                dropdownInstance.hide();
+            }
+        });
+        
+        // Empêcher la fermeture lors de la sélection de fichier
+        document.getElementById('file')?.addEventListener('click', (event) => {
+            event.stopPropagation();
+        });
+        
+        // Garder le menu ouvert pendant le drag & drop d'un fichier
+        dropdownMenu.addEventListener('dragover', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        
+        dropdownMenu.addEventListener('drop', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        
+        console.log('GEDCOM menu auto-open setup complete');
+    } else {
+        console.warn('GEDCOM menu elements not found');
+    }
+}
+
 // Gestion du sélecteur d'individu
 export const setupIndividualSelectorListener = () => {
     const individualSelect = document.getElementById("individual-select");
@@ -228,18 +278,19 @@ export const setupAllEventListeners = (authStore) => {
 
     const initializeEventListeners = () => {
         console.group('EventListeners: Initializing...'); // Debug
-
+    
         // Configuration des écouteurs globaux
         setupIndividualSelectorListener();
         setupTabAndUIEventListeners();
         setupFileLoadingEventListeners();
         setupUndoRedoEventListeners();
-
+        setupAutoOpenGedcomMenu(); // Ajoutez cette ligne
+    
         setTimeout(() => {
             setupResponsiveTabs();
             setupTabResizeListener();
         }, 0);
-
+    
         setupProtectedFeatureEventListeners(authStore);
 
         // Émettre l'événement de chargement initial immédiatement
