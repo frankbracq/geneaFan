@@ -49,31 +49,27 @@ const TOUR_CONFIG = {
                 hasDriver: !!manager.driver
             });
 
-            // Montrer le tour si :
-            // - Ce n'est PAS la première visite (tour de bienvenue déjà vu)
-            // - Le tour de bienvenue n'est PAS actif
-            // - Le tour fanDrawn n'a PAS encore été vu
             const shouldShowTour = !isFirstVisit && !isWelcomeTourActive && !hasSeenTour;
-
             console.log('Should show tour:', shouldShowTour);
             console.groupEnd();
 
             return shouldShowTour;
         },
+        // Utilisation de steps par défaut et getSteps pour les étapes additionnelles
         steps: [
+            {
+                element: '.nav-link.active[href="#tab1"]',
+                popover: {
+                    title: 'Ascendance',
+                    description: 'Vue principale de votre arbre généalogique.',
+                    position: 'bottom'
+                }
+            },
             {
                 element: '#individual-select',
                 popover: {
                     title: 'Sélection de l\'individu',
                     description: 'Recherchez et sélectionnez un individu.',
-                    position: 'bottom'
-                }
-            },
-            {
-                element: '#tab-nav',
-                popover: {
-                    title: 'Navigation',
-                    description: 'Explorez les différentes visualisations.',
                     position: 'bottom'
                 }
             }
@@ -90,11 +86,9 @@ const TOUR_CONFIG = {
                     description: 'Activez ou désactivez l\'affichage des lieux des ancêtres.',
                     position: 'right'
                 }
-            },
-            // ... autres étapes
+            }
         ]
     }
-    // Ajouter facilement d'autres tours ici
 };
 
 class OnboardingManager {
@@ -190,15 +184,42 @@ class OnboardingManager {
     }
 
     isElementVisible(element) {
+        // Obtenir l'élément nav-link le plus proche si on est sur un tab
+        const navLink = element.closest('.nav-link');
+        if (navLink) {
+            // Pour les onglets, vérifier s'ils sont actifs et visibles
+            const isDisabled = navLink.classList.contains('disabled') || 
+                             navLink.getAttribute('aria-disabled') === 'true' ||
+                             navLink.getAttribute('aria-selected') === 'false';
+            
+            if (isDisabled) {
+                console.log(`Tab ${element.id || navLink.id || navLink.getAttribute('href')} is disabled/not selected`);
+                return false;
+            }
+        }
+
+        // Vérification standard de la visibilité
         const style = window.getComputedStyle(element);
         const rect = element.getBoundingClientRect();
 
-        return style.display !== 'none'
-            && style.visibility !== 'hidden'
-            && style.opacity !== '0'
-            && rect.width > 0
-            && rect.height > 0;
+        const isVisible = style.display !== 'none' &&
+            style.visibility !== 'hidden' &&
+            style.opacity !== '0' &&
+            rect.width > 0 &&
+            rect.height > 0;
+
+        if (!isVisible) {
+            console.log(`Element ${element.id || element.className} is not visible:`, {
+                display: style.display,
+                visibility: style.visibility,
+                opacity: style.opacity,
+                dimensions: { width: rect.width, height: rect.height }
+            });
+        }
+
+        return isVisible;
     }
+
 
     createDriver() {
         try {
@@ -264,7 +285,7 @@ class OnboardingManager {
         });
     }
 
-    async waitForElements(steps, maxAttempts = 5, interval = 1000) {
+    async waitForElements(steps, maxAttempts = 10, interval = 500) {
         console.log('OnboardingManager: Waiting for elements to be visible...');
         
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -282,64 +303,97 @@ class OnboardingManager {
         return false;
     }
 
+    getFanDrawnSteps() {
+        // Base steps that are always present
+        const steps = [
+            {
+                element: '#tab1',
+                popover: {
+                    title: 'Ascendance',
+                    description: 'Vue principale de votre arbre généalogique.',
+                    position: 'bottom'
+                }
+            },
+            {
+                element: '#individual-select',
+                popover: {
+                    title: 'Sélection de l\'individu',
+                    description: 'Recherchez et sélectionnez un individu.',
+                    position: 'bottom'
+                }
+            }
+        ];
+
+        return steps;
+    }
+
     async startTour(tourType) {
         console.log('OnboardingManager: Starting tour:', tourType);
-
+    
         if (this.driver) {
             console.log('OnboardingManager: Stopping current tour');
             this.driver.destroy();
             this.driver = null;
         }
-
+    
         const config = TOUR_CONFIG[tourType];
         if (!config) {
             console.error('OnboardingManager: No configuration found for tour:', tourType);
             return;
         }
-
+    
         try {
-            const elementsReady = await this.waitForElements(config.steps);
+            // Utiliser les steps statiques par défaut
+            let steps = config.steps || [];
+    
+            // Log pour debug
+            console.log('OnboardingManager: Tour steps:', {
+                tourType,
+                numberOfSteps: steps.length,
+                steps: steps.map(s => ({
+                    element: s.element,
+                    title: s.popover.title
+                }))
+            });
+    
+            if (!steps || steps.length === 0) {
+                console.log('OnboardingManager: No steps available for tour:', tourType);
+                return;
+            }
+    
+            const elementsReady = await this.waitForElements(steps);
             if (!elementsReady) {
                 console.error(`OnboardingManager: Cannot start ${tourType} tour - elements not ready`);
                 return;
             }
-
+    
             this.driver = this.createDriver();
             if (!this.driver) {
                 console.error('OnboardingManager: Failed to create driver instance');
                 return;
             }
-
-            // Stocke le type de tour actif
+    
             this.activeTourType = tourType;
             
-            // Pas besoin d'ajouter onNext car on utilise onHighlightStarted/onDeselected
-            // Modifier les étapes pour ajouter une logique spéciale à la dernière étape
-            const lastStepIndex = config.steps.length - 1;
-            
-            const enhancedSteps = config.steps.map((step, index) => ({
+            // Préparer les steps avec le bouton Terminer sur le dernier
+            const lastStepIndex = steps.length - 1;
+            const enhancedSteps = steps.map((step, index) => ({
                 ...step,
                 popover: {
                     ...step.popover,
                     doneBtnText: index === lastStepIndex ? 'Terminer' : undefined,
                 },
                 onDeselected: () => {
-                    console.log(`OnboardingManager: Step ${index + 1}/${config.steps.length} deselected`);
+                    console.log(`OnboardingManager: Step ${index + 1}/${steps.length} deselected`);
                     
-                    // Si c'est la dernière étape, on termine le tour
                     if (index === lastStepIndex) {
-                        console.log('OnboardingManager: Last step deselected, completing tour');
-                        
-                        // Utiliser un setTimeout pour s'assurer que l'événement onDeselected est terminé
                         setTimeout(() => {
                             if (this.activeTourType && this.driver) {
-                                console.log('OnboardingManager: Triggering tour completion');
+                                console.log('OnboardingManager: Last step completed, ending tour');
                                 this.markTourAsShown(this.activeTourType);
                                 storeEvents.emit(EVENTS.ONBOARDING.TOUR_COMPLETED, { 
                                     tourType: this.activeTourType 
                                 });
-                                
-                                // Utiliser destroy() pour terminer proprement le tour
                                 this.driver.destroy();
                                 this.cleanup();
                             }
@@ -350,7 +404,7 @@ class OnboardingManager {
             
             this.driver.setSteps(enhancedSteps);
             this.driver.drive();
-
+    
             storeEvents.emit(EVENTS.ONBOARDING.TOUR_STARTED, { tourType });
             console.log(`OnboardingManager: ${tourType} tour started successfully`);
         } catch (error) {
