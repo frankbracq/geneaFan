@@ -1,5 +1,8 @@
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
+import '../../../scss/pages/driverjs-custom.scss';
+
+import { Offcanvas } from "bootstrap";
 import { EVENTS, storeEvents } from '../gedcom/stores/storeEvents.js';
 
 // Configuration centralisée des tours
@@ -8,6 +11,14 @@ const TOUR_CONFIG = {
         event: EVENTS.ONBOARDING.APP_LOADED,
         condition: (manager) => manager.isFirstVisit(),
         steps: [
+            {
+                element: '#tab-nav',
+                popover: {
+                    title: 'Navigation',
+                    description: 'Une fois votre fichier chargé, vous pourrez explorer vos données avec différentes visualisations.',
+                    position: 'bottom'
+                }
+            },
             {
                 element: '#gedcomMenu',
                 popover: {
@@ -23,14 +34,6 @@ const TOUR_CONFIG = {
                     description: 'Pas de fichier GEDCOM ? Essayez notre exemple pour découvrir les fonctionnalités.',
                     position: 'bottom'
                 }
-            },
-            {
-                element: '#tab-nav',
-                popover: {
-                    title: 'Navigation',
-                    description: 'Une fois votre fichier chargé, vous pourrez explorer vos données avec différentes visualisations.',
-                    position: 'bottom'
-                }
             }
         ]
     },
@@ -41,24 +44,17 @@ const TOUR_CONFIG = {
             const isFirstVisit = manager.isFirstVisit();
             const isWelcomeTourActive = manager.isWelcomeTourActive();
             const hasSeenTour = manager.hasTourBeenShown('fanDrawn');
-
-            console.log({
-                isFirstVisit,
-                isWelcomeTourActive,
-                hasSeenTour,
-                hasDriver: !!manager.driver
-            });
-
+    
             const shouldShowTour = !isFirstVisit && !isWelcomeTourActive && !hasSeenTour;
             console.log('Should show tour:', shouldShowTour);
             console.groupEnd();
-
+    
             return shouldShowTour;
         },
-        // Utilisation de steps par défaut et getSteps pour les étapes additionnelles
         steps: [
             {
-                element: '.nav-link.active[href="#tab1"]',
+                //element: '#tab-nav .nav-link[href="#tab1"]',
+                element: '#tab1-label',
                 popover: {
                     title: 'Ascendance',
                     description: 'Vue principale de votre arbre généalogique.',
@@ -66,13 +62,110 @@ const TOUR_CONFIG = {
                 }
             },
             {
-                element: '#individual-select',
+                element: '#rootPerson',
+                popover: {
+                    title: 'Personne racine',
+                    description: 'Par défaut, l\'éventail affiché lors du chargement du fichier Gedcom est celui la personne la plus jeune de la famille.',
+                    position: 'right'
+                },
+                
+            },
+            {
+                element: '#middle-container',
                 popover: {
                     title: 'Sélection de l\'individu',
                     description: 'Recherchez et sélectionnez un individu.',
                     position: 'bottom'
+                },
+                
+            },
+            {
+                element: '#rootAscendant',
+                popover: {
+                    title: 'Navigation dans l\'arbre',
+                    description: 'Explorez vos ancêtres en cliquant sur leur nom.',
+                    position: 'auto'
+                },
+                onHighlight: (element) => {
+                    if (!element || !element.__data__) return;
+                    // Simuler un clic pour montrer l'offcanvas des détails
+                    const customEvent = new CustomEvent('showPersonDetails', { 
+                        detail: element.__data__ 
+                    });
+                    document.dispatchEvent(customEvent);
+                },
+                onDeselected: (element) => {
+                    // D'abord fermer l'offcanvas
+                    const offcanvas = document.getElementById('personDetails');
+                    if (offcanvas) {
+                        const bsOffcanvas = Offcanvas.getInstance(offcanvas);
+                        if (bsOffcanvas) {
+                            try {
+                                bsOffcanvas.hide();
+                            } catch (error) {
+                                console.error('Error closing offcanvas:', error);
+                            }
+                        }
+                    }
+            
+                    // Attendre que l'offcanvas soit fermé avant de continuer
+                    return new Promise(resolve => {
+                        setTimeout(() => {
+                            resolve();
+                        }, 300); // Délai pour laisser l'animation se terminer
+                    });
                 }
-            }
+            },
+            {
+                element: '#fanParametersDisplay',
+                popover: {
+                    title: 'Paramètres de l\'éventail',
+                    description: 'Cliquez ici pour personnaliser l\'affichage de votre arbre en éventail.',
+                    position: 'bottom'
+                },
+                onDeselected: (element) => {
+                    console.log('Opening fan parameters offcanvas...');
+                    const offcanvas = document.getElementById('fanParameters');
+                    if (offcanvas) {
+                        try {
+                            new Offcanvas(offcanvas).show();
+                        } catch (error) {
+                            console.error('Error opening offcanvas:', error);
+                        }
+                    }
+                }
+            },
+            {
+                element: '#fanParametersBody',
+                popover: {
+                    title: 'Configuration de l\'éventail',
+                    description: 'Lorem ipsum...',
+                    position: 'right'
+                },
+                onDeselected: (element) => {
+                    console.log('Closing fan parameters offcanvas...');
+                    const offcanvas = document.getElementById('fanParameters');
+                    if (offcanvas) {
+                        const bsOffcanvas = Offcanvas.getInstance(offcanvas);
+                        if (bsOffcanvas) {
+                            try {
+                                bsOffcanvas.hide();
+                            } catch (error) {
+                                console.error('Error closing offcanvas:', error);
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                element: '#download-menu',
+                popover: {
+                    title: 'Export de l\éventail en PDF',
+                    description: 'Pour commencer, vous devez charger un fichier GEDCOM. Cliquez ici pour importer votre fichier ou essayer notre exemple.',
+                    position: 'bottom'
+                }
+            },
+
         ]
     },
     mapView: {
@@ -103,17 +196,18 @@ class OnboardingManager {
             opacity: 0.7,
             padding: 5,
             showProgress: true,
-            allowClose: true,
+            allowClose: false,
             stagePadding: 5,
             nextBtnText: 'Suivant',
             prevBtnText: 'Précédent',
             doneBtnText: 'Terminer'
         };
 
-        // Garde en mémoire le tour actif
         this.activeTourType = null;
+        this.currentStepIndex = 0;
         this.setupTours();
     }
+
 
     setupTours() {
         Object.entries(TOUR_CONFIG).forEach(([tourType, config]) => {
@@ -273,15 +367,17 @@ class OnboardingManager {
     }
 
     cleanup() {
-        const previousTourType = this.activeTourType;
+        const tourType = this.activeTourType;
+        const finalStepIndex = this.currentStepIndex;
+        
         this.driver = null;
         this.activeTourType = null;
-        console.log('OnboardingManager: Cleaned up tour:', previousTourType);
-        
-        console.log('OnboardingManager: Tour state after cleanup:', {
-            driver: this.driver,
-            activeTourType: this.activeTourType,
-            hasSeenTour: previousTourType ? this.hasTourBeenShown(previousTourType) : null
+        this.currentStepIndex = 0;
+
+        console.log('OnboardingManager: Cleaned up tour:', {
+            tourType,
+            finalStep: finalStepIndex,
+            hasSeenTour: tourType ? this.hasTourBeenShown(tourType) : null
         });
     }
 
@@ -328,6 +424,114 @@ class OnboardingManager {
     }
 
     async startTour(tourType) {
+        console.log('OnboardingManager: Starting tour:', tourType);
+
+        if (this.driver) {
+            console.log('OnboardingManager: Stopping current tour');
+            this.driver.destroy();
+            this.driver = null;
+        }
+
+        try {
+            const config = TOUR_CONFIG[tourType];
+            let steps = config.steps || [];
+            this.currentStepIndex = 0;
+
+            // Debug log pour vérifier l'ordre des étapes
+            console.log('Steps before enhancement:', steps.map(s => s.popover.title));
+
+            // Configuration des étapes
+            const enhancedSteps = steps.map((step, index) => {
+                const isLastStep = index === steps.length - 1;
+                const stepConfig = {
+                    ...step,
+                    popover: {
+                        ...step.popover,
+                        buttons: isLastStep 
+                            ? {
+                                text: {
+                                    done: 'Terminer'
+                                },
+                                show: ['previous', 'done']
+                            }
+                            : {
+                                text: {
+                                    next: 'Suivant'
+                                },
+                                show: ['previous', 'next']
+                            }
+                    }
+                };
+
+                // Debug log pour chaque étape
+                console.log(`Step ${index + 1} configuration:`, {
+                    title: stepConfig.popover.title,
+                    buttons: stepConfig.popover.buttons,
+                    isLastStep
+                });
+
+                return stepConfig;
+            });
+
+            this.driver = driver({
+                ...this.driverOptions,
+                onHighlightStarted: (element) => {
+                    console.log('OnboardingManager: Step highlight started', { 
+                        element,
+                        currentStep: this.currentStepIndex + 1,
+                        totalSteps: steps.length,
+                        stepTitle: steps[this.currentStepIndex].popover.title
+                    });
+
+                    const currentStep = steps[this.currentStepIndex];
+                    if (currentStep?.onHighlight) {
+                        try {
+                            currentStep.onHighlight(element);
+                        } catch (error) {
+                            console.error('Error in onHighlight:', error);
+                        }
+                    }
+                },
+                onDeselected: (element) => {
+                    console.log(`OnboardingManager: Step ${this.currentStepIndex + 1}/${steps.length} deselected`);
+                    
+                    const currentStep = steps[this.currentStepIndex];
+                    if (currentStep?.onDeselected) {
+                        try {
+                            currentStep.onDeselected(element);
+                        } catch (error) {
+                            console.error('Error in onDeselected:', error);
+                        }
+                    }
+
+                    if (this.currentStepIndex === steps.length - 1) {
+                        if (this.activeTourType) {
+                            this.markTourAsShown(this.activeTourType);
+                            storeEvents.emit(EVENTS.ONBOARDING.TOUR_COMPLETED, { 
+                                tourType: this.activeTourType 
+                            });
+                        }
+                        this.cleanup();
+                    } else {
+                        this.currentStepIndex++;
+                    }
+                }
+            });
+
+            this.activeTourType = tourType;
+            
+            this.driver.setSteps(enhancedSteps);
+            this.driver.drive();
+
+            storeEvents.emit(EVENTS.ONBOARDING.TOUR_STARTED, { tourType });
+            console.log(`OnboardingManager: ${tourType} tour started successfully`);
+        } catch (error) {
+            console.error('OnboardingManager: Error during tour start:', error);
+            this.cleanup();
+        }
+    }
+
+    async startTour1(tourType) {
         console.log('OnboardingManager: Starting tour:', tourType);
     
         if (this.driver) {

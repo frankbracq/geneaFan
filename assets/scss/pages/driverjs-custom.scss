@@ -1,0 +1,28 @@
+/**
+ * Styles personnalisés pour Driver.js
+ */
+
+// Overlay transparent
+.driver-overlay {
+    opacity: 0 !important;
+    background: transparent !important;
+}
+
+// Style de base pour les éléments actifs
+.driver-active-element {
+    pointer-events: none !important;
+    cursor: default !important;
+    position: relative;
+    z-index: 10000 !important;
+
+    // Style pour les éléments HTML standards (hors SVG)
+    &:not(g, text, textPath) {
+        outline: 2px solid red !important;
+        outline-offset: 2px !important;
+    }
+
+    // Style pour les éléments textuels du SVG
+    text, textPath {
+        fill: red !important;
+    }
+}

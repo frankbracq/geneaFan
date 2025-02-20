@@ -397,13 +397,24 @@ function createTextElements(g, defs, descendants, showMarriages) {
 
     const createGroupElement = (anchor, line, alignment, special) => {
         const group = anchor.append('g')
-            .on('click', (event, d) => { // Utilisez d3.js pour gérer le clic
-                event.stopPropagation(); // Empêche l'événement de se propager
+            .on('click', (event, d) => {
+                event.stopPropagation();
                 const customEvent = new CustomEvent('showPersonDetails', { detail: d });
-                // console.log('Dispatching showPersonDetails event:', customEvent);
                 document.dispatchEvent(customEvent);
+            })
+            .attr('id', d => {
+                // Ajouter id pour la personne racine (depth = 0)
+                if (d.depth === 0) {
+                    return 'rootPerson';
+                }
+                // Ajouter id pour un ascendant de la 3ème génération (depth = 3)
+                // On peut choisir un critère spécifique, ici je prends le premier trouvé
+                if (d.depth === 3) {
+                    return 'rootAscendant';
+                }
+                return '';
             });
-
+    
         return group;
     };
 

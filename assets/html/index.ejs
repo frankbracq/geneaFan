@@ -21,7 +21,7 @@
                     <ul class="nav nav-tabs" id="tab-nav">
                         <li class="nav-item">
                             <a class="nav-link active" href="#tab1" data-bs-toggle="tab">
-                                <span class="tab-label">
+                                <span class="tab-label" id="tab1-label">
                                     <%= __('geneafan.view_fan_chart') %>
                                 </span>
                                 <button class="btn btn-secondary btn-sm spacedS" id="fanParametersDisplay" disabled
@@ -256,7 +256,7 @@
                                 <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
                                     aria-label="Close"></button>
                             </div>
-                            <div class="offcanvas-body">
+                            <div class="offcanvas-body" id="fanParametersBody">
                                 <div class="container-fluid">
                                     <div class="row col-12 mx-auto">
                                         <!-- Paramètre de l'angle du fan -->
