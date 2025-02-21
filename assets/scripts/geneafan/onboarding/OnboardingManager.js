@@ -1,8 +1,8 @@
+import { Offcanvas } from "bootstrap";
+import { Dropdown } from "bootstrap/js/dist/dropdown";
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import '../../../scss/pages/driverjs-custom.scss';
-
-import { Offcanvas } from "bootstrap";
 import { EVENTS, storeEvents } from '../gedcom/stores/storeEvents.js';
 
 // Configuration centralisée des tours
@@ -44,16 +44,15 @@ const TOUR_CONFIG = {
             const isFirstVisit = manager.isFirstVisit();
             const isWelcomeTourActive = manager.isWelcomeTourActive();
             const hasSeenTour = manager.hasTourBeenShown('fanDrawn');
-    
+
             const shouldShowTour = !isFirstVisit && !isWelcomeTourActive && !hasSeenTour;
             console.log('Should show tour:', shouldShowTour);
             console.groupEnd();
-    
+
             return shouldShowTour;
         },
         steps: [
             {
-                //element: '#tab-nav .nav-link[href="#tab1"]',
                 element: '#tab1-label',
                 popover: {
                     title: 'Ascendance',
@@ -67,8 +66,7 @@ const TOUR_CONFIG = {
                     title: 'Personne racine',
                     description: 'Par défaut, l\'éventail affiché lors du chargement du fichier Gedcom est celui la personne la plus jeune de la famille.',
                     position: 'right'
-                },
-                
+                }
             },
             {
                 element: '#middle-container',
@@ -76,8 +74,7 @@ const TOUR_CONFIG = {
                     title: 'Sélection de l\'individu',
                     description: 'Recherchez et sélectionnez un individu.',
                     position: 'bottom'
-                },
-                
+                }
             },
             {
                 element: '#rootAscendant',
@@ -86,35 +83,29 @@ const TOUR_CONFIG = {
                     description: 'Explorez vos ancêtres en cliquant sur leur nom.',
                     position: 'auto'
                 },
-                onHighlight: (element) => {
+                onHighlight: async (element) => {
                     if (!element || !element.__data__) return;
-                    // Simuler un clic pour montrer l'offcanvas des détails
-                    const customEvent = new CustomEvent('showPersonDetails', { 
-                        detail: element.__data__ 
+
+                    const customEvent = new CustomEvent('showPersonDetails', {
+                        detail: element.__data__
                     });
                     document.dispatchEvent(customEvent);
                 },
-                onDeselected: (element) => {
-                    // D'abord fermer l'offcanvas
+                /*
+                onNextClick: async (element, step, { driver }) => {
+                    console.log('OnboardingManager: Closing person details offcanvas...');  
                     const offcanvas = document.getElementById('personDetails');
                     if (offcanvas) {
                         const bsOffcanvas = Offcanvas.getInstance(offcanvas);
                         if (bsOffcanvas) {
-                            try {
-                                bsOffcanvas.hide();
-                            } catch (error) {
-                                console.error('Error closing offcanvas:', error);
-                            }
+                            bsOffcanvas.hide();
+                            await new Promise(resolve => {
+                                offcanvas.addEventListener('hidden.bs.offcanvas', resolve, { once: true });
+                            });
                         }
                     }
-            
-                    // Attendre que l'offcanvas soit fermé avant de continuer
-                    return new Promise(resolve => {
-                        setTimeout(() => {
-                            resolve();
-                        }, 300); // Délai pour laisser l'animation se terminer
-                    });
                 }
+                */
             },
             {
                 element: '#fanParametersDisplay',
@@ -123,17 +114,27 @@ const TOUR_CONFIG = {
                     description: 'Cliquez ici pour personnaliser l\'affichage de votre arbre en éventail.',
                     position: 'bottom'
                 },
-                onDeselected: (element) => {
-                    console.log('Opening fan parameters offcanvas...');
-                    const offcanvas = document.getElementById('fanParameters');
-                    if (offcanvas) {
-                        try {
-                            new Offcanvas(offcanvas).show();
-                        } catch (error) {
-                            console.error('Error opening offcanvas:', error);
+                onHighlight: async (element) => {
+                    await new Promise((resolve) => {
+                        const offcanvas = document.getElementById('personDetails');
+                        if (offcanvas) {
+                            const bsOffcanvas = Offcanvas.getInstance(offcanvas);
+                            if (bsOffcanvas) {
+                                const handleOffcanvasHidden = () => {
+                                    offcanvas.removeEventListener('hidden.bs.offcanvas', handleOffcanvasHidden);
+                                    resolve();
+                                };
+                                
+                                offcanvas.addEventListener('hidden.bs.offcanvas', handleOffcanvasHidden);
+                                bsOffcanvas.hide();
+                            } else {
+                                resolve();
+                            }
+                        } else {
+                            resolve();
                         }
-                    }
-                }
+                    });
+                },
             },
             {
                 element: '#fanParametersBody',
@@ -142,17 +143,22 @@ const TOUR_CONFIG = {
                     description: 'Lorem ipsum...',
                     position: 'right'
                 },
-                onDeselected: (element) => {
+                onHighlight: async (element) => {
+                    const offcanvas = document.getElementById('fanParameters');
+                    if (offcanvas) {
+                        new Offcanvas(offcanvas).show();
+                    }
+                },
+                onNextClick: async (element, step, { driver }) => {
                     console.log('Closing fan parameters offcanvas...');
                     const offcanvas = document.getElementById('fanParameters');
                     if (offcanvas) {
                         const bsOffcanvas = Offcanvas.getInstance(offcanvas);
                         if (bsOffcanvas) {
-                            try {
-                                bsOffcanvas.hide();
-                            } catch (error) {
-                                console.error('Error closing offcanvas:', error);
-                            }
+                            bsOffcanvas.hide();
+                            await new Promise(resolve => {
+                                offcanvas.addEventListener('hidden.bs.offcanvas', resolve, { once: true });
+                            });
                         }
                     }
                 }
@@ -160,12 +166,42 @@ const TOUR_CONFIG = {
             {
                 element: '#download-menu',
                 popover: {
-                    title: 'Export de l\éventail en PDF',
+                    title: 'Export de l\'éventail en PDF',
                     description: 'Pour commencer, vous devez charger un fichier GEDCOM. Cliquez ici pour importer votre fichier ou essayer notre exemple.',
                     position: 'bottom'
-                }
-            },
+                },
+                onHighlight: (element) => {
+                    console.log(`OnboardingManager: Highlighting download menu step`);
+                    const dropdownButton = document.querySelector('#download-menu');
+                    if (!dropdownButton) {
+                        console.error('Download button not found');
+                        return;
+                    }
 
+                    try {
+                        const dropdown = new Dropdown(dropdownButton);
+                        dropdown.show();
+                        console.log('Dropdown menu opened successfully');
+                    } catch (error) {
+                        console.error('Error opening dropdown:', error);
+                    }
+                },
+                onNextClick: async (element, step, { driver }) => {
+                    console.log('OnboardingManager: Closing download menu step');
+                    try {
+                        const dropdownButton = document.querySelector('#download-menu');
+                        if (dropdownButton) {
+                            const dropdown = Dropdown.getInstance(dropdownButton);
+                            if (dropdown) {
+                                dropdown.hide();
+                                await new Promise(resolve => setTimeout(resolve, 300));
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error closing dropdown:', error);
+                    }
+                }
+            }
         ]
     },
     mapView: {
@@ -205,24 +241,24 @@ class OnboardingManager {
 
         this.activeTourType = null;
         this.currentStepIndex = 0;
+        this.activeDropdown = null; // Add this to store the dropdown instance
         this.setupTours();
     }
 
-
     setupTours() {
         Object.entries(TOUR_CONFIG).forEach(([tourType, config]) => {
-            storeEvents.subscribe(config.event, () => {
+            storeEvents.subscribe(config.event, async () => {  // Ajout de async ici
                 console.log(`OnboardingManager: ${tourType} event received`);
-                
-                // Vérification plus stricte des conditions
+
                 const shouldStartTour = this.shouldStartTour(tourType);
                 console.log(`OnboardingManager: Should start ${tourType}?`, shouldStartTour);
-                
+
                 if (shouldStartTour) {
-                    // On attend que le tour démarre
-                    this.startTour(tourType).catch(error => {
+                    try {
+                        await this.startTour(tourType);  // Utilisation de await
+                    } catch (error) {
                         console.error(`OnboardingManager: Failed to start ${tourType} tour:`, error);
-                    });
+                    }
                 }
             });
         });
@@ -230,11 +266,10 @@ class OnboardingManager {
 
     shouldStartTour(tourType) {
         if (this.options.forceTour) return true;
-        
+
         const config = TOUR_CONFIG[tourType];
         if (!config) return false;
 
-        // Vérifie si le tour a déjà été montré
         const hasBeenShown = this.hasTourBeenShown(tourType);
         if (hasBeenShown && !this.options.forceTour) {
             console.log(`OnboardingManager: ${tourType} already shown`);
@@ -243,7 +278,6 @@ class OnboardingManager {
 
         return config.condition(this);
     }
-
 
     verifyDOMElements(steps) {
         console.log('OnboardingManager: Verifying DOM elements...');
@@ -278,21 +312,18 @@ class OnboardingManager {
     }
 
     isElementVisible(element) {
-        // Obtenir l'élément nav-link le plus proche si on est sur un tab
         const navLink = element.closest('.nav-link');
         if (navLink) {
-            // Pour les onglets, vérifier s'ils sont actifs et visibles
-            const isDisabled = navLink.classList.contains('disabled') || 
-                             navLink.getAttribute('aria-disabled') === 'true' ||
-                             navLink.getAttribute('aria-selected') === 'false';
-            
+            const isDisabled = navLink.classList.contains('disabled') ||
+                navLink.getAttribute('aria-disabled') === 'true' ||
+                navLink.getAttribute('aria-selected') === 'false';
+
             if (isDisabled) {
                 console.log(`Tab ${element.id || navLink.id || navLink.getAttribute('href')} is disabled/not selected`);
                 return false;
             }
         }
 
-        // Vérification standard de la visibilité
         const style = window.getComputedStyle(element);
         const rect = element.getBoundingClientRect();
 
@@ -314,21 +345,20 @@ class OnboardingManager {
         return isVisible;
     }
 
-
     createDriver() {
         try {
             const driverInstance = driver({
                 ...this.driverOptions,
                 onHighlightStarted: (element) => {
-                    console.log('OnboardingManager: Step started', { 
-                        element, 
-                        tourType: this.activeTourType 
+                    console.log('OnboardingManager: Step started', {
+                        element,
+                        tourType: this.activeTourType
                     });
                 },
                 onDeselected: (element) => {
-                    console.log('OnboardingManager: Step completed', { 
-                        element, 
-                        tourType: this.activeTourType 
+                    console.log('OnboardingManager: Step completed', {
+                        element,
+                        tourType: this.activeTourType
                     });
                 },
                 onComplete: () => {
@@ -337,22 +367,22 @@ class OnboardingManager {
                         hasDriver: !!this.driver,
                         currentStep: this.driver ? this.driver.currentStep : null
                     });
-                    
+
                     if (this.activeTourType) {
                         this.markTourAsShown(this.activeTourType);
-                        storeEvents.emit(EVENTS.ONBOARDING.TOUR_COMPLETED, { 
-                            tourType: this.activeTourType 
+                        storeEvents.emit(EVENTS.ONBOARDING.TOUR_COMPLETED, {
+                            tourType: this.activeTourType
                         });
                         console.log('OnboardingManager: Tour marked as shown and event emitted');
                     }
-                    
+
                     this.cleanup();
                 },
                 onClose: () => {
                     console.log('OnboardingManager: Tour closed manually', this.activeTourType);
                     if (this.activeTourType) {
-                        storeEvents.emit(EVENTS.ONBOARDING.TOUR_CANCELLED, { 
-                            tourType: this.activeTourType 
+                        storeEvents.emit(EVENTS.ONBOARDING.TOUR_CANCELLED, {
+                            tourType: this.activeTourType
                         });
                     }
                     this.cleanup();
@@ -369,7 +399,16 @@ class OnboardingManager {
     cleanup() {
         const tourType = this.activeTourType;
         const finalStepIndex = this.currentStepIndex;
-        
+
+        if (this.activeDropdown) {
+            try {
+                this.activeDropdown.hide();
+            } catch (error) {
+                console.error('Error hiding dropdown during cleanup:', error);
+            }
+            this.activeDropdown = null;
+        }
+
         this.driver = null;
         this.activeTourType = null;
         this.currentStepIndex = 0;
@@ -383,47 +422,23 @@ class OnboardingManager {
 
     async waitForElements(steps, maxAttempts = 10, interval = 500) {
         console.log('OnboardingManager: Waiting for elements to be visible...');
-        
+
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
             console.log(`OnboardingManager: Attempt ${attempt}/${maxAttempts}`);
-            
+
             if (this.verifyDOMElements(steps)) {
                 console.log('OnboardingManager: All elements are now visible');
                 return true;
             }
-            
+
             await new Promise(resolve => setTimeout(resolve, interval));
         }
-        
+
         console.error('OnboardingManager: Elements not visible after all attempts');
         return false;
     }
 
-    getFanDrawnSteps() {
-        // Base steps that are always present
-        const steps = [
-            {
-                element: '#tab1',
-                popover: {
-                    title: 'Ascendance',
-                    description: 'Vue principale de votre arbre généalogique.',
-                    position: 'bottom'
-                }
-            },
-            {
-                element: '#individual-select',
-                popover: {
-                    title: 'Sélection de l\'individu',
-                    description: 'Recherchez et sélectionnez un individu.',
-                    position: 'bottom'
-                }
-            }
-        ];
-
-        return steps;
-    }
-
-    async startTour(tourType) {
+    async startTour(tourType) {  // Ajout de async ici
         console.log('OnboardingManager: Starting tour:', tourType);
 
         if (this.driver) {
@@ -447,7 +462,7 @@ class OnboardingManager {
                     ...step,
                     popover: {
                         ...step.popover,
-                        buttons: isLastStep 
+                        buttons: isLastStep
                             ? {
                                 text: {
                                     done: 'Terminer'
@@ -475,140 +490,58 @@ class OnboardingManager {
 
             this.driver = driver({
                 ...this.driverOptions,
-                onHighlightStarted: (element) => {
-                    console.log('OnboardingManager: Step highlight started', { 
-                        element,
-                        currentStep: this.currentStepIndex + 1,
-                        totalSteps: steps.length,
-                        stepTitle: steps[this.currentStepIndex].popover.title
+                onHighlightStarted: async (element) => {
+                    const currentStep = this.currentStepIndex + 1;
+                    console.log(`OnboardingManager: Highlighting step ${currentStep}/${steps.length}`, {
+                        element: element.id || element.className,
+                        title: steps[this.currentStepIndex].popover.title
                     });
 
-                    const currentStep = steps[this.currentStepIndex];
-                    if (currentStep?.onHighlight) {
+                    const stepConfig = steps[this.currentStepIndex];
+                    if (stepConfig?.onHighlight) {
                         try {
-                            currentStep.onHighlight(element);
+                            await stepConfig.onHighlight(element);
                         } catch (error) {
-                            console.error('Error in onHighlight:', error);
+                            console.error(`Error in onHighlight for step ${currentStep}:`, error);
                         }
                     }
                 },
-                onDeselected: (element) => {
-                    console.log(`OnboardingManager: Step ${this.currentStepIndex + 1}/${steps.length} deselected`);
-                    
-                    const currentStep = steps[this.currentStepIndex];
-                    if (currentStep?.onDeselected) {
+                onDeselected: async (element) => {
+                    const currentStep = this.currentStepIndex + 1;
+                    console.log(`OnboardingManager: Step ${currentStep}/${steps.length} deselected`, {
+                        element: element.id || element.className,
+                        title: steps[this.currentStepIndex].popover.title
+                    });
+
+                    const stepConfig = steps[this.currentStepIndex];
+                    if (stepConfig?.onDeselected) {
                         try {
-                            currentStep.onDeselected(element);
+                            await stepConfig.onDeselected(element);
                         } catch (error) {
-                            console.error('Error in onDeselected:', error);
+                            console.error(`Error in onDeselected for step ${currentStep}:`, error);
                         }
                     }
 
-                    if (this.currentStepIndex === steps.length - 1) {
+                    if (currentStep === steps.length) {
+                        console.log('OnboardingManager: Tour completed');
                         if (this.activeTourType) {
                             this.markTourAsShown(this.activeTourType);
-                            storeEvents.emit(EVENTS.ONBOARDING.TOUR_COMPLETED, { 
-                                tourType: this.activeTourType 
+                            storeEvents.emit(EVENTS.ONBOARDING.TOUR_COMPLETED, {
+                                tourType: this.activeTourType
                             });
                         }
                         this.cleanup();
                     } else {
                         this.currentStepIndex++;
+                        console.log(`OnboardingManager: Moving to step ${this.currentStepIndex + 1}/${steps.length}`);
                     }
                 }
             });
 
             this.activeTourType = tourType;
-            
             this.driver.setSteps(enhancedSteps);
             this.driver.drive();
 
-            storeEvents.emit(EVENTS.ONBOARDING.TOUR_STARTED, { tourType });
-            console.log(`OnboardingManager: ${tourType} tour started successfully`);
-        } catch (error) {
-            console.error('OnboardingManager: Error during tour start:', error);
-            this.cleanup();
-        }
-    }
-
-    async startTour1(tourType) {
-        console.log('OnboardingManager: Starting tour:', tourType);
-    
-        if (this.driver) {
-            console.log('OnboardingManager: Stopping current tour');
-            this.driver.destroy();
-            this.driver = null;
-        }
-    
-        const config = TOUR_CONFIG[tourType];
-        if (!config) {
-            console.error('OnboardingManager: No configuration found for tour:', tourType);
-            return;
-        }
-    
-        try {
-            // Utiliser les steps statiques par défaut
-            let steps = config.steps || [];
-    
-            // Log pour debug
-            console.log('OnboardingManager: Tour steps:', {
-                tourType,
-                numberOfSteps: steps.length,
-                steps: steps.map(s => ({
-                    element: s.element,
-                    title: s.popover.title
-                }))
-            });
-    
-            if (!steps || steps.length === 0) {
-                console.log('OnboardingManager: No steps available for tour:', tourType);
-                return;
-            }
-    
-            const elementsReady = await this.waitForElements(steps);
-            if (!elementsReady) {
-                console.error(`OnboardingManager: Cannot start ${tourType} tour - elements not ready`);
-                return;
-            }
-    
-            this.driver = this.createDriver();
-            if (!this.driver) {
-                console.error('OnboardingManager: Failed to create driver instance');
-                return;
-            }
-    
-            this.activeTourType = tourType;
-            
-            // Préparer les steps avec le bouton Terminer sur le dernier
-            const lastStepIndex = steps.length - 1;
-            const enhancedSteps = steps.map((step, index) => ({
-                ...step,
-                popover: {
-                    ...step.popover,
-                    doneBtnText: index === lastStepIndex ? 'Terminer' : undefined,
-                },
-                onDeselected: () => {
-                    console.log(`OnboardingManager: Step ${index + 1}/${steps.length} deselected`);
-                    
-                    if (index === lastStepIndex) {
-                        setTimeout(() => {
-                            if (this.activeTourType && this.driver) {
-                                console.log('OnboardingManager: Last step completed, ending tour');
-                                this.markTourAsShown(this.activeTourType);
-                                storeEvents.emit(EVENTS.ONBOARDING.TOUR_COMPLETED, { 
-                                    tourType: this.activeTourType 
-                                });
-                                this.driver.destroy();
-                                this.cleanup();
-                            }
-                        }, 100);
-                    }
-                }
-            }));
-            
-            this.driver.setSteps(enhancedSteps);
-            this.driver.drive();
-    
             storeEvents.emit(EVENTS.ONBOARDING.TOUR_STARTED, { tourType });
             console.log(`OnboardingManager: ${tourType} tour started successfully`);
         } catch (error) {
@@ -618,17 +551,14 @@ class OnboardingManager {
     }
 
     isFirstVisit() {
-        // On vérifie uniquement si le tour de bienvenue a été montré
         return !localStorage.getItem('geneafan_has_seen_welcome_tour');
     }
 
     isWelcomeTourActive() {
-        // Version simplifiée utilisant directement activeTourType
         return this.driver && this.activeTourType === 'welcome';
     }
 
     getCurrentActiveTour() {
-        // Utilise directement activeTourType s'il est défini
         return this.activeTourType;
     }
 
@@ -646,11 +576,11 @@ class OnboardingManager {
         try {
             localStorage.setItem(key, 'true');
             const storedValue = localStorage.getItem(key);
-            
+
             if (storedValue !== 'true') {
                 throw new Error('Storage verification failed');
             }
-            
+
             console.log(`OnboardingManager: ${tourType} tour marked as shown`);
         } catch (error) {
             console.error('OnboardingManager: Failed to mark tour as shown:', error);
