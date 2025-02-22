@@ -170,37 +170,27 @@ const TOUR_CONFIG = {
                     description: 'Pour commencer, vous devez charger un fichier GEDCOM. Cliquez ici pour importer votre fichier ou essayer notre exemple.',
                     position: 'bottom'
                 },
-                onHighlight: (element) => {
-                    console.log(`OnboardingManager: Highlighting download menu step`);
-                    const dropdownButton = document.querySelector('#download-menu');
-                    if (!dropdownButton) {
-                        console.error('Download button not found');
-                        return;
-                    }
-
-                    try {
-                        const dropdown = new Dropdown(dropdownButton);
-                        dropdown.show();
-                        console.log('Dropdown menu opened successfully');
-                    } catch (error) {
-                        console.error('Error opening dropdown:', error);
-                    }
-                },
-                onNextClick: async (element, step, { driver }) => {
-                    console.log('OnboardingManager: Closing download menu step');
-                    try {
-                        const dropdownButton = document.querySelector('#download-menu');
-                        if (dropdownButton) {
-                            const dropdown = Dropdown.getInstance(dropdownButton);
-                            if (dropdown) {
-                                dropdown.hide();
-                                await new Promise(resolve => setTimeout(resolve, 300));
+                onHighlight: async (element) => {
+                    await new Promise((resolve) => {
+                        const offcanvas = document.getElementById('fanParameters');
+                        if (offcanvas) {
+                            const bsOffcanvas = Offcanvas.getInstance(offcanvas);
+                            if (bsOffcanvas) {
+                                const handleOffcanvasHidden = () => {
+                                    offcanvas.removeEventListener('hidden.bs.offcanvas', handleOffcanvasHidden);
+                                    resolve();
+                                };
+                                
+                                offcanvas.addEventListener('hidden.bs.offcanvas', handleOffcanvasHidden);
+                                bsOffcanvas.hide();
+                            } else {
+                                resolve();
                             }
+                        } else {
+                            resolve();
                         }
-                    } catch (error) {
-                        console.error('Error closing dropdown:', error);
-                    }
-                }
+                    });
+                },
             }
         ]
     },
