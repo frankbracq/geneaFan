@@ -4,9 +4,10 @@ import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import '../../../scss/pages/driverjs-custom.scss';
 import { EVENTS, storeEvents } from '../gedcom/stores/storeEvents.js';
+import { TOUR_CONFIG } from './tours';
 
 // Configuration centralisée des tours
-const TOUR_CONFIG = {
+const TOUR_CONFIG1 = {
     welcome: {
         event: EVENTS.ONBOARDING.APP_LOADED,
         condition: (manager) => manager.isFirstVisit(),

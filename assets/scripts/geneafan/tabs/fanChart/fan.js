@@ -1,9 +1,9 @@
+import _ from "lodash";
 import { arc, line } from 'd3-shape';
 import { select } from 'd3-selection';
 import { hierarchy } from 'd3-hierarchy';
 import { xml } from 'd3-fetch';
 import tinycolor from "tinycolor2";
-import _ from "lodash";
 import { mmToPixels } from '../../utils/utils.js';
 import { dateProcessor } from '../../gedcom/processors/dateProcessor.js';
 import configStore from './fanConfigStore.js';

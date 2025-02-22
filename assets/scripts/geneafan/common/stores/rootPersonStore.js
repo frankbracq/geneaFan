@@ -1,7 +1,6 @@
-import { makeAutoObservable, action, reaction, runInAction } from 'mobx';
+import { makeAutoObservable, action, reaction, runInAction } from "./mobx-config.js";
 import TomSelect from 'tom-select';
 import { updateFilename } from "../downloadManager.js";
-import { FanChartManager } from "../../tabs/fanChart/fanChartManager.js";
 import gedcomDataStore from '../../gedcom/stores/gedcomDataStore.js';
 import { DownloadManager } from "../downloadManager.js";
 import configStore from '../../tabs/fanChart/fanConfigStore.js';

@@ -5,10 +5,9 @@ import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
 import {
     setupResponsiveTabs,
     setupTabResizeListener,
-} from "./responsiveTabs.js";
+} from "../tabs/responsiveTabs.js";
 import { displayPersonDetailsUI } from "../tabs/fanChart/personDetailsDisplay.js";
 import { loadGedcomFile } from "../gedcom/gedcomFileHandler.js";
-import { FamilyTownsUI } from '../gedcom/ui/familyTownsUI.js';
 
 
 // WeakMap to store event listener references
