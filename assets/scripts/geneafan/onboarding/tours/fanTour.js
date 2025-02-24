@@ -14,7 +14,16 @@ export const fanTour = {
             element: '#tab1-label',
             popover: {
                 title: 'Ascendance',
-                description: 'Vue principale de votre arbre généalogique.',
+                description: `
+                    <div class="mb-4">
+                        Bienvenue dans la vue principale de votre arbre généalogique. Cette visualisation intuitive vous permet de :
+                    </div>
+                    <ul class="list-disc pl-4 mb-4">
+                        <li>Explorer vos ancêtres de façon interactive</li>
+                        <li>Visualiser plusieurs générations d'un coup d'œil</li>
+                        <li>Naviguer facilement dans votre histoire familiale</li>
+                    </ul>
+                `,
                 position: 'bottom'
             }
         },
@@ -22,7 +31,19 @@ export const fanTour = {
             element: '#rootPerson',
             popover: {
                 title: 'Personne racine',
-                description: 'Par défaut, l\'éventail affiché lors du chargement du fichier Gedcom est celui la personne la plus jeune de la famille.',
+                description: `
+                    <div class="mb-4">
+                        Le centre de l'éventail est occupé par la personne de référence.
+                    </div>
+                    <div class="mb-4">
+                        Par défaut, il s'agit de la personne la plus jeune de votre famille, mais vous pouvez la changer :
+                    </div>
+                    <ul class="list-disc pl-4 mb-4">
+                        <li>En cliquant sur n'importe quel autre membre</li>
+                        <li>En utilisant la recherche</li>
+                        <li>En naviguant dans l'arbre</li>
+                    </ul>
+                `,
                 position: 'right'
             }
         },
@@ -30,7 +51,19 @@ export const fanTour = {
             element: '#rootAscendant',
             popover: {
                 title: 'Navigation dans l\'arbre',
-                description: 'Explorez vos ancêtres en cliquant sur leur nom.',
+                description: `
+                    <div class="mb-4">
+                        Explorez votre arbre généalogique en interagissant avec les personnes :
+                    </div>
+                    <ul class="list-disc pl-4 mb-4">
+                        <li>Cliquez sur un nom pour voir les détails</li>
+                        <li>Double-cliquez pour centrer l'éventail sur cette personne</li>
+                        <li>Utilisez la molette pour zoomer/dézoomer</li>
+                    </ul>
+                    <div class="text-sm text-blue-600">
+                        <strong>Astuce</strong> : Les couleurs indiquent les lignées paternelles et maternelles !
+                    </div>
+                `,
                 position: 'auto'
             },
             onHighlight: (element) => {
@@ -45,7 +78,19 @@ export const fanTour = {
             element: '#fanParametersDisplay',
             popover: {
                 title: 'Paramètres de l\'éventail',
-                description: 'Cliquez ici pour personnaliser l\'affichage de votre arbre en éventail.',
+                description: `
+                    <div class="mb-4">
+                        Personnalisez l'affichage selon vos préférences :
+                    </div>
+                    <ul class="list-disc pl-4 mb-4">
+                        <li>Ajustez le nombre de générations affichées</li>
+                        <li>Modifiez les couleurs des lignées</li>
+                        <li>Changez le style d'affichage des noms</li>
+                    </ul>
+                    <div class="text-sm text-gray-600 italic">
+                        Cliquez pour ouvrir le panneau des paramètres
+                    </div>
+                `,
                 position: 'bottom'
             },
             onHighlight: async (element) => {
@@ -74,7 +119,20 @@ export const fanTour = {
             element: '#fanParametersBody',
             popover: {
                 title: 'Configuration de l\'éventail',
-                description: 'Lorem ipsum...',
+                description: `
+                    <div class="mb-4">
+                        Découvrez toutes les options de personnalisation :
+                    </div>
+                    <ul class="list-disc pl-4 mb-4">
+                        <li>Profondeur de l'arbre</li>
+                        <li>Schéma des couleurs</li>
+                        <li>Format d'affichage des données</li>
+                        <li>Options visuelles avancées</li>
+                    </ul>
+                    <div class="text-sm text-blue-600">
+                        <strong>Conseil</strong> : Expérimentez avec les différents paramètres pour trouver l'affichage qui vous convient le mieux !
+                    </div>
+                `,
                 position: 'right'
             },
             onHighlight: async (element) => {
@@ -101,7 +159,19 @@ export const fanTour = {
             element: '#download-menu',
             popover: {
                 title: 'Export de l\'éventail en PDF',
-                description: 'Pour commencer, vous devez charger un fichier GEDCOM. Cliquez ici pour importer votre fichier ou essayer notre exemple.',
+                description: `
+                    <div class="mb-4">
+                        Conservez une trace de votre arbre généalogique :
+                    </div>
+                    <ul class="list-disc pl-4 mb-4">
+                        <li>Exportez en haute qualité</li>
+                        <li>Choisissez le format qui vous convient</li>
+                        <li>Partagez facilement avec votre famille</li>
+                    </ul>
+                    <div class="text-sm text-gray-600 italic">
+                        L'export conserve tous vos paramètres d'affichage personnalisés
+                    </div>
+                `,
                 position: 'bottom'
             },
             onHighlight: async (element) => {
@@ -127,4 +197,4 @@ export const fanTour = {
             },
         }
     ]
-}
+};

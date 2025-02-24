@@ -82,9 +82,6 @@ export function setupPersonLinkEventListener() {
             const personId = event.target.getAttribute("data-person-id");
             rootPersonStore.setTomSelectValue(personId); // Utiliser rootPersonStore
 
-            const individualMapContainer = document.getElementById(
-                "individualMapContainer"
-            );
             const personDetails = document.getElementById("personDetails");
             if (individualMapContainer?.classList.contains("show")) {
                 Offcanvas.getInstance(individualMapContainer).hide();

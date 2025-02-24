@@ -83,6 +83,19 @@ class InfoWindowDisplayManager {
             pixelOffset: new google.maps.Size(0, -(offset / 2))
         });
     }
+
+    /**
+     * Hides the currently active info window
+     * @returns {boolean} true if an info window was hidden, false if none was active
+     */
+    hideInfoWindow() {
+        if (this.currentInfoWindow) {
+            this.currentInfoWindow.close();
+            this.currentInfoWindow = null;
+            return true;
+        }
+        return false;
+    }
 }
 
 // Export a singleton instance

@@ -37,7 +37,7 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link disabled" href="#tab2" data-bs-toggle="tab">
-                                <span class="tab-label">
+                                <span class="tab-label" id="tab2-label">
                                     <%= __('geneafan.view_family_map') %>
                                 </span>
                                 <button class="btn btn-secondary btn-sm spacedS" id="mapParametersDisplay" disabled
@@ -53,7 +53,7 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link disabled" href="#tab3" data-bs-toggle="tab">
-                                <span class="tab-label">
+                                <span class="tab-label" id="tab3-label">
                                     <%= __('geneafan.view_family_tree') %>
                                 </span>
                                 <button class="btn btn-secondary btn-sm spacedS" id="treeParametersDisplay" disabled
@@ -69,14 +69,14 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link disabled" href="#tab4" data-bs-toggle="tab">
-                                <span class="tab-label">
+                                <span class="tab-label" id="tab4-label">
                                     <%= __('geneafan.view_ascendant_timeline') %>
                                 </span>
                             </a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link disabled" href="#tab5" data-bs-toggle="tab">
-                                <span class="tab-label">
+                                <span class="tab-label" id="tab5-label">
                                     <%= __('geneafan.view_statistics') %>
                                 </span>
                             </a>
@@ -359,21 +359,6 @@
                                 <div id="individualTimeline" class="text-start"></div>
                             </div>
                         </div>
-
-                        <div class="offcanvas offcanvas-start map-width" tabindex="-1" id="individualMapContainer"
-                            aria-labelledby="individualMapLabel">
-                            <div class="offcanvas-header">
-                                <h5 id="individualMapLabel">Carte</h5>
-                                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                                    aria-label="Close"></button>
-                            </div>
-                            <div class="offcanvas-body">
-                                <div id="individual-map-container" class="row flex-nowrap h-100">
-                                    <div id="individualMap" style="width: 100%; height: 100%;"></div>
-                                    <!-- la carte Google sera insérée ici -->
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
                 <div class="tab-pane fade" id="tab2">
@@ -388,14 +373,14 @@
                                 <button type="button" class="btn-close" data-bs-dismiss="offcanvas"
                                     aria-label="Close"></button>
                             </div>
-                            <div class="offcanvas-body">
-                                <div class="container-fluid">
+                            <div class="offcanvas-body" id="mapParametersBody">
+                                <div class="container-fluid" id="layerControls">
                                     <!-- Calques -->
                                     <div class="row">
                                         <div class="col-12">
-                                            <label class="form-label">Layers</label>
+                                            <label class="form-label">Layers</label> 
                                             <div class="list-group">
-                                                <div class="list-group-item">
+                                                <div class="list-group-item" id="layerAncestorsContainer">
                                                     <div class="d-flex justify-content-between align-items-center">
                                                         <label class="form-check-label" for="layerAncestors">Ancestor Towns</label>
                                                         <div class="form-check form-switch">
@@ -403,7 +388,7 @@
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div class="list-group-item">
+                                                <div class="list-group-item" id="layerFamilyContainer">
                                                     <div class="d-flex justify-content-between align-items-center">
                                                         <label class="form-check-label" for="layerFamily">Family Towns</label>
                                                         <div class="form-check form-switch">
@@ -411,7 +396,7 @@
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div class="list-group-item">
+                                                <div class="list-group-item" id="layerSurnamesContainer">
                                                     <!-- Première ligne : Label seul -->
                                                     <div class="mb-2">
                                                         Towns by Surnames
@@ -429,12 +414,13 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <!-- Bouton avec z-index très élevé -->
+                                    <!-- Bouton avec z-index très élevé 
                                     <button class="btn btn-light position-absolute top-0 end-0 m-2" type="button"
                                         data-bs-toggle="offcanvas" data-bs-target="#placesListOffcanvas"
                                         style="z-index: 1000002;">
                                         <i class="bi bi-list-ul"></i> Liste des lieux
                                     </button>
+                                    -->
                                 </div>
                             </div>
                         </div>

@@ -173,14 +173,6 @@ class GedcomDataStore {
         }
     }
     
-    // Temporairement commenté pour les tests de performance
-    // juste avant } catch (error) {
-            /*
-            const maxGenerations = this.calculateMaxGenerations(this.individualsCache, families);
-            configStore.setConfig({ maxGenerations: Math.min(maxGenerations, 8) });
-            configStore.setAvailableGenerations(maxGenerations);
-            */
-
     calculateMaxGenerations(individualsCache, allFamilies) {
         let maxGen = 0;
         const generationMap = new Map();

@@ -26,9 +26,10 @@ function calculateLocalStorageSize() {
 
 // Function to update individual towns from family towns
 export function updateIndividualTownsFromFamilyTowns(individualsCache) {
+    // console.log('Updating individual towns from family towns...', JSON.stringify(JSON.parse(JSON.stringify(individualsCache)), null, 2));
     const familyTowns = familyTownsStore.getAllTowns();
     console.log('Family towns:', familyTowns);
-    
+
     individualsCache.forEach((individual) => {
         const individualTownKeys = Object.keys(individual.individualTowns || {});
         if (individualTownKeys.length > 0) {
@@ -113,7 +114,7 @@ export function getActionWord(eventType, gender) {
         return baseWord + '(e)';
     }
 }
-  
+
  /**
      * Function to validate email format using a regex.
      * @param {string} email - The email to validate.
@@ -122,7 +123,7 @@ export function getActionWord(eventType, gender) {
  export function isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
-} 
+}
 
 
 

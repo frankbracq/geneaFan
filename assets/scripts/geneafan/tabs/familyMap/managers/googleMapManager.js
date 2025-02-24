@@ -1,10 +1,10 @@
-import { observable } from '../../../common/stores/mobx-config.js';
+import { autorun } from '../../../common/stores/mobx-config.js';
 import gedcomDataStore from '../../../gedcom/stores/gedcomDataStore.js';
+import { storeEvents, EVENTS } from '../../../gedcom/stores/storeEvents.js';
 import { googleMapsStore } from '../stores/googleMapsStore.js';
 import { rootAncestorTownsStore } from '../stores/rootAncestorTownsStore.js';
 import surnamesTownsStore from '../stores/surnamesTownsStore.js';
 import familyTownsStore from '../stores/familyTownsStore.js';
-import { autorun } from '../../../common/stores/mobx-config.js';
 
 class GoogleMapManager {
     constructor() {
@@ -72,7 +72,14 @@ class GoogleMapManager {
             // 6. Configurer les contrôles de calques
             this.setupLayerControls();
             
-            // Le reste du code...
+            // 7. Marquer l'initialisation comme terminée
+            this.initialized = true;
+            
+            // 8. Émettre l'événement indiquant que la carte est prête
+            storeEvents.emit(EVENTS.VISUALIZATIONS.MAP.DRAWN);
+            console.log('✅ Carte dessinée et prête pour le tour');
+            
+            console.groupEnd();
         } catch (error) {
             console.error("❌ Échec de l'initialisation:", error);
             console.groupEnd();

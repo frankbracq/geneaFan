@@ -282,12 +282,19 @@ class RootAncestorTownsStore {
     createMarkerElement(locationData) {
         const div = document.createElement('div');
         div.className = 'custom-marker';
+        
+        // Ajouter un ID au premier marqueur pour le tour
+        if (!document.getElementById('rootMarkerForTour')) {
+            div.id = 'rootMarkerForTour';
+        }
+        
         div.style.cssText = `
             background: ${this.getBranchColor(locationData.births)};
             border-radius: 50%;
             width: 16px;
             height: 16px;
             border: 1px solid white;
+            transition: transform 0.3s ease;
         `;
         return div;
     }
