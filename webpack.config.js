@@ -278,8 +278,30 @@ module.exports = (env, argv) => {
                                 ]
                             })
                         }
-                    }
-                ],
+                    },
+                    {
+                        test: /\.svg$/,
+                        use: [
+                            {
+                                loader: 'file-loader',
+                                options: {
+                                    outputPath: 'images/icons',
+                                    name: '[name].[ext]',
+                                },
+                            },
+                            {
+                                loader: 'image-webpack-loader',
+                                options: {
+                                    disable: !isProduction,
+                                    mozjpeg: {
+                                        progressive: true,
+                                        quality: 75
+                                    },
+                                },
+                            }
+                        ],
+                    },
+                ]
             },
             plugins: [
                 new webpack.ProgressPlugin(), // Show progress bar during build

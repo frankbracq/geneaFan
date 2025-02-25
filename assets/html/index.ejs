@@ -118,7 +118,7 @@
                 <div class="dropdown spacedS">
                     <button class="btn btn-secondary dropdown-toggle w-100" type="button" id="gedcomMenu"
                         data-bs-toggle="dropdown" aria-expanded="false">
-                        GEDCOM
+                        <img src="/images/icons/filetype-ged.svg" alt="GEDCOM" style="width: 1em; height: 1em;">
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="gedcomMenu">
                         <!-- Upload a new GEDCOM file -->
@@ -247,7 +247,7 @@
                         <div id="fanContainer" class="col-12 container-fluid">
                             <svg id="fan"></svg>
                         </div>
-                        
+
                         <!-- Offcanvas for fan settings -->
                         <div class="offcanvas offcanvas-start" tabindex="-1" id="fanParameters"
                             aria-labelledby="fanParametersLabel">
@@ -378,21 +378,25 @@
                                     <!-- Calques -->
                                     <div class="row">
                                         <div class="col-12">
-                                            <label class="form-label">Layers</label> 
+                                            <label class="form-label">Layers</label>
                                             <div class="list-group">
                                                 <div class="list-group-item" id="layerAncestorsContainer">
                                                     <div class="d-flex justify-content-between align-items-center">
-                                                        <label class="form-check-label" for="layerAncestors">Ancestor Towns</label>
+                                                        <label class="form-check-label" for="layerAncestors">Ancestor
+                                                            Towns</label>
                                                         <div class="form-check form-switch">
-                                                            <input class="form-check-input" type="checkbox" id="layerAncestors">
+                                                            <input class="form-check-input" type="checkbox"
+                                                                id="layerAncestors">
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div class="list-group-item" id="layerFamilyContainer">
                                                     <div class="d-flex justify-content-between align-items-center">
-                                                        <label class="form-check-label" for="layerFamily">Family Towns</label>
+                                                        <label class="form-check-label" for="layerFamily">Family
+                                                            Towns</label>
                                                         <div class="form-check form-switch">
-                                                            <input class="form-check-input" type="checkbox" id="layerFamily">
+                                                            <input class="form-check-input" type="checkbox"
+                                                                id="layerFamily">
                                                         </div>
                                                     </div>
                                                 </div>
@@ -403,11 +407,13 @@
                                                     </div>
                                                     <!-- Deuxième ligne : Select et Switch -->
                                                     <div class="d-flex justify-content-between align-items-center">
-                                                        <select class="form-select form-select-sm me-2" id="surnameFilter" disabled style="width: auto;">
+                                                        <select class="form-select form-select-sm me-2"
+                                                            id="surnameFilter" disabled style="width: auto;">
                                                             <option value="">Select a surname...</option>
                                                         </select>
                                                         <div class="form-check form-switch">
-                                                            <input class="form-check-input" type="checkbox" id="layerSurnames">
+                                                            <input class="form-check-input" type="checkbox"
+                                                                id="layerSurnames">
                                                         </div>
                                                     </div>
                                                 </div>
