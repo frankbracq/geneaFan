@@ -1,57 +1,85 @@
 /* Styles de base du header */
 #tab-header {
-    padding-left: 10px;
-    padding-right: 10px;
-    border-bottom: 1px solid #ccc;
-    background-color: var(--bg-color-light);
-  }
-  
-  /* Container principal avec flex */
-  .container-fluid {
-    display: flex;
-    flex-wrap: nowrap;
-    width: 100%;
-  }
-  
-  /* Section gauche avec les onglets */
-  #left-container {
-    flex: 0 1 auto;
-    min-width: 200px;
-    margin-right: 1rem;
-  }
-  
-  /* Navigation par onglets */
-  #tab-nav {
-    border-bottom: none;
-  }
-  
-  #tab-nav .nav-item {
-    position: relative;
-  }
-  
-  #tab-nav .nav-link {
-    border-color: transparent;
-    border-radius: 0;
-    padding: 0.5rem 0.75rem;
-    white-space: nowrap;
-    transition: all 0.3s ease;
-    color: var(--navTextColor);
-  }
-  
-  #tab-nav .nav-link.active {
-    background-color: transparent;
-    border-color: transparent;
-    border-bottom: 2px solid var(--activeColor);
-    color: var(--activeColor);
-  }
-  
-  #tab-nav .nav-link.disabled {
-    opacity: 0.7;
-    color: var(--navTextColor);
-  }
-  
-  /* Dropdown pour les onglets sur mobile */
-  /* Styles pour le dropdown d'onglets */
+  padding-left: 10px;
+  padding-right: 10px;
+  border-bottom: 1px solid #ccc;
+  background-color: var(--bg-color-light);
+}
+
+/* Structure à deux lignes */
+.navbar-expand.custom-navbar {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Premier niveau - ligne du haut */
+.container-fluid.w-100 {
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
+  justify-content: space-between;
+  background-color: var(--bg-color-light);
+}
+
+/* Section avec le sélecteur individuel */
+.selector-container {
+  border-top: 1px solid #eee;
+  background-color: #f8f9fa;
+  padding: 5px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.selector-wrapper {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  justify-content: center;
+}
+
+/* Section gauche avec les onglets */
+#left-container {
+  flex: 0 1 auto;
+  min-width: 200px;
+  margin-right: 1rem;
+}
+
+/* Navigation par onglets */
+#tab-nav {
+  border-bottom: none;
+}
+
+#tab-nav .nav-item {
+  position: relative;
+}
+
+#tab-nav .nav-link {
+  border-color: transparent;
+  border-radius: 0;
+  padding: 0.5rem 0.75rem;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+  color: var(--navTextColor);
+}
+
+#tab-nav .nav-link.active {
+  background-color: transparent;
+  border-color: transparent;
+  border-bottom: 2px solid var(--activeColor);
+  color: var(--activeColor);
+}
+
+#tab-nav .nav-link.disabled {
+  opacity: 0.7;
+  color: var(--navTextColor);
+}
+
+/* Dropdown pour les onglets sur mobile */
 .tab-dropdown {
   margin-bottom: 0.5rem;
   width: 100%;
@@ -103,84 +131,97 @@
   background: transparent;
   border: none;
 }
-  
-  /* Section centrale avec le sélecteur */
-  #middle-container {
-    flex: 1 1 auto;
-    justify-content: center;
-    max-width: none;
-    padding: 0 1rem;
+
+/* Section centrale avec le sélecteur */
+#middle-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Styles pour le sélecteur individuel */
+#individual-select {
+  width: 100%;
+  max-width: 500px;
+}
+
+/* Boutons undo/redo */
+#undoButton, #redoButton {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Section droite avec les contrôles */
+#right-container {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+/* Boutons dans les onglets */
+.tab-label {
+  margin-right: 0.25rem;
+}
+
+/* Styles responsives */
+@media (max-width: 992px) {
+  #left-container {
+    min-width: auto;
+    max-width: 40%;
   }
   
-  /* Section droite avec les contrôles */
-  #right-container {
-    flex: 0 0 auto;
-    display: flex;
-    justify-content: flex-end;
-    margin-left: auto;
+  .selector-wrapper {
+    max-width: 80%;
+  }
+}
+
+@media (max-width: 768px) {
+  .navbar-expand.custom-navbar {
+    flex-direction: column;
   }
   
-  /* Styles pour le sélecteur individuel */
-  #individual-select {
-    min-width: 150px;
-    max-width: none;
+  .container-fluid.w-100 {
+    flex-wrap: wrap;
+  }
+  
+  #left-container {
     width: 100%;
+    max-width: 100%;
+    margin-right: 0;
+    margin-bottom: 0.5rem;
   }
   
-  /* Boutons dans les onglets */
-  .tab-label {
-    margin-right: 0.25rem;
+  #right-container {
+    order: 3;
+    margin-top: 0.5rem;
+    width: 100%;
+    max-width: 100%;
+    justify-content: space-between;
+  }
+
+  #right-container .dropdown .dropdown-menu.show {
+    position: absolute !important;
+    inset: auto auto auto 0px !important;
+    transform: translate(0px, 40px) !important;
+    margin: 0 !important;
   }
   
-  /* Styles responsives */
-  @media (max-width: 992px) {
-    #left-container {
-      min-width: auto;
-      max-width: 40%;
-    }
-    
-    #middle-container {
-      max-width: 35%;
-    }
-    
-    #individual-select {
-      width: 100%;
-    }
+  #tab-nav {
+    display: none;
   }
   
-  @media (max-width: 768px) {
-    #left-container {
-      width: 100%;
-      max-width: 100%;
-      margin-right: 0;
-      margin-bottom: 0.5rem;
-    }
-    
-    .container-fluid {
-      flex-wrap: wrap;
-    }
-    
-    #middle-container {
-      order: 2;
-      width: 100%;
-      max-width: 100%;
-    }
-    
-    #right-container {
-      order: 3;
-      margin-top: 0.5rem;
-      width: 100%;
-      max-width: 100%;
-      justify-content: space-between;
-    }
-    
-    #tab-nav {
-      display: none;
-    }
-    
-    /* Sur mobile, le dropdown s'affiche toujours */
-    .tab-dropdown {
-      display: block !important;
-    }
+  /* Sur mobile, le dropdown s'affiche toujours */
+  .tab-dropdown {
+    display: block !important;
   }
- 
+  
+  .selector-wrapper {
+    max-width: 95%;
+  }
+}

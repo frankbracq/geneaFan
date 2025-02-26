@@ -148,134 +148,107 @@ const setupFileLoadingEventListeners = () => {
   });
 };
 
+function setupFileMenuToggle() {
+    const fileMenu = document.getElementById("fileMenu");
+    if (fileMenu) {
+      // Supprimer l'attribut onclick existant
+      fileMenu.removeAttribute("onclick");
+      
+      // Ajouter un gestionnaire d'événement click simple
+      fileMenu.addEventListener("click", function(event) {
+        event.preventDefault();
+        if (window.bootstrap && window.bootstrap.Dropdown) {
+          const dropdown = bootstrap.Dropdown.getOrCreateInstance(fileMenu);
+          dropdown.toggle();
+        } else {
+          // Fallback si nécessaire
+          const dropdownMenu = document.querySelector('.dropdown-menu[aria-labelledby="fileMenu"]');
+          if (dropdownMenu) {
+            dropdownMenu.classList.toggle('show');
+            fileMenu.setAttribute('aria-expanded', dropdownMenu.classList.contains('show'));
+          }
+        }
+      });
+    }
+}
+
 // Fonction pour gérer le bouton d'outils contextuel
 function setupToolsButton() {
-    const toolsButton = document.getElementById("toolsButton");
-    
-    if (!toolsButton) {
-      console.error("Tools button not found");
-      return;
-    }
-    
-    // Handler pour le clic sur le bouton d'outils
-    toolsButton.addEventListener("click", () => {
-      // Déterminer quel onglet est actif
-      const activeTab = document.querySelector(".nav-link.active");
-      if (!activeTab) return;
-      
-      const tabName = activeTab.getAttribute("data-tab-name");
-      
-      // Ouvrir l'offcanvas correspondant à l'onglet actif
-      switch (tabName) {
-        case "Fan":
-          const fanParameters = document.getElementById("fanParameters");
-          if (fanParameters) {
-            const fanOffcanvas = new Offcanvas(fanParameters);
-            fanOffcanvas.show();
-          }
-          break;
-        
-        case "Map":
-          const mapParameters = document.getElementById("mapParameters");
-          if (mapParameters) {
-            const mapOffcanvas = new Offcanvas(mapParameters, {
-              backdrop: true,
-              keyboard: true,
-              scroll: false,
-            });
-            mapOffcanvas.show();
-          }
-          break;
-        
-        case "Tree":
-          const treeParameters = document.getElementById("treeParameters");
-          if (treeParameters) {
-            const treeOffcanvas = new Offcanvas(treeParameters);
-            treeOffcanvas.show();
-          }
-          break;
-          
-        case "Timeline":
-          const timelineParameters = document.getElementById("timelineParameters");
-          if (timelineParameters) {
-            const timelineOffcanvas = new Offcanvas(timelineParameters);
-            timelineOffcanvas.show();
-          }
-          break;
-        
-        case "Stats":
-          // Ajouter ici la logique pour l'onglet Stats si nécessaire
-          break;
-      }
-    });
+  const toolsButton = document.getElementById("toolsButton");
+
+  if (!toolsButton) {
+    console.error("Tools button not found");
+    return;
   }
+
+  // Handler pour le clic sur le bouton d'outils
+  toolsButton.addEventListener("click", () => {
+    // Déterminer quel onglet est actif
+    const activeTab = document.querySelector(".nav-link.active");
+    if (!activeTab) return;
+
+    const tabName = activeTab.getAttribute("data-tab-name");
+
+    // Ouvrir l'offcanvas correspondant à l'onglet actif
+    switch (tabName) {
+      case "Fan":
+        const fanParameters = document.getElementById("fanParameters");
+        if (fanParameters) {
+          const fanOffcanvas = new Offcanvas(fanParameters);
+          fanOffcanvas.show();
+        }
+        break;
+
+      case "Map":
+        const mapParameters = document.getElementById("mapParameters");
+        if (mapParameters) {
+          const mapOffcanvas = new Offcanvas(mapParameters, {
+            backdrop: true,
+            keyboard: true,
+            scroll: false,
+          });
+          mapOffcanvas.show();
+        }
+        break;
+
+      case "Tree":
+        const treeParameters = document.getElementById("treeParameters");
+        if (treeParameters) {
+          const treeOffcanvas = new Offcanvas(treeParameters);
+          treeOffcanvas.show();
+        }
+        break;
+
+      case "Timeline":
+        const timelineParameters =
+          document.getElementById("timelineParameters");
+        if (timelineParameters) {
+          const timelineOffcanvas = new Offcanvas(timelineParameters);
+          timelineOffcanvas.show();
+        }
+        break;
+
+      case "Stats":
+        // Ajouter ici la logique pour l'onglet Stats si nécessaire
+        break;
+    }
+  });
+}
 
 // Setup tab and UI event listeners
 function setupTabAndUIEventListeners() {
-  document.querySelectorAll(".dropdown-menu a").forEach((element) => {
-    element.addEventListener("click", function () {
-      const dropdownButton = this.closest(".dropdown");
-      dropdownButton.classList.remove("show");
-      dropdownButton.querySelector(".dropdown-menu").classList.remove("show");
+    document.querySelectorAll(".dropdown-menu a").forEach((element) => {
+      element.addEventListener("click", function () {
+        const dropdownButton = this.closest(".dropdown");
+        dropdownButton.classList.remove("show");
+        dropdownButton.querySelector(".dropdown-menu").classList.remove("show");
+      });
     });
-  });
-
-  setupToolsButton();
-
-  setupTooltips();
-}
-
-function setupAutoOpenGedcomMenu() {
-  const gedcomMenu = document.getElementById("gedcomMenu");
-  const dropdownMenu = document.querySelector(
-    '.dropdown-menu[aria-labelledby="gedcomMenu"]'
-  );
-
-  if (gedcomMenu && dropdownMenu) {
-    console.log("Setting up auto-open GEDCOM menu...");
-
-    // Créer l'instance du dropdown
-    const dropdownInstance = new Dropdown(gedcomMenu);
-
-    // Ouvrir le menu automatiquement
-    setTimeout(() => {
-      dropdownInstance.show();
-    }, 500); // Petit délai pour assurer que tout est bien chargé
-
-    // Gérer la fermeture au clic extérieur
-    document.addEventListener("click", (event) => {
-      // Vérifier si le clic est en dehors du menu et de son contenu
-      const isClickInside =
-        gedcomMenu.contains(event.target) ||
-        dropdownMenu.contains(event.target);
-
-      // Si le clic est en dehors et que le menu est ouvert
-      if (!isClickInside && dropdownMenu.classList.contains("show")) {
-        dropdownInstance.hide();
-      }
-    });
-
-    // Empêcher la fermeture lors de la sélection de fichier
-    document.getElementById("file")?.addEventListener("click", (event) => {
-      event.stopPropagation();
-    });
-
-    // Garder le menu ouvert pendant le drag & drop d'un fichier
-    dropdownMenu.addEventListener("dragover", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    });
-
-    dropdownMenu.addEventListener("drop", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-    });
-
-    console.log("GEDCOM menu auto-open setup complete");
-  } else {
-    console.warn("GEDCOM menu elements not found");
+  
+    setupToolsButton();
+    setupFileMenuToggle();
+    setupTooltips();
   }
-}
 
 // Gestion du sélecteur d'individu
 export const setupIndividualSelectorListener = () => {
@@ -308,10 +281,10 @@ export const setupAllEventListeners = (authStore) => {
     // Configuration des écouteurs globaux
     setupResponsiveTabHandler();
     setupIndividualSelectorListener();
-    setupTabAndUIEventListeners();
+    setupTabAndUIEventListeners(); // Cette fonction appelle maintenant setupFileMenu()
     setupFileLoadingEventListeners();
     setupUndoRedoEventListeners();
-    setupAutoOpenGedcomMenu(); // Ajoutez cette ligne
+    // Nous n'avons plus besoin d'appeler setupAutoOpenGedcomMenu() ici
 
     setupProtectedFeatureEventListeners(authStore);
 

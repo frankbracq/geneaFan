@@ -72,8 +72,8 @@
         "vector_formats": "Formats vectoriels",
         "raster_formats": "Formats matriciels",
         "file_type_list": {
-            "pdf_watermark": "PDF avec filigrane (téléchargement immédiat)",
-            "pdf": "PDF sans filigrane (envoi par courriel en 5')",
+            "pdf_watermark": "PDF avec filigrane",
+            "pdf": "PDF",
             "svg": "Image SVG",
             "png_transparent": "PNG transparent",
             "png_white_background": "PNG avec fond blanc"
