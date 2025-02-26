@@ -1,26 +1,32 @@
-/* Header styles */
+/* Styles de base du header */
 #tab-header {
     padding-left: 10px;
     padding-right: 10px;
     border-bottom: 1px solid #ccc;
-  }
-  
-  /* Style de la navbar personnalisée qui utilise les variables existantes */
-  .custom-navbar {
     background-color: var(--bg-color-light);
-    border-bottom: 1px solid #ccc;
-    padding: 0.5rem 1rem;
-    height: var(--tab-header-height, 50px);
   }
   
-  /* Styles pour les onglets adaptés au thème */
+  /* Container principal avec flex */
+  .container-fluid {
+    display: flex;
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+  
+  /* Section gauche avec les onglets */
+  #left-container {
+    flex: 0 1 auto;
+    min-width: 200px;
+    margin-right: 1rem;
+  }
+  
+  /* Navigation par onglets */
   #tab-nav {
     border-bottom: none;
   }
   
   #tab-nav .nav-item {
     position: relative;
-    transition: all 0.3s ease;
   }
   
   #tab-nav .nav-link {
@@ -28,7 +34,6 @@
     border-radius: 0;
     padding: 0.5rem 0.75rem;
     white-space: nowrap;
-    overflow: hidden;
     transition: all 0.3s ease;
     color: var(--navTextColor);
   }
@@ -45,147 +50,137 @@
     color: var(--navTextColor);
   }
   
+  /* Dropdown pour les onglets sur mobile */
+  /* Styles pour le dropdown d'onglets */
+.tab-dropdown {
+  margin-bottom: 0.5rem;
+  width: 100%;
+  max-width: 220px;
+}
+
+.tab-dropdown .dropdown-toggle {
+  width: 100%;
+  text-align: left;
+  background-color: var(--bg-color-light);
+  border: 1px solid var(--color-light);
+  color: var(--color-dark);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tab-dropdown .dropdown-toggle::after {
+  margin-left: auto;
+}
+
+.tab-dropdown .dropdown-menu {
+  width: 100%;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.tab-dropdown .dropdown-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+}
+
+.tab-dropdown .dropdown-item.active {
+  background-color: var(--bg-color-light);
+  color: var(--activeColor);
+  border-left: 3px solid var(--activeColor);
+}
+
+.tab-dropdown .dropdown-item.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tab-dropdown .dropdown-item button {
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.3rem;
+  background: transparent;
+  border: none;
+}
+  
+  /* Section centrale avec le sélecteur */
+  #middle-container {
+    flex: 1 1 auto;
+    justify-content: center;
+    max-width: none;
+    padding: 0 1rem;
+  }
+  
+  /* Section droite avec les contrôles */
+  #right-container {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: flex-end;
+    margin-left: auto;
+  }
+  
   /* Styles pour le sélecteur individuel */
   #individual-select {
-    background-color: var(--bg-color-light);
-    border: 1px solid var(--color-light);
-    color: var(--color-dark);
-    max-width: 220px;
-  }
-  
-  /* Effet d'élargissement des onglets */
-  .tab-label.full {
-    display: none;
-    opacity: 0;
-    position: absolute;
-    left: 0;
-    transition: opacity 0.3s ease;
-  }
-  
-  .tab-label.short {
-    display: inline-block;
-    opacity: 1;
-    transition: opacity 0.3s ease;
-  }
-  
-  /* État au survol */
-  #tab-nav .nav-item:hover {
-    min-width: max-content;
-    z-index: 10;
-  }
-  
-  #tab-nav .nav-item:hover .nav-link {
-    min-width: max-content;
-  }
-  
-  #tab-nav .nav-item:hover .tab-label.short {
-    display: none;
-    opacity: 0;
-  }
-  
-  #tab-nav .nav-item:hover .tab-label.full {
-    display: inline-block;
-    opacity: 1;
-  }
-  
-  /* Pour rétrécir les autres onglets lors du survol d'un onglet */
-  #tab-nav:hover .nav-item:not(:hover) {
-    flex-shrink: 1;
-  }
-  
-  #tab-nav:hover .nav-item:hover {
-    flex-grow: 2;
-  }
-  
-  /* Responsive tab header */
-  .dropdown-content-modifiers {
-    max-height: 600px !important;
-  }
-  
-  .burger-menu {
-    position: relative;
-  }
-  
-  .more-btn {
-    height: 100%;
-    cursor: pointer;
-    visibility: hidden;
-  
-    svg {
-      width: 16px;
-      height: 16px;
-    }
-  }
-  
-  .more-content {
-    position: absolute;
-    top: 40px;
-    display: flex;
-    padding: 6px;
-    flex-direction: column;
-    border-color: var(--color-light);
-    border-width: 2px;
-    width: 150px;
-    background: #fff;
-    z-index: 10;
-    gap: 8px;
-    visibility: hidden;
-    border-radius: 4px;
-  
-    &>li {
-      list-style: none;
-      width: 100%;
-    }
-  
-    & .nav-link {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-  }
-  
-  .left-header {
-    display: flex;
-    justify-content: space-between;
+    min-width: 150px;
+    max-width: none;
     width: 100%;
-    align-items: center;
-    margin-right: 20px;
-  
-    &>#tab-container {
-      flex: 1;
-    }
   }
   
-  /* Adaptatif pour les écrans plus petits */
+  /* Boutons dans les onglets */
+  .tab-label {
+    margin-right: 0.25rem;
+  }
+  
+  /* Styles responsives */
   @media (max-width: 992px) {
+    #left-container {
+      min-width: auto;
+      max-width: 40%;
+    }
+    
     #middle-container {
-      max-width: 180px;
+      max-width: 35%;
     }
+    
     #individual-select {
-      max-width: 120px;
-    }
-    .tab-label.short {
-      max-width: 60px;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      width: 100%;
     }
   }
   
   @media (max-width: 768px) {
-    #tab-header {
-      overflow-x: auto;
-    }
     #left-container {
-      max-width: 40%;
-      overflow-x: auto;
+      width: 100%;
+      max-width: 100%;
+      margin-right: 0;
+      margin-bottom: 0.5rem;
     }
-    #right-container {
-      max-width: 35%;
+    
+    .container-fluid {
+      flex-wrap: wrap;
     }
+    
     #middle-container {
-      max-width: 25%;
+      order: 2;
+      width: 100%;
+      max-width: 100%;
     }
-    .spacedS {
-      margin-right: 0.25rem;
+    
+    #right-container {
+      order: 3;
+      margin-top: 0.5rem;
+      width: 100%;
+      max-width: 100%;
+      justify-content: space-between;
+    }
+    
+    #tab-nav {
+      display: none;
+    }
+    
+    /* Sur mobile, le dropdown s'affiche toujours */
+    .tab-dropdown {
+      display: block !important;
     }
   }
+ 
