@@ -259,6 +259,109 @@ export const setupIndividualSelectorListener = () => {
 };
 
 /**
+ * Initialise le comportement du header et des onglets
+ * @function initializeHeaderBehavior
+ */
+function initializeHeaderBehavior() {
+    // Récupération des éléments
+    const tabItems = document.querySelectorAll('#tab-nav .nav-item');
+    const moreBtn = document.getElementById('more-tab-btn');
+    const moreDrawer = document.getElementById('more-drawer');
+    const toolsButton = document.getElementById('toolsButton');
+    
+    // Fonction pour ajuster la largeur des onglets selon l'écran
+    function adjustTabsForScreenSize() {
+      if (window.innerWidth < 768) {
+        // Sur mobile, on limite le nombre d'onglets visibles et on active le burger
+        const maxVisibleTabs = 3;
+        const tabsToShow = Array.from(tabItems).slice(0, maxVisibleTabs);
+        const tabsToHide = Array.from(tabItems).slice(maxVisibleTabs);
+        
+        tabsToShow.forEach(tab => tab.style.display = 'block');
+        tabsToHide.forEach(tab => tab.style.display = 'none');
+        
+        moreBtn.style.visibility = 'visible';
+        
+        // Populate more-drawer with hidden tabs
+        moreDrawer.innerHTML = '';
+        tabsToHide.forEach(tab => {
+          const clone = tab.cloneNode(true);
+          clone.classList.add('more-item');
+          moreDrawer.appendChild(clone);
+        });
+      } else {
+        // Sur desktop, tous les onglets sont visibles
+        tabItems.forEach(tab => tab.style.display = 'block');
+        
+        // Afficher le burger-menu seulement si nécessaire
+        const totalTabsWidth = Array.from(tabItems).reduce((sum, tab) => sum + tab.offsetWidth, 0);
+        const containerWidth = document.getElementById('left-container').offsetWidth;
+        
+        if (totalTabsWidth > containerWidth * 0.8) {
+          moreBtn.style.visibility = 'visible';
+        } else {
+          moreBtn.style.visibility = 'hidden';
+        }
+      }
+    }
+    
+    // Gestion du clic sur le bouton d'outils
+    if (toolsButton) {
+      toolsButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Détecter l'onglet actif
+        const activeTab = document.querySelector('.nav-link.active');
+        if (!activeTab) return;
+        
+        let offcanvasId = null;
+        
+        // Déterminer quel offcanvas ouvrir en fonction de l'onglet actif
+        if (activeTab.getAttribute('href') === '#tab1') {
+          offcanvasId = 'fanParameters';
+        } else if (activeTab.getAttribute('href') === '#tab2') {
+          offcanvasId = 'mapParameters';
+        } else if (activeTab.getAttribute('href') === '#tab3') {
+          offcanvasId = 'treeParameters';
+        }
+        
+        // Ouvrir l'offcanvas approprié s'il existe
+        if (offcanvasId) {
+          const offcanvasElement = document.getElementById(offcanvasId);
+          if (offcanvasElement) {
+            const offcanvas = new bootstrap.Offcanvas(offcanvasElement);
+            offcanvas.show();
+          }
+        }
+      });
+    }
+    
+    // Gestion du burger menu
+    if (moreBtn) {
+      moreBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        if (moreDrawer.style.visibility === 'visible') {
+          moreDrawer.style.visibility = 'hidden';
+        } else {
+          moreDrawer.style.visibility = 'visible';
+        }
+      });
+    }
+    
+    // Fermer le menu lorsqu'on clique ailleurs
+    document.addEventListener('click', function(e) {
+      if (moreBtn && moreDrawer && !moreBtn.contains(e.target) && !moreDrawer.contains(e.target)) {
+        moreDrawer.style.visibility = 'hidden';
+      }
+    });
+    
+    // Appliquer l'ajustement au chargement et au redimensionnement
+    window.addEventListener('resize', adjustTabsForScreenSize);
+    adjustTabsForScreenSize();
+  }
+
+/**
  * Function to set up all event listeners.
  *
  * @param {AuthStore} authStore - Instance of the MobX store for authentication.
@@ -276,17 +379,20 @@ export const setupAllEventListeners = (authStore) => {
         console.group('EventListeners: Initializing...'); // Debug
     
         // Configuration des écouteurs globaux
+        initializeHeaderBehavior();
         setupIndividualSelectorListener();
         setupTabAndUIEventListeners();
         setupFileLoadingEventListeners();
         setupUndoRedoEventListeners();
         setupAutoOpenGedcomMenu(); // Ajoutez cette ligne
     
+        /*
         setTimeout(() => {
             setupResponsiveTabs();
             setupTabResizeListener();
         }, 0);
-    
+        */
+
         setupProtectedFeatureEventListeners(authStore);
 
         // Émettre l'événement de chargement initial immédiatement

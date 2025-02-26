@@ -13,200 +13,192 @@
 
 <body>
     <header>
-        <!-- Header with tabs, tom-select element, dropdowns and fullscreen button -->
-        <div class="fixed-top d-flex justify-content-between align-items-center" id="tab-header">
-            <!-- Section with tab headers -->
-            <div id="left-container" class="left-header" role="tablist">
-                <div id="tab-container" class="d-flex">
-                    <ul class="nav nav-tabs" id="tab-nav">
-                        <li class="nav-item">
-                            <a class="nav-link active" href="#tab1" data-bs-toggle="tab">
-                                <span class="tab-label" id="tab1-label">
-                                    <%= __('geneafan.view_fan_chart') %>
-                                </span>
-                                <button class="btn btn-secondary btn-sm spacedS" id="fanParametersDisplay" disabled
-                                    data-bs-toggle="tooltip" data-bs-placement="top"
-                                    title="<%= __('geneafan.tooltip_fan_parameters') %>">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
-                                        style="width: 1em; height: 1em; fill: currentColor;">
-                                        <path
-                                            d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z" />
-                                    </svg>
-                                </button>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link disabled" href="#tab2" data-bs-toggle="tab">
-                                <span class="tab-label" id="tab2-label">
-                                    <%= __('geneafan.view_family_map') %>
-                                </span>
-                                <button class="btn btn-secondary btn-sm spacedS" id="mapParametersDisplay" disabled
-                                    data-bs-toggle="tooltip" data-bs-placement="top"
-                                    title="<%= __('geneafan.tooltip_map_parameters') %>">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
-                                        style="width: 1em; height: 1em; fill: currentColor;">
-                                        <path
-                                            d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z" />
-                                    </svg>
-                                </button>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link disabled" href="#tab3" data-bs-toggle="tab">
-                                <span class="tab-label" id="tab3-label">
-                                    <%= __('geneafan.view_family_tree') %>
-                                </span>
-                                <button class="btn btn-secondary btn-sm spacedS" id="treeParametersDisplay" disabled
-                                    data-bs-toggle="tooltip" data-bs-placement="top"
-                                    title="<%= __('geneafan.tooltip_tree_parameters') %>">
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
-                                        style="width: 1em; height: 1em; fill: currentColor;">
-                                        <path
-                                            d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z" />
-                                    </svg>
-                                </button>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link disabled" href="#tab4" data-bs-toggle="tab">
-                                <span class="tab-label" id="tab4-label">
-                                    <%= __('geneafan.view_ascendant_timeline') %>
-                                </span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link disabled" href="#tab5" data-bs-toggle="tab">
-                                <span class="tab-label" id="tab5-label">
-                                    <%= __('geneafan.view_statistics') %>
-                                </span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-                <div id="burger-menu" class="burger-menu">
-                    <div type="button" id="more-tab-btn" class="more-btn">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 4 18">
-                            <path fill="var(--color-dark)" fill-rule="evenodd"
-                                d="M0 2a2 2 0 1 0 4 0 2 2 0 0 0-4 0m2 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4m0 7a2 2 0 1 1 0-4 2 2 0 0 1 0 4"
-                                clip-rule="evenodd" />
-                        </svg>
+        <!-- Header with tabs and navbar in a single row with custom theme -->
+        <div class="fixed-top" id="tab-header">
+            <nav class="navbar navbar-expand custom-navbar">
+                <div class="container-fluid">
+                    <!-- Left section with tabs -->
+                    <div class="navbar-nav me-auto d-flex flex-row" role="tablist" id="left-container">
+                        <ul class="nav nav-tabs" id="tab-nav">
+                            <li class="nav-item">
+                                <a class="nav-link active" href="#tab1" data-bs-toggle="tab">
+                                    <span class="tab-label short" id="tab1-label-short">Éventail</span>
+                                    <span class="tab-label full" id="tab1-label-full">Éventail des ancêtres</span>
+                                    <button class="btn btn-sm spacedS" id="fanParametersDisplay" disabled
+                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                        title="<%= __('geneafan.tooltip_fan_parameters') %>">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
+                                            style="width: 1em; height: 1em; fill: currentColor;">
+                                            <path
+                                                d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z" />
+                                        </svg>
+                                    </button>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#tab2" data-bs-toggle="tab">
+                                    <span class="tab-label short" id="tab2-label-short">Carte</span>
+                                    <span class="tab-label full" id="tab2-label-full">Carte des lieux</span>
+                                    <button class="btn btn-sm spacedS" id="mapParametersDisplay" disabled
+                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                        title="<%= __('geneafan.tooltip_map_parameters') %>">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
+                                            style="width: 1em; height: 1em; fill: currentColor;">
+                                            <path
+                                                d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z" />
+                                        </svg>
+                                    </button>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#tab3" data-bs-toggle="tab">
+                                    <span class="tab-label short" id="tab3-label-short">Arbre</span>
+                                    <span class="tab-label full" id="tab3-label-full">Arbre généalogique</span>
+                                    <button class="btn btn-sm spacedS" id="treeParametersDisplay" disabled
+                                        data-bs-toggle="tooltip" data-bs-placement="top"
+                                        title="<%= __('geneafan.tooltip_tree_parameters') %>">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
+                                            style="width: 1em; height: 1em; fill: currentColor;">
+                                            <path
+                                                d="M495.9 166.6c3.2 8.7 .5 18.4-6.4 24.6l-43.3 39.4c1.1 8.3 1.7 16.8 1.7 25.4s-.6 17.1-1.7 25.4l43.3 39.4c6.9 6.2 9.6 15.9 6.4 24.6c-4.4 11.9-9.7 23.3-15.8 34.3l-4.7 8.1c-6.6 11-14 21.4-22.1 31.2c-5.9 7.2-15.7 9.6-24.5 6.8l-55.7-17.7c-13.4 10.3-28.2 18.9-44 25.4l-12.5 57.1c-2 9.1-9 16.3-18.2 17.8c-13.8 2.3-28 3.5-42.5 3.5s-28.7-1.2-42.5-3.5c-9.2-1.5-16.2-8.7-18.2-17.8l-12.5-57.1c-15.8-6.5-30.6-15.1-44-25.4L83.1 425.9c-8.8 2.8-18.6 .3-24.5-6.8c-8.1-9.8-15.5-20.2-22.1-31.2l-4.7-8.1c-6.1-11-11.4-22.4-15.8-34.3c-3.2-8.7-.5-18.4 6.4-24.6l43.3-39.4C64.6 273.1 64 264.6 64 256s.6-17.1 1.7-25.4L22.4 191.2c-6.9-6.2-9.6-15.9-6.4-24.6c4.4-11.9 9.7-23.3 15.8-34.3l4.7-8.1c6.6-11 14-21.4 22.1-31.2c5.9-7.2 15.7-9.6 24.5-6.8l55.7 17.7c13.4-10.3 28.2-18.9 44-25.4l12.5-57.1c2-9.1 9-16.3 18.2-17.8C227.3 1.2 241.5 0 256 0s28.7 1.2 42.5 3.5c9.2 1.5 16.2 8.7 18.2 17.8l12.5 57.1c15.8 6.5 30.6 15.1 44 25.4l55.7-17.7c8.8-2.8 18.6-.3 24.5 6.8c8.1 9.8 15.5 20.2 22.1 31.2l4.7 8.1c6.1 11 11.4 22.4 15.8 34.3zM256 336a80 80 0 1 0 0-160 80 80 0 1 0 0 160z" />
+                                        </svg>
+                                    </button>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#tab4" data-bs-toggle="tab">
+                                    <span class="tab-label short" id="tab4-label-short">Chronologie</span>
+                                    <span class="tab-label full" id="tab4-label-full">Chronologie des ancêtres</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link disabled" href="#tab5" data-bs-toggle="tab">
+                                    <span class="tab-label short" id="tab5-label-short">Stats</span>
+                                    <span class="tab-label full" id="tab5-label-full">Statistiques</span>
+                                </a>
+                            </li>
+                        </ul>
+                        <!-- Burger menu for tabs -->
+                        <div id="burger-menu" class="burger-menu ms-2 d-flex align-items-center">
+                            <div type="button" id="more-tab-btn" class="more-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 4 18" width="16"
+                                    height="16">
+                                    <path fill="var(--color-dark)" fill-rule="evenodd"
+                                        d="M0 2a2 2 0 1 0 4 0 2 2 0 0 0-4 0m2 9a2 2 0 1 1 0-4 2 2 0 0 1 0 4m0 7a2 2 0 1 1 0-4 2 2 0 0 1 0 4"
+                                        clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <ul id="more-drawer" class="nav-tabs more-content position-absolute"></ul>
+                        </div>
                     </div>
-                    <ul id="more-drawer" class="nav-tabs more-content">
-                    </ul>
-                </div>
-            </div>
-            <!-- Section with the tom-select element -->
-            <div id="middle-container" class="col-4 d-flex justify-content-center mx-auto align-items-center">
-                <div id="undoButton" class="me-2" style="cursor: pointer; width: 1.5em; height: 1.5em;">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
-                        style="width: 100%; height: 100%; fill: currentColor;">
-                        <path
-                            d="M125.7 160l50.3 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L48 224c-17.7 0-32-14.3-32-32L16 64c0-17.7 14.3-32 32-32s32 14.3 32 32l0 51.2L97.6 97.6c87.5-87.5 229.3-87.5 316.8 0s87.5 229.3 0 316.8s-229.3 87.5-316.8 0c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0c62.5 62.5 163.8 62.5 226.3 0s62.5-163.8 0-226.3s-163.8-62.5-226.3 0L125.7 160z" />
-                    </svg>
-                </div>
-                <select id="individual-select" class="form-control disabled mx-3"></select>
-                <div id="redoButton" class="mx-2" style="cursor: pointer; width: 1.5em; height: 1.5em;">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
-                        style="width: 100%; height: 100%; fill: currentColor;">
-                        <path
-                            d="M386.3 160L336 160c-17.7 0-32 14.3-32 32s14.3 32 32 32l128 0c17.7 0 32-14.3 32-32l0-128c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 51.2L414.4 97.6c-87.5-87.5-229.3-87.5-316.8 0s-87.5 229.3 0 316.8s229.3 87.5 316.8 0c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0c-62.5 62.5-163.8 62.5-226.3 0s-62.5-163.8 0-226.3s163.8-62.5 226.3 0L386.3 160z" />
-                    </svg>
-                </div>
-            </div>
-            <!-- Section with dropdowns and the fullscreen button -->
-            <div id="right-container" class="col-4 d-flex justify-content-end">
-                <div class="dropdown spacedS">
-                    <button class="btn btn-secondary dropdown-toggle w-100" type="button" id="gedcomMenu"
-                        data-bs-toggle="dropdown" aria-expanded="false">
-                        <img src="/images/icons/filetype-ged.svg" alt="GEDCOM" style="width: 2em; height: 2em;">
-                    </button>
-                    <ul class="dropdown-menu" aria-labelledby="gedcomMenu">
-                        <!-- Upload a new GEDCOM file -->
-                        <li>
-                            <a class="dropdown-item" href="#">
-                                <div class="input-file-container text-center">
-                                    <%= __('geneafan.your_gedcom_file') %>
-                                        <input type="file" name="file" id="file" accept=".ged,.gedcom">
-                                </div>
-                            </a>
-                        </li>
 
-                        <!-- My GEDCOM Files -->
-                        <li>
-                            <a class="dropdown-item protected-feature" data-action="fetchGedcomFiles" href="#"
-                                id="myGedcomFilesMenuItem">
-                                Mes fichiers Gedcom enregistrés
-                            </a>
-                        </li>
+                    <!-- Middle section with person selector -->
+                    <div class="d-flex justify-content-center align-items-center mx-auto" id="middle-container">
+                        <div id="undoButton" class="me-2" style="cursor: pointer; width: 1.5em; height: 1.5em;">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
+                                style="width: 100%; height: 100%; fill: currentColor;">
+                                <path
+                                    d="M125.7 160l50.3 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L48 224c-17.7 0-32-14.3-32-32L16 64c0-17.7 14.3-32 32-32s32 14.3 32 32l0 51.2L97.6 97.6c87.5-87.5 229.3-87.5 316.8 0s87.5 229.3 0 316.8s-229.3 87.5-316.8 0c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0c62.5 62.5 163.8 62.5 226.3 0s62.5-163.8 0-226.3s-163.8-62.5-226.3 0L125.7 160z" />
+                            </svg>
+                        </div>
 
-                        <!-- Separator -->
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
+                        <select id="individual-select" class="form-select mx-2"></select>
 
-                        <!-- Use the sample GEDCOM file -->
-                        <li>
-                            <a class="dropdown-item remote-file" href="#" id="sample-toggle"
-                                data-link="https://files.genealog.ie/Arbre_Robin_Keller_7G_25-10-2023.ged">
-                                <%= __('geneafan.or_try_sample') %>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="dropdown spacedS">
-                    <button class="btn btn-secondary dropdown-toggle" type="button" id="download-menu"
-                        data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" disabled>
-                        <%= __('common.download') %>
-                    </button>
-                    <div class="dropdown-menu" aria-labelledby="download-menu">
-                        <a class="dropdown-item" id="download-pdf-watermark" href="#">
-                            <%= __('geneafan.file_type_list.pdf_watermark') %>
-                        </a>
-                        <a class="dropdown-item protected-feature" data-action="downloadPdf" id="download-pdf" href="#">
-                            <%= __('geneafan.file_type_list.pdf') %>
-                        </a>
-                        <a class="dropdown-item" id="download-svg" href="#">
-                            <%= __('geneafan.file_type_list.svg') %>
-                        </a>
-                        <a class="dropdown-item" id="download-png-transparency" href="#">
-                            <%= __('geneafan.file_type_list.png_transparent') %>
-                        </a>
-                        <a class="dropdown-item" id="download-png-background" href="#">
-                            <%= __('geneafan.file_type_list.png_white_background') %>
-                        </a>
+                        <div id="redoButton" class="ms-2" style="cursor: pointer; width: 1.5em; height: 1.5em;">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"
+                                style="width: 100%; height: 100%; fill: currentColor;">
+                                <path
+                                    d="M386.3 160L336 160c-17.7 0-32 14.3-32 32s14.3 32 32 32l128 0c17.7 0 32-14.3 32-32l0-128c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 51.2L414.4 97.6c-87.5-87.5-229.3-87.5-316.8 0s-87.5 229.3 0 316.8s229.3 87.5 316.8 0c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0c-62.5 62.5-163.8 62.5-226.3 0s-62.5-163.8 0-226.3s163.8-62.5 226.3 0L386.3 160z" />
+                            </svg>
+                        </div>
                     </div>
-                </div>
-                <div style="display: flex;">
-                    <button class="btn btn-secondary" id="fullscreenButton" disabled data-bs-toggle="tooltip"
-                        data-bs-placement="top" title="<%= __('geneafan.tooltip_full_screen') %>">
-                        <i class="bi bi-arrows-fullscreen"></i>
-                    </button>
-                </div>
 
-                <!-- Element for the sign-in button or the user button -->
-                <div id="user-controls">
-                    <button id="sign-in-button" class="btn btn-primary">Sign In</button>
-                    <div id="user-button" style="display: none;"></div>
-                </div>
+                    <!-- Right section with navbar controls -->
+                    <div class="navbar-nav ms-auto d-flex flex-row" id="right-container">
+                        <!-- File dropdown -->
+                        <div class="dropdown spacedS">
+                            <button class="btn dropdown-toggle" type="button" id="fileMenu" data-bs-toggle="dropdown"
+                                aria-expanded="false">
+                                <i class="bi bi-file-earmark"></i> Fichier
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="fileMenu">
+                                <li>
+                                    <a class="dropdown-item" href="#">
+                                        <div class="input-file-container">
+                                            <%= __('geneafan.your_gedcom_file') %>
+                                                <input type="file" name="file" id="file" accept=".ged,.gedcom">
+                                        </div>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item protected-feature" data-action="fetchGedcomFiles" href="#"
+                                        id="myGedcomFilesMenuItem">Mes fichiers Gedcom enregistrés</a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li>
+                                    <a class="dropdown-item remote-file" href="#" id="sample-toggle"
+                                        data-link="https://files.genealog.ie/Arbre_Robin_Keller_7G_25-10-2023.ged">
+                                        <%= __('geneafan.or_try_sample') %>
+                                    </a>
+                                </li>
+                                <li>
+                                    <hr class="dropdown-divider">
+                                </li>
+                                <li class="dropdown-header">Exporter</li>
+                                <li>
+                                    <a class="dropdown-item" id="download-pdf-watermark" href="#">
+                                        <%= __('geneafan.file_type_list.pdf_watermark') %>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item protected-feature" data-action="downloadPdf"
+                                        id="download-pdf" href="#">
+                                        <%= __('geneafan.file_type_list.pdf') %>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" id="download-svg" href="#">
+                                        <%= __('geneafan.file_type_list.svg') %>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" id="download-png-transparency" href="#">
+                                        <%= __('geneafan.file_type_list.png_transparent') %>
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" id="download-png-background" href="#">
+                                        <%= __('geneafan.file_type_list.png_white_background') %>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
 
+                        <!-- Tools button -->
+                        <div class="spacedS">
+                            <button class="btn" id="toolsButton">
+                                <i class="bi bi-gear"></i> Outils
+                            </button>
+                        </div>
 
+                        <!-- Fullscreen button -->
+                        <div style="display: flex;">
+                            <button class="btn" id="fullscreenButton" disabled data-bs-toggle="tooltip"
+                                data-bs-placement="top" title="<%= __('geneafan.tooltip_full_screen') %>">
+                                <i class="bi bi-arrows-fullscreen"></i>
+                            </button>
+                        </div>
 
-                <!--
-                <div class="dropdown">
-                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="lang-menu" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        <i class="fa fa-globe" aria-hidden="true"></i>
-                    </button>
-                    <div class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton">
-                        <h6 class="dropdown-header">
-                            <%=__('common.language')%>
-                        </h6>
-                        <a class="dropdown-item ${lang === 'fr' ? 'active' : ''}" href="${urlGeneratorLang('fr', 'geneafan')}">Français</a>
-                        <a class="dropdown-item ${lang === 'en' ? 'active' : ''}" href="${urlGeneratorLang('en', 'geneafan')}">English</a>
+                        <!-- User account -->
+                        <div id="user-controls">
+                            <button id="sign-in-button" class="btn btn-sign-in">Connexion</button>
+                            <div id="user-button" style="display: none;"></div>
+                        </div>
                     </div>
                 </div>
-                -->
-            </div>
+            </nav>
         </div>
 
         <div id="overlay">
