@@ -148,6 +148,68 @@ const setupFileLoadingEventListeners = () => {
   });
 };
 
+// Fonction pour gérer le bouton d'outils contextuel
+function setupToolsButton() {
+    const toolsButton = document.getElementById("toolsButton");
+    
+    if (!toolsButton) {
+      console.error("Tools button not found");
+      return;
+    }
+    
+    // Handler pour le clic sur le bouton d'outils
+    toolsButton.addEventListener("click", () => {
+      // Déterminer quel onglet est actif
+      const activeTab = document.querySelector(".nav-link.active");
+      if (!activeTab) return;
+      
+      const tabName = activeTab.getAttribute("data-tab-name");
+      
+      // Ouvrir l'offcanvas correspondant à l'onglet actif
+      switch (tabName) {
+        case "Fan":
+          const fanParameters = document.getElementById("fanParameters");
+          if (fanParameters) {
+            const fanOffcanvas = new Offcanvas(fanParameters);
+            fanOffcanvas.show();
+          }
+          break;
+        
+        case "Map":
+          const mapParameters = document.getElementById("mapParameters");
+          if (mapParameters) {
+            const mapOffcanvas = new Offcanvas(mapParameters, {
+              backdrop: true,
+              keyboard: true,
+              scroll: false,
+            });
+            mapOffcanvas.show();
+          }
+          break;
+        
+        case "Tree":
+          const treeParameters = document.getElementById("treeParameters");
+          if (treeParameters) {
+            const treeOffcanvas = new Offcanvas(treeParameters);
+            treeOffcanvas.show();
+          }
+          break;
+          
+        case "Timeline":
+          const timelineParameters = document.getElementById("timelineParameters");
+          if (timelineParameters) {
+            const timelineOffcanvas = new Offcanvas(timelineParameters);
+            timelineOffcanvas.show();
+          }
+          break;
+        
+        case "Stats":
+          // Ajouter ici la logique pour l'onglet Stats si nécessaire
+          break;
+      }
+    });
+  }
+
 // Setup tab and UI event listeners
 function setupTabAndUIEventListeners() {
   document.querySelectorAll(".dropdown-menu a").forEach((element) => {
@@ -158,37 +220,7 @@ function setupTabAndUIEventListeners() {
     });
   });
 
-  document
-    .getElementById("fanParametersDisplay")
-    .addEventListener("click", () => {
-      const fanParametersOffcanvas = new Offcanvas(
-        document.getElementById("fanParameters")
-      );
-      fanParametersOffcanvas.show();
-    });
-
-  document
-    .getElementById("mapParametersDisplay")
-    ?.addEventListener("click", () => {
-      const mapParameters = document.getElementById("mapParameters");
-      if (mapParameters) {
-        const offcanvas = new Offcanvas(mapParameters, {
-          backdrop: true,
-          keyboard: true,
-          scroll: false,
-        });
-        offcanvas.show();
-      }
-    });
-
-  document
-    .getElementById("treeParametersDisplay")
-    .addEventListener("click", () => {
-      const treeParametersOffcanvas = new Offcanvas(
-        document.getElementById("treeParameters")
-      );
-      treeParametersOffcanvas.show();
-    });
+  setupToolsButton();
 
   setupTooltips();
 }
