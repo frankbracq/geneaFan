@@ -1,0 +1,191 @@
+/* Header styles */
+#tab-header {
+    padding-left: 10px;
+    padding-right: 10px;
+    border-bottom: 1px solid #ccc;
+  }
+  
+  /* Style de la navbar personnalisée qui utilise les variables existantes */
+  .custom-navbar {
+    background-color: var(--bg-color-light);
+    border-bottom: 1px solid #ccc;
+    padding: 0.5rem 1rem;
+    height: var(--tab-header-height, 50px);
+  }
+  
+  /* Styles pour les onglets adaptés au thème */
+  #tab-nav {
+    border-bottom: none;
+  }
+  
+  #tab-nav .nav-item {
+    position: relative;
+    transition: all 0.3s ease;
+  }
+  
+  #tab-nav .nav-link {
+    border-color: transparent;
+    border-radius: 0;
+    padding: 0.5rem 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    color: var(--navTextColor);
+  }
+  
+  #tab-nav .nav-link.active {
+    background-color: transparent;
+    border-color: transparent;
+    border-bottom: 2px solid var(--activeColor);
+    color: var(--activeColor);
+  }
+  
+  #tab-nav .nav-link.disabled {
+    opacity: 0.7;
+    color: var(--navTextColor);
+  }
+  
+  /* Styles pour le sélecteur individuel */
+  #individual-select {
+    background-color: var(--bg-color-light);
+    border: 1px solid var(--color-light);
+    color: var(--color-dark);
+    max-width: 220px;
+  }
+  
+  /* Effet d'élargissement des onglets */
+  .tab-label.full {
+    display: none;
+    opacity: 0;
+    position: absolute;
+    left: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .tab-label.short {
+    display: inline-block;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+  }
+  
+  /* État au survol */
+  #tab-nav .nav-item:hover {
+    min-width: max-content;
+    z-index: 10;
+  }
+  
+  #tab-nav .nav-item:hover .nav-link {
+    min-width: max-content;
+  }
+  
+  #tab-nav .nav-item:hover .tab-label.short {
+    display: none;
+    opacity: 0;
+  }
+  
+  #tab-nav .nav-item:hover .tab-label.full {
+    display: inline-block;
+    opacity: 1;
+  }
+  
+  /* Pour rétrécir les autres onglets lors du survol d'un onglet */
+  #tab-nav:hover .nav-item:not(:hover) {
+    flex-shrink: 1;
+  }
+  
+  #tab-nav:hover .nav-item:hover {
+    flex-grow: 2;
+  }
+  
+  /* Responsive tab header */
+  .dropdown-content-modifiers {
+    max-height: 600px !important;
+  }
+  
+  .burger-menu {
+    position: relative;
+  }
+  
+  .more-btn {
+    height: 100%;
+    cursor: pointer;
+    visibility: hidden;
+  
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+  
+  .more-content {
+    position: absolute;
+    top: 40px;
+    display: flex;
+    padding: 6px;
+    flex-direction: column;
+    border-color: var(--color-light);
+    border-width: 2px;
+    width: 150px;
+    background: #fff;
+    z-index: 10;
+    gap: 8px;
+    visibility: hidden;
+    border-radius: 4px;
+  
+    &>li {
+      list-style: none;
+      width: 100%;
+    }
+  
+    & .nav-link {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  }
+  
+  .left-header {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    align-items: center;
+    margin-right: 20px;
+  
+    &>#tab-container {
+      flex: 1;
+    }
+  }
+  
+  /* Adaptatif pour les écrans plus petits */
+  @media (max-width: 992px) {
+    #middle-container {
+      max-width: 180px;
+    }
+    #individual-select {
+      max-width: 120px;
+    }
+    .tab-label.short {
+      max-width: 60px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+  
+  @media (max-width: 768px) {
+    #tab-header {
+      overflow-x: auto;
+    }
+    #left-container {
+      max-width: 40%;
+      overflow-x: auto;
+    }
+    #right-container {
+      max-width: 35%;
+    }
+    #middle-container {
+      max-width: 25%;
+    }
+    .spacedS {
+      margin-right: 0.25rem;
+    }
+  }
