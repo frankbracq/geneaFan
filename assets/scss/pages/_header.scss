@@ -20,17 +20,22 @@
   width: 100%;
   justify-content: space-between;
   background-color: var(--bg-color-light);
+  position: relative;
+  z-index: 1010;
+  padding-bottom: 18px; /* Espace pour l'effet de chevauchement */
+  margin-bottom: -12px; /* Compensation pour maintenir la hauteur totale */
 }
 
 /* Section avec le sélecteur individuel */
 .selector-container {
-  border-top: 1px solid #eee;
-  background-color: #f8f9fa;
   padding: 5px 0;
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
+  position: relative;
+  z-index: 1020;
+  margin-top: -18px;
 }
 
 .selector-wrapper {
@@ -40,6 +45,16 @@
   max-width: 600px;
   margin: 0 auto;
   justify-content: center;
+  background-color: #f8f9fa;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  border-radius: 20px;
+  padding: 5px 10px;
+  transition: box-shadow 0.3s ease;
+}
+
+/* Optionnel : effet d'ombrage légèrement plus prononcé au survol */
+.selector-wrapper:hover {
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
 }
 
 /* Section gauche avec les onglets */
@@ -188,6 +203,7 @@
   
   .container-fluid.w-100 {
     flex-wrap: wrap;
+    padding-bottom: 20px; /* Augmenté pour mobile */
   }
   
   #left-container {
@@ -223,5 +239,13 @@
   
   .selector-wrapper {
     max-width: 95%;
+  }
+  
+  /* Ajustement pour le sélecteur flottant sur mobile */
+  .selector-container {
+    margin-top: -10px;
+    width: 95%;
+    margin-left: auto;
+    margin-right: auto;
   }
 }
