@@ -48,6 +48,7 @@
   flex: 0 1 auto;
   min-width: 200px;
   margin-right: 1rem;
+  order: initial;
 }
 
 /* Navigation par onglets - Desktop */
@@ -175,6 +176,7 @@
   position: relative;
   z-index: 1020;
   margin-top: -18px;
+  order: initial;
 }
 
 .selector-wrapper {
@@ -229,6 +231,7 @@
   display: flex;
   justify-content: flex-end;
   margin-left: auto;
+  order: initial;
 }
 
 /* Style de base pour les boutons du conteneur droit */
@@ -336,9 +339,10 @@
   }
   
   .container-fluid.w-100 {
+    order: 2 !important;
     flex-wrap: wrap;
-    padding-bottom: 10px;
-    margin-bottom: -6px;
+    padding-bottom: 5px;
+    margin-bottom: 0;
   }
   
   /* Réduire l'espacement global */
@@ -346,16 +350,45 @@
     padding: 5px 3px;
   }
 
-  /* Section gauche */
-  #left-container {
+  /* Réarrangement pour le layout mobile à 2 lignes */
+  /* Première ligne : sélecteur d'individu */
+  .selector-container {
+    /* IMPORTANT: Réinitialiser les styles desktop qui causent la régression */
+    margin-top: 0 !important; 
+    order: 1 !important;
+    /* Puis appliquer les styles mobile */
     width: 100%;
-    max-width: 100%;
-    margin-right: 0;
-    margin-bottom: 0.5rem;
+    margin-bottom: 8px;
+    padding: 5px 0;
+    z-index: 1020;
   }
   
-  /* Note: Le ResponsiveTabs module gère l'affichage/masquage des onglets et dropdown */
-  /* Nous laissons donc les styles mais la visibilité sera gérée via JavaScript */
+  .selector-wrapper {
+    width: 95%;
+    max-width: 95%;
+    padding: 4px 8px;
+  }
+  
+  #individual-select {
+    font-size: 0.9rem;
+    height: 30px !important;
+  }
+  
+  #undoButton, #redoButton {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+  }
+  
+  /* Deuxième ligne : dropdown d'onglets à gauche + boutons à droite */
+  /* Section gauche */
+  #left-container {
+    width: auto;
+    flex: 0 0 auto;
+    max-width: 140px;
+    margin-right: 0;
+    margin-bottom: 0;
+  }
   
   /* Styles pour le dropdown en mode mobile */
   #tab-nav {
@@ -364,19 +397,19 @@
 
   .tab-dropdown {
     min-width: 120px;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0;
     display: block !important;
   }
   
   /* S'assurer que le dropdown toggle est cliquable */
   .tab-dropdown .dropdown-toggle {
-    padding: 0.5rem;
+    padding: 0.4rem;
     background-color: var(--bg-color-light);
     border: 1px solid rgba(0,0,0,0.15);
     border-radius: 0.25rem;
     cursor: pointer;
     font-weight: 400;
-    text-align: center;
+    text-align: left;
     z-index: 1030; /* Garantir qu'il est au-dessus */
   }
   
@@ -397,42 +430,16 @@
    .tab-dropdown .dropdown-menu.show {
     display: block !important;
   }
-  
-  /* Section centrale */
-  .selector-container {
-    margin-top: -6px;
-    width: 95%;
-    margin-left: auto;
-    margin-right: auto;
-    padding: 2px 0;
-  }
-  
-  .selector-wrapper {
-    width: 90%;
-    max-width: 95%;
-    padding: 4px 8px;
-  }
-  
-  #individual-select {
-    font-size: 0.9rem;
-    height: 28px !important;
-  }
-  
-  #undoButton, #redoButton {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
-  }
 
-  /* Section droite */
+  /* Section droite sur la deuxième ligne */
   #right-container {
-    order: 3;
-    margin-top: 0.5rem;
-    width: 100%;
-    max-width: 100%;
+    margin-top: 0;
+    width: auto;
+    max-width: none;
+    flex: 1 0 auto;
     display: flex;
     flex-wrap: nowrap;
-    justify-content: space-between;
+    justify-content: flex-end;
     padding: 0 2px;
   }
   
@@ -445,21 +452,16 @@
   
   #right-container .btn {
     padding: 0.2rem 0.35rem;
-    min-height: 32px;
+    min-height: 30px;
     font-size: 0.85rem;
   }
   
   #right-container .btn i.bi {
-    margin-right: 0;
-  }
-  
-  #right-container .btn span:not(.bi),
-  #right-container .btn-outline-secondary::after {
-    display: none;
+    margin-right: 3px;
   }
   
   #right-container .me-3 {
-    margin-right: 0.15rem !important;
+    margin-right: 0.25rem !important;
   }
   
   #right-container .dropdown-menu {
@@ -471,9 +473,10 @@
 
 /* 6.5. Très petits écrans (480px) */
 @media (max-width: 480px) {
-  /* Section centrale */
+  /* Section centrale (sélecteur) */
   .selector-container {
     width: 98%;
+    padding: 3px 0;
   }
   
   #undoButton, #redoButton {
@@ -492,14 +495,28 @@
     font-size: 0.85rem;
   }
   
-  /* Section droite */
+  /* Section gauche (dropdown) */
+  #left-container {
+    max-width: 100px;
+  }
+  
+  .tab-dropdown {
+    max-width: 100px;
+  }
+  
+  .tab-dropdown .dropdown-toggle {
+    font-size: 0.85rem;
+    padding: 0.15rem 0.4rem 0.15rem 0.25rem;
+  }
+  
+  /* Section droite (boutons) */
   #right-container .me-3 {
-    margin-right: 0.1rem !important;
+    margin-right: 0.15rem !important;
   }
 
   #right-container .btn {
     padding: 0.15rem 0.25rem;
-    min-height: 30px;
+    min-height: 26px;
     width: 32px;
     min-width: 32px;
     display: flex;
@@ -507,17 +524,13 @@
     align-items: center;
   }
   
-  #right-container {
-    justify-content: space-around;
+  /* Cacher le texte des boutons sur très petits écrans */
+  #right-container .btn span:not(.bi),
+  #right-container .btn-outline-secondary::after {
+    display: none;
   }
   
-  /* Dropdown d'onglets */
-  .tab-dropdown {
-    max-width: 110px;
-  }
-  
-  .tab-dropdown .dropdown-toggle {
-    font-size: 0.85rem;
-    padding: 0.15rem 0.5rem 0.15rem 0.25rem;
+  #right-container .btn i.bi {
+    margin-right: 0;
   }
 }
