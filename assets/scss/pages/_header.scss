@@ -1,4 +1,17 @@
-/* Styles de base du header */
+/* _header.scss - Interface header styles
+ * Structure organisée par composants et par responsivité
+ */
+
+/* =========================================
+   1. VARIABLES ET UTILITAIRES
+   ========================================= */
+// Utiliser des variables SCSS pour les valeurs réutilisées
+
+
+/* =========================================
+   2. STRUCTURE PRINCIPALE DU HEADER
+   ========================================= */
+/* Header container */
 #tab-header {
   padding-left: 10px;
   padding-right: 10px;
@@ -6,7 +19,7 @@
   background-color: var(--bg-color-light);
 }
 
-/* Structure à deux lignes */
+/* Navbar à deux niveaux */
 .navbar-expand.custom-navbar {
   display: flex;
   flex-direction: column;
@@ -26,37 +39,10 @@
   margin-bottom: -12px; /* Compensation pour maintenir la hauteur totale */
 }
 
-/* Section avec le sélecteur individuel */
-.selector-container {
-  padding: 5px 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  position: relative;
-  z-index: 1020;
-  margin-top: -18px;
-}
 
-.selector-wrapper {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
-  justify-content: center;
-  background-color: #f8f9fa;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  border-radius: 20px;
-  padding: 5px 10px;
-  transition: box-shadow 0.3s ease;
-}
-
-/* Optionnel : effet d'ombrage légèrement plus prononcé au survol */
-.selector-wrapper:hover {
-  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-}
-
+/* =========================================
+   3. SECTION GAUCHE (ONGLETS DE NAVIGATION)
+   ========================================= */
 /* Section gauche avec les onglets */
 #left-container {
   flex: 0 1 auto;
@@ -64,7 +50,7 @@
   margin-right: 1rem;
 }
 
-/* Navigation par onglets */
+/* Navigation par onglets - Desktop */
 #tab-nav {
   border-bottom: none;
 }
@@ -74,11 +60,14 @@
 }
 
 #tab-nav .nav-link {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   border-color: transparent;
   border-radius: 0;
   padding: 0.5rem 0.75rem;
   white-space: nowrap;
-  transition: all 0.3s ease;
+  transition: max-width 0.3s ease;
   color: var(--navTextColor);
 }
 
@@ -94,7 +83,11 @@
   color: var(--navTextColor);
 }
 
-/* Dropdown pour les onglets sur mobile */
+.tab-label {
+  margin-right: 0.25rem;
+}
+
+/* Navigation par dropdown - Mobile */
 .tab-dropdown {
   margin-bottom: 0.5rem;
   width: 100%;
@@ -147,11 +140,38 @@
   border: none;
 }
 
-/* Section centrale avec le sélecteur */
-#middle-container {
+
+/* =========================================
+   4. SECTION CENTRALE (SÉLECTEUR D'INDIVIDU)
+   ========================================= */
+/* Section avec le sélecteur individuel */
+.selector-container {
+  padding: 5px 0;
   display: flex;
   justify-content: center;
+  align-items: center;
   width: 100%;
+  position: relative;
+  z-index: 1020;
+  margin-top: -18px;
+}
+
+.selector-wrapper {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+  justify-content: center;
+  background-color: #f8f9fa;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  border-radius: 20px;
+  padding: 5px 10px;
+  transition: box-shadow 0.3s ease;
+}
+
+.selector-wrapper:hover {
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
 }
 
 /* Styles pour le sélecteur individuel */
@@ -171,6 +191,17 @@
   justify-content: center;
 }
 
+/* Section centrale */
+#middle-container {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+
+/* =========================================
+   5. SECTION DROITE (CONTRÔLES ET BOUTONS)
+   ========================================= */
 /* Section droite avec les contrôles */
 #right-container {
   flex: 0 0 auto;
@@ -179,53 +210,127 @@
   margin-left: auto;
 }
 
-/* Boutons dans les onglets */
-.tab-label {
-  margin-right: 0.25rem;
+/* Style de base pour les boutons du conteneur droit */
+#right-container .btn {
+  transition: all 0.3s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
-/* Styles responsives */
+
+/* =========================================
+   6. RESPONSIVE DESIGN - DESKTOP VERS MOBILE
+   ========================================= */
+
+/* 6.1. Grand écran vers moyen (1200px) */
+@media (max-width: 1200px) {
+  /* Navigation */
+  #tab-nav .nav-link {
+    max-width: 100px;
+    padding: 0.5rem 0.5rem;
+  }
+
+  /* Boutons à droite */
+  #right-container .btn {
+    padding: 0.375rem 0.5rem;
+    font-size: 0.95rem;
+  }
+  
+  #right-container .me-3 {
+    margin-right: 0.5rem !important;
+  }
+}
+
+/* 6.2. Moyen écran vers petit (992px) */
 @media (max-width: 992px) {
+  /* Navigation */
+  #tab-nav .nav-link {
+    max-width: 80px;
+    padding: 0.5rem 0.4rem;
+  }
+
+  /* Conteneur gauche */
   #left-container {
     min-width: auto;
     max-width: 40%;
   }
   
+  /* Sélecteur central */
   .selector-wrapper {
     max-width: 80%;
   }
+
+  /* Boutons à droite */
+  #right-container .btn {
+    padding: 0.375rem 0.4rem;
+    max-width: 100px;
+  }
+  
+  #right-container .btn-outline-secondary {
+    max-width: 90px;
+  }
 }
 
+/* 6.3. Petit écran vers très petit (860px) */
+@media (max-width: 860px) {
+  /* Navigation */
+  #tab-nav .nav-link {
+    max-width: 50px;
+    padding: 0.5rem 0.3rem;
+  }
+  
+  #tab-nav .nav-link .tab-label {
+    font-size: 0.85em;
+  }
+
+  /* Boutons à droite */
+  #right-container .btn {
+    padding: 0.25rem 0.3rem;
+    font-size: 0.9rem;
+    max-width: 80px;
+  }
+  
+  #right-container .me-3 {
+    margin-right: 0.3rem !important;
+  }
+  
+  /* Simplifier boutons : icônes seulement */
+  #right-container #fileMenu span:not(.bi),
+  #right-container #toolsButton span:not(.bi) {
+    display: none;
+  }
+  
+  #right-container .bi {
+    margin-right: 0;
+  }
+}
+
+/* 6.4. Passage en mode mobile (768px) */
 @media (max-width: 768px) {
+  /* Structure globale */
   .navbar-expand.custom-navbar {
     flex-direction: column;
   }
   
   .container-fluid.w-100 {
     flex-wrap: wrap;
-    padding-bottom: 20px; /* Augmenté pour mobile */
+    padding-bottom: 10px;
+    margin-bottom: -6px;
   }
   
+  /* Réduire l'espacement global */
+  #tab-header {
+    padding: 5px 3px;
+  }
+
+  /* Section gauche */
   #left-container {
     width: 100%;
     max-width: 100%;
     margin-right: 0;
     margin-bottom: 0.5rem;
-  }
-  
-  #right-container {
-    order: 3;
-    margin-top: 0.5rem;
-    width: 100%;
-    max-width: 100%;
-    justify-content: space-between;
-  }
-
-  #right-container .dropdown .dropdown-menu.show {
-    position: absolute !important;
-    inset: auto auto auto 0px !important;
-    transform: translate(0px, 40px) !important;
-    margin: 0 !important;
   }
   
   #tab-nav {
@@ -235,17 +340,139 @@
   /* Sur mobile, le dropdown s'affiche toujours */
   .tab-dropdown {
     display: block !important;
+    min-width: 120px;
+    margin-bottom: 0.25rem;
   }
   
-  .selector-wrapper {
-    max-width: 95%;
+  .tab-dropdown .dropdown-toggle {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-right: 20px; /* Espace pour la flèche dropdown */
   }
   
-  /* Ajustement pour le sélecteur flottant sur mobile */
+  .tab-dropdown .dropdown-toggle::after {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  
+  /* Section centrale */
   .selector-container {
-    margin-top: -10px;
+    margin-top: -6px;
     width: 95%;
     margin-left: auto;
     margin-right: auto;
+    padding: 2px 0;
+  }
+  
+  .selector-wrapper {
+    width: 90%;
+    max-width: 95%;
+    padding: 4px 8px;
+  }
+  
+  #individual-select {
+    font-size: 0.9rem;
+    height: 28px !important;
+  }
+  
+  #undoButton, #redoButton {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+  }
+
+  /* Section droite */
+  #right-container {
+    order: 3;
+    margin-top: 0.5rem;
+    width: 100%;
+    max-width: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    padding: 0 2px;
+  }
+  
+  #right-container .dropdown .dropdown-menu.show {
+    position: absolute !important;
+    inset: auto auto auto 0px !important;
+    transform: translate(0px, 40px) !important;
+    margin: 0 !important;
+  }
+  
+  #right-container .btn {
+    padding: 0.2rem 0.35rem;
+    min-height: 32px;
+    font-size: 0.85rem;
+  }
+  
+  #right-container .btn i.bi {
+    margin-right: 0;
+  }
+  
+  #right-container .btn span:not(.bi),
+  #right-container .btn-outline-secondary::after {
+    display: none;
+  }
+  
+  #right-container .me-3 {
+    margin-right: 0.15rem !important;
+  }
+  
+  #right-container .dropdown-menu {
+    left: auto;
+    right: 0;
+    min-width: 200px;
+  }
+}
+
+/* 6.5. Très petits écrans (480px) */
+@media (max-width: 480px) {
+  /* Section centrale */
+  .selector-container {
+    width: 98%;
+  }
+  
+  #undoButton, #redoButton {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+  }
+
+  .selector-wrapper {
+    width: 100%;
+    padding: 2px 4px;
+  }
+
+  #individual-select {
+    height: 26px !important;
+    font-size: 0.85rem;
+  }
+  
+  /* Section droite */
+  #right-container .me-3 {
+    margin-right: 0.1rem !important;
+  }
+
+  #right-container .btn {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.85rem;
+  }
+  
+  #right-container {
+    justify-content: space-around;
+  }
+  
+  /* Dropdown d'onglets */
+  .tab-dropdown {
+    max-width: 110px;
+  }
+  
+  .tab-dropdown .dropdown-toggle {
+    font-size: 0.9rem;
+    padding: 0.15rem 0.5rem 0.15rem 0.25rem;
   }
 }

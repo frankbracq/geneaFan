@@ -1,7 +1,6 @@
 import { Offcanvas, Tooltip, Dropdown } from "bootstrap";
 import { EVENTS, storeEvents } from "../gedcom/stores/storeEvents.js";
 import rootPersonStore from "../common/stores/rootPersonStore.js";
-import { setupResponsiveTabHandler } from "../tabs/responsiveTabHandler.js";
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
 import { displayPersonDetailsUI } from "../tabs/fanChart/personDetailsDisplay.js";
 import { loadGedcomFile } from "../gedcom/gedcomFileHandler.js";
@@ -279,7 +278,6 @@ export const setupAllEventListeners = (authStore) => {
     console.group("EventListeners: Initializing..."); // Debug
 
     // Configuration des écouteurs globaux
-    setupResponsiveTabHandler();
     setupIndividualSelectorListener();
     setupTabAndUIEventListeners(); // Cette fonction appelle maintenant setupFileMenu()
     setupFileLoadingEventListeners();
