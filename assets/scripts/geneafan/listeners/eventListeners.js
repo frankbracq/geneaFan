@@ -1,5 +1,6 @@
-import { Offcanvas, Tooltip, Dropdown } from "bootstrap";
+import { Offcanvas, Tooltip } from "bootstrap";
 import { EVENTS, storeEvents } from "../gedcom/stores/storeEvents.js";
+import ResponsiveTabs from "../tabs/responsiveTabs.js";
 import rootPersonStore from "../common/stores/rootPersonStore.js";
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
 import { displayPersonDetailsUI } from "../tabs/fanChart/personDetailsDisplay.js";
@@ -148,27 +149,32 @@ const setupFileLoadingEventListeners = () => {
 };
 
 function setupFileMenuToggle() {
-    const fileMenu = document.getElementById("fileMenu");
-    if (fileMenu) {
-      // Supprimer l'attribut onclick existant
-      fileMenu.removeAttribute("onclick");
-      
-      // Ajouter un gestionnaire d'événement click simple
-      fileMenu.addEventListener("click", function(event) {
-        event.preventDefault();
-        if (window.bootstrap && window.bootstrap.Dropdown) {
-          const dropdown = bootstrap.Dropdown.getOrCreateInstance(fileMenu);
-          dropdown.toggle();
-        } else {
-          // Fallback si nécessaire
-          const dropdownMenu = document.querySelector('.dropdown-menu[aria-labelledby="fileMenu"]');
-          if (dropdownMenu) {
-            dropdownMenu.classList.toggle('show');
-            fileMenu.setAttribute('aria-expanded', dropdownMenu.classList.contains('show'));
-          }
+  const fileMenu = document.getElementById("fileMenu");
+  if (fileMenu) {
+    // Supprimer l'attribut onclick existant
+    fileMenu.removeAttribute("onclick");
+
+    // Ajouter un gestionnaire d'événement click simple
+    fileMenu.addEventListener("click", function (event) {
+      event.preventDefault();
+      if (window.bootstrap && window.bootstrap.Dropdown) {
+        const dropdown = bootstrap.Dropdown.getOrCreateInstance(fileMenu);
+        dropdown.toggle();
+      } else {
+        // Fallback si nécessaire
+        const dropdownMenu = document.querySelector(
+          '.dropdown-menu[aria-labelledby="fileMenu"]'
+        );
+        if (dropdownMenu) {
+          dropdownMenu.classList.toggle("show");
+          fileMenu.setAttribute(
+            "aria-expanded",
+            dropdownMenu.classList.contains("show")
+          );
         }
-      });
-    }
+      }
+    });
+  }
 }
 
 // Fonction pour gérer le bouton d'outils contextuel
@@ -236,18 +242,27 @@ function setupToolsButton() {
 
 // Setup tab and UI event listeners
 function setupTabAndUIEventListeners() {
-    document.querySelectorAll(".dropdown-menu a").forEach((element) => {
-      element.addEventListener("click", function () {
-        const dropdownButton = this.closest(".dropdown");
-        dropdownButton.classList.remove("show");
-        dropdownButton.querySelector(".dropdown-menu").classList.remove("show");
-      });
+  document.querySelectorAll(".dropdown-menu a").forEach((element) => {
+    element.addEventListener("click", function () {
+      const dropdownButton = this.closest(".dropdown");
+      dropdownButton.classList.remove("show");
+      dropdownButton.querySelector(".dropdown-menu").classList.remove("show");
     });
-  
-    setupToolsButton();
-    setupFileMenuToggle();
-    setupTooltips();
-  }
+  });
+
+  // Initialiser les onglets responsives avec les options par défaut
+  const responsiveTabs = new ResponsiveTabs();
+  // Ou avec des options personnalisées
+  // const responsiveTabs = new ResponsiveTabs({
+  //   tabNavSelector: '#custom-tab-nav',
+  //   containerSelector: '#custom-container',
+  //   breakpoint: 992 // Point de rupture personnalisé
+  // });
+
+  setupToolsButton();
+  setupFileMenuToggle();
+  setupTooltips();
+}
 
 // Gestion du sélecteur d'individu
 export const setupIndividualSelectorListener = () => {

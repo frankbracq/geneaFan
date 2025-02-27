@@ -87,8 +87,9 @@
   margin-right: 0.25rem;
 }
 
-/* Navigation par dropdown - Mobile */
+/* Navigation par dropdown - Styles pour le dropdown généré dynamiquement */
 .tab-dropdown {
+  display: none;
   margin-bottom: 0.5rem;
   width: 100%;
   max-width: 220px;
@@ -103,16 +104,32 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  cursor: pointer;
+  position: relative;
+  z-index: 1030;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 20px; /* Espace pour la flèche dropdown */
 }
 
 .tab-dropdown .dropdown-toggle::after {
   margin-left: auto;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .tab-dropdown .dropdown-menu {
   width: 100%;
   max-height: 300px;
   overflow-y: auto;
+  z-index: 1031;
+}
+
+.tab-dropdown .dropdown-menu.show {
+  display: block !important; /* Forcer l'affichage */
 }
 
 .tab-dropdown .dropdown-item {
@@ -120,17 +137,21 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem 1rem;
+  cursor: pointer;
 }
 
 .tab-dropdown .dropdown-item.active {
   background-color: var(--bg-color-light);
   color: var(--activeColor);
   border-left: 3px solid var(--activeColor);
+  font-weight: bold;
 }
 
 .tab-dropdown .dropdown-item.disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  pointer-events: none;
+  background-color: transparent;
 }
 
 .tab-dropdown .dropdown-item button {
@@ -333,29 +354,48 @@
     margin-bottom: 0.5rem;
   }
   
-  #tab-nav {
-    display: none;
-  }
+  /* Note: Le ResponsiveTabs module gère l'affichage/masquage des onglets et dropdown */
+  /* Nous laissons donc les styles mais la visibilité sera gérée via JavaScript */
   
-  /* Sur mobile, le dropdown s'affiche toujours */
+  /* Styles pour le dropdown en mode mobile */
+  #tab-nav {
+    display: none !important;
+  }
+
   .tab-dropdown {
-    display: block !important;
     min-width: 120px;
     margin-bottom: 0.25rem;
+    display: block !important;
   }
   
+  /* S'assurer que le dropdown toggle est cliquable */
   .tab-dropdown .dropdown-toggle {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding-right: 20px; /* Espace pour la flèche dropdown */
+    padding: 0.5rem;
+    background-color: var(--bg-color-light);
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: 0.25rem;
+    cursor: pointer;
+    font-weight: 400;
+    text-align: center;
+    z-index: 1030; /* Garantir qu'il est au-dessus */
   }
   
-  .tab-dropdown .dropdown-toggle::after {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
+  /* S'assurer que le menu dropdown s'affiche correctement */
+  .tab-dropdown .dropdown-menu {
+    display: none;
+    z-index: 1031; /* Au-dessus du bouton */
+    margin-top: 0.125rem;
+    min-width: 10rem;
+    padding: 0.5rem 0;
+    background-color: #fff;
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: 0.25rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  }
+
+   /* Forcer l'affichage quand le dropdown est ouvert */
+   .tab-dropdown .dropdown-menu.show {
+    display: block !important;
   }
   
   /* Section centrale */
@@ -458,8 +498,13 @@
   }
 
   #right-container .btn {
-    padding: 0.2rem 0.4rem;
-    font-size: 0.85rem;
+    padding: 0.15rem 0.25rem;
+    min-height: 30px;
+    width: 32px;
+    min-width: 32px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
   
   #right-container {
@@ -472,7 +517,7 @@
   }
   
   .tab-dropdown .dropdown-toggle {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     padding: 0.15rem 0.5rem 0.15rem 0.25rem;
   }
 }

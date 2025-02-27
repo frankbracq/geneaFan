@@ -20,19 +20,8 @@
                 <div class="container-fluid w-100">
                     <!-- Section gauche avec les onglets qui devient un dropdown sur mobile -->
                     <div class="navbar-nav d-flex flex-row" role="tablist" id="left-container">
-                        <!-- Bouton dropdown visible uniquement sur mobile -->
-                        <div class="dropdown d-block d-md-none tab-dropdown">
-                            <button class="btn dropdown-toggle" type="button" id="tabsDropdownMenu"
-                                data-bs-toggle="dropdown" aria-expanded="false">
-                                <span id="current-tab-text">Éventail</span>
-                            </button>
-                            <ul class="dropdown-menu" aria-labelledby="tabsDropdownMenu" id="tabs-dropdown-menu">
-                                <!-- Le contenu sera ajouté dynamiquement par JavaScript -->
-                            </ul>
-                        </div>
-
-                        <!-- Onglets normaux visibles sur desktop -->
-                        <ul class="nav nav-pills d-none d-md-flex" id="tab-nav">
+                        <!-- Gardez seulement les onglets normaux, le JS s'occupera de créer le dropdown -->
+                        <ul class="nav nav-pills d-flex" id="tab-nav">
                             <li class="nav-item">
                                 <a class="nav-link active" href="#tab1" data-bs-toggle="tab" data-tab-name="Fan">
                                     <span class="tab-label" data-bs-toggle="tooltip" data-bs-placement="bottom"
@@ -48,13 +37,13 @@
                             <li class="nav-item">
                                 <a class="nav-link disabled" href="#tab3" data-bs-toggle="tab" data-tab-name="Tree">
                                     <span class="tab-label" data-bs-toggle="tooltip" data-bs-placement="bottom"
-                                        title="Arbre généalogique familial">Arbre<span>
+                                        title="Arbre généalogique familial">Arbre</span>
                                 </a>
                             </li>
                             <li class="nav-item">
                                 <a class="nav-link disabled" href="#tab4" data-bs-toggle="tab" data-tab-name="Timeline">
                                     <span class="tab-label" data-bs-toggle="tooltip" data-bs-placement="bottom"
-                                        title="Frise chronologique des événements familiaux">Événements<span>
+                                        title="Frise chronologique des événements familiaux">Événements</span>
                                 </a>
                             </li>
                             <li class="nav-item">
