@@ -28,6 +28,7 @@
 
 /* Premier niveau - ligne du haut */
 .container-fluid.w-100 {
+  order: initial;
   display: flex;
   flex-wrap: nowrap;
   width: 100%;

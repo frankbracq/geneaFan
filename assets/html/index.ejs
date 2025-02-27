@@ -19,7 +19,7 @@
                 <!-- Première ligne: sections gauche et droite -->
                 <div class="container-fluid w-100">
 
-                    
+
                     <!-- Section gauche avec les onglets qui devient un dropdown sur mobile -->
                     <div class="navbar-nav d-flex flex-row" role="tablist" id="left-container">
                         <!-- Gardez seulement les onglets normaux, le JS s'occupera de créer le dropdown -->
@@ -76,7 +76,7 @@
                                 </li>
                                 <li>
                                     <a class="dropdown-item protected-feature" data-action="fetchGedcomFiles" href="#"
-                                        id="myGedcomFilesMenuItem">Mes fichiers Gedcom enregistrés</a>
+                                        id="myGedcomFilesMenuItem"><%= __('geneafan.my_gedcom_files') %></a>
                                 </li>
                                 <li>
                                     <hr class="dropdown-divider">
@@ -127,23 +127,39 @@
 
                         <!-- Tools button -->
                         <div class="me-3">
-                            <button class="btn btn-outline-secondary" id="toolsButton">
-                                <i class="bi bi-gear"></i> Outils
+                            <button class="btn btn-outline-secondary" id="toolsButton"
+                                data-bs-toggle="tooltip" data-bs-placement="top" data-bs-trigger="hover"
+                                title="Paramètres" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sliders" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd" d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z"/>
+                                </svg>
                             </button>
                         </div>
 
-                        <!-- Fullscreen button -->
+                        <!-- Fullscreen button (avec tooltip au survol même désactivé) -->
                         <div class="me-3">
-                            <button class="btn btn-outline-secondary" id="fullscreenButton" disabled
-                                data-bs-toggle="tooltip" data-bs-placement="top"
-                                title="<%= __('geneafan.tooltip_full_screen') %>">
-                                <i class="bi bi-arrows-fullscreen"></i>
-                            </button>
+                            <span class="d-inline-block" data-bs-toggle="tooltip" data-bs-placement="top"
+                                data-bs-trigger="hover" title="<%= __('geneafan.tooltip_full_screen') %>">
+                                <button class="btn btn-outline-secondary" id="fullscreenButton" disabled
+                                    style="pointer-events: none;">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-fullscreen" viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707m0-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707m-4.344 0a.5.5 0 0 1-.707 0L1.025 1.732V4.5a.5.5 0 0 1-1 0V.525a.5.5 0 0 1 .5-.5H4.5a.5.5 0 0 1 0 1H1.732l4.096 4.096a.5.5 0 0 1 0 .707"/>
+                                      </svg>
+                                </button>
+                            </span>
                         </div>
 
-                        <!-- User account -->
-                        <div id="user-controls">
-                            <button id="sign-in-button" class="btn btn-primary">Connexion</button>
+                        <!-- User account (harmonisé avec le style du bouton plein écran) -->
+                        <div id="user-controls" class="me-3">
+                            <button class="btn btn-outline-secondary" id="sign-in-button" data-bs-toggle="tooltip"
+                                data-bs-placement="top" data-bs-trigger="hover" title="Connexion">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                    class="bi bi-person-circle" viewBox="0 0 16 16">
+                                    <path d="M11 6a3 3 0 1 1-6 0 3 3 0 0 1 6 0" />
+                                    <path fill-rule="evenodd"
+                                        d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8m8-7a7 7 0 0 0-5.468 11.37C3.242 11.226 4.805 10 8 10s4.757 1.225 5.468 2.37A7 7 0 0 0 8 1" />
+                                </svg>
+                            </button>
                             <div id="user-button" style="display: none;"></div>
                         </div>
                     </div>
