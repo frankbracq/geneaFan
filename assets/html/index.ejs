@@ -65,19 +65,20 @@
                                 data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-file-earmark"></i> Fichier
                             </button>
-                            <ul class="dropdown-menu" aria-labelledby="fileMenu" data-bs-popper="static">
+                            <ul class="dropdown-menu" aria-labelledby="fileMenu">
+                                <li class="dropdown-header">Import GEDCOM</li>
                                 <li>
-                                    <a class="dropdown-item" href="#">
-                                        <div class="input-file-container">
-                                            <%= __('geneafan.your_gedcom_file') %>
-                                                <input type="file" name="file" id="file" accept=".ged,.gedcom">
-                                        </div>
-                                    </a>
+                                    <label class="dropdown-item">
+                                        <%= __('geneafan.your_gedcom_file') %>
+                                        <input type="file" name="file" id="file" accept=".ged,.gedcom" style="display: none;">
+                                    </label>
                                 </li>
                                 <li>
                                     <a class="dropdown-item protected-feature" data-action="fetchGedcomFiles" href="#"
                                         id="myGedcomFilesMenuItem"><%= __('geneafan.my_gedcom_files') %></a>
                                 </li>
+                                
+                                
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
@@ -90,7 +91,7 @@
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
-                                <li class="dropdown-header">Exporter</li>
+                                <li class="dropdown-header">Export PDF</li>
 
                                 <li>
                                     <a class="dropdown-item" id="download-pdf-watermark" href="#"

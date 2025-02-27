@@ -243,7 +243,8 @@ function setupToolsButton() {
 // Setup tab and UI event listeners
 function setupTabAndUIEventListeners() {
   document.querySelectorAll(".dropdown-menu a").forEach((element) => {
-    element.addEventListener("click", function () {
+    element.addEventListener("click", function (event) {
+      console.log("Clicked element:", event.target);
       const dropdownButton = this.closest(".dropdown");
       dropdownButton.classList.remove("show");
       dropdownButton.querySelector(".dropdown-menu").classList.remove("show");

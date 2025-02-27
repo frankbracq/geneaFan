@@ -175,7 +175,6 @@
   align-items: center;
   width: 100%;
   position: relative;
-  z-index: 1020;
   margin-top: -18px;
   order: initial;
 }
@@ -187,6 +186,7 @@
   max-width: 600px;
   margin: 0 auto;
   justify-content: center;
+  z-index: 1020;
   background-color: #f8f9fa;
   box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   border-radius: 20px;
@@ -415,9 +415,12 @@
   }
   
   /* S'assurer que le menu dropdown s'affiche correctement */
+  .dropdown-menu {
+    z-index: 1100 !important; /* Assurez-vous qu'il est plus grand que 1020 */
+}
   .tab-dropdown .dropdown-menu {
     display: none;
-    z-index: 1031; /* Au-dessus du bouton */
+    z-index: 1100; /* Au-dessus du bouton */
     margin-top: 0.125rem;
     min-width: 10rem;
     padding: 0.5rem 0;

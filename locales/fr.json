@@ -53,9 +53,9 @@
             "text": "Vérifier lors de l'exportation depuis votre logiciel ou plateforme que l'encodage du fichier Gedcom est bien paramétré sur <strong>UTF-8</strong>. Cet outil <em>ne supporte pas</em> l'ASCII étendu."
         },
         "load_gedcom": "GEDCOM",
-        "your_gedcom_file": "Charger un Gedcom",
+        "your_gedcom_file": "Nouveau Gedcom",
         "my_gedcom_files": "Mes Gedcom enregistrés",
-        "or_try_sample": "Utiliser le Gedcom test",
+        "or_try_sample": "Gedcom de test",
         "sample_files": "Fichiers Gedcom échantillon",
         "choose_sample_below": "Si vous ne possédez pas de fichier Gedcom ou bien que vous souhaitez tester le service, il est possible d'en charger un parmi la liste suivante&#8239;:",
         "sample_files_list": {
