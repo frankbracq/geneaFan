@@ -149,53 +149,6 @@ const setupFileLoadingEventListeners = () => {
   });
 };
 
-/*
-// Fonction simplifiée pour désactiver/activer les éléments d'exportation
-function setupUIElementsActivation() {
-  // Sélectionner tous les éléments d'exportation
-  const exportItems = [
-    'download-pdf-watermark',
-    'download-pdf',
-    'download-svg',
-    'download-png-transparency',
-    'download-png-background'
-  ].map(id => document.getElementById(id));
-  
-  // Sélectionner les boutons d'interface
-  const toolsButton = document.getElementById('toolsButton');
-  const fullscreenButton = document.getElementById('fullscreenButton');
-  
-  // Désactiver les éléments initialement (ils sont déjà désactivés par l'attribut 'disabled' dans le HTML)
-  exportItems.forEach(item => {
-    if (item) {
-      item.classList.add('disabled');
-    }
-  });
-  
-  // Écouter l'événement de dessin du fan chart pour activer les éléments
-  storeEvents.subscribe(EVENTS.VISUALIZATIONS.FAN.DRAWN, () => {
-    console.log('🎯 Fan chart drawn, enabling export options and UI controls');
-    
-    // Activer les options d'exportation
-    exportItems.forEach(item => {
-      if (item) {
-        item.classList.remove('disabled');
-      }
-    });
-    
-    // Activer les boutons d'interface
-    if (toolsButton) {
-      toolsButton.removeAttribute('disabled');
-    }
-    
-    if (fullscreenButton) {
-      fullscreenButton.removeAttribute('disabled');
-      fullscreenButton.style.pointerEvents = 'auto';
-    }
-  });
-}
-  */
-
 // Fonction pour gérer le bouton de menu de fichier
 function setupFileMenuToggle() {
   const fileMenu = document.getElementById("fileMenu");
@@ -311,7 +264,6 @@ function setupTabAndUIEventListeners() {
 
   setupToolsButton();
   setupFileMenuToggle();
-  // setupUIElementsActivation();
   setupTooltips();
 }
 

@@ -74,7 +74,6 @@ export const fanTour = {
                 document.dispatchEvent(customEvent);
             }
         },
-        /*
         {
             element: '#fanParametersDisplay',
             popover: {
@@ -197,6 +196,5 @@ export const fanTour = {
                 });
             },
         }
-        */
     ]
 };

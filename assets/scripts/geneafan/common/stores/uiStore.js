@@ -126,7 +126,6 @@ class UIStore {
   }
 
   get areToolsEnabled() {
-    console.log(`🔍 Checking if tools should be enabled. isDataLoaded: ${this.isDataLoaded}`);
     return this.isFanChartDrawn;
   }
 
