@@ -571,7 +571,7 @@ async function onFileChange(data) {
                 rootPersonStore.setTomSelectValue(rootId);
             }
         }
-
+        /*
         [
             ...document.querySelectorAll(".parameter"),
             document.getElementById("individual-select"),
@@ -583,6 +583,7 @@ async function onFileChange(data) {
         ].forEach((el) => {
             el.disabled = false;
         });
+        */
 
         storeEvents.emit(EVENTS.PROCESS.COMPLETE);
 

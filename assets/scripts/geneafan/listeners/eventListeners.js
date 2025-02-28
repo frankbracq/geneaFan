@@ -1,5 +1,6 @@
 import { Offcanvas, Tooltip } from "bootstrap";
 import { EVENTS, storeEvents } from "../gedcom/stores/storeEvents.js";
+import uiStore from "../common/stores/uiStore.js";
 import ResponsiveTabs from "../tabs/responsiveTabs.js";
 import rootPersonStore from "../common/stores/rootPersonStore.js";
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
@@ -148,8 +149,9 @@ const setupFileLoadingEventListeners = () => {
   });
 };
 
+/*
 // Fonction simplifiée pour désactiver/activer les éléments d'exportation
-function setupExportMenuItems() {
+function setupUIElementsActivation() {
   // Sélectionner tous les éléments d'exportation
   const exportItems = [
     'download-pdf-watermark',
@@ -159,7 +161,11 @@ function setupExportMenuItems() {
     'download-png-background'
   ].map(id => document.getElementById(id));
   
-  // Désactiver les éléments initialement
+  // Sélectionner les boutons d'interface
+  const toolsButton = document.getElementById('toolsButton');
+  const fullscreenButton = document.getElementById('fullscreenButton');
+  
+  // Désactiver les éléments initialement (ils sont déjà désactivés par l'attribut 'disabled' dans le HTML)
   exportItems.forEach(item => {
     if (item) {
       item.classList.add('disabled');
@@ -168,15 +174,27 @@ function setupExportMenuItems() {
   
   // Écouter l'événement de dessin du fan chart pour activer les éléments
   storeEvents.subscribe(EVENTS.VISUALIZATIONS.FAN.DRAWN, () => {
-    console.log('🎯 Fan chart drawn, enabling export options');
+    console.log('🎯 Fan chart drawn, enabling export options and UI controls');
     
+    // Activer les options d'exportation
     exportItems.forEach(item => {
       if (item) {
         item.classList.remove('disabled');
       }
     });
+    
+    // Activer les boutons d'interface
+    if (toolsButton) {
+      toolsButton.removeAttribute('disabled');
+    }
+    
+    if (fullscreenButton) {
+      fullscreenButton.removeAttribute('disabled');
+      fullscreenButton.style.pointerEvents = 'auto';
+    }
   });
 }
+  */
 
 // Fonction pour gérer le bouton de menu de fichier
 function setupFileMenuToggle() {
@@ -208,7 +226,7 @@ function setupFileMenuToggle() {
   }
 }
 
-// Fonction pour gérer le bouton d'outils contextuel
+// Fonction pour gérer le comportement du bouton d'outils contextuel
 function setupToolsButton() {
   const toolsButton = document.getElementById("toolsButton");
 
@@ -293,7 +311,7 @@ function setupTabAndUIEventListeners() {
 
   setupToolsButton();
   setupFileMenuToggle();
-  setupExportMenuItems()
+  // setupUIElementsActivation();
   setupTooltips();
 }
 

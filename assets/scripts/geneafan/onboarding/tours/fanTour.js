@@ -24,7 +24,7 @@ export const fanTour = {
                         <li>Naviguer facilement dans votre histoire familiale</li>
                     </ul>
                 `,
-                position: 'bottom'
+                position: 'auto'
             }
         },
         {
@@ -44,7 +44,7 @@ export const fanTour = {
                         <li>En naviguant dans l'arbre</li>
                     </ul>
                 `,
-                position: 'right'
+                position: 'auto'
             }
         },
         {
@@ -74,6 +74,7 @@ export const fanTour = {
                 document.dispatchEvent(customEvent);
             }
         },
+        /*
         {
             element: '#fanParametersDisplay',
             popover: {
@@ -196,5 +197,6 @@ export const fanTour = {
                 });
             },
         }
+        */
     ]
 };
