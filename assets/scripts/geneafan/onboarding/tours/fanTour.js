@@ -75,7 +75,7 @@ export const fanTour = {
             }
         },
         {
-            element: '#fanParametersDisplay',
+            element: '#toolsButton',
             popover: {
                 title: 'Paramètres de l\'éventail',
                 description: `
