@@ -148,6 +148,37 @@ const setupFileLoadingEventListeners = () => {
   });
 };
 
+// Fonction simplifiée pour désactiver/activer les éléments d'exportation
+function setupExportMenuItems() {
+  // Sélectionner tous les éléments d'exportation
+  const exportItems = [
+    'download-pdf-watermark',
+    'download-pdf',
+    'download-svg',
+    'download-png-transparency',
+    'download-png-background'
+  ].map(id => document.getElementById(id));
+  
+  // Désactiver les éléments initialement
+  exportItems.forEach(item => {
+    if (item) {
+      item.classList.add('disabled');
+    }
+  });
+  
+  // Écouter l'événement de dessin du fan chart pour activer les éléments
+  storeEvents.subscribe(EVENTS.VISUALIZATIONS.FAN.DRAWN, () => {
+    console.log('🎯 Fan chart drawn, enabling export options');
+    
+    exportItems.forEach(item => {
+      if (item) {
+        item.classList.remove('disabled');
+      }
+    });
+  });
+}
+
+// Fonction pour gérer le bouton de menu de fichier
 function setupFileMenuToggle() {
   const fileMenu = document.getElementById("fileMenu");
   if (fileMenu) {
@@ -262,6 +293,7 @@ function setupTabAndUIEventListeners() {
 
   setupToolsButton();
   setupFileMenuToggle();
+  setupExportMenuItems()
   setupTooltips();
 }
 
