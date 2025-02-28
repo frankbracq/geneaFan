@@ -156,45 +156,45 @@ export const fanTour = {
             }
         },
         {
-            element: '#download-menu',
+            element: '#fileMenu',
             popover: {
-                title: 'Export de l\'éventail en PDF',
-                description: `
-                    <div class="mb-4">
-                        Conservez une trace de votre arbre généalogique :
-                    </div>
-                    <ul class="list-disc pl-4 mb-4">
-                        <li>Exportez en haute qualité</li>
-                        <li>Choisissez le format qui vous convient</li>
-                        <li>Partagez facilement avec votre famille</li>
-                    </ul>
-                    <div class="text-sm text-gray-600 italic">
-                        L'export conserve tous vos paramètres d'affichage personnalisés
-                    </div>
-                `,
+                title: 'Bienvenue sur GeneaFan !',
+                description: 'Pour commencer, vous devez charger un fichier GEDCOM. Cliquez ici pour importer votre fichier ou essayer notre exemple.',
                 position: 'bottom'
             },
-            onHighlight: async (element) => {
-                await new Promise((resolve) => {
-                    const offcanvas = document.getElementById('fanParameters');
-                    if (offcanvas) {
-                        const bsOffcanvas = Offcanvas.getInstance(offcanvas);
-                        if (bsOffcanvas) {
-                            const handleOffcanvasHidden = () => {
-                                offcanvas.removeEventListener('hidden.bs.offcanvas', handleOffcanvasHidden);
-                                resolve();
-                            };
-                            
-                            offcanvas.addEventListener('hidden.bs.offcanvas', handleOffcanvasHidden);
-                            bsOffcanvas.hide();
-                        } else {
-                            resolve();
+            onHighlight: (element) => {
+                try {
+                    // Déployer le menu déroulant à cette étape
+                    setTimeout(() => {
+                        if (element && !document.querySelector('.dropdown-menu.show')) {
+                            console.log('Clicking on fileMenu to open the dropdown');
+                            element.click();
                         }
-                    } else {
-                        resolve();
-                    }
-                });
+                    }, 300);
+                } catch (error) {
+                    console.error('Error opening dropdown:', error);
+                }
+            }
+        },
+        {
+            element: '#pdf-export-options',
+            popover: {
+                title: 'Importez votre fichier GEDCOM',
+                description: 'Vous pouvez charger votre propre fichier GEDCOM pour visualiser votre arbre généalogique.',
+                position: 'bottom'
             },
+            onHighlight: (element) => {
+                try {
+                    // S'assurer que le menu est ouvert
+                    const fileMenuBtn = document.querySelector('#fileMenu');
+                    if (fileMenuBtn && !document.querySelector('.dropdown-menu.show')) {
+                        console.log('Clicking on fileMenu for gedcomFileInput step');
+                        fileMenuBtn.click();
+                    }
+                } catch (error) {
+                    console.error('Error ensuring dropdown is open:', error);
+                }
+            }
         }
     ]
 };
