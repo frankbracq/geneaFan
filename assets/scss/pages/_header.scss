@@ -132,6 +132,7 @@
 
 .tab-dropdown .dropdown-menu.show {
   display: block !important; /* Forcer l'affichage */
+  margin-left: -50px;
 }
 
 .tab-dropdown .dropdown-item {

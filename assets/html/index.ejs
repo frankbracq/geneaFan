@@ -68,44 +68,70 @@
                             <ul class="dropdown-menu" aria-labelledby="fileMenu">
                                 <li class="dropdown-header">Import GEDCOM</li>
                                 <li>
-                                    <label class="dropdown-item">
-                                        <%= __('geneafan.your_gedcom_file') %>
-                                        <input type="file" name="file" id="file" accept=".ged,.gedcom" style="display: none;">
-                                    </label>
+                                    <a class="dropdown-item" href="#">
+                                        <div class="input-file-container text-center" style="cursor: pointer;" id="gedcomFileInput">
+                                            <%= __('geneafan.your_gedcom_file') %>
+                                            <input type="file" name="file" id="file" accept=".ged,.gedcom" style="cursor: pointer;">
+                                        </div>
+                                    </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item protected-feature" data-action="fetchGedcomFiles" href="#"
-                                        id="myGedcomFilesMenuItem"><%= __('geneafan.my_gedcom_files') %></a>
+                                    <a class="dropdown-item protected-feature" data-action="fetchGedcomFiles" href="#" id="myGedcomFiles">
+                                        <%= __('geneafan.my_gedcom_files') %>
+                                        <sup>
+                                            <span 
+                                                style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #777; text-align: center; line-height: 12px; font-size: 10px; cursor: help;"
+                                                data-bs-toggle="tooltip" 
+                                                data-bs-placement="bottom"
+                                                title="Accéder à vos fichiers Gedcom sauvegardés"
+                                            >?</span>
+                                        </sup>
+                                    </a>
                                 </li>
-                                
-                                
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
                                 <li>
-                                    <a class="dropdown-item remote-file" href="#" id="sample-toggle"
-                                        data-link="https://files.genealog.ie/Arbre_Robin_Keller_7G_25-10-2023.ged">
+                                    <a class="dropdown-item remote-file" href="#" data-link="https://files.genealog.ie/Arbre_Robin_Keller_7G_25-10-2023.ged" id="gedcomFileSample">
                                         <%= __('geneafan.or_try_sample') %>
+                                        <sup>
+                                            <span 
+                                                style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #777; text-align: center; line-height: 12px; font-size: 10px; cursor: help;"
+                                                data-bs-toggle="tooltip" 
+                                                data-bs-placement="bottom"
+                                                title="Tester le service avec l'exemple Gedcom"
+                                            >?</span>
+                                        </sup>
                                     </a>
                                 </li>
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
                                 <li class="dropdown-header">Export PDF</li>
-
                                 <li>
-                                    <a class="dropdown-item" id="download-pdf-watermark" href="#"
-                                        data-bs-toggle="tooltip" data-bs-placement="right"
-                                        title="Téléchargement immédiat du PDF avec filigrane Genealog.ie">
+                                    <a class="dropdown-item" id="download-pdf-watermark" href="#">
                                         <%= __('geneafan.file_type_list.pdf_watermark') %>
+                                        <sup>
+                                            <span 
+                                                style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #777; text-align: center; line-height: 12px; font-size: 10px; cursor: help;"
+                                                data-bs-toggle="tooltip" 
+                                                data-bs-placement="right"
+                                                title="Téléchargement immédiat du PDF avec filigrane Genealog.ie"
+                                            >?</span>
+                                        </sup>
                                     </a>
                                 </li>
-
                                 <li>
-                                    <a class="dropdown-item protected-feature" data-action="downloadPdf"
-                                        id="download-pdf" href="#" data-bs-toggle="tooltip" data-bs-placement="right"
-                                        title="Envoi par courriel du PDF imprimable sans filigrane">
+                                    <a class="dropdown-item protected-feature" data-action="downloadPdf" id="download-pdf" href="#">
                                         <%= __('geneafan.file_type_list.pdf') %>
+                                        <sup>
+                                            <span 
+                                                style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #777; text-align: center; line-height: 12px; font-size: 10px; cursor: help;"
+                                                data-bs-toggle="tooltip" 
+                                                data-bs-placement="right"
+                                                title="Envoi par courriel du PDF imprimable sans filigrane"
+                                            >?</span>
+                                        </sup>
                                     </a>
                                 </li>
                                 <li>

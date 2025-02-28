@@ -54,8 +54,8 @@
         },
         "load_gedcom": "GEDCOM",
         "your_gedcom_file": "Nouveau Gedcom",
-        "my_gedcom_files": "Mes Gedcom enregistrés",
-        "or_try_sample": "Gedcom de test",
+        "my_gedcom_files": "Gedcom enregistrés",
+        "or_try_sample": "Gedcom exemple",
         "sample_files": "Fichiers Gedcom échantillon",
         "choose_sample_below": "Si vous ne possédez pas de fichier Gedcom ou bien que vous souhaitez tester le service, il est possible d'en charger un parmi la liste suivante&#8239;:",
         "sample_files_list": {
