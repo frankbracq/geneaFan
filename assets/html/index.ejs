@@ -69,71 +69,71 @@
                                 <li class="dropdown-header">Import GEDCOM</li>
                                 <li>
                                     <a class="dropdown-item" href="#">
-                                        <div class="input-file-container text-center" style="cursor: pointer;" id="gedcomFileInput">
+                                        <div class="input-file-container text-center" style="cursor: pointer;"
+                                            id="gedcomFileInput">
                                             <%= __('geneafan.your_gedcom_file') %>
-                                            <input type="file" name="file" id="file" accept=".ged,.gedcom" style="cursor: pointer;">
+                                                <input type="file" name="file" id="file" accept=".ged,.gedcom"
+                                                    style="cursor: pointer;">
                                         </div>
                                     </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item protected-feature" data-action="fetchGedcomFiles" href="#" id="myGedcomFiles">
+                                    <a class="dropdown-item protected-feature" data-action="fetchGedcomFiles" href="#"
+                                        id="myGedcomFiles">
                                         <%= __('geneafan.my_gedcom_files') %>
-                                        <sup>
-                                            <span 
-                                                style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #777; text-align: center; line-height: 12px; font-size: 10px; cursor: help;"
-                                                data-bs-toggle="tooltip" 
-                                                data-bs-placement="bottom"
-                                                title="Accéder à vos fichiers Gedcom sauvegardés"
-                                            >?</span>
-                                        </sup>
+                                            <sup>
+                                                <span
+                                                    style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #777; text-align: center; line-height: 12px; font-size: 10px; cursor: help;"
+                                                    data-bs-toggle="tooltip" data-bs-placement="bottom"
+                                                    title="Accéder à vos fichiers Gedcom sauvegardés">?</span>
+                                            </sup>
                                     </a>
                                 </li>
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
                                 <li>
-                                    <a class="dropdown-item remote-file" href="#" data-link="https://files.genealog.ie/Arbre_Robin_Keller_7G_25-10-2023.ged" id="gedcomFileSample">
+                                    <a class="dropdown-item remote-file" href="#"
+                                        data-link="https://files.genealog.ie/Arbre_Robin_Keller_7G_25-10-2023.ged"
+                                        id="gedcomFileSample">
                                         <%= __('geneafan.or_try_sample') %>
-                                        <sup>
-                                            <span 
-                                                style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #777; text-align: center; line-height: 12px; font-size: 10px; cursor: help;"
-                                                data-bs-toggle="tooltip" 
-                                                data-bs-placement="bottom"
-                                                title="Tester le service avec l'exemple Gedcom"
-                                            >?</span>
-                                        </sup>
+                                            <sup>
+                                                <span
+                                                    style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #777; text-align: center; line-height: 12px; font-size: 10px; cursor: help;"
+                                                    data-bs-toggle="tooltip" data-bs-placement="bottom"
+                                                    title="Tester le service avec l'exemple Gedcom">?</span>
+                                            </sup>
                                     </a>
                                 </li>
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
                                 <li class="dropdown-header">Export PDF</li>
-                                <li>
-                                    <a class="dropdown-item" id="download-pdf-watermark" href="#">
-                                        <%= __('geneafan.file_type_list.pdf_watermark') %>
-                                        <sup>
-                                            <span 
-                                                style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #777; text-align: center; line-height: 12px; font-size: 10px; cursor: help;"
-                                                data-bs-toggle="tooltip" 
-                                                data-bs-placement="right"
-                                                title="Téléchargement immédiat du PDF avec filigrane Genealog.ie"
-                                            >?</span>
-                                        </sup>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item protected-feature" data-action="downloadPdf" id="download-pdf" href="#">
-                                        <%= __('geneafan.file_type_list.pdf') %>
-                                        <sup>
-                                            <span 
-                                                style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #777; text-align: center; line-height: 12px; font-size: 10px; cursor: help;"
-                                                data-bs-toggle="tooltip" 
-                                                data-bs-placement="right"
-                                                title="Envoi par courriel du PDF imprimable sans filigrane"
-                                            >?</span>
-                                        </sup>
-                                    </a>
-                                </li>
+                                <div id="pdf-export-options">
+                                    <li>
+                                        <a class="dropdown-item" id="download-pdf-watermark" href="#">
+                                            <%= __('geneafan.file_type_list.pdf_watermark') %>
+                                                <sup>
+                                                    <span
+                                                        style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #777; text-align: center; line-height: 12px; font-size: 10px; cursor: help;"
+                                                        data-bs-toggle="tooltip" data-bs-placement="right"
+                                                        title="Téléchargement immédiat du PDF avec filigrane Genealog.ie">?</span>
+                                                </sup>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item protected-feature" data-action="downloadPdf"
+                                            id="download-pdf" href="#">
+                                            <%= __('geneafan.file_type_list.pdf') %>
+                                                <sup>
+                                                    <span
+                                                        style="display: inline-block; width: 14px; height: 14px; border-radius: 50%; border: 1px solid #777; text-align: center; line-height: 12px; font-size: 10px; cursor: help;"
+                                                        data-bs-toggle="tooltip" data-bs-placement="right"
+                                                        title="Envoi par courriel du PDF imprimable sans filigrane">?</span>
+                                                </sup>
+                                        </a>
+                                    </li>
+                                </div>
                                 <li>
                                     <a class="dropdown-item" id="download-svg" href="#">
                                         <%= __('geneafan.file_type_list.svg') %>
@@ -154,11 +154,12 @@
 
                         <!-- Tools button -->
                         <div class="me-3">
-                            <button class="btn btn-outline-secondary" id="toolsButton"
-                                data-bs-toggle="tooltip" data-bs-placement="top" data-bs-trigger="hover"
-                                title="Paramètres" disabled>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-sliders" viewBox="0 0 16 16">
-                                    <path fill-rule="evenodd" d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z"/>
+                            <button class="btn btn-outline-secondary" id="toolsButton" data-bs-toggle="tooltip"
+                                data-bs-placement="top" data-bs-trigger="hover" title="Paramètres" disabled>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                    class="bi bi-sliders" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd"
+                                        d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z" />
                                 </svg>
                             </button>
                         </div>
@@ -169,9 +170,11 @@
                                 data-bs-trigger="hover" title="<%= __('geneafan.tooltip_full_screen') %>">
                                 <button class="btn btn-outline-secondary" id="fullscreenButton" disabled
                                     style="pointer-events: none;">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrows-fullscreen" viewBox="0 0 16 16">
-                                        <path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707m0-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707m-4.344 0a.5.5 0 0 1-.707 0L1.025 1.732V4.5a.5.5 0 0 1-1 0V.525a.5.5 0 0 1 .5-.5H4.5a.5.5 0 0 1 0 1H1.732l4.096 4.096a.5.5 0 0 1 0 .707"/>
-                                      </svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+                                        class="bi bi-arrows-fullscreen" viewBox="0 0 16 16">
+                                        <path fill-rule="evenodd"
+                                            d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707m4.344 0a.5.5 0 0 1 .707 0l4.096 4.096V11.5a.5.5 0 1 1 1 0v3.975a.5.5 0 0 1-.5.5H11.5a.5.5 0 0 1 0-1h2.768l-4.096-4.096a.5.5 0 0 1 0-.707m0-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707m-4.344 0a.5.5 0 0 1-.707 0L1.025 1.732V4.5a.5.5 0 0 1-1 0V.525a.5.5 0 0 1 .5-.5H4.5a.5.5 0 0 1 0 1H1.732l4.096 4.096a.5.5 0 0 1 0 .707" />
+                                    </svg>
                                 </button>
                             </span>
                         </div>

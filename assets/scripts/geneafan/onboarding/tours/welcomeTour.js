@@ -92,6 +92,26 @@ export const welcomeTour = {
                     console.error('Error ensuring dropdown is open:', error);
                 }
             }
+        },
+        {
+            element: '#pdf-export-options',
+            popover: {
+                title: 'Options d\'export PDF',
+                description: 'Une fois votre arbre généalogique généré, vous pourrez l\'exporter en PDF avec ou sans filigrane.',
+                position: 'right'
+            },
+            onHighlight: (element) => {
+                try {
+                    // S'assurer que le menu est toujours ouvert
+                    const fileMenuBtn = document.querySelector('#fileMenu');
+                    if (fileMenuBtn && !document.querySelector('.dropdown-menu.show')) {
+                        console.log('Clicking on fileMenu for PDF export options step');
+                        fileMenuBtn.click();
+                    }
+                } catch (error) {
+                    console.error('Error ensuring dropdown is open:', error);
+                }
+            }
         }
     ]
 };

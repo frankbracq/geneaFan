@@ -42,3 +42,22 @@
         opacity: 1;
     }
 }
+
+// Style spécifique pour le groupe d'options PDF
+#pdf-export-options.driver-active-element {
+    outline: 2px solid red !important;
+    outline-offset: 2px !important;
+    background-color: rgba(255, 0, 0, 0.05) !important;
+    border-radius: 4px !important;
+    
+    // Assurer que les éléments enfants sont visibles correctement
+    li, a {
+        position: relative;
+        z-index: 10001 !important;
+    }
+}
+
+// Style général pour les éléments actifs dans les menus déroulants
+.dropdown-menu .driver-active-element {
+    background-color: rgba(255, 0, 0, 0.05) !important;
+}
