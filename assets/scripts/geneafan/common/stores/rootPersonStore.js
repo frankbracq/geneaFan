@@ -5,7 +5,7 @@ import gedcomDataStore from '../../gedcom/stores/gedcomDataStore.js';
 import { DownloadManager } from "../downloadManager.js";
 import configStore from '../../tabs/fanChart/fanConfigStore.js';
 import timelineEventsStore from '../../tabs/timeline/timelineEventsStore.js';
-import { storeEvents, EVENTS } from '../../gedcom/stores/storeEvents.js';
+import { storeEvents, EVENTS } from './storeEvents.js';
 
 class RootPersonStore {
     root = null;

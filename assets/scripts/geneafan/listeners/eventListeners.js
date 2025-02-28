@@ -1,6 +1,5 @@
 import { Offcanvas, Tooltip } from "bootstrap";
-import { EVENTS, storeEvents } from "../gedcom/stores/storeEvents.js";
-import uiStore from "../common/stores/uiStore.js";
+import { EVENTS, storeEvents } from "../common/stores/storeEvents.js";
 import ResponsiveTabs from "../tabs/responsiveTabs.js";
 import rootPersonStore from "../common/stores/rootPersonStore.js";
 import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";

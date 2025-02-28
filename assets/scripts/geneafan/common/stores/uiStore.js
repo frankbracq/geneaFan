@@ -5,7 +5,7 @@ import {
   computed,
   autorun,
 } from "./mobx-config.js";
-import { EVENTS, storeEvents } from "../../gedcom/stores/storeEvents.js";
+import { EVENTS, storeEvents } from "./storeEvents.js";
 
 class UIStore {
   // États observables

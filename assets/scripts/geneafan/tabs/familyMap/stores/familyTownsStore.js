@@ -1,7 +1,7 @@
 import { makeObservable, observable, action, computed, runInAction, autorun, toJS, isObservable } from '../../../common/stores/mobx-config.js';
 import MarkerDisplayManager from '../managers/markerDisplayManager.js';
 import { infoWindowDisplayManager } from '../managers/infoWindowDisplayManager.js';
-import { storeEvents, EVENTS } from '../../../gedcom/stores/storeEvents.js';
+import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 import { normalizeGeoString } from "../../../utils/geo.js";
 import { TownStatisticsManager } from '../../../gedcom/stores/townStatisticsManager.js';
 import { infoWindowContentManager } from '../managers/infoWindowContentManager.js';

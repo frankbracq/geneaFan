@@ -4,7 +4,7 @@ import { draw } from "./fan.js";
 import rootPersonStore from "../../common/stores/rootPersonStore.js";
 import configStore from "./fanConfigStore.js";
 import { SVGPanZoomManager } from "./SVGPanZoomManager.js";
-import { storeEvents, EVENTS } from '../../gedcom/stores/storeEvents.js';
+import { storeEvents, EVENTS } from '../../common/stores/storeEvents.js';
 
 
 export class FanChartManager {

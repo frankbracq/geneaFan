@@ -1,4 +1,4 @@
-import { EVENTS } from '../../gedcom/stores/storeEvents.js';
+import { EVENTS } from '../../common/stores/storeEvents.js';
 import { Offcanvas } from "bootstrap";
 
 export const fanTour = {

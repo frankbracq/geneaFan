@@ -1,6 +1,6 @@
 import { autorun } from '../../../common/stores/mobx-config.js';
 import gedcomDataStore from '../../../gedcom/stores/gedcomDataStore.js';
-import { storeEvents, EVENTS } from '../../../gedcom/stores/storeEvents.js';
+import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 import { googleMapsStore } from '../stores/googleMapsStore.js';
 import { rootAncestorTownsStore } from '../stores/rootAncestorTownsStore.js';
 import surnamesTownsStore from '../stores/surnamesTownsStore.js';

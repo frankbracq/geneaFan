@@ -2,7 +2,7 @@ import { makeAutoObservable, action, reaction, runInAction, computed, comparer }
 import 'tom-select/dist/css/tom-select.css';
 import { FanChartManager } from "./fanChartManager.js";
 import _ from 'lodash';
-import { storeEvents, EVENTS } from '../../gedcom/stores/storeEvents.js'; 
+import { storeEvents, EVENTS } from '../../common/stores/storeEvents.js'; 
 class ConfigStore {
     config = {
         fanAngle: 270,

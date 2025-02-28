@@ -1,4 +1,4 @@
-import { EVENTS } from '../../gedcom/stores/storeEvents.js';
+import { EVENTS } from '../../common/stores/storeEvents.js';
 import { rootAncestorTownsStore } from '../../tabs/familyMap/stores/rootAncestorTownsStore.js';
 import { infoWindowDisplayManager } from '../../tabs/familyMap/managers/infoWindowDisplayManager.js';
 import { Offcanvas } from "bootstrap";
@@ -108,20 +108,20 @@ export const mapTour = {
 
         },
         {
-            element: '#mapParametersDisplay', // step 4
+            element: '#toolsButton',
             popover: {
                 title: 'Paramètres de la carte',
                 description: `
                     <div class="mb-4">
-                        Personnalisez l'affichage de votre carte :
+                        Personnalisez l'affichage selon vos préférences :
                     </div>
                     <ul class="list-disc pl-4 mb-4">
-                        <li>Filtrez les lieux affichés</li>
-                        <li>Ajustez les couleurs des marqueurs</li>
-                        <li>Modifiez le style de la carte</li>
+                        <li>Ajustez le nombre de générations affichées</li>
+                        <li>Modifiez les couleurs des lignées</li>
+                        <li>Changez le style d'affichage des noms</li>
                     </ul>
                     <div class="text-sm text-gray-600 italic">
-                        Cliquez pour ouvrir les paramètres
+                        Cliquez pour ouvrir le panneau des paramètres
                     </div>
                 `,
                 position: 'bottom'

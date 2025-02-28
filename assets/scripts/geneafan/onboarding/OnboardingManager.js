@@ -3,7 +3,7 @@ import { Dropdown } from "bootstrap/js/dist/dropdown";
 import { driver } from 'driver.js';
 import 'driver.js/dist/driver.css';
 import '../../../scss/pages/driverjs-custom.scss';
-import { EVENTS, storeEvents } from '../gedcom/stores/storeEvents.js';
+import { EVENTS, storeEvents } from '../common/stores/storeEvents.js';
 import { TOUR_CONFIG } from './tours';
 class OnboardingManager {
     constructor(options = {}) {
