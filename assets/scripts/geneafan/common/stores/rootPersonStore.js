@@ -284,7 +284,14 @@ class RootPersonStore {
             maxItems: 1,
             closeAfterSelect: true,
             dropdownContentClass: 'ts-dropdown-content dropdown-content-modifiers',
-            plugins: ['dropdown_input', 'clear_button']
+            plugins: ['dropdown_input', 'clear_button'],
+            openOnFocus: true,
+        });
+
+        this.tomSelect.on('change', (value) => {
+            if (value) {
+                this.setRoot(value);
+            }
         });
 
         this.tomSelect.addOption({ value: "", text: __("geneafan.choose_root_placeholder"), disabled: true });

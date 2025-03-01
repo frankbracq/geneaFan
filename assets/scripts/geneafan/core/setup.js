@@ -3,6 +3,7 @@ import { initializeTabs } from '../tabs/tabManager.js';
 import { setupEventListeners } from './events.js';
 import { v4 as uuidv4 } from 'uuid';
 import OnboardingManager from '../onboarding/OnboardingManager.js';
+import rootPersonStore from '../common/stores/rootPersonStore.js';
 
 export async function setupCore() {
     console.group('🚀 Initialisation du core');
@@ -14,6 +15,10 @@ export async function setupCore() {
 
         // Unique call to initializeTabs
         await initializeTabs();
+        
+        // Initialiser TomSelect dès le démarrage
+        rootPersonStore.initializeTomSelect();
+        console.log('✅ TomSelect initialized');
         
         // Initialisation de l'onboarding
         console.log('OnboardingManager prototype:', OnboardingManager.prototype);

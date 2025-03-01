@@ -509,7 +509,7 @@ async function onFileChange(data) {
         // Traiter le fichier GEDCOM
         storeEvents.emit(EVENTS.PROCESS.START, 'Analyse du fichier...');
         let json = toJson(data);
-        
+
         // Attendre la fin de du traitement des lieux dans getAllPlaces avant d'enregistrer les données source dans le store
         storeEvents.emit(EVENTS.PROCESS.START, 'Validation du géocodage des villes...');
         let sourceData = await placeProcessor.processGedcomTowns(json);
@@ -521,7 +521,7 @@ async function onFileChange(data) {
         // Mettre à jour les données des individus
         updateIndividualTownsFromFamilyTowns(gedcomDataStore.getIndividualsCache());
         // gedcomDataStore.setIndividualsCache(gedcomDataStore.getIndividualsCache());
-        
+
         console.log("Individuals cache updated:", gedcomDataStore.getIndividualsCache());
 
         const selectElement = document.getElementById("individual-select");
@@ -532,8 +532,12 @@ async function onFileChange(data) {
 
         let tomSelect = rootPersonStore.tomSelect;
         if (!tomSelect) {
+            // Initialiser seulement si ce n'est pas déjà fait (cas de secours)
             rootPersonStore.initializeTomSelect();
             tomSelect = rootPersonStore.tomSelect;
+        } else {
+            // Si déjà initialisé, nettoyer les options existantes
+            tomSelect.clearOptions();
         }
 
         tomSelect.clearOptions();
@@ -589,7 +593,7 @@ async function onFileChange(data) {
 
     } catch (error) {
         console.error("General Error:", error);
-       storeEvents.emit(EVENTS.PROCESS.ERROR, error);
+        storeEvents.emit(EVENTS.PROCESS.ERROR, error);
     } finally {
         handleTabsAndOverlay(false);
         setupPersonLinkEventListener();

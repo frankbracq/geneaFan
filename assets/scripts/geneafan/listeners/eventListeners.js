@@ -269,17 +269,6 @@ function setupTabAndUIEventListeners() {
   setupTooltips();
 }
 
-// Gestion du sélecteur d'individu
-export const setupIndividualSelectorListener = () => {
-  const individualSelect = document.getElementById("individual-select");
-  if (individualSelect) {
-    individualSelect.addEventListener("change", () => {
-      const selectedRoot = individualSelect.value;
-      rootPersonStore.setRoot(selectedRoot);
-    });
-  }
-};
-
 /**
  * Function to set up all event listeners.
  *
@@ -298,7 +287,6 @@ export const setupAllEventListeners = (authStore) => {
     console.group("EventListeners: Initializing..."); // Debug
 
     // Configuration des écouteurs globaux
-    setupIndividualSelectorListener();
     setupTabAndUIEventListeners(); // Cette fonction appelle maintenant setupFileMenu()
     setupFileLoadingEventListeners();
     setupUndoRedoEventListeners();
