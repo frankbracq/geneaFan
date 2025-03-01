@@ -28,14 +28,6 @@ export const mapTour = {
                 `,
                 position: 'right'
             },
-            /*
-            onHighlight: async () => {
-                if (!rootAncestorTownsStore.isVisible) {
-                    rootAncestorTownsStore.toggleVisibility(true);
-                }
-                await new Promise(resolve => setTimeout(resolve, 500));
-            }
-                */
         },
         {
             element: '#rootMarkerForTour', // step 2
