@@ -1836,10 +1836,7 @@ Docs at http://horizontal-timeline.ycodetech.co.uk
 								if (typeof callback === "function") callback(this);
 							})
 							.fail(function(jqxhr, settings, exception) {
-								console.error("Failed to get " + url + "
-" + jqxhr + "
-" + this.settings + "
-" + exception);
+									console.error("Failed to get " + url + "\n" + jqxhr + "\n" + this.settings + "\n" + exception);
 							}); // End $.getScript function
 
 						console.log('It was loaded dynamically.');
