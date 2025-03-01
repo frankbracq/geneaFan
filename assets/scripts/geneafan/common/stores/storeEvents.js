@@ -142,8 +142,17 @@ class StoreEventEmitter {
     }
 
     emit(event, data) {
-        if (this.debug) {
+        // Toujours logger l'émission de l'événement fan:drawn pour le débogage
+        if (event === 'visualization:fan:drawn') {
+            console.log(`⚡ Event ${event} émis à ${new Date().toISOString()}`);
+        } else if (this.debug) {
             console.log(`Event emitted: ${event}`, data);
+        }
+
+        // Si c'est l'événement fan chart drawn, vérifier qu'il y a des écouteurs
+        if (event === 'visualization:fan:drawn') {
+            const listenerCount = this.listeners.has(event) ? this.listeners.get(event).size : 0;
+            console.log(`Nombre d'écouteurs pour ${event}: ${listenerCount}`);
         }
 
         if (this.listeners.has(event)) {

@@ -1,4 +1,5 @@
 import { Offcanvas, Tooltip } from "bootstrap";
+import { uiStore } from "../common/stores/uiStore.js";
 import { EVENTS, storeEvents } from "../common/stores/storeEvents.js";
 import ResponsiveTabs from "../tabs/responsiveTabs.js";
 import rootPersonStore from "../common/stores/rootPersonStore.js";
@@ -6,6 +7,7 @@ import { setupProtectedFeatureEventListeners } from "./protectedFeatures.js";
 import { displayPersonDetailsUI } from "../tabs/fanChart/personDetailsDisplay.js";
 import { loadGedcomFile } from "../gedcom/gedcomFileHandler.js";
 
+console.log('📋 uiStore initialized in eventListeners:', uiStore);
 // WeakMap to store event listener references
 const eventListenersMap = new WeakMap();
 
@@ -178,6 +180,7 @@ function setupFileMenuToggle() {
   }
 }
 
+// Fonction pour gérer le comportement du bouton d'outils contextuel
 // Fonction pour gérer le comportement du bouton d'outils contextuel
 function setupToolsButton() {
   const toolsButton = document.getElementById("toolsButton");
