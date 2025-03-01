@@ -75,6 +75,26 @@ export const fanTour = {
             }
         },
         {
+            element: '#individualSelectContainer',
+            popover: {
+                title: 'Sélecteur de personne',
+                description: `
+                    <div class="mb-4">
+                        Ce sélecteur vous permet de choisir la personne racine qui sera au centre de votre éventail généalogique.
+                    </div>
+                    <ul class="list-disc pl-4 mb-4">
+                        <li>Cliquez pour rechercher une personne par son nom</li>
+                        <li>Naviguez dans la liste des personnes disponibles</li>
+                        <li>La personne sélectionnée deviendra la racine de l'éventail</li>
+                    </ul>
+                    <div class="text-sm text-blue-600">
+                        <strong>Astuce</strong> : Utilisez ce sélecteur pour passer rapidement d'un ancêtre à un autre !
+                    </div>
+                `,
+                position: 'bottom'
+            }
+        },
+        {
             element: '#toolsButton',
             popover: {
                 title: 'Paramètres de l\'éventail',

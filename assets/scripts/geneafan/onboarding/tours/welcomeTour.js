@@ -5,14 +5,6 @@ export const welcomeTour = {
     condition: (manager) => manager.isFirstVisit(),
     steps: [
         {
-            element: '#tab-nav',
-            popover: {
-                title: 'Navigation',
-                description: 'Une fois votre fichier chargé, vous pourrez explorer vos données avec différentes visualisations.',
-                position: 'bottom'
-            }
-        },
-        {
             element: '#fileMenu',
             popover: {
                 title: 'Bienvenue sur GeneaFan !',
@@ -112,6 +104,14 @@ export const welcomeTour = {
                     console.error('Error ensuring dropdown is open:', error);
                 }
             }
-        }
+        },
+        {
+            element: '#tab-nav',
+            popover: {
+                title: 'Navigation',
+                description: 'Une fois votre fichier chargé, vous pourrez explorer vos données avec différentes visualisations.',
+                position: 'bottom'
+            }
+        },
     ]
 };

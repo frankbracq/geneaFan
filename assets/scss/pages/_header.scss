@@ -168,6 +168,28 @@
 /* =========================================
    4. SECTION CENTRALE (SÉLECTEUR D'INDIVIDU)
    ========================================= */
+/* Effet de flottement pour le conteneur de sélection */
+#individualSelectContainer {
+  flex: 1;
+  width: 100%;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  border-radius: 8px;
+  padding: 0;
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+  background-color: #fff;
+}
+
+#individualSelectContainer:hover {
+  box-shadow: 0 8px 16px rgba(0,0,0,0.18);
+  transform: translateY(-2px);
+}
+
+#individualSelectContainer #individual-select {
+  border: none;
+  background-color: transparent;
+  box-shadow: none;
+}
+
 /* Section avec le sélecteur individuel */
 .selector-container {
   padding: 5px 0;
