@@ -410,15 +410,29 @@ class FamilyTownsStore {
             this.getOrCreateMarker(townName, townData);
         });
 
-        this.markerDisplayManager.toggleLayerVisibility('familyTowns', true, this.map);
+        this.markerDisplayManager.toggleLayerVisibility('familyTowns', false, this.map);
     }
 
     // Visibility Management
     toggleVisibility(visible) {
-        if (visible) {
-            this.updateMarkers();
-        } else {
-            this.markerDisplayManager.toggleLayerVisibility('familyTowns', false, this.map);
+        // Mettre à jour l'état interne du store
+        this.isVisible = visible;
+        
+        // Appliquer la visibilité aux marqueurs si la carte est disponible
+        if (this.map) {
+            // Si on active la visibilité
+            if (visible) {
+                // S'assurer que les marqueurs sont à jour
+                this.updateMarkers();
+                
+                // Ajouter les marqueurs au cluster
+                setTimeout(() => {
+                    this.markerDisplayManager.addMarkersToCluster(this.map);
+                }, 200);
+            } else {
+                // Sinon, masquer les marqueurs
+                this.markerDisplayManager.toggleLayerVisibility('familyTowns', false, this.map);
+            }
         }
     }
 

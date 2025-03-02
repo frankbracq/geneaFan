@@ -335,17 +335,23 @@ class RootAncestorTownsStore {
         return hasMarkers ? bounds : null;
     }
 
-    // Uniformisation avec FamilyTownsStore pour la méthode toggleVisibility
     toggleVisibility(visible) {
+        // Mettre à jour l'état interne du store
         this.isVisible = visible;
+        
+        // Appliquer la visibilité aux marqueurs si la carte est disponible
         if (this.map) {
             this.markerDisplayManager.toggleLayerVisibility('rootAncestors', visible, this.map);
+            
+            // Si on active la visibilité et qu'il y a des données
             if (visible && this.birthData && this.birthData.length > 0) {
-                console.warn(`⚠️ Ajout des marqueurs au cluster dans toggleVisibility (${this.birthData.length} marqueurs)`);
+                // S'assurer que les marqueurs sont à jour
                 this.updateMarkers(this.birthData);
+                
+                // Ajouter les marqueurs au cluster avec un petit délai pour stabilité
                 setTimeout(() => {
                     this.markerDisplayManager.addMarkersToCluster(this.map);
-                }, 200); // ⏳ Petit délai pour garantir que les markers sont bien en place
+                }, 200);
             }
         }
     }

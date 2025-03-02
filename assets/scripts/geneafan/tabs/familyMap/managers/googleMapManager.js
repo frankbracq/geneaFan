@@ -109,50 +109,88 @@ class GoogleMapManager {
 
     setupLayerControls() {
         if (!rootAncestorTownsStore.markerDisplayManager.isInitialized()) {
-            console.warn('⚠️ MarkerDisplayManager pas encore initialisé');
+            console.warn("⚠️ MarkerDisplayManager pas encore initialisé");
             return;
         }
     
-        // Calque des ancêtres
+        // Calque des ancêtres - par défaut activé
         const ancestorLayerSwitch = document.getElementById('layerAncestors');
         if (ancestorLayerSwitch) {
-            // Synchroniser avec l'état sauvegardé
-            ancestorLayerSwitch.checked = googleMapsStore.layerStates.ancestors ?? true;
-            rootAncestorTownsStore.toggleVisibility(ancestorLayerSwitch.checked);
+            // 1. Récupérer l'état avec valeur par défaut true pour les ancêtres
+            const isAncestorsVisible = googleMapsStore.layerStates.ancestors ?? true;
             
+            // 2. Mettre à jour l'état interne du store rootAncestorTownsStore
+            rootAncestorTownsStore.isVisible = isAncestorsVisible;
+            
+            // 3. Mettre à jour l'état de la checkbox
+            ancestorLayerSwitch.checked = isAncestorsVisible;
+            
+            // 4. S'assurer que l'état est sauvegardé dans googleMapsStore
+            googleMapsStore.setLayerState('ancestors', isAncestorsVisible);
+            
+            // 5. Appliquer la visibilité (seulement si nécessaire)
+            // Pour éviter un double appel toggleVisibility qui pourrait causer le problème
+            if (rootAncestorTownsStore.isVisible !== isAncestorsVisible) {
+                rootAncestorTownsStore.toggleVisibility(isAncestorsVisible);
+            }
+            
+            // 6. Ajouter l'écouteur pour les changements futurs
             ancestorLayerSwitch.addEventListener('change', (e) => {
                 googleMapsStore.setLayerState('ancestors', e.target.checked);
                 rootAncestorTownsStore.toggleVisibility(e.target.checked);
             });
         }
     
-        // Calque des villes familiales
+        // Calque des villes familiales - par défaut désactivé
         const familyTownsSwitch = document.getElementById('layerFamily');
         if (familyTownsSwitch) {
-            familyTownsSwitch.checked = googleMapsStore.layerStates.family ?? false;
-            familyTownsStore.toggleVisibility(familyTownsSwitch.checked);
+            // 1. Récupérer l'état avec valeur par défaut false
+            const isFamilyVisible = googleMapsStore.layerStates.family ?? false;
             
+            // 2. Mettre à jour l'état de la checkbox
+            familyTownsSwitch.checked = isFamilyVisible;
+            
+            // 3. S'assurer que l'état est sauvegardé
+            googleMapsStore.setLayerState('family', isFamilyVisible);
+            
+            // 4. Appliquer la visibilité
+            familyTownsStore.toggleVisibility(isFamilyVisible);
+            
+            // 5. Ajouter l'écouteur pour les changements futurs
             familyTownsSwitch.addEventListener('change', (e) => {
                 googleMapsStore.setLayerState('family', e.target.checked);
                 familyTownsStore.toggleVisibility(e.target.checked);
             });
         }
     
-        // Calque des patronymes
+        // Calque des patronymes - par défaut désactivé
         const surnamesLayerSwitch = document.getElementById('layerSurnames');
         const surnameFilter = document.getElementById('surnameFilter');
         
         if (surnamesLayerSwitch && surnameFilter) {
-            surnamesLayerSwitch.checked = googleMapsStore.layerStates.surnames ?? false;
-            surnameFilter.disabled = !googleMapsStore.layerStates.surnames;
-            surnamesTownsStore.toggleVisibility(surnamesLayerSwitch.checked);
-    
+            // 1. Récupérer l'état avec valeur par défaut false 
+            const isSurnamesVisible = googleMapsStore.layerStates.surnames ?? false;
+            
+            // 2. Mettre à jour l'état de la checkbox
+            surnamesLayerSwitch.checked = isSurnamesVisible;
+            
+            // 3. Désactiver le filtre si nécessaire
+            surnameFilter.disabled = !isSurnamesVisible;
+            
+            // 4. S'assurer que l'état est sauvegardé
+            googleMapsStore.setLayerState('surnames', isSurnamesVisible);
+            
+            // 5. Appliquer la visibilité
+            surnamesTownsStore.toggleVisibility(isSurnamesVisible);
+            
+            // 6. Ajouter l'écouteur pour les changements futurs
             surnamesLayerSwitch.addEventListener('change', (e) => {
                 googleMapsStore.setLayerState('surnames', e.target.checked);
                 surnameFilter.disabled = !e.target.checked;
                 surnamesTownsStore.toggleVisibility(e.target.checked);
             });
     
+            // Écouteur pour le filtre
             surnameFilter.addEventListener('change', (e) => {
                 surnamesTownsStore.setSurname(e.target.value);
             });

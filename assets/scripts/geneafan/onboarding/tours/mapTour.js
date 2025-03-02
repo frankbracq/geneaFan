@@ -2,7 +2,7 @@ import { EVENTS } from '../../common/stores/storeEvents.js';
 import { rootAncestorTownsStore } from '../../tabs/familyMap/stores/rootAncestorTownsStore.js';
 import { infoWindowDisplayManager } from '../../tabs/familyMap/managers/infoWindowDisplayManager.js';
 import { Offcanvas } from "bootstrap";
-
+// test
 export const mapTour = {
     event: EVENTS.VISUALIZATIONS.MAP.DRAWN,
     condition: (manager) => {

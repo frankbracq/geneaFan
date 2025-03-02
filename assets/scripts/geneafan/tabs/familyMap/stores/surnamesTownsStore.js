@@ -306,12 +306,24 @@ class SurnamesTownsStore {
      * @param {boolean} visible - Whether to show or hide markers
      */
     toggleVisibility(visible) {
-        const layerName = 'surnames';
+        // Mettre à jour l'état interne du store
+        this.isVisible = visible;
         
-        if (visible && this.currentSurname) {
-            this.updateMarkersForSurname(this.currentSurname);
-        } else {
-            this.markerDisplayManager.toggleLayerVisibility(layerName, false, this.map);
+        // Appliquer la visibilité aux marqueurs si la carte est disponible
+        if (this.map) {
+            // Si on active la visibilité et qu'un patronyme est sélectionné
+            if (visible && this.currentSurname) {
+                // Mettre à jour les marqueurs pour le patronyme
+                this.updateMarkersForSurname(this.currentSurname);
+                
+                // Ajouter les marqueurs au cluster
+                setTimeout(() => {
+                    this.markerDisplayManager.addMarkersToCluster(this.map);
+                }, 200);
+            } else {
+                // Sinon, masquer les marqueurs
+                this.markerDisplayManager.toggleLayerVisibility('surnames', false, this.map);
+            }
         }
     }
 
