@@ -416,7 +416,7 @@ export const mapTour = {
             }
         },
         {
-            element: '#familyMap', // step 8
+            element: '.gm-bundled-control',
             popover: {
                 title: 'Navigation sur la carte',
                 description: `
@@ -432,9 +432,9 @@ export const mapTour = {
                         <strong>Astuce</strong> : Les marqueurs proches sont regroupés automatiquement. Zoomez pour les voir en détail !
                     </div>
                 `,
+                // Changer la position pour qu'elle soit au-dessus de l'ancre
                 position: 'left'
-            },
-
+            }
         }
     ]
 };
