@@ -65,7 +65,8 @@ export const EVENTS = {
         TABS: {
             CHANGED: 'ui:tabs:changed',
             SHOWN: 'ui:tabs:shown',
-            HIDDEN: 'ui:tabs:hidden'
+            HIDDEN: 'ui:tabs:hidden',
+            TIMELINE_SHOWN: 'ui:tabs:timeline:shown'
         },
         PANELS: {
             SHOWN: 'ui:panels:shown',

@@ -1,6 +1,7 @@
 import timelineStore from './timelineStore.js';
 import rootPersonStore from '../../common/stores/rootPersonStore.js';
 import { reaction } from '../../common/stores/mobx-config.js';
+import { EVENTS, storeEvents } from '../../common/stores/storeEvents.js';
 
 class TimelineManager {
     constructor() {
@@ -86,6 +87,15 @@ class TimelineManager {
                     console.log('📏 Triggering resize event');
                     window.dispatchEvent(new Event('resize'));
                 }
+                
+                // Ajouter un bouton d'aide avec un petit délai pour s'assurer que le DOM est prêt
+                setTimeout(() => {
+                    this.addHelpButton();
+                    console.log('Help button added with delay');
+                }, 500);
+                
+                // Émettre l'événement pour indiquer que l'onglet timeline est affiché
+                storeEvents.emit(EVENTS.UI.TABS.TIMELINE_SHOWN);
             } catch (error) {
                 console.error('❌ Error updating timeline:', error);
             }
@@ -95,6 +105,101 @@ class TimelineManager {
         
         console.log('✅ Timeline tab listeners setup complete');
         console.groupEnd();
+    }
+    
+    addHelpButton() {
+        // Vérifier si le bouton existe déjà
+        if (document.getElementById('timeline-help-button')) {
+            console.log('Help button already exists');
+            return;
+        }
+        
+        console.log('➕ Adding timeline help button');
+        
+        // Debuggons les éléments disponibles
+        console.group('🔍 Timeline Container Debug');
+        console.log('tab4 exists:', !!document.getElementById('tab4'));
+        console.log('tab4-label exists:', !!document.getElementById('tab4-label'));
+        console.log('ascendantTimeline exists:', !!document.getElementById('ascendantTimeline'));
+        console.log('Tab panes:', document.querySelectorAll('.tab-pane').length);
+        const allIds = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
+        console.log('All IDs on page:', allIds);
+        console.groupEnd();
+        
+        // Créer le bouton d'aide
+        const helpButton = document.createElement('button');
+        helpButton.id = 'timeline-help-button';
+        helpButton.className = 'btn btn-primary position-absolute';
+        helpButton.style = 'top: 10px; right: 10px; z-index: 9999; padding: 8px 15px; font-size: 16px; box-shadow: 0 3px 5px rgba(0,0,0,0.2);';
+        helpButton.innerHTML = '<i class="fas fa-question-circle"></i> Aide';
+        
+        // Essayons une approche plus directe pour trouver le conteneur de la timeline
+        const allTabPanes = document.querySelectorAll('.tab-pane');
+        console.log('Tab panes found:', allTabPanes.length);
+        
+        // Cherchons spécifiquement le conteneur de la timeline
+        const activeTab = document.querySelector('.tab-pane.active');
+        console.log('Active tab found:', !!activeTab);
+        
+        // Le conteneur qui contient #ascendantTimeline
+        const timelineParent = document.getElementById('ascendantTimeline')?.parentElement;
+        console.log('Timeline parent found:', !!timelineParent);
+        
+        // Utilisons la meilleure option disponible
+        let container = timelineParent || activeTab;
+        
+        // Si rien ne fonctionne, utilisons le body comme fallback
+        if (!container) {
+            container = document.body;
+            helpButton.style = 'position: fixed; top: 70px; right: 20px; z-index: 9999; padding: 8px 15px; font-size: 16px; box-shadow: 0 3px 5px rgba(0,0,0,0.2);';
+        }
+        
+        console.log('Container for help button:', container);
+        
+        if (container) {
+            if (container !== document.body) {
+                container.style.position = 'relative';
+            }
+            container.appendChild(helpButton);
+            
+            console.log('Help button added to container');
+            
+            // Ajouter un écouteur d'événement pour démarrer le tour via l'OnboardingManager
+            helpButton.addEventListener('click', async () => {
+                console.log('🚀 Starting timeline tour');
+                
+                try {
+                    // Essayer d'utiliser l'OnboardingManager pour une expérience cohérente
+                    const { default: OnboardingManager } = await import('../../onboarding/OnboardingManager.js');
+                    
+                    // Démarrer le tour en forçant l'affichage (même si déjà vu)
+                    await OnboardingManager.startTour('timelineView', { forceTour: true });
+                    console.log('Tour démarré via OnboardingManager');
+                } catch (error) {
+                    console.error('Erreur lors du démarrage du tour via OnboardingManager:', error);
+                    
+                    // Fallback en cas d'erreur : utiliser driver.js directement
+                    const { driver } = await import('driver.js');
+                    await import('driver.js/dist/driver.css');
+                    const { TOUR_CONFIG } = await import('../../onboarding/tours/index.js');
+                    
+                    const driverObj = driver({
+                        showProgress: true,
+                        nextBtnText: 'Suivant',
+                        prevBtnText: 'Précédent',
+                        doneBtnText: 'Terminer',
+                        animate: true,
+                        allowClose: true,
+                        stagePadding: 10
+                    });
+                    
+                    driverObj.setSteps(TOUR_CONFIG.timelineView.steps);
+                    driverObj.drive();
+                }
+            });
+        } else {
+            console.error('❌ No container found for help button');
+        }
     }
 
     enableTimelineTab() {
@@ -113,6 +218,62 @@ class TimelineManager {
 
     async updateTimelineForRoot() {
         return timelineStore.updateTimelineForRoot();
+    }
+    
+    // Méthode publique pour ajouter le bouton d'aide (peut être appelée manuellement)
+    addHelpButtonManually() {
+        console.log('🔄 Adding help button manually');
+        // Force la suppression du bouton existant s'il y en a un
+        const existingButton = document.getElementById('timeline-help-button');
+        if (existingButton) {
+            existingButton.remove();
+        }
+        
+        // Ajout du bouton directement au body (méthode sûre)
+        const helpButton = document.createElement('button');
+        helpButton.id = 'timeline-help-button';
+        helpButton.className = 'btn btn-danger';
+        helpButton.style = 'position: fixed; top: 120px; right: 20px; z-index: 9999; padding: 10px 20px; font-size: 16px; box-shadow: 0 4px 8px rgba(0,0,0,0.3);';
+        helpButton.innerHTML = '<i class="fas fa-question-circle"></i> Aide Timeline';
+        
+        document.body.appendChild(helpButton);
+        console.log('Help button manually added to body');
+        
+        // Ajouter l'écouteur d'événement pour démarrer le tour via l'OnboardingManager
+        helpButton.addEventListener('click', async () => {
+            console.log('🚀 Starting timeline tour (manually added button)');
+            
+            try {
+                // Essayer d'utiliser l'OnboardingManager pour une expérience cohérente
+                const { default: OnboardingManager } = await import('../../onboarding/OnboardingManager.js');
+                
+                // Démarrer le tour en forçant l'affichage (même si déjà vu)
+                await OnboardingManager.startTour('timelineView', { forceTour: true });
+                console.log('Tour démarré via OnboardingManager');
+            } catch (error) {
+                console.error('Erreur lors du démarrage du tour via OnboardingManager:', error);
+                
+                // Fallback en cas d'erreur : utiliser driver.js directement
+                const { driver } = await import('driver.js');
+                await import('driver.js/dist/driver.css');
+                const { TOUR_CONFIG } = await import('../../onboarding/tours/index.js');
+                
+                const driverObj = driver({
+                    showProgress: true,
+                    nextBtnText: 'Suivant',
+                    prevBtnText: 'Précédent',
+                    doneBtnText: 'Terminer',
+                    animate: true,
+                    allowClose: true,
+                    stagePadding: 10
+                });
+                
+                driverObj.setSteps(TOUR_CONFIG.timelineView.steps);
+                driverObj.drive();
+            }
+        });
+        
+        return helpButton;
     }
 
     // Clean up method

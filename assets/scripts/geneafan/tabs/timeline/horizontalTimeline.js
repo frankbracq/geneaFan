@@ -144,7 +144,7 @@ Docs at http://horizontal-timeline.ycodetech.co.uk
 							}, this));
 
 					// Add .selected class to the matched element
-					selectedDate.addClass('selected');
+					selectedDate.addClass('selected').attr('id', 'timeline-selected-date');
 					// Update all previous dates for styling.
 					this._updateOlderEvents(selectedDate);
 				}
@@ -153,7 +153,7 @@ Docs at http://horizontal-timeline.ycodetech.co.uk
 					// If dateOrder is normal (Ascending)... start from the left.
 					if (this.settings.dateOrder == "normal") {
 						// Add .selected class to the first event.
-						timelineComponents['eventsWrapper'].find('a.first').addClass('selected');
+						timelineComponents['eventsWrapper'].find('a.first').addClass('selected').attr('id', 'timeline-selected-date');
 
 							// Find the selected event
 						var selectedEvent = timelineComponents['eventsWrapper'].find('a.selected'),
@@ -169,7 +169,7 @@ Docs at http://horizontal-timeline.ycodetech.co.uk
 					// Else dateOrder is reverse (Descending)... start from the right.
 					else if (this.settings.dateOrder == "reverse") {
 						// Add .selected class to the last event.
-						timelineComponents['eventsWrapper'].find('a.last').addClass('selected');
+						timelineComponents['eventsWrapper'].find('a.last').addClass('selected').attr('id', 'timeline-selected-date');
 
 							// Find the selected event
 						var selectedEvent = timelineComponents['eventsWrapper'].find('a.selected'),
@@ -213,22 +213,25 @@ Docs at http://horizontal-timeline.ycodetech.co.uk
 			//** Adding IDs and Classes **//
 			this._timelineComponents(timelineComponents);
 
+			// Add ID to events content container
+			timelineComponents['eventsContent'].attr('id', 'timeline-events-content');
+
 			if (timelineComponents['eventsContentList'].length == 1) {
-				timelineComponents['eventsContentList'].first().attr('id', 'first');
-				timelineComponents['timelineEvents'].first().addClass("first");
+				timelineComponents['eventsContentList'].first().attr('id', 'timeline-first-event');
+				timelineComponents['timelineEvents'].first().addClass("first").attr('id', 'timeline-first-date');
 			}
 			else {
 				var animationBase = this.settings.animationClass.base;
 
 				// Adds id to the first and last li of the event-content list respectively.
 				timelineComponents['eventsContentList'].addClass(animationBase)
-					.first().attr('id', 'first').end()
-					.last().attr('id', 'last');
+					.first().attr('id', 'timeline-first-event').end()
+					.last().attr('id', 'timeline-last-event');
 
 				// Adds class to the first and last timeline event dates respectively.
 				timelineComponents['timelineEvents']
-					.first().addClass("first").end()
-					.last().addClass("last");
+					.first().addClass("first").attr('id', 'timeline-first-date').end()
+					.last().addClass("last").attr('id', 'timeline-last-date');
 			}
 		}, // End _addIdsAndClasses
 
@@ -249,18 +252,18 @@ Docs at http://horizontal-timeline.ycodetech.co.uk
 					iconPause = iconClass.pause,
 
 					// Left Nav
-					$scrollLeftButton = '<a href="" class="'+ iconBase +' '+ iconScrollLeft +' scroll-left inactive"></a>',
-					$prevButton = '<a href="" class="'+ iconBase +' '+ iconPrev +' prev inactive"></a>',
+					$scrollLeftButton = '<a href="" class="'+ iconBase +' '+ iconScrollLeft +' scroll-left inactive" id="timeline-scroll-left"></a>',
+					$prevButton = '<a href="" class="'+ iconBase +' '+ iconPrev +' prev inactive" id="timeline-prev"></a>',
 
 					// Right Nav
-					$nextButton = '<a href="" class="'+ iconBase +' '+ iconNext +' next"></a>',
-					$scrollRightButton = '<a href="" class="'+ iconBase +' '+ iconScrollRight +' scroll-right"></a>',
+					$nextButton = '<a href="" class="'+ iconBase +' '+ iconNext +' next" id="timeline-next"></a>',
+					$scrollRightButton = '<a href="" class="'+ iconBase +' '+ iconScrollRight +' scroll-right" id="timeline-scroll-right"></a>',
 
 					// Pause button
-					$pauseButton = '<a href="" class="'+ iconBase +' '+ iconPause +' pause"></a>';
+					$pauseButton = '<a href="" class="'+ iconBase +' '+ iconPause +' pause" id="timeline-pause"></a>';
 			//** Create the timeline HTML **//
 
-			timelineHTML += '<div class="timeline">';
+			timelineHTML += '<div class="timeline" id="timeline-container">';
 
 			if (this.settings.useNavBtns == true || this.settings.useScrollBtns == true) {
 				// Add the left nav.
@@ -280,7 +283,7 @@ Docs at http://horizontal-timeline.ycodetech.co.uk
 
 				timelineHTML += '</div>'
 
-					+'<div class="events-wrapper"><div class="events"><span class="filling-line" aria-hidden="true"></span></div></div>'
+					+'<div class="events-wrapper" id="timeline-events-wrapper"><div class="events" id="timeline-events"><span class="filling-line" id="timeline-filling-line" aria-hidden="true"></span></div></div>'
 					
 					// Add the right nav.
 					+'<div class="timeline-navigation" id="rightNav">';
@@ -300,7 +303,7 @@ Docs at http://horizontal-timeline.ycodetech.co.uk
 				timelineHTML += '</div>';
 			}
 			else {
-				timelineHTML += '<div class="events-wrapper" style="min-width: 100%"><div class="events"><span class="filling-line" aria-hidden="true"></span></div></div>';
+				timelineHTML += '<div class="events-wrapper" id="timeline-events-wrapper" style="min-width: 100%"><div class="events" id="timeline-events"><span class="filling-line" id="timeline-filling-line" aria-hidden="true"></span></div></div>';
 			}
 			if (this.settings.autoplay == true)
 				timelineHTML += '<div class="timeline-navigation" id="pausePlay">'
@@ -1416,7 +1419,7 @@ Docs at http://horizontal-timeline.ycodetech.co.uk
 						// Remove all selected classes from dates
 						prevDates.removeClass('selected');
 						// Add a selected class to the date we are targeting
-						selectedDate.addClass('selected');
+						selectedDate.addClass('selected').attr('id', 'timeline-selected-date');
 						// Update other dates as an older event for styling
 						instanceRef._updateOlderEvents(selectedDate);
 						// Update the filling line up to the selected date
@@ -1483,7 +1486,7 @@ Docs at http://horizontal-timeline.ycodetech.co.uk
 
 				this._updateVisibleContent(newEvent, timelineComponents['eventsContent']);
 
-				newEvent.addClass('selected');
+				newEvent.addClass('selected').attr('id', 'timeline-selected-date');
 				selectedDate.removeClass('selected');
 
 				this._updateFilling(newEvent, timelineComponents['fillingLine'], timelineTotalWidth);
@@ -1625,7 +1628,7 @@ Docs at http://horizontal-timeline.ycodetech.co.uk
 			    dataAttribute = this._eventContentListData();
 
 			// Add the enter class to the newContent.
-			newContent.addClass(classEntering);
+			newContent.addClass(classEntering).attr('id', 'timeline-selected-content');
 			// Add the exit class to the visibleContent and on animation end...
 			visibleContent
 				.addClass(classExiting)
@@ -1979,3 +1982,4 @@ Docs at http://horizontal-timeline.ycodetech.co.uk
 	};
 
 })( jQuery, window, document );
+

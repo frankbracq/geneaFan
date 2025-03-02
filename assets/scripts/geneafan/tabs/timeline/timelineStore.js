@@ -70,7 +70,7 @@ class TimelineStore {
     generateTimelineEvents() {
         if (!timelineEventsStore.hasEvents) return '';
         
-        let eventsContentHTML = '<div class="events-content"><ol>';
+        let eventsContentHTML = '<div class="events-content" id="timeline-events-content"><ol>';
         
         const eventTypes = [
             { 
@@ -92,7 +92,7 @@ class TimelineStore {
 
         const groupedEvents = timelineEventsStore.getGroupedEvents();
         for (const period in groupedEvents) {
-            eventsContentHTML += `<li class="box" data-horizontal-timeline='{"date": "${period}"}'>`;
+            eventsContentHTML += `<li class="box" id="timeline-event-${period.replace(/\//g, '-')}" data-horizontal-timeline='{"date": "${period}"}'>`;
 
             eventTypes.forEach(({ type, title, format }) => {
                 const events = groupedEvents[period][type] || [];
