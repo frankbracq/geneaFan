@@ -5,7 +5,8 @@ import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 import { normalizeGeoString } from "../../../utils/geo.js";
 import { TownStatisticsManager } from '../../../gedcom/stores/townStatisticsManager.js';
 import { infoWindowContentManager } from '../managers/infoWindowContentManager.js';
-import { googleMapsStore } from './googleMapsStore.js'; 
+import { googleMapsStore } from './googleMapsStore.js';
+import { layerManager } from '../managers/layerManager.js';
 
 /**
  * Manage the display of all towns mentioned in the GEDCOM file
@@ -34,7 +35,6 @@ class FamilyTownsStore {
 
         // State management
         this.isLoading = false;
-        this.isVisible = false;
         this.map = null;
 
         // Observable event collections by type
@@ -51,7 +51,6 @@ class FamilyTownsStore {
         makeObservable(this, {
             townsData: observable,
             isLoading: observable,
-            isVisible: observable,
             events: observable,
             updateTownsViaProxy: action,
             setIsLoading: action,
@@ -69,7 +68,7 @@ class FamilyTownsStore {
 
         // Automatic marker updates when data changes
         autorun(() => {
-            if (this.map && (this.townsData.size > 0 || this.isVisible)) {
+            if (this.map && (this.townsData.size > 0 || layerManager.isLayerVisible('family'))) {
                 this.updateMarkers();
             }
         });
@@ -81,9 +80,6 @@ class FamilyTownsStore {
             EVENTS.VISUALIZATIONS.MAP.LAYERS.CHANGED,
             (data) => {
                 if (data.layer === 'family') {
-                    runInAction(() => {
-                        this.isVisible = data.state;
-                    });
                     this.applyVisibility(data.state);
                 }
             }
@@ -420,33 +416,44 @@ class FamilyTownsStore {
 
     updateMarkers() {
         if (!this.map) return;
-
+    
         if (!this.markerDisplayManager.isInitialized()) {
             this.markerDisplayManager.initializeCluster(this.map, this.createClusterMarker);
         }
-
+    
         this.townsData.forEach((townData, townName) => {
             this.getOrCreateMarker(townName, townData);
         });
-
-        this.markerDisplayManager.toggleLayerVisibility('familyTowns', false, this.map);
     }
 
     // Visibility Management
     toggleVisibility(visible) {
-        googleMapsStore.setLayerState('family', visible);
+        // Déléguer la gestion de l'état au service centralisé
+        layerManager.setLayerVisibility('family', visible);
     }
-    
-    // Ajouter une nouvelle méthode pour appliquer l'état de visibilité
+
+    // Dans applyVisibility
     applyVisibility(visible) {
         if (this.map) {
             if (visible) {
+                console.log('🔍 Activation du calque des villes familiales');
+                
+                // Créer/mettre à jour les marqueurs sans les afficher encore
                 this.updateMarkers();
                 
+                // IMPORTANT: D'abord rendre les marqueurs visibles
+                this.markerDisplayManager.toggleLayerVisibility('familyTowns', true, this.map);
+    
+                // Puis ajouter au cluster après le délai
+                const config = layerManager.getLayerConfig('family');
+                const delay = config ? config.clusterDelay : 200;
+                
                 setTimeout(() => {
+                    console.log('📍 Ajout des marqueurs familiaux au cluster');
                     this.markerDisplayManager.addMarkersToCluster(this.map);
-                }, 200);
+                }, delay);
             } else {
+                console.log('🔍 Désactivation du calque des villes familiales');
                 this.markerDisplayManager.toggleLayerVisibility('familyTowns', false, this.map);
             }
         }

@@ -3,6 +3,7 @@ import { makeObservable, observable, action, runInAction } from '../../../common
 import { Loader } from "@googlemaps/js-api-loader";
 import { rootAncestorTownsStore } from './rootAncestorTownsStore.js';
 import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
+import { layerManager } from '../managers/layerManager.js';
 
 class GoogleMapsStore {
     constructor() {
@@ -27,19 +28,11 @@ class GoogleMapsStore {
         this.history = [];
         this.redoStack = [];
 
-        // État des calques avec valeurs par défaut fixes pour chaque session
-        this.layerStates = observable({
-            ancestors: true,    // Calque des ancêtres toujours activé par défaut
-            family: false,      // Calque des villes familiales toujours désactivé par défaut
-            surnames: false     // Calque des patronymes toujours désactivé par défaut
-        });
-
         makeObservable(this, {
             map: observable,
             isTimelineActive: observable,
             overviewMapVisible: observable,
             isApiLoaded: observable,
-            layerStates: observable,
 
             // Actions existantes
             initializeApi: action,
@@ -186,15 +179,7 @@ class GoogleMapsStore {
 
     // Méthode pour modifier l'état d'un calque
     setLayerState(layer, state) {
-        runInAction(() => {
-            this.layerStates[layer] = state;
-        });
-
-        // Émettre un événement pour notifier le changement
-        storeEvents.emit(EVENTS.VISUALIZATIONS.MAP.LAYERS.CHANGED, {
-            layer,
-            state
-        });
+        layerManager.setLayerVisibility(layer, state);
     }
 
     // Gestion de la liste des lieux

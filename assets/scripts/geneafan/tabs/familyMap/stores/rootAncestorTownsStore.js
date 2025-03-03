@@ -2,7 +2,7 @@ import { makeObservable, observable, action, runInAction } from '../../../common
 import MarkerDisplayManager from '../managers/markerDisplayManager.js';
 import { infoWindowDisplayManager } from '../managers/infoWindowDisplayManager.js';
 import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
-import { googleMapsStore } from './googleMapsStore.js'; 
+import { layerManager } from '../managers/layerManager.js';
 
 /**
  * Manages the display of ancestor birth locations on the map for the current root person
@@ -22,9 +22,6 @@ class RootAncestorTownsStore {
         this.markerDisplayManager = new MarkerDisplayManager();
         this.map = null;
 
-        // Visibility state
-        this.isVisible = true;
-
         // Style configuration for different branches
         this.styles = {
             colors: {
@@ -39,21 +36,19 @@ class RootAncestorTownsStore {
         makeObservable(this, {
             birthData: observable,
             map: observable.ref,
-            isVisible: observable,
             initialize: action,
             updateMarkers: action,
             clearMarkers: action,
             toggleVisibility: action,
+            applyVisibility: action,
             processHierarchy: action
         });
 
+        // Écouter les changements de visibilité du calque
         const layerChangeDisposer = storeEvents.subscribe(
             EVENTS.VISUALIZATIONS.MAP.LAYERS.CHANGED,
             (data) => {
                 if (data.layer === 'ancestors') {
-                    runInAction(() => {
-                        this.isVisible = data.state;
-                    });
                     this.applyVisibility(data.state);
                 }
             }
@@ -264,7 +259,7 @@ class RootAncestorTownsStore {
             );
         });
 
-        if (this.isVisible) {
+        if (layerManager.isLayerVisible('ancestors')) {
             this.markerDisplayManager.toggleLayerVisibility('rootAncestors', true, this.map);
         }
     }
@@ -353,23 +348,36 @@ class RootAncestorTownsStore {
         return hasMarkers ? bounds : null;
     }
 
-    // Séparer toggleVisibility en deux méthodes
+    // Visibilité du calque
+
+    /**
+     * Change la visibilité du calque des ancêtres
+     * @param {boolean} visible - Nouvel état de visibilité
+     */
     toggleVisibility(visible) {
-        // Ne fait que mettre à jour la source de vérité
-        googleMapsStore.setLayerState('ancestors', visible);
+        // Délègue la gestion de l'état au service centralisé
+        layerManager.setLayerVisibility('ancestors', visible);
     }
 
-    // Nouvelle méthode pour appliquer la visibilité sans modifier l'état
+    /**
+     * Applique l'état de visibilité aux marqueurs
+     * @param {boolean} visible - État de visibilité à appliquer
+     */
     applyVisibility(visible) {
         if (this.map) {
             this.markerDisplayManager.toggleLayerVisibility('rootAncestors', visible, this.map);
-
+    
             if (visible && this.birthData && this.birthData.length > 0) {
                 this.updateMarkers(this.birthData);
-
+    
+                // Utiliser le délai configuré dans le service
+                const config = layerManager.getLayerConfig('ancestors');
+                const delay = config ? config.clusterDelay : 200;
+                
                 setTimeout(() => {
+                    console.log('📍 Ajout des marqueurs au cluster après délai');
                     this.markerDisplayManager.addMarkersToCluster(this.map);
-                }, 200);
+                }, delay);
             }
         }
     }

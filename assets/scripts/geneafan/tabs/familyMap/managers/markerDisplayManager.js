@@ -105,12 +105,14 @@ class MarkerDisplayManager {
      */
     addMarkersToCluster(map) {
         if (!this.isInitialized()) {
-            console.warn('⚠️ Cluster or map not initialized');
+            console.warn('⚠️ Cluster ou map non initialisé');
+            console.log('Map:', !!this.map, 'Cluster:', !!this.cluster);
             return;
         }
-    
+        
         let markersToAdd = [];
         this.layers.forEach((layerMarkers, layerName) => {
+            console.log(`Calque ${layerName}: ${layerMarkers.size} marqueurs`);
             layerMarkers.forEach(marker => {
                 if (marker.map !== null) {
                     markersToAdd.push(marker);

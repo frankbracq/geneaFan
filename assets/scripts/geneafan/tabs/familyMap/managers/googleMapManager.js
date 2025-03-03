@@ -5,6 +5,7 @@ import { googleMapsStore } from '../stores/googleMapsStore.js';
 import { rootAncestorTownsStore } from '../stores/rootAncestorTownsStore.js';
 import surnamesTownsStore from '../stores/surnamesTownsStore.js';
 import familyTownsStore from '../stores/familyTownsStore.js';
+import { layerManager } from './layerManager.js';
 
 class GoogleMapManager {
     constructor() {
@@ -54,23 +55,34 @@ class GoogleMapManager {
                 google.maps.event.addListenerOnce(map, 'idle', resolve);
             });
 
-            // 4. Initialiser les stores avec la carte
+            // Initialiser le service de gestion des calques avec les références aux stores
+            layerManager.initialize({
+                ancestors: rootAncestorTownsStore,
+                family: familyTownsStore,
+                surnames: surnamesTownsStore
+            });
+
+            // Initialiser les stores avec la carte
             await Promise.all([
                 rootAncestorTownsStore.initialize(map),
                 familyTownsStore.initialize(map),
                 surnamesTownsStore.initialize(map)
             ]);
 
-            // 5. S'assurer que les données sont chargées
+            // S'assurer que les données sont chargées
             const hierarchy = gedcomDataStore.getHierarchy();
             if (hierarchy) {
                 await rootAncestorTownsStore.processHierarchy(hierarchy);
+                
+                // Forcer la mise à jour et l'affichage des marqueurs
+                console.log('🔄 Forçage de l\'affichage des marqueurs ancestraux');
+                rootAncestorTownsStore.applyVisibility(layerManager.isLayerVisible('ancestors'));
             }
 
-            // 6. Configurer les contrôles de calques
+            // Configurer les contrôles de calques avec le service centralisé
             this.setupLayerControls();
 
-            // 7. Marquer l'initialisation comme terminée
+            // Marquer l'initialisation comme terminée
             this.initialized = true;
 
             // Émettre l'événement indiquant que la carte est prête
@@ -113,55 +125,13 @@ class GoogleMapManager {
 
         console.log("🔍 Configuration des contrôles de calques");
 
-        // Calque des ancêtres - toujours activé par défaut
-        const ancestorLayerSwitch = document.getElementById('layerAncestors');
-        if (ancestorLayerSwitch) {
-            // Valeur par défaut fixe
-            ancestorLayerSwitch.checked = true;
-
-            // Mettre à jour la source de vérité pour refléter l'état initial
-            googleMapsStore.setLayerState('ancestors', true);
-
-            // Écouteur d'événements
-            ancestorLayerSwitch.addEventListener('change', (e) => {
-                rootAncestorTownsStore.toggleVisibility(e.target.checked);
-            });
-        }
-
-        // Calque des villes familiales - toujours désactivé par défaut
-        const familyTownsSwitch = document.getElementById('layerFamily');
-        if (familyTownsSwitch) {
-            familyTownsSwitch.checked = false;
-
-            // Mettre à jour la source de vérité pour refléter l'état initial
-            googleMapsStore.setLayerState('family', false);
-
-            familyTownsSwitch.addEventListener('change', (e) => {
-                familyTownsStore.toggleVisibility(e.target.checked);
-            });
-        }
-
-        // Calque des patronymes - toujours désactivé par défaut
-        const surnamesLayerSwitch = document.getElementById('layerSurnames');
-        const surnameFilter = document.getElementById('surnameFilter');
-
-        if (surnamesLayerSwitch && surnameFilter) {
-            surnamesLayerSwitch.checked = false;
-            surnameFilter.disabled = true;
-
-            // Mettre à jour la source de vérité pour refléter l'état initial
-            googleMapsStore.setLayerState('surnames', false);
-
-            surnamesLayerSwitch.addEventListener('change', (e) => {
-                surnamesTownsStore.toggleVisibility(e.target.checked);
-                surnameFilter.disabled = !e.target.checked;
-            });
-
-            // Écouteur pour le filtre (inchangé)
-            surnameFilter.addEventListener('change', (e) => {
-                surnamesTownsStore.setSurname(e.target.value);
-            });
-        }
+        // Utiliser le service centralisé pour configurer les contrôles
+        layerManager.setupLayerControls({
+            ancestorLayerSwitch: document.getElementById('layerAncestors'),
+            familyTownsSwitch: document.getElementById('layerFamily'),
+            surnamesLayerSwitch: document.getElementById('layerSurnames'),
+            surnameFilter: document.getElementById('surnameFilter')
+        });
 
         console.log("✅ Contrôles de calques configurés");
     }
