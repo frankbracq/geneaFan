@@ -27,11 +27,11 @@ class GoogleMapsStore {
         this.history = [];
         this.redoStack = [];
 
-        // État des calques avec valeurs par défaut
+        // État des calques avec valeurs par défaut fixes pour chaque session
         this.layerStates = observable({
-            ancestors: true,    // Calque des ancêtres activé par défaut
-            family: false,      // Calque des villes familiales désactivé par défaut
-            surnames: false     // Calque des patronymes désactivé par défaut
+            ancestors: true,    // Calque des ancêtres toujours activé par défaut
+            family: false,      // Calque des villes familiales toujours désactivé par défaut
+            surnames: false     // Calque des patronymes toujours désactivé par défaut
         });
 
         makeObservable(this, {
@@ -40,16 +40,13 @@ class GoogleMapsStore {
             overviewMapVisible: observable,
             isApiLoaded: observable,
             layerStates: observable,
-            
+
             // Actions existantes
             initializeApi: action,
             initMap: action,
             centerMapOnMarkers: action,
             setLayerState: action
         });
-
-        // Charger l'état sauvegardé des calques
-        this.loadLayerStates();
     }
 
     async initializeApi() {
@@ -62,7 +59,7 @@ class GoogleMapsStore {
         }
 
         console.group('🚀 Initialisation de l\'API Google Maps');
-        
+
         const loader = new Loader({
             apiKey: this.mapsApiKey,
             version: "weekly",
@@ -94,21 +91,21 @@ class GoogleMapsStore {
         if (!this.isApiLoaded) {
             throw new Error('Google Maps API not initialized');
         }
-    
+
         try {
             console.group('🗺️ Initialisation de la carte');
-    
+
             const mapElement = document.getElementById(elementId);
             if (!mapElement) {
                 throw new Error(`Element with id ${elementId} not found`);
             }
-    
+
             // Nettoyage de la carte existante si elle existe
             if (this.map) {
                 await this.cleanup();
                 this.map = null;
             }
-    
+
             const defaultOptions = {
                 mapId: this.MAP_ID,
                 zoom: 6.2,
@@ -123,17 +120,17 @@ class GoogleMapsStore {
                     position: google.maps.ControlPosition.TOP_CENTER
                 }
             };
-    
+
             this.map = new google.maps.Map(mapElement, {
                 ...defaultOptions,
                 ...options
             });
-    
+
             await this.#initializeMapComponents();
-    
+
             console.log('✅ Carte initialisée avec succès');
             return this.map;
-    
+
         } catch (error) {
             console.error('❌ Erreur lors de l\'initialisation de la carte:', error);
             throw error;
@@ -141,7 +138,7 @@ class GoogleMapsStore {
             console.groupEnd();
         }
     }
-    
+
     async #initializeMapComponents() {
         this.#addMapControls();
         this.#setupMapListeners();
@@ -154,10 +151,10 @@ class GoogleMapsStore {
             console.warn('❌ Carte non initialisée');
             return;
         }
-    
+
         const bounds = new google.maps.LatLngBounds();
         let hasMarkers = false;
-    
+
         // Collecter tous les marqueurs visibles
         if (rootAncestorTownsStore.markers) {
             rootAncestorTownsStore.markers.forEach(marker => {
@@ -167,17 +164,17 @@ class GoogleMapsStore {
                 }
             });
         }
-    
+
         if (hasMarkers) {
             this.map.fitBounds(bounds);
-            
+
             // Ajuster le zoom si nécessaire
             const listener = google.maps.event.addListenerOnce(this.map, 'idle', () => {
                 if (this.map.getZoom() > 12) {
                     this.map.setZoom(12);
                 }
             });
-            
+
             console.log('✅ Carte centrée sur les marqueurs');
         } else {
             // Si aucun marqueur, revenir à la vue par défaut de la France
@@ -187,36 +184,17 @@ class GoogleMapsStore {
         }
     }
 
-    // Gestion de l'état des calques
-    loadLayerStates() {
-        try {
-            const saved = localStorage.getItem('mapLayerStates');
-            if (saved) {
-                const states = JSON.parse(saved);
-                runInAction(() => {
-                    // Fusionner avec les valeurs par défaut
-                    this.layerStates = {
-                        ...this.layerStates,
-                        ...states
-                    };
-                });
-            }
-        } catch (error) {
-            console.error('Erreur lors du chargement des états des calques:', error);
-        }
-    }
-    
-    saveLayerStates() {
-        try {
-            localStorage.setItem('mapLayerStates', JSON.stringify(this.layerStates));
-        } catch (error) {
-            console.error('Erreur lors de la sauvegarde des états des calques:', error);
-        }
-    }
-    
+    // Méthode pour modifier l'état d'un calque
     setLayerState(layer, state) {
-        this.layerStates[layer] = state;
-        this.saveLayerStates();
+        runInAction(() => {
+            this.layerStates[layer] = state;
+        });
+
+        // Émettre un événement pour notifier le changement
+        storeEvents.emit(EVENTS.VISUALIZATIONS.MAP.LAYERS.CHANGED, {
+            layer,
+            state
+        });
     }
 
     // Gestion de la liste des lieux
@@ -232,7 +210,7 @@ class GoogleMapsStore {
         const places = new Map();
         rootAncestorTownsStore.birthData.forEach(birth => {
             if (!birth.location) return;
-            
+
             const key = `${birth.location.lat}-${birth.location.lng}`;
             if (!places.has(key)) {
                 places.set(key, {
@@ -329,7 +307,7 @@ class GoogleMapsStore {
             google.maps.event.trigger(this.map, "resize");
         }
     }
-    
+
     // Gestion de l'historique
     #setupMapListeners() {
         this.map.addListener('zoom_changed', () => this.#recordState());
@@ -445,23 +423,23 @@ class GoogleMapsStore {
     // Gestion de la mini-carte
     async #initializeOverviewMap() {
         console.group('📍 Initialisation de la mini-carte');
-    
+
         try {
             const mapContainer = this.map.getDiv().parentElement;
-    
+
             // Fonction pour calculer la taille de la mini-carte avec des dimensions entières
             const calculateMinimapSize = () => {
                 const containerWidth = mapContainer.offsetWidth;
                 // Arrondir à l'entier le plus proche
                 return Math.min(Math.max(Math.round(containerWidth * 0.2), 150), 300);
             };
-    
+
             // Suppression de l'ancienne mini-carte si elle existe
             const existingWrapper = document.getElementById('overview-map-wrapper');
             if (existingWrapper) {
                 existingWrapper.remove();
             }
-    
+
             // Création du wrapper
             const wrapper = document.createElement('div');
             wrapper.id = 'overview-map-wrapper';
@@ -475,7 +453,7 @@ class GoogleMapsStore {
                 z-index: 1000;
             `;
             mapContainer.appendChild(wrapper);
-    
+
             const initialSize = calculateMinimapSize();
             const container = document.createElement('div');
             container.id = 'overview-map-container';
@@ -496,7 +474,7 @@ class GoogleMapsStore {
                 display: block;
             `;
             wrapper.appendChild(container);
-    
+
             // Image statique
             const staticMap = document.createElement('img');
             staticMap.id = 'overview-static-map';
@@ -506,20 +484,20 @@ class GoogleMapsStore {
                 object-fit: cover;
                 display: block;
             `;
-    
+
             staticMap.onerror = (error) => {
                 console.error('❌ Erreur lors du chargement de la carte statique:', error);
                 container.style.display = 'none';
             };
-    
+
             staticMap.onload = () => {
                 container.style.opacity = '1';
                 container.style.display = 'block';
                 console.log('✅ Image de la carte statique chargée');
             };
-    
+
             container.appendChild(staticMap);
-    
+
             // Viewport
             const viewport = document.createElement('div');
             viewport.id = 'overview-viewport';
@@ -531,27 +509,27 @@ class GoogleMapsStore {
                 transition: all 0.3s ease;
             `;
             container.appendChild(viewport);
-    
+
             // Debounce pour les mises à jour
             let updateTimeout = null;
-    
+
             // Fonction de mise à jour
             const updateOverview = () => {
                 if (!this.overviewMapVisible) return;
-    
+
                 if (updateTimeout) {
                     clearTimeout(updateTimeout);
                 }
-    
+
                 updateTimeout = setTimeout(() => {
                     const bounds = this.map.getBounds();
                     const center = this.map.getCenter();
                     if (!bounds || !center) return;
-    
+
                     const size = calculateMinimapSize();
                     container.style.width = `${size}px`;
                     container.style.height = `${size}px`;
-    
+
                     const mapParams = new URLSearchParams({
                         center: `${center.lat()},${center.lng()}`,
                         zoom: '5',
@@ -562,48 +540,48 @@ class GoogleMapsStore {
                         language: 'fr',
                         region: 'FR'
                     });
-    
+
                     console.log('🔄 Mise à jour de la mini-carte');
                     staticMap.src = `https://maps.googleapis.com/maps/api/staticmap?${mapParams}`;
-    
+
                     const ne = bounds.getNorthEast();
                     const sw = bounds.getSouthWest();
                     const staticMapSpan = {
                         lat: 360 / Math.pow(2, 6),
                         lng: 360 / Math.pow(2, 6)
                     };
-                    
+
                     const mapSpan = {
                         lat: Math.abs(ne.lat() - sw.lat()),
                         lng: Math.abs(ne.lng() - sw.lng())
                     };
-                    
+
                     const pixelSpan = {
                         lat: Math.round(mapSpan.lat / staticMapSpan.lat * size),
                         lng: Math.round(mapSpan.lng / staticMapSpan.lng * size)
                     };
-    
+
                     viewport.style.width = `${pixelSpan.lng}px`;
                     viewport.style.height = `${pixelSpan.lat}px`;
-                    viewport.style.left = `${Math.round(size/2 - pixelSpan.lng/2)}px`;
-                    viewport.style.top = `${Math.round(size/2 - pixelSpan.lat/2)}px`;
+                    viewport.style.left = `${Math.round(size / 2 - pixelSpan.lng / 2)}px`;
+                    viewport.style.top = `${Math.round(size / 2 - pixelSpan.lat / 2)}px`;
                 }, 300);
             };
-    
+
             // Observer de redimensionnement
             const resizeObserver = new ResizeObserver(() => {
                 if (this.overviewMapVisible) {
                     updateOverview();
                 }
             });
-            
+
             resizeObserver.observe(mapContainer);
-    
+
             // Gestion du zoom
             this.map.addListener('zoom_changed', () => {
                 const zoom = this.map.getZoom();
                 console.log('🔍 Niveau de zoom:', zoom);
-                
+
                 if (zoom >= this.ZOOM_THRESHOLD && !this.overviewMapVisible) {
                     console.log('📍 Affichage de la mini-carte');
                     this.overviewMapVisible = true;
@@ -619,7 +597,7 @@ class GoogleMapsStore {
                     container.style.display = 'none';
                 }
             });
-    
+
             // Écouteurs pour les changements de position
             ['bounds_changed', 'center_changed'].forEach(event => {
                 this.map.addListener(event, () => {
@@ -628,7 +606,7 @@ class GoogleMapsStore {
                     }
                 });
             });
-    
+
             // Vérification initiale du zoom
             const initialZoom = this.map.getZoom();
             if (initialZoom >= this.ZOOM_THRESHOLD) {
@@ -637,7 +615,7 @@ class GoogleMapsStore {
                 container.style.display = 'block';
                 updateOverview();
             }
-    
+
             console.log('✅ Mini-carte initialisée avec succès');
             console.groupEnd();
             return resizeObserver;
@@ -652,17 +630,17 @@ class GoogleMapsStore {
         if (this.map) {
             google.maps.event.clearInstanceListeners(this.map);
         }
-    
+
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
             this.resizeObserver = null;
         }
-    
+
         const wrapper = document.getElementById('overview-map-wrapper');
         if (wrapper) {
             wrapper.remove();
         }
-    
+
         this.overviewMapVisible = false;
         this.history = [];
         this.redoStack = [];

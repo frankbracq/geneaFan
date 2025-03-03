@@ -56,7 +56,10 @@ export const EVENTS = {
             DRAWN: 'visualization:map:drawn',
             UPDATED: 'visualization:map:updated',
             API_READY: 'visualization:map:api:ready',
-            API_ERROR: 'visualization:map:api:error'
+            API_ERROR: 'visualization:map:api:error',
+            LAYERS: {
+                CHANGED: 'visualization:map:layers:changed',
+            }
         }
     },
 

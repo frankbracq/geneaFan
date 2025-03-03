@@ -1,8 +1,10 @@
-import { makeObservable, observable, action, reaction } from '../../../common/stores/mobx-config.js';
+import { makeObservable, observable, action, reaction, runInAction } from '../../../common/stores/mobx-config.js';
 import { infoWindowDisplayManager } from '../managers/infoWindowDisplayManager.js';
 import { infoWindowContentManager } from '../managers/infoWindowContentManager.js';
 import familyTownsStore from './familyTownsStore.js';
 import MarkerDisplayManager from '../managers/markerDisplayManager.js';
+import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
+import { googleMapsStore } from './googleMapsStore.js'; 
 
 /**
  * Store that dynamically filters and displays towns on a Google Map based on genealogical events
@@ -29,12 +31,18 @@ class SurnamesTownsStore {
         // Set of MobX reaction disposers
         this.disposers = new Set();
 
+        this.isVisible = false; // Toujours désactivé par défaut
+
         // Configure MobX observables and actions
         makeObservable(this, {
             currentSurname: observable,
+
+            setSurname: action.bound,
+            isVisible: observable,
             toggleVisibility: action,
-            setSurname: action.bound
+            applyVisibility: action
         });
+
 
         // React to changes in towns data to update surnames list
         const disposer = reaction(
@@ -48,7 +56,23 @@ class SurnamesTownsStore {
         );
 
         this.disposers.add(disposer);
+
+        // Écouteur pour les changements de calque
+        const layerChangeDisposer = storeEvents.subscribe(
+            EVENTS.VISUALIZATIONS.MAP.LAYERS.CHANGED,
+            (data) => {
+                if (data.layer === 'surnames') {
+                    runInAction(() => {
+                        this.isVisible = data.state;
+                    });
+                    this.applyVisibility(data.state);
+                }
+            }
+        );
+
+        this.disposers.add(layerChangeDisposer);
     }
+
 
     /**
      * Initializes the store with a Google Map instance
@@ -83,7 +107,7 @@ class SurnamesTownsStore {
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         `;
         div.innerHTML = `<span>${count}</span>`;
-        
+
         return new google.maps.marker.AdvancedMarkerElement({
             position,
             content: div
@@ -117,7 +141,7 @@ class SurnamesTownsStore {
                 title: townData.townDisplay || townData.town
             }
         };
-        
+
         this.markerConfigs.set(townName, config);
         return config;
     }
@@ -169,8 +193,8 @@ class SurnamesTownsStore {
         const filteredEvents = {
             birth: (events.birth || []).filter(e => e.personDetails?.surname === surname),
             death: (events.death || []).filter(e => e.personDetails?.surname === surname),
-            marriage: (events.marriage || []).filter(e => 
-                e.personDetails?.surname === surname || 
+            marriage: (events.marriage || []).filter(e =>
+                e.personDetails?.surname === surname ||
                 e.spouseDetails?.surname === surname
             )
         };
@@ -253,15 +277,15 @@ class SurnamesTownsStore {
         const filteredEvents = {
             birth: groupedEvents.birth.filter(e => e.personDetails?.surname === this.currentSurname),
             death: groupedEvents.death.filter(e => e.personDetails?.surname === this.currentSurname),
-            marriage: groupedEvents.marriage.filter(e => 
-                e.personDetails?.surname === this.currentSurname || 
+            marriage: groupedEvents.marriage.filter(e =>
+                e.personDetails?.surname === this.currentSurname ||
                 e.spouseDetails?.surname === this.currentSurname
             )
         };
 
         // Calculate native deaths (people born and died in the same town)
         const nativeDeaths = filteredEvents.death.filter(deathEvent => {
-            const isNative = filteredEvents.birth.some(birthEvent => 
+            const isNative = filteredEvents.birth.some(birthEvent =>
                 birthEvent.personDetails?.id === deathEvent.personDetails?.id
             );
             console.log('👶 Vérification natif décédé:', {
@@ -301,27 +325,22 @@ class SurnamesTownsStore {
         infoWindowDisplayManager.showInfoWindow(marker, content);
     }
 
-    /**
-     * Toggles visibility of surname markers layer
-     * @param {boolean} visible - Whether to show or hide markers
-     */
+    // Modifier toggleVisibility
     toggleVisibility(visible) {
-        // Mettre à jour l'état interne du store
-        this.isVisible = visible;
-        
-        // Appliquer la visibilité aux marqueurs si la carte est disponible
+        // Mettre à jour la source de vérité
+        googleMapsStore.setLayerState('surnames', visible);
+    }
+
+    // Nouvelle méthode pour appliquer la visibilité
+    applyVisibility(visible) {
         if (this.map) {
-            // Si on active la visibilité et qu'un patronyme est sélectionné
             if (visible && this.currentSurname) {
-                // Mettre à jour les marqueurs pour le patronyme
                 this.updateMarkersForSurname(this.currentSurname);
-                
-                // Ajouter les marqueurs au cluster
+
                 setTimeout(() => {
                     this.markerDisplayManager.addMarkersToCluster(this.map);
                 }, 200);
             } else {
-                // Sinon, masquer les marqueurs
                 this.markerDisplayManager.toggleLayerVisibility('surnames', false, this.map);
             }
         }
@@ -344,7 +363,7 @@ class SurnamesTownsStore {
      */
     updateSurnamesList() {
         const surnamesCount = new Map();
-        
+
         // Count occurrences of each surname in birth events
         familyTownsStore.townsData.forEach(townData => {
             if (townData.events && townData.events.birth) {
@@ -366,9 +385,9 @@ class SurnamesTownsStore {
         if (select) {
             select.innerHTML = `
                 <option value="">Sélectionner un patronyme...</option>
-                ${sortedSurnames.map(([surname, count]) => 
-                    `<option value="${surname}">${surname.toUpperCase()} (${count})</option>`
-                ).join('')}
+                ${sortedSurnames.map(([surname, count]) =>
+                `<option value="${surname}">${surname.toUpperCase()} (${count})</option>`
+            ).join('')}
             `;
         }
     }

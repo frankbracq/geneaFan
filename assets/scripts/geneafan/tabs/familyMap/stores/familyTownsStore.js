@@ -5,6 +5,7 @@ import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 import { normalizeGeoString } from "../../../utils/geo.js";
 import { TownStatisticsManager } from '../../../gedcom/stores/townStatisticsManager.js';
 import { infoWindowContentManager } from '../managers/infoWindowContentManager.js';
+import { googleMapsStore } from './googleMapsStore.js'; 
 
 /**
  * Manage the display of all towns mentioned in the GEDCOM file
@@ -38,14 +39,14 @@ class FamilyTownsStore {
 
         // Observable event collections by type
         this.events = observable({
-            birth: observable([]),    
-            death: observable([]),    
-            marriage: observable([]), 
-            burial: observable([]),   
+            birth: observable([]),
+            death: observable([]),
+            marriage: observable([]),
+            burial: observable([]),
             occupation: observable([]),
-            event: observable([]) 
+            event: observable([])
         });
-    
+
         // MobX configuration
         makeObservable(this, {
             townsData: observable,
@@ -55,24 +56,42 @@ class FamilyTownsStore {
             updateTownsViaProxy: action,
             setIsLoading: action,
             setTownsData: action,
-            addOrUpdateTown: action,         
+            addOrUpdateTown: action,
             updateTown: action,
             toggleVisibility: action,
+            applyVisibility: action,
             clearAllTowns: action,
             updateTownEventsForIndividual: action,
             finalizeAllTownsData: action,
             recalculateAllTownsStatistics: action,
             totalTowns: computed
         });
-    
+
         // Automatic marker updates when data changes
         autorun(() => {
             if (this.map && (this.townsData.size > 0 || this.isVisible)) {
                 this.updateMarkers();
             }
         });
-    
+
         this.setupEventSubscriptions();
+
+        // Écouteur pour les changements de calque
+        const layerChangeDisposer = storeEvents.subscribe(
+            EVENTS.VISUALIZATIONS.MAP.LAYERS.CHANGED,
+            (data) => {
+                if (data.layer === 'family') {
+                    runInAction(() => {
+                        this.isVisible = data.state;
+                    });
+                    this.applyVisibility(data.state);
+                }
+            }
+        );
+
+        // Ajouter au disposers pour nettoyage
+        this.disposers.set('layerChange', layerChangeDisposer);
+
     }
 
     /**
@@ -83,25 +102,25 @@ class FamilyTownsStore {
         // Handle bulk addition of individuals
         const bulkIndividualsDisposer = storeEvents.subscribe(
             EVENTS.INDIVIDUALS.BULK_ADDED,
-            
+
             (individuals) => {
                 console.time('processAllTownsEvents');
-    
+
                 runInAction(() => {
                     const townUpdates = new Map();
                     console.time('processIndividuals');
-    
+
                     const validEventTypes = ['birth', 'death', 'marriage'];
-    
+
                     // Process each individual's events
                     individuals.forEach(([id, individual]) => {
                         individual.individualEvents?.forEach(event => {
                             if (!validEventTypes.includes(event.type)) return;
                             if (!event.town) return;
-    
+
                             const normalizedTownName = normalizeGeoString(event.town);
                             if (normalizedTownName === 'lieu_inconnu') return;
-    
+
                             // Initialize town data if needed
                             if (!townUpdates.has(normalizedTownName)) {
                                 townUpdates.set(normalizedTownName, {
@@ -112,7 +131,7 @@ class FamilyTownsStore {
                                     events: []
                                 });
                             }
-    
+
                             // Enrich event with individual details
                             const enrichedEvent = {
                                 type: event.type,
@@ -129,14 +148,14 @@ class FamilyTownsStore {
                                     occupation: individual.occupation
                                 }
                             };
-    
+
                             townUpdates.get(normalizedTownName).events.push(enrichedEvent);
                         });
                     });
-    
+
                     console.timeEnd('processIndividuals');
                     console.time('applyTownUpdates');
-    
+
                     // Apply accumulated updates
                     townUpdates.forEach((updateData, normalizedTownName) => {
                         this.addOrUpdateTown(normalizedTownName, updateData.townData);
@@ -147,14 +166,14 @@ class FamilyTownsStore {
                             });
                         }
                     });
-    
+
                     console.timeEnd('applyTownUpdates');
                 });
-    
+
                 console.timeEnd('processAllTownsEvents');
             }
         );
-    
+
         // Handle cache build completion
         const cacheDisposer = storeEvents.subscribe(
             EVENTS.CACHE.BUILT,
@@ -163,18 +182,18 @@ class FamilyTownsStore {
                 this.finalizeAllTownsData();
             }
         );
-    
+
         // Handle cache clearing
         const clearDisposer = storeEvents.subscribe(EVENTS.CACHE.CLEARED, () => {
             console.log('🧹 Clearing town data');
             this.clearAllTowns();
         });
-    
+
         // Store disposers for cleanup
         this.disposers.set('bulkIndividuals', bulkIndividualsDisposer);
         this.disposers.set('cache', cacheDisposer);
         this.disposers.set('clear', clearDisposer);
-    }    
+    }
 
     /**
      * Creates marker configuration for a town
@@ -190,7 +209,7 @@ class FamilyTownsStore {
 
         const config = {
             position: new google.maps.LatLng(
-                Number(townData.latitude), 
+                Number(townData.latitude),
                 Number(townData.longitude)
             ),
             options: {
@@ -198,7 +217,7 @@ class FamilyTownsStore {
                 title: townData.townDisplay || townData.town
             }
         };
-        
+
         this.markerConfigs.set(townName, config);
         return config;
     }
@@ -230,12 +249,12 @@ class FamilyTownsStore {
         }
 
         let config = this.markerConfigs.get(townName);
-    
+
         if (!config) {
             config = this.createMarkerConfig(townName, townData);
             if (!config) return null;
         }
-    
+
         return this.markerDisplayManager.addMarker(
             'familyTowns',
             townName,
@@ -249,10 +268,10 @@ class FamilyTownsStore {
     updateTownEventsForIndividual(individual) {
         individual.individualEvents?.forEach(event => {
             if (!event.town) return;
-            
+
             const normalizedTownName = normalizeGeoString(event.town);
             if (!normalizedTownName) return;
-    
+
             const enrichedEvent = {
                 type: event.type,
                 date: event.date,
@@ -268,13 +287,13 @@ class FamilyTownsStore {
                     occupation: individual.occupation
                 }
             };
-    
+
             storeEvents.emit(EVENTS.TOWN.UPDATED, {
                 townKey: normalizedTownName,
                 event: enrichedEvent
             });
-    
-            this.addOrUpdateTown(normalizedTownName, { 
+
+            this.addOrUpdateTown(normalizedTownName, {
                 town: event.town,
                 townDisplay: event.town
             }, enrichedEvent);
@@ -288,15 +307,15 @@ class FamilyTownsStore {
         //    townData,
         //    eventData
         //});
-        
+
         if (!normalizedTownName || !townData) {
             console.warn('⚠️ Données manquantes:', { normalizedTownName, townData });
             return;
         }
-    
+
         runInAction(() => {
             let town = this.townsData.get(normalizedTownName);
-    
+
             if (!town) {
                 const eventTypes = {
                     BIRT: observable([]),
@@ -312,7 +331,7 @@ class FamilyTownsStore {
                     occupation: observable([]),
                     event: observable([])
                 };
-    
+
                 town = observable({
                     town: townData.town || '',
                     townDisplay: townData.townDisplay || townData.town || '',
@@ -326,12 +345,12 @@ class FamilyTownsStore {
                     events: eventTypes,
                     statistics: TownStatisticsManager.createEmptyStatistics()
                 });
-                
+
                 // console.log('🆕 Création nouvelle ville:', toJS(town));
                 this.townsData.set(normalizedTownName, town);
             } else {
                 // console.log('📝 Mise à jour ville existante:', normalizedTownName);
-                
+
                 if (!town.events || !isObservable(town.events)) {
                     town.events = observable({
                         BIRT: observable([]),
@@ -348,20 +367,20 @@ class FamilyTownsStore {
                         event: observable([])
                     });
                 }
-                
+
                 Object.entries(townData).forEach(([field, value]) => {
                     if (value !== undefined && value !== null && field !== 'events') {
                         town[field] = value;
                     }
                 });
             }
-    
+
             if (eventData) {
                 console.log('🎯 Traitement événement pour', normalizedTownName, eventData);
                 this.invalidateCache(normalizedTownName);
                 this.updateTownEvents(town, eventData);
             }
-            
+
             // console.log('✅ Fin addOrUpdateTown pour', normalizedTownName);
         });
     }
@@ -415,22 +434,19 @@ class FamilyTownsStore {
 
     // Visibility Management
     toggleVisibility(visible) {
-        // Mettre à jour l'état interne du store
-        this.isVisible = visible;
-        
-        // Appliquer la visibilité aux marqueurs si la carte est disponible
+        googleMapsStore.setLayerState('family', visible);
+    }
+    
+    // Ajouter une nouvelle méthode pour appliquer l'état de visibilité
+    applyVisibility(visible) {
         if (this.map) {
-            // Si on active la visibilité
             if (visible) {
-                // S'assurer que les marqueurs sont à jour
                 this.updateMarkers();
                 
-                // Ajouter les marqueurs au cluster
                 setTimeout(() => {
                     this.markerDisplayManager.addMarkersToCluster(this.map);
                 }, 200);
             } else {
-                // Sinon, masquer les marqueurs
                 this.markerDisplayManager.toggleLayerVisibility('familyTowns', false, this.map);
             }
         }
@@ -440,13 +456,13 @@ class FamilyTownsStore {
     recalculateAllTownsStatistics() {
         runInAction(() => {
             console.log('🏘️ Début du recalcul des statistiques');
-    
+
             let totalEvents = {
                 births: 0,
                 deaths: 0,
                 marriages: 0
             };
-    
+
             this.townsData.forEach((town, normalizedTownName) => {
                 try {
                     town.statistics = TownStatisticsManager.createEmptyStatistics();
@@ -455,14 +471,14 @@ class FamilyTownsStore {
                             console.warn(`Données manquantes pour ${eventType} dans ${normalizedTownName}`);
                             return;
                         }
-    
+
                         const eventCount = town.events[eventType].length;
                         totalEvents[eventType + 's'] += eventCount;
-    
+
                         town.events[eventType].forEach(event => {
                             if (event) TownStatisticsManager.updateTownStatistics(town, event);
                         });
-    
+
                         // console.log(`📊 ${normalizedTownName}:`,
                         //    JSON.stringify({
                         //        events: {
@@ -478,23 +494,23 @@ class FamilyTownsStore {
                     console.error(`Erreur: ${normalizedTownName}:`, error);
                 }
             });
-    
+
             console.log('📊 Total des événements:', totalEvents);
         });
     }
 
     finalizeAllTownsData() {
         console.log('🏁 Début finalizeAllTownsData');
-        this.recalculateAllTownsStatistics(); 
+        this.recalculateAllTownsStatistics();
         this.clearAllCaches();
-        console.log('✅ Fin finalizeAllTownsData'); 
-        
+        console.log('✅ Fin finalizeAllTownsData');
+
         // Mettre à jour les marqueurs après la finalisation des données
         if (this.map) {
             console.log('📍 Mise à jour des marqueurs après finalisation');
             this.updateMarkers();
         }
-        
+
         this.saveToLocalStorage();
     }
 
@@ -514,7 +530,7 @@ class FamilyTownsStore {
 
     getBounds() {
         if (!this.markerDisplayManager) return null;
-        
+
         const bounds = new google.maps.LatLngBounds();
         let hasMarkers = false;
 
@@ -539,11 +555,11 @@ class FamilyTownsStore {
         try {
             const stored = localStorage.getItem('townsDB');
             if (!stored) return {};
-    
+
             const parsed = JSON.parse(stored);
             const validTowns = {};
             const invalidKeys = [];
-    
+
             Object.entries(parsed).forEach(([key, townData]) => {
                 if (!this._isValidTownData(townData)) {
                     invalidKeys.push(key);
@@ -551,13 +567,13 @@ class FamilyTownsStore {
                 }
                 validTowns[key] = townData;
             });
-    
+
             if (invalidKeys.length > 0) {
-                const newCache = {...parsed};
+                const newCache = { ...parsed };
                 invalidKeys.forEach(key => delete newCache[key]);
                 localStorage.setItem('townsDB', JSON.stringify(newCache));
             }
-    
+
             this.setTownsData(validTowns);
             return validTowns;
         } catch (error) {
@@ -566,15 +582,15 @@ class FamilyTownsStore {
             return {};
         }
     }
-    
+
     _isValidTownData(townData) {
-        return townData && 
-               townData.town && 
-               typeof townData.town === 'string' &&
-               townData.latitude && 
-               !isNaN(townData.latitude) &&
-               townData.longitude && 
-               !isNaN(townData.longitude);
+        return townData &&
+            townData.town &&
+            typeof townData.town === 'string' &&
+            townData.latitude &&
+            !isNaN(townData.latitude) &&
+            townData.longitude &&
+            !isNaN(townData.longitude);
     }
 
     getStorageData() {
@@ -623,41 +639,41 @@ class FamilyTownsStore {
             console.warn("⚠️ Une mise à jour est déjà en cours");
             return;
         }
-    
+
         try {
             console.log('🔄 Début de la mise à jour via proxy');
             this.setIsLoading(true);
-            
+
             console.log('📣 Émission de UPDATE_START');
             storeEvents.emit(EVENTS.TOWN.UPDATE_START);
-    
+
             const updates = townsToUpdate || this._collectTownsNeedingUpdate();
-            
+
             if (Object.keys(updates).length === 0) {
                 console.log('ℹ️ Aucune ville à mettre à jour');
                 console.log('📣 Émission de UPDATE_COMPLETE');
                 storeEvents.emit(EVENTS.TOWN.UPDATE_COMPLETE);
                 return;
             }
-    
+
             console.log(`🔄 Mise à jour de ${Object.keys(updates).length} villes`);
-    
+
             const response = await fetch('https://opencageproxy.genealogie.workers.dev/', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
+                body: JSON.stringify({
                     familyTowns: updates,
                     userId: localStorage.getItem('userId')
                 })
             });
-    
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-    
+
             const updatedTowns = await response.json();
             console.log('✅ Données reçues du proxy:', Object.keys(updatedTowns).length);
-    
+
             runInAction(() => {
                 Object.entries(updatedTowns).forEach(([key, data]) => {
                     // Ne stocker que les villes avec coordonnées valides
@@ -667,10 +683,10 @@ class FamilyTownsStore {
                 });
                 this.saveToLocalStorage();
             });
-    
+
             console.log('📣 Émission de UPDATE_COMPLETE');
             storeEvents.emit(EVENTS.TOWN.UPDATE_COMPLETE);
-            
+
         } catch (error) {
             console.error('❌ Erreur lors de la mise à jour:', error);
             console.log('📣 Émission de UPDATE_ERROR');
@@ -683,15 +699,15 @@ class FamilyTownsStore {
     }
 
     // Nouvelle méthode auxiliaire pour identifier les villes à mettre à jour
-_collectTownsNeedingUpdate() {
-    const updates = {};
-    this.townsData.forEach((town, key) => {
-        if (!town.latitude || !town.longitude || !town.departement || !town.country) {
-            updates[key] = this.cleanData(town);
-        }
-    });
-    return updates;
-}
+    _collectTownsNeedingUpdate() {
+        const updates = {};
+        this.townsData.forEach((town, key) => {
+            if (!town.latitude || !town.longitude || !town.departement || !town.country) {
+                updates[key] = this.cleanData(town);
+            }
+        });
+        return updates;
+    }
 
     // Cleanup and Reset
     cleanup() {
@@ -733,20 +749,20 @@ _collectTownsNeedingUpdate() {
                 //    avant: { ...town },
                 //    miseAJour: updates,
                 // });
-                
+
                 // Mise à jour des propriétés
                 Object.entries(updates).forEach(([field, value]) => {
                     if (value !== undefined && value !== null) {
                         town[field] = value;
                     }
                 });
-        
+
                 // Si les coordonnées ou données géographiques ont été mises à jour
-                if (updates.latitude || updates.longitude || 
+                if (updates.latitude || updates.longitude ||
                     updates.departement || updates.country) {
                     this.saveToLocalStorage();
                 }
-                
+
                 // console.log('Après mise à jour:', this.townsData.get(key));
             } else {
                 console.warn(`Tentative de mise à jour d'une ville inexistante: ${key}`);
@@ -829,7 +845,7 @@ _collectTownsNeedingUpdate() {
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         `;
         div.innerHTML = `<span>${count}</span>`;
-        
+
         return new google.maps.marker.AdvancedMarkerElement({
             position,
             content: div
@@ -864,29 +880,29 @@ _collectTownsNeedingUpdate() {
             console.log('❌ Invalid event or town structure:', { eventData, town });
             return;
         }
-    
+
         // Standardize event types to lowercase only
         const validEventTypes = ['birth', 'death', 'marriage', 'burial', 'occupation', 'event'];
-    
+
         if (!validEventTypes.includes(eventData.type)) {
             console.log('❌ Unrecognized event type:', eventData.type);
             return;
         }
-    
+
         const enrichedEvent = {
             ...eventData,
             personDetails: { ...eventData.personDetails }
         };
-    
+
         // Add or update event in standardized type
         if (!Array.isArray(town.events[eventData.type])) {
             town.events[eventData.type] = observable([]);
         }
-    
+
         const existingIndex = town.events[eventData.type].findIndex(
             e => e.personId === enrichedEvent.personId && e.date === enrichedEvent.date
         );
-    
+
         if (existingIndex !== -1) {
             town.events[eventData.type][existingIndex] = enrichedEvent;
         } else {

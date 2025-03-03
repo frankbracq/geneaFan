@@ -1,6 +1,8 @@
-import { makeObservable, observable, action, autorun } from '../../../common/stores/mobx-config.js';
+import { makeObservable, observable, action, runInAction } from '../../../common/stores/mobx-config.js';
 import MarkerDisplayManager from '../managers/markerDisplayManager.js';
 import { infoWindowDisplayManager } from '../managers/infoWindowDisplayManager.js';
+import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
+import { googleMapsStore } from './googleMapsStore.js'; 
 
 /**
  * Manages the display of ancestor birth locations on the map for the current root person
@@ -19,7 +21,7 @@ class RootAncestorTownsStore {
         this.birthData = [];
         this.markerDisplayManager = new MarkerDisplayManager();
         this.map = null;
-        
+
         // Visibility state
         this.isVisible = true;
 
@@ -31,7 +33,9 @@ class RootAncestorTownsStore {
                 mixed: '#9333ea'      // Purple for mixed locations
             }
         };
-    
+
+        this.disposers = new Set();
+
         makeObservable(this, {
             birthData: observable,
             map: observable.ref,
@@ -42,6 +46,20 @@ class RootAncestorTownsStore {
             toggleVisibility: action,
             processHierarchy: action
         });
+
+        const layerChangeDisposer = storeEvents.subscribe(
+            EVENTS.VISUALIZATIONS.MAP.LAYERS.CHANGED,
+            (data) => {
+                if (data.layer === 'ancestors') {
+                    runInAction(() => {
+                        this.isVisible = data.state;
+                    });
+                    this.applyVisibility(data.state);
+                }
+            }
+        );
+
+        this.disposers.add(layerChangeDisposer)
     }
 
     /**
@@ -52,18 +70,18 @@ class RootAncestorTownsStore {
     async processHierarchy(hierarchy) {
         try {
             console.group('📍 Processing ancestor towns hierarchy');
-    
+
             if (!hierarchy) {
                 console.warn('⚠️ Invalid or missing hierarchy');
                 return;
             }
-    
+
             const birthData = [];
-            
+
             // Recursive function to process each node in the hierarchy
             const processNode = (node, depth = 0) => {
                 const birthInfo = node.stats?.demography?.birthInfo;
-    
+
                 if (birthInfo?.place?.coordinates?.latitude) {
                     birthData.push({
                         id: node.id,
@@ -79,25 +97,25 @@ class RootAncestorTownsStore {
                         }
                     });
                 }
-    
+
                 // Process children recursively
                 if (node.children && Array.isArray(node.children)) {
                     node.children.forEach(child => processNode(child, depth + 1));
                 }
             };
-    
+
             processNode(hierarchy);
             this.birthData = birthData;
-    
+
             if (birthData.length > 0) {
                 console.log('✅ Birth data extracted for', birthData.length, 'locations');
             } else {
                 console.warn('⚠️ No birth locations found in hierarchy');
             }
-    
+
             console.groupEnd();
             return birthData;
-    
+
         } catch (error) {
             console.error('❌ Error processing hierarchy:', error);
             console.groupEnd();
@@ -112,7 +130,7 @@ class RootAncestorTownsStore {
     initialize(map) {
         console.log("🚀 Initialisation de rootAncestorTownsStore");
         this.map = map;
-        
+
         if (!this.markerDisplayManager.isInitialized()) {
             console.warn("⚠️ Initialisation du clustering...");
             this.markerDisplayManager.initializeCluster(map, this.createClusterMarker);
@@ -141,7 +159,7 @@ class RootAncestorTownsStore {
             box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         `;
         div.textContent = count;
-    
+
         return new google.maps.marker.AdvancedMarkerElement({
             position,
             content: div,
@@ -154,7 +172,7 @@ class RootAncestorTownsStore {
      */
     centerMapOnMarkers() {
         if (!this.map) return;
-        
+
         const bounds = this.getBounds();
         if (bounds) {
             this.map.fitBounds(bounds);
@@ -172,16 +190,16 @@ class RootAncestorTownsStore {
             console.warn('❌ Données de localisation invalides', location);
             return;
         }
-    
+
         const key = `${location.lat}-${location.lng}-${location.name}`;
         const position = new google.maps.LatLng(location.lat, location.lng);
         const content = this.renderMarkerContent(location, births);
-    
+
         // console.log(`📍 Création du marqueur: ${location.name}`);
         // console.log(`   ➝ Coordonnées: (${location.lat}, ${location.lng})`);
         // console.log(`   ➝ Nombre de personnes associées: ${births.length}`);
         // console.log(`   ➝ Générations concernées:`, Object.keys(generations));
-    
+
         return this.markerDisplayManager.addMarker(
             'rootAncestors',
             key,
@@ -203,7 +221,7 @@ class RootAncestorTownsStore {
         element.style.height = '16px';
         element.style.border = '1px solid #1e40af';
         return element;
-     }
+    }
 
     /**
      * Update all markers on the map
@@ -214,17 +232,17 @@ class RootAncestorTownsStore {
             console.warn('⚠️ Carte ou données absentes');
             return;
         }
-    
+
         console.log(`🔄 Mise à jour des marqueurs pour ${birthData.length} lieux.`);
         this.birthData = birthData;
         this.markerDisplayManager.clearMarkers('rootAncestors');
-    
+
         const locationMap = this.groupBirthDataByLocation(birthData);
         console.log(`📍 Nombre de lieux uniques: ${locationMap.size}`);
-    
+
         locationMap.forEach((locationData) => {
             if (!this.isValidLocationData(locationData)) return;
-    
+
             // Utiliser getOrCreateMarker au lieu de addMarker
             this.markerDisplayManager.getOrCreateMarker(
                 'rootAncestors',
@@ -245,7 +263,7 @@ class RootAncestorTownsStore {
                 }
             );
         });
-    
+
         if (this.isVisible) {
             this.markerDisplayManager.toggleLayerVisibility('rootAncestors', true, this.map);
         }
@@ -258,12 +276,12 @@ class RootAncestorTownsStore {
     getOrCreateMarker(locationData) {
         const key = `${locationData.location.lat}-${locationData.location.lng}-${locationData.location.name}`;
         const position = new google.maps.LatLng(locationData.location.lat, locationData.location.lng);
-        
+
         return this.markerDisplayManager.addMarker(
             'rootAncestors',
             key,
             position,
-            { 
+            {
                 content: this.createMarkerElement(locationData),
                 title: locationData.births.map(b => b.name).join(', ')
             },
@@ -282,12 +300,12 @@ class RootAncestorTownsStore {
     createMarkerElement(locationData) {
         const div = document.createElement('div');
         div.className = 'custom-marker';
-        
+
         // Ajouter un ID au premier marqueur pour le tour
         if (!document.getElementById('rootMarkerForTour')) {
             div.id = 'rootMarkerForTour';
         }
-        
+
         div.style.cssText = `
             background: ${this.getBranchColor(locationData.births)};
             border-radius: 50%;
@@ -319,7 +337,7 @@ class RootAncestorTownsStore {
 
     getBounds() {
         if (!this.markerDisplayManager) return null;
-        
+
         const bounds = new google.maps.LatLngBounds();
         let hasMarkers = false;
 
@@ -335,27 +353,27 @@ class RootAncestorTownsStore {
         return hasMarkers ? bounds : null;
     }
 
+    // Séparer toggleVisibility en deux méthodes
     toggleVisibility(visible) {
-        // Mettre à jour l'état interne du store
-        this.isVisible = visible;
-        
-        // Appliquer la visibilité aux marqueurs si la carte est disponible
+        // Ne fait que mettre à jour la source de vérité
+        googleMapsStore.setLayerState('ancestors', visible);
+    }
+
+    // Nouvelle méthode pour appliquer la visibilité sans modifier l'état
+    applyVisibility(visible) {
         if (this.map) {
             this.markerDisplayManager.toggleLayerVisibility('rootAncestors', visible, this.map);
-            
-            // Si on active la visibilité et qu'il y a des données
+
             if (visible && this.birthData && this.birthData.length > 0) {
-                // S'assurer que les marqueurs sont à jour
                 this.updateMarkers(this.birthData);
-                
-                // Ajouter les marqueurs au cluster avec un petit délai pour stabilité
+
                 setTimeout(() => {
                     this.markerDisplayManager.addMarkersToCluster(this.map);
                 }, 200);
             }
         }
     }
-    
+
     /**
      * Group birth data by location
      * @param {Array} data - Birth data array
