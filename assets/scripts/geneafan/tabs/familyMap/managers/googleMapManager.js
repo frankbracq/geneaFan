@@ -122,9 +122,9 @@ class GoogleMapManager {
             console.warn("⚠️ MarkerDisplayManager pas encore initialisé");
             return;
         }
-
+    
         console.log("🔍 Configuration des contrôles de calques");
-
+    
         // Utiliser le service centralisé pour configurer les contrôles
         layerManager.setupLayerControls({
             ancestorLayerSwitch: document.getElementById('layerAncestors'),
@@ -132,7 +132,27 @@ class GoogleMapManager {
             surnamesLayerSwitch: document.getElementById('layerSurnames'),
             surnameFilter: document.getElementById('surnameFilter')
         });
-
+    
+        // Ajouter l'écouteur spécifique pour le sélecteur de patronymes
+        const surnameFilter = document.getElementById('surnameFilter');
+        if (surnameFilter) {
+            console.log('📋 Configuration de l\'écouteur pour le sélecteur de patronymes');
+            
+            // Technique pour remplacer les écouteurs existants
+            const old_element = surnameFilter;
+            const new_element = old_element.cloneNode(true);
+            old_element.parentNode.replaceChild(new_element, old_element);
+            
+            // Ajouter le nouvel écouteur
+            new_element.addEventListener('change', (event) => {
+                const selectedSurname = event.target.value;
+                console.log(`🔄 Changement de patronyme via l'interface: ${selectedSurname}`);
+                
+                // Utiliser directement le store importé
+                surnamesTownsStore.setSurname(selectedSurname);
+            });
+        }
+    
         console.log("✅ Contrôles de calques configurés");
     }
 

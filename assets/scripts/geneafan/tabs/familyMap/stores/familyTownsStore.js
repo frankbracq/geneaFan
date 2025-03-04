@@ -5,7 +5,6 @@ import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 import { normalizeGeoString } from "../../../utils/geo.js";
 import { TownStatisticsManager } from '../../../gedcom/stores/townStatisticsManager.js';
 import { infoWindowContentManager } from '../managers/infoWindowContentManager.js';
-import { googleMapsStore } from './googleMapsStore.js';
 import { layerManager } from '../managers/layerManager.js';
 
 /**
