@@ -1,11 +1,11 @@
 import { makeObservable, observable, action, computed, runInAction, autorun, toJS, isObservable } from '../../../common/stores/mobx-config.js';
-import MarkerDisplayManager from '../managers/markerDisplayManager.js';
 import { infoWindowDisplayManager } from '../managers/infoWindowDisplayManager.js';
 import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 import { normalizeGeoString } from "../../../utils/geo.js";
 import { TownStatisticsManager } from '../../../gedcom/stores/townStatisticsManager.js';
 import { infoWindowContentManager } from '../managers/infoWindowContentManager.js';
 import { layerManager } from '../managers/layerManager.js';
+import BaseLayerStore from '../managers/baseLayerStore.js';
 
 /**
  * Manage the display of all towns mentioned in the GEDCOM file
@@ -17,8 +17,10 @@ import { layerManager } from '../managers/layerManager.js';
  * - Handles geocoding and marker management
  * - Manages caching and data persistence
  */
-class FamilyTownsStore {
+class FamilyTownsStore extends BaseLayerStore {
     constructor() {
+        super('family');
+        
         // Primary data storage
         this.eventsData = new Map();
 
@@ -27,14 +29,14 @@ class FamilyTownsStore {
         this.markerConfigs = new Map();               // Stores marker configurations by town
         this.infoWindowContentCache = new Map();      // Caches info window HTML content
 
-        // Core infrastructure
-        this.markerDisplayManager = new MarkerDisplayManager();
-        this.townsData = new Map();                   // Primary town data storage
-        this.disposers = new Map();                   // Cleanup handlers
-
+        // Primary town data storage
+        this.townsData = new Map();                   
+        
         // State management
         this.isLoading = false;
-        this.map = null;
+        
+        // Dans BaseLayerStore, disposers est un Set, mais ici on l'utilisait comme Map
+        this.disposers = new Map(); // Pour la compatibilité avec le code existant
 
         // Observable event collections by type
         this.events = observable({
@@ -57,7 +59,6 @@ class FamilyTownsStore {
             addOrUpdateTown: action,
             updateTown: action,
             toggleVisibility: action,
-            applyVisibility: action,
             clearAllTowns: action,
             updateTownEventsForIndividual: action,
             finalizeAllTownsData: action,
@@ -73,20 +74,6 @@ class FamilyTownsStore {
         });
 
         this.setupEventSubscriptions();
-
-        // Écouteur pour les changements de calque
-        const layerChangeDisposer = storeEvents.subscribe(
-            EVENTS.VISUALIZATIONS.MAP.LAYERS.CHANGED,
-            (data) => {
-                if (data.layer === 'family') {
-                    this.applyVisibility(data.state);
-                }
-            }
-        );
-
-        // Ajouter au disposers pour nettoyage
-        this.disposers.set('layerChange', layerChangeDisposer);
-
     }
 
     /**
@@ -425,35 +412,45 @@ class FamilyTownsStore {
         });
     }
 
-    // Visibility Management
+    // Surcharge de la méthode toggleVisibility de BaseLayerStore pour maintenir
+    // la compatibilité avec le code existant
     toggleVisibility(visible) {
-        // Déléguer la gestion de l'état au service centralisé
-        layerManager.setLayerVisibility('family', visible);
+        super.toggleVisibility(visible);
     }
 
-    // Dans applyVisibility
+    /**
+     * Surcharge de la méthode applyVisibility de BaseLayerStore
+     * @param {boolean} visible - État de visibilité à appliquer
+     */
     applyVisibility(visible) {
-        if (this.map) {
-            if (visible) {
-                console.log('🔍 Activation du calque des villes familiales');
-                
-                // Mettre à jour les marqueurs
-                this.updateMarkers();
-                
-                // Rendre les marqueurs visibles
-                const layerMarkers = this.markerDisplayManager.layers.get('familyTowns');
-                if (layerMarkers) {
-                    layerMarkers.forEach(marker => {
-                        marker.map = this.map;
-                    });
-                }
-                
-                // Ajouter au cluster (maintenant que les marqueurs sont visibles)
-                this.markerDisplayManager.addMarkersToCluster(this.map);
-            } else {
-                console.log('🔍 Désactivation du calque des villes familiales');
-                this.markerDisplayManager.toggleLayerVisibility('familyTowns', false, this.map);
+        if (!this.map) return;
+        
+        if (visible) {
+            console.log('🔍 Activation du calque des villes familiales');
+            
+            // 1. S'assurer que le cluster est bien initialisé
+            if (!this.markerDisplayManager.isInitialized()) {
+                this.markerDisplayManager.initializeCluster(this.map, this.createClusterMarker);
             }
+            
+            // 2. Mettre à jour les marqueurs (crée les marqueurs s'ils n'existent pas)
+            this.updateMarkers();
+            
+            // 3. Rendre les marqueurs visibles AVANT de les ajouter au cluster (directement sur la carte)
+            const layerMarkers = this.markerDisplayManager.layers.get('familyTowns');
+            if (layerMarkers) {
+                layerMarkers.forEach(marker => {
+                    marker.map = this.map;
+                });
+            }
+            
+            // 4. Ajouter les marqueurs au cluster SANS les cacher d'abord
+            console.log('📍 Ajout des marqueurs au cluster');
+            this.markerDisplayManager.addMarkersToCluster(this.map);
+            
+        } else {
+            console.log('🔍 Désactivation du calque des villes familiales');
+            this.markerDisplayManager.toggleLayerVisibility('familyTowns', false, this.map);
         }
     }
 
@@ -714,11 +711,13 @@ class FamilyTownsStore {
         return updates;
     }
 
-    // Cleanup and Reset
+    /**
+     * Surcharge de la méthode cleanup de BaseLayerStore
+     * Nettoyage des ressources spécifiques à ce calque
+     */
     cleanup() {
         this.clearAllCaches();
-        this.markerDisplayManager.cleanup();
-        this.map = null;
+        super.cleanup();
         this.disposers.forEach(disposer => disposer());
         this.disposers.clear();
     }

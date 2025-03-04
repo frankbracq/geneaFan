@@ -2,10 +2,10 @@ import { makeObservable, observable, action, reaction, runInAction } from '../..
 import { infoWindowDisplayManager } from '../managers/infoWindowDisplayManager.js';
 import { infoWindowContentManager } from '../managers/infoWindowContentManager.js';
 import familyTownsStore from './familyTownsStore.js';
-import MarkerDisplayManager from '../managers/markerDisplayManager.js';
 import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 import { googleMapsStore } from './googleMapsStore.js';
 import { layerManager } from '../managers/layerManager.js';
+import BaseLayerStore from '../managers/baseLayerStore.js';
 
 /**
  * Store that dynamically filters and displays towns on a Google Map based on genealogical events
@@ -19,28 +19,26 @@ import { layerManager } from '../managers/layerManager.js';
  * - Provides clustering support for better visualization when multiple markers are close
  * - Updates markers and statistics in real-time when surname selection changes
  */
-class SurnamesTownsStore {
+class SurnamesTownsStore extends BaseLayerStore {
     constructor() {
-        // Manager for handling marker display and clustering
-        this.markerDisplayManager = new MarkerDisplayManager();
+        super('surnames'); // Nom du calque passé au constructeur parent
+        
         // Currently selected surname for filtering
         this.currentSurname = null;
-        // Reference to the Google Map instance
-        this.map = null;
+        
         // Cache of marker configurations
         this.markerConfigs = new Map();
-        // Set of MobX reaction disposers
-        this.disposers = new Set();
+        
+        // Set of MobX reaction disposers (en plus de ceux gérés par la classe parente)
+        this.localDisposers = new Set();
 
         // Configure MobX observables and actions
         makeObservable(this, {
             currentSurname: observable,
-
             setSurname: action.bound,
             toggleVisibility: action,
             applyVisibility: action
         });
-
 
         // React to changes in towns data to update surnames list
         const disposer = reaction(
@@ -53,29 +51,19 @@ class SurnamesTownsStore {
             }
         );
 
-        this.disposers.add(disposer);
-
-        // Écouteur pour les changements de calque
-        const layerChangeDisposer = storeEvents.subscribe(
-            EVENTS.VISUALIZATIONS.MAP.LAYERS.CHANGED,
-            (data) => {
-                if (data.layer === 'surnames') {
-                    this.applyVisibility(data.state);
-                }
-            }
-        );
-
-        this.disposers.add(layerChangeDisposer);
+        this.localDisposers.add(disposer);
+        
+        // Note: L'écouteur pour les changements de calque est déjà géré par BaseLayerStore
     }
 
 
     /**
-     * Initializes the store with a Google Map instance
+     * Surcharge de la méthode initialize de BaseLayerStore
      * @param {google.maps.Map} map - Google Maps instance
      */
     initialize(map) {
-        this.map = map;
-        this.markerDisplayManager.initializeCluster(map, this.createClusterMarker);
+        console.log('🎯 Initialisation de SurnamesTownsStore');
+        super.initialize(map);
     }
 
     /**
@@ -391,83 +379,99 @@ class SurnamesTownsStore {
         infoWindowDisplayManager.showInfoWindow(marker, content);
     }
 
-    // Modifier toggleVisibility
+    /**
+     * Surcharge de la méthode toggleVisibility de BaseLayerStore
+     * Conserve la délégation au layerManager
+     */
     toggleVisibility(visible) {
-        // Déléguer la gestion de l'état au service centralisé
-        layerManager.setLayerVisibility('surnames', visible);
+        // On appelle la méthode parente qui délègue déjà au layerManager
+        super.toggleVisibility(visible);
     }
 
-    // Nouvelle méthode pour appliquer la visibilité
+    /**
+     * Surcharge de la méthode applyVisibility de BaseLayerStore
+     * Gestion spécifique pour le calque des patronymes, avec sélection automatique
+     * @param {boolean} visible - État de visibilité à appliquer
+     */
     applyVisibility(visible) {
         console.log(`🔄 applyVisibility appelé avec visible=${visible}, surname=${this.currentSurname}`);
         
-        if (this.map) {
-            if (visible) {
-                // Si le calque est activé mais aucun patronyme n'est sélectionné,
-                // sélectionner automatiquement le premier
-                if (!this.currentSurname) {
-                    const select = document.getElementById('surnameFilter');
-                    if (select && select.options.length > 1) {  // > 1 car la première option est vide
-                        const firstSurname = select.options[1].value;
-                        console.log(`🔄 Sélection automatique du patronyme: ${firstSurname}`);
-                        
-                        // Mettre à jour le menu déroulant
-                        select.value = firstSurname;
-                        
-                        // Mettre à jour le store
-                        this.currentSurname = firstSurname;
-                        this.updateMarkersForSurname(firstSurname);
-                    }
-                } else {
-                    // S'assurer que le menu déroulant affiche le patronyme actuel
-                    const select = document.getElementById('surnameFilter');
-                    if (select && select.value !== this.currentSurname) {
-                        select.value = this.currentSurname;
-                    }
-                }
-                
-                if (this.currentSurname) {
-                    console.log('🔍 Activation du calque des patronymes');
+        if (!this.map) return;
+        
+        if (visible) {
+            // Si le calque est activé mais aucun patronyme n'est sélectionné,
+            // sélectionner automatiquement le premier
+            if (!this.currentSurname) {
+                const select = document.getElementById('surnameFilter');
+                if (select && select.options.length > 1) {  // > 1 car la première option est vide
+                    const firstSurname = select.options[1].value;
+                    console.log(`🔄 Sélection automatique du patronyme: ${firstSurname}`);
                     
-                    // Mettre à jour les marqueurs basés sur le patronyme sélectionné
-                    this.updateMarkersForSurname(this.currentSurname);
+                    // Mettre à jour le menu déroulant
+                    select.value = firstSurname;
                     
-                    // Vérifier si des marqueurs ont été créés
-                    const layerMarkers = this.markerDisplayManager.layers.get('surnames');
-                    const markerCount = layerMarkers ? layerMarkers.size : 0;
-                    console.log(`🔢 Nombre de marqueurs pour ce patronyme: ${markerCount}`);
-                    
-                    if (layerMarkers && markerCount > 0) {
-                        console.log('🔄 Définition de la visibilité des marqueurs');
-                        layerMarkers.forEach(marker => {
-                            marker.map = this.map;
-                        });
-                        
-                        // Ajouter au cluster
-                        console.log('🔄 Ajout des marqueurs au cluster');
-                        this.markerDisplayManager.addMarkersToCluster(this.map);
-                    } else {
-                        console.log('⚠️ Aucun marqueur trouvé pour ce patronyme');
-                    }
-                } else {
-                    console.warn('⚠️ Le calque est activé mais aucun patronyme n\'est disponible');
+                    // Mettre à jour le store
+                    this.currentSurname = firstSurname;
                 }
             } else {
-                console.log('🔍 Désactivation du calque des patronymes');
-                this.markerDisplayManager.toggleLayerVisibility('surnames', false, this.map);
+                // S'assurer que le menu déroulant affiche le patronyme actuel
+                const select = document.getElementById('surnameFilter');
+                if (select && select.value !== this.currentSurname) {
+                    select.value = this.currentSurname;
+                }
             }
+            
+            if (this.currentSurname) {
+                console.log('🔍 Activation du calque des patronymes');
+                
+                // 1. S'assurer que le cluster est initialisé
+                if (!this.markerDisplayManager.isInitialized()) {
+                    this.markerDisplayManager.initializeCluster(this.map, this.createClusterMarker);
+                }
+                
+                // 2. Mettre à jour les marqueurs pour le patronyme actuel
+                this.updateMarkersForSurname(this.currentSurname);
+                
+                // 3. Rendre les marqueurs visibles AVANT de les ajouter au cluster
+                const layerMarkers = this.markerDisplayManager.layers.get('surnames');
+                const markerCount = layerMarkers ? layerMarkers.size : 0;
+                console.log(`🔢 Nombre de marqueurs pour ce patronyme: ${markerCount}`);
+                
+                if (layerMarkers && markerCount > 0) {
+                    console.log('🔄 Définition de la visibilité des marqueurs');
+                    layerMarkers.forEach(marker => {
+                        marker.map = this.map;
+                    });
+                    
+                    // 4. Ajouter les marqueurs au cluster SANS les cacher d'abord
+                    console.log('🔄 Ajout des marqueurs au cluster');
+                    this.markerDisplayManager.addMarkersToCluster(this.map);
+                } else {
+                    console.log('⚠️ Aucun marqueur trouvé pour ce patronyme');
+                }
+            } else {
+                console.warn('⚠️ Le calque est activé mais aucun patronyme n\'est disponible');
+            }
+        } else {
+            console.log('🔍 Désactivation du calque des patronymes');
+            this.markerDisplayManager.toggleLayerVisibility('surnames', false, this.map);
         }
     }
 
     /**
-     * Cleans up resources and resets store state
+     * Surcharge de la méthode cleanup de BaseLayerStore
+     * Nettoyage des ressources spécifiques à ce calque
      */
     cleanup() {
-        this.markerDisplayManager.toggleLayerVisibility('surnames', false, this.map);
-        this.disposers.forEach(disposer => disposer());
-        this.disposers.clear();
+        // Appel de la méthode parente d'abord
+        super.cleanup();
+        
+        // Gestion des disposers locaux
+        this.localDisposers.forEach(disposer => disposer());
+        this.localDisposers.clear();
+        
+        // Réinitialisation des propriétés spécifiques
         this.currentSurname = null;
-        this.map = null;
     }
 
     /**

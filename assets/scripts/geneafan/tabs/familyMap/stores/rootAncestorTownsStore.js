@@ -1,8 +1,8 @@
 import { makeObservable, observable, action, runInAction } from '../../../common/stores/mobx-config.js';
-import MarkerDisplayManager from '../managers/markerDisplayManager.js';
 import { infoWindowDisplayManager } from '../managers/infoWindowDisplayManager.js';
 import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 import { layerManager } from '../managers/layerManager.js';
+import BaseLayerStore from '../managers/baseLayerStore.js';
 
 /**
  * Manages the display of ancestor birth locations on the map for the current root person
@@ -15,12 +15,12 @@ import { layerManager } from '../managers/layerManager.js';
  * - Handles marker clustering for dense areas
  * - Updates dynamically when root person changes
  */
-class RootAncestorTownsStore {
+class RootAncestorTownsStore extends BaseLayerStore {
     constructor() {
-        // Core data and managers
+        super('ancestors');
+        
+        // Core data
         this.birthData = [];
-        this.markerDisplayManager = new MarkerDisplayManager();
-        this.map = null;
 
         // Style configuration for different branches
         this.styles = {
@@ -31,30 +31,13 @@ class RootAncestorTownsStore {
             }
         };
 
-        this.disposers = new Set();
-
         makeObservable(this, {
             birthData: observable,
             map: observable.ref,
-            initialize: action,
             updateMarkers: action,
             clearMarkers: action,
-            toggleVisibility: action,
-            applyVisibility: action,
             processHierarchy: action
         });
-
-        // Écouter les changements de visibilité du calque
-        const layerChangeDisposer = storeEvents.subscribe(
-            EVENTS.VISUALIZATIONS.MAP.LAYERS.CHANGED,
-            (data) => {
-                if (data.layer === 'ancestors') {
-                    this.applyVisibility(data.state);
-                }
-            }
-        );
-
-        this.disposers.add(layerChangeDisposer)
     }
 
     /**
@@ -115,20 +98,6 @@ class RootAncestorTownsStore {
             console.error('❌ Error processing hierarchy:', error);
             console.groupEnd();
             throw error;
-        }
-    }
-
-    /**
-     * Initialize the store with a map instance
-     * @param {google.maps.Map} map - Google Maps instance
-     */
-    initialize(map) {
-        console.log("🚀 Initialisation de rootAncestorTownsStore");
-        this.map = map;
-
-        if (!this.markerDisplayManager.isInitialized()) {
-            console.warn("⚠️ Initialisation du clustering...");
-            this.markerDisplayManager.initializeCluster(map, this.createClusterMarker);
         }
     }
 
@@ -348,19 +317,8 @@ class RootAncestorTownsStore {
         return hasMarkers ? bounds : null;
     }
 
-    // Visibilité du calque
-
     /**
-     * Change la visibilité du calque des ancêtres
-     * @param {boolean} visible - Nouvel état de visibilité
-     */
-    toggleVisibility(visible) {
-        // Délègue la gestion de l'état au service centralisé
-        layerManager.setLayerVisibility('ancestors', visible);
-    }
-
-    /**
-     * Applique l'état de visibilité aux marqueurs
+     * Surcharge de la méthode applyVisibility de BaseLayerStore
      * @param {boolean} visible - État de visibilité à appliquer
      */
     applyVisibility(visible) {
@@ -510,10 +468,10 @@ class RootAncestorTownsStore {
         return this.styles.colors.mixed;
     }
 
+    // Surcharge la méthode cleanup pour effectuer des nettoyages spécifiques
     cleanup() {
         this.clearMarkers();
-        this.map = null;
-        this.markerDisplayManager.cleanup();
+        super.cleanup(); // Appel à la méthode cleanup de la classe parente
     }
 }
 
