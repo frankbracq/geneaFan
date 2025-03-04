@@ -438,18 +438,30 @@ class FamilyTownsStore {
             if (visible) {
                 console.log('🔍 Activation du calque des villes familiales');
                 
-                // Créer/mettre à jour les marqueurs sans les afficher encore
+                // Créer/mettre à jour les marqueurs
                 this.updateMarkers();
                 
-                // IMPORTANT: D'abord rendre les marqueurs visibles
-                this.markerDisplayManager.toggleLayerVisibility('familyTowns', true, this.map);
-    
-                // Puis ajouter au cluster après le délai
+                // Au lieu d'appeler toggleLayerVisibility, qui appelle déjà addMarkersToCluster
+                // Définir une approche en deux étapes
+                
+                // 1. Rendre les marqueurs visibles sans les ajouter au cluster
+                const layerMarkers = this.markerDisplayManager.layers.get('familyTowns');
+                if (layerMarkers) {
+                    layerMarkers.forEach(marker => {
+                        marker.map = this.map;
+                    });
+                }
+                
+                // 2. Ajouter au cluster après le délai
                 const config = layerManager.getLayerConfig('family');
                 const delay = config ? config.clusterDelay : 200;
                 
                 setTimeout(() => {
                     console.log('📍 Ajout des marqueurs familiaux au cluster');
+                    // S'assurer que le cluster est vide pour ce layer avant d'ajouter
+                    if (this.markerDisplayManager.cluster) {
+                        this.markerDisplayManager.cluster.clearMarkers();
+                    }
                     this.markerDisplayManager.addMarkersToCluster(this.map);
                 }, delay);
             } else {

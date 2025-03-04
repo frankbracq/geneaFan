@@ -31,14 +31,11 @@ class SurnamesTownsStore {
         // Set of MobX reaction disposers
         this.disposers = new Set();
 
-        this.isVisible = false; // Toujours désactivé par défaut
-
         // Configure MobX observables and actions
         makeObservable(this, {
             currentSurname: observable,
 
             setSurname: action.bound,
-            isVisible: observable,
             toggleVisibility: action,
             applyVisibility: action
         });
@@ -62,9 +59,6 @@ class SurnamesTownsStore {
             EVENTS.VISUALIZATIONS.MAP.LAYERS.CHANGED,
             (data) => {
                 if (data.layer === 'surnames') {
-                    runInAction(() => {
-                        this.isVisible = data.state;
-                    });
                     this.applyVisibility(data.state);
                 }
             }
@@ -216,8 +210,6 @@ class SurnamesTownsStore {
         townsData.forEach((townData, townName) => {
             this.getOrCreateMarker(townName, townData);
         });
-
-        this.markerDisplayManager.toggleLayerVisibility('surnames', true, this.map);
     }
 
     /**
@@ -327,19 +319,28 @@ class SurnamesTownsStore {
 
     // Modifier toggleVisibility
     toggleVisibility(visible) {
-        // Mettre à jour la source de vérité
-        googleMapsStore.setLayerState('surnames', visible);
+        // Déléguer la gestion de l'état au service centralisé
+        layerManager.setLayerVisibility('surnames', visible);
     }
 
     // Nouvelle méthode pour appliquer la visibilité
     applyVisibility(visible) {
         if (this.map) {
             if (visible && this.currentSurname) {
+                // Mettre à jour les marqueurs basés sur le patronyme sélectionné
                 this.updateMarkersForSurname(this.currentSurname);
-
+                
+                // IMPORTANT: Rendre les marqueurs visibles avant de les ajouter au cluster
+                this.markerDisplayManager.toggleLayerVisibility('surnames', true, this.map);
+    
+                // Utiliser le délai configuré dans le service
+                const config = layerManager.getLayerConfig('surnames');
+                const delay = config ? config.clusterDelay : 200;
+                
                 setTimeout(() => {
+                    console.log('📍 Ajout des marqueurs de patronymes au cluster');
                     this.markerDisplayManager.addMarkersToCluster(this.map);
-                }, 200);
+                }, delay);
             } else {
                 this.markerDisplayManager.toggleLayerVisibility('surnames', false, this.map);
             }
