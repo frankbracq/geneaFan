@@ -106,48 +106,36 @@ class MarkerDisplayManager {
     addMarkersToCluster(map) {
         if (!this.isInitialized()) {
             console.warn('⚠️ Cluster ou map non initialisé');
-            console.log('Map:', !!this.map, 'Cluster:', !!this.cluster);
             return;
         }
         
+        // 1. Récupérer tous les marqueurs visibles
         let markersToAdd = [];
-        this.layers.forEach((layerMarkers, layerName) => {
-            console.log(`Calque ${layerName}: ${layerMarkers.size} marqueurs`);
+        this.layers.forEach((layerMarkers) => {
             layerMarkers.forEach(marker => {
                 if (marker.map !== null) {
                     markersToAdd.push(marker);
                 }
             });
         });
-    
-        console.log(`📊 Attempting to add ${markersToAdd.length} markers to cluster`);
-    
+        
+        console.log(`📊 Tentative d'ajout de ${markersToAdd.length} marqueurs au cluster`);
+        
         if (markersToAdd.length === 0) {
-            console.warn('⚠️ No markers to display in cluster');
+            console.warn('⚠️ Aucun marqueur à afficher dans le cluster');
             return;
         }
-    
-        if (!this.cluster) {
-            console.error("❌ Cluster is not initialized properly!");
-            return;
-        }
-    
+        
+        // 2. Vider le cluster existant
         this.cluster.clearMarkers();
         
-        const validMarkers = markersToAdd.filter(marker => {
-            if (!marker.position) {
-                console.warn('⚠️ Marker without position detected');
-                return false;
-            }
-            return true;
-        });
-    
-        console.log(`📍 Adding ${validMarkers.length} valid markers to cluster`);
-        this.cluster.addMarkers(validMarkers);
-    
+        // 3. Ajouter les marqueurs au cluster SANS les retirer de la carte
+        this.cluster.addMarkers(markersToAdd);
+        
+        // 4. Forcer un rafraîchissement du clustering
         google.maps.event.trigger(map, 'zoom_changed');
         
-        console.log('✅ Markers added to cluster');
+        console.log('✅ Marqueurs ajoutés au cluster');
     }
 
     /**
