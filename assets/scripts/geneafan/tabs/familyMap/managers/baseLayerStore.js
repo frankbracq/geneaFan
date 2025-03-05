@@ -8,6 +8,8 @@ import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 class BaseLayerStore {
     constructor(layerName) {
         this.layerName = layerName;
+        // Standardisation : par défaut, le nom de la couche de marqueurs est identique au nom du calque
+        this.markerLayerName = layerName;
         this.markerDisplayManager = new MarkerDisplayManager();
         this.map = null;
         this.disposers = new Set();
@@ -64,8 +66,9 @@ class BaseLayerStore {
     applyVisibility(visible) {
         if (!this.map) return;
         
+        // Utiliser markerLayerName au lieu de layerName pour la gestion des marqueurs
         this.markerDisplayManager.toggleLayerVisibility(
-            this.layerName,
+            this.markerLayerName,
             visible,
             this.map
         );

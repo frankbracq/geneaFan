@@ -20,6 +20,8 @@ import BaseLayerStore from '../managers/baseLayerStore.js';
 class FamilyTownsStore extends BaseLayerStore {
     constructor() {
         super('family');
+        // Définir explicitement le nom de la couche de marqueurs
+        this.markerLayerName = 'familyTowns';
         
         // Primary data storage
         this.eventsData = new Map();
@@ -224,6 +226,7 @@ class FamilyTownsStore extends BaseLayerStore {
         return div;
     }
 
+    // Mettre à jour la méthode getOrCreateMarker pour utiliser le bon nom de couche
     getOrCreateMarker(townName, townData) {
         if (!townData) {
             console.warn(`⚠️ Données manquantes pour la ville ${townName}`);
@@ -238,7 +241,7 @@ class FamilyTownsStore extends BaseLayerStore {
         }
 
         return this.markerDisplayManager.addMarker(
-            'familyTowns',
+            this.markerLayerName,
             townName,
             config.position,
             config.options,
@@ -437,7 +440,7 @@ class FamilyTownsStore extends BaseLayerStore {
             this.updateMarkers();
             
             // 3. Rendre les marqueurs visibles AVANT de les ajouter au cluster (directement sur la carte)
-            const layerMarkers = this.markerDisplayManager.layers.get('familyTowns');
+            const layerMarkers = this.markerDisplayManager.layers.get(this.markerLayerName);
             if (layerMarkers) {
                 layerMarkers.forEach(marker => {
                     marker.map = this.map;
@@ -450,7 +453,7 @@ class FamilyTownsStore extends BaseLayerStore {
             
         } else {
             console.log('🔍 Désactivation du calque des villes familiales');
-            this.markerDisplayManager.toggleLayerVisibility('familyTowns', false, this.map);
+            this.markerDisplayManager.toggleLayerVisibility(this.markerLayerName, false, this.map);
         }
     }
 

@@ -18,6 +18,7 @@ import BaseLayerStore from '../managers/baseLayerStore.js';
 class RootAncestorTownsStore extends BaseLayerStore {
     constructor() {
         super('ancestors');
+        this.markerLayerName = 'rootAncestors';
         
         // Core data
         this.birthData = [];
@@ -165,7 +166,7 @@ class RootAncestorTownsStore extends BaseLayerStore {
         // console.log(`   ➝ Générations concernées:`, Object.keys(generations));
 
         return this.markerDisplayManager.addMarker(
-            'rootAncestors',
+            this.markerLayerName,
             key,
             position,
             { content, title: births.map(b => b.name).join(', ') },
@@ -199,7 +200,7 @@ class RootAncestorTownsStore extends BaseLayerStore {
 
         console.log(`🔄 Mise à jour des marqueurs pour ${birthData.length} lieux.`);
         this.birthData = birthData;
-        this.markerDisplayManager.clearMarkers('rootAncestors');
+        this.markerDisplayManager.clearMarkers(this.markerLayerName);
 
         const locationMap = this.groupBirthDataByLocation(birthData);
         console.log(`📍 Nombre de lieux uniques: ${locationMap.size}`);
@@ -209,7 +210,7 @@ class RootAncestorTownsStore extends BaseLayerStore {
 
             // Utiliser getOrCreateMarker au lieu de addMarker
             this.markerDisplayManager.getOrCreateMarker(
-                'rootAncestors',
+                this.markerLayerName,
                 locationData.location.name,
                 {
                     latitude: locationData.location.lat,
@@ -229,7 +230,7 @@ class RootAncestorTownsStore extends BaseLayerStore {
         });
 
         if (layerManager.isLayerVisible('ancestors')) {
-            this.markerDisplayManager.toggleLayerVisibility('rootAncestors', true, this.map);
+            this.markerDisplayManager.toggleLayerVisibility(this.markerLayerName, true, this.map);
         }
     }
 
@@ -242,7 +243,7 @@ class RootAncestorTownsStore extends BaseLayerStore {
         const position = new google.maps.LatLng(locationData.location.lat, locationData.location.lng);
 
         return this.markerDisplayManager.addMarker(
-            'rootAncestors',
+            this.markerLayerName,
             key,
             position,
             {
@@ -283,7 +284,7 @@ class RootAncestorTownsStore extends BaseLayerStore {
 
     clearMarkers() {
         this.birthData = [];
-        this.markerDisplayManager.clearMarkers('rootAncestors');
+        this.markerDisplayManager.clearMarkers(this.markerLayerName);
     }
 
     hasActiveMarkers() {
@@ -323,13 +324,13 @@ class RootAncestorTownsStore extends BaseLayerStore {
      */
     applyVisibility(visible) {
         if (this.map) {
-            this.markerDisplayManager.toggleLayerVisibility('rootAncestors', visible, this.map);
+            this.markerDisplayManager.toggleLayerVisibility(this.markerLayerName, visible, this.map);
     
             if (visible && this.birthData && this.birthData.length > 0) {
                 this.updateMarkers(this.birthData);
     
                 // Utiliser le délai configuré dans le service
-                const config = layerManager.getLayerConfig('ancestors');
+                const config = layerManager.getLayerConfig(this.layerName);
                 const delay = config ? config.clusterDelay : 200;
                 
                 setTimeout(() => {
