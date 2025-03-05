@@ -1,6 +1,5 @@
 import { makeObservable, observable, action, runInAction } from '../../../common/stores/mobx-config.js';
 import { infoWindowDisplayManager } from '../managers/infoWindowDisplayManager.js';
-import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 import { layerManager } from '../managers/layerManager.js';
 import BaseLayerStore from '../managers/baseLayerStore.js';
 
@@ -50,8 +49,12 @@ class RootAncestorTownsStore extends BaseLayerStore {
         try {
             console.group('📍 Processing ancestor towns hierarchy');
 
+            // Nettoyer explicitement d'abord
+            this.clearMarkers();
+
             if (!hierarchy) {
                 console.warn('⚠️ Invalid or missing hierarchy');
+                console.groupEnd();
                 return;
             }
 
@@ -84,17 +87,18 @@ class RootAncestorTownsStore extends BaseLayerStore {
             };
 
             processNode(hierarchy);
+
+            console.log(`✅ Birth data extracted for ${birthData.length} locations`);
             this.birthData = birthData;
 
-            if (birthData.length > 0) {
-                console.log('✅ Birth data extracted for', birthData.length, 'locations');
-            } else {
-                console.warn('⚠️ No birth locations found in hierarchy');
+            // Vérifier si le calque est visible et afficher les marqueurs si c'est le cas
+            if (birthData.length > 0 && layerManager.isLayerVisible(this.layerName)) {
+                console.log('🔄 Mise à jour automatique des marqueurs après changement de hiérarchie');
+                this.updateMarkers(birthData);
             }
 
             console.groupEnd();
             return birthData;
-
         } catch (error) {
             console.error('❌ Error processing hierarchy:', error);
             console.groupEnd();
@@ -199,9 +203,21 @@ class RootAncestorTownsStore extends BaseLayerStore {
         }
 
         console.log(`🔄 Mise à jour des marqueurs pour ${birthData.length} lieux.`);
-        this.birthData = birthData;
-        this.markerDisplayManager.clearMarkers(this.markerLayerName);
 
+        // 1. S'assurer que le nettoyage est vraiment fait
+        this.clearMarkers();
+
+        // 2. Vérifier que le nettoyage a bien fonctionné
+        const layerExists = this.markerDisplayManager.layers.has(this.markerLayerName);
+        if (layerExists) {
+            console.warn('⚠️ La couche existe encore après nettoyage, forçage du nettoyage...');
+            this.markerDisplayManager.layers.delete(this.markerLayerName);
+        }
+
+        // 3. Mettre à jour les données
+        this.birthData = birthData;
+
+        // 4. Continuer avec le reste de la logique...
         const locationMap = this.groupBirthDataByLocation(birthData);
         console.log(`📍 Nombre de lieux uniques: ${locationMap.size}`);
 
@@ -283,8 +299,31 @@ class RootAncestorTownsStore extends BaseLayerStore {
     }
 
     clearMarkers() {
+        console.log('🧹 Nettoyage complet des marqueurs d\'ancêtres');
+
+        // 1. Réinitialiser les données d'abord
         this.birthData = [];
+
+        // 2. S'assurer que les marqueurs sont retirés de la carte avant tout
+        if (this.markerDisplayManager && this.markerDisplayManager.layers) {
+            const layer = this.markerDisplayManager.layers.get(this.markerLayerName);
+            if (layer) {
+                // Rendre tous les marqueurs invisibles d'abord
+                layer.forEach(marker => {
+                    marker.map = null;
+                });
+            }
+        }
+
+        // 3. Demander au gestionnaire de marqueurs de nettoyer complètement
         this.markerDisplayManager.clearMarkers(this.markerLayerName);
+
+        // 4. Forcer un rafraîchissement du clustering
+        if (this.map) {
+            google.maps.event.trigger(this.map, 'zoom_changed');
+        }
+
+        console.log('✅ Nettoyage des marqueurs d\'ancêtres terminé');
     }
 
     hasActiveMarkers() {

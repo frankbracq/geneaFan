@@ -35,7 +35,6 @@ class SurnamesTownsStore extends BaseLayerStore {
             currentSurname: observable,
             setSurname: action.bound,
             toggleVisibility: action,
-            applyVisibility: action
         });
 
         // React to changes in towns data to update surnames list

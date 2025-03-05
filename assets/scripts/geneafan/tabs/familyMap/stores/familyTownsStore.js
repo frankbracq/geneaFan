@@ -487,11 +487,15 @@ class FamilyTownsStore extends BaseLayerStore {
     }
 
     /**
-     * Surcharge de la méthode applyVisibility de BaseLayerStore
-     * @param {boolean} visible - État de visibilité à appliquer
-    */
+ * Surcharge de la méthode applyVisibility de BaseLayerStore
+ * @param {boolean} visible - État de visibilité à appliquer
+ */
     applyVisibility(visible) {
         if (!this.map) return;
+
+        // Ne pas appeler super.applyVisibility() car nous avons besoin d'une implémentation complètement personnalisée
+        // Mais documenter explicitement cette décision
+        // Note: Cette méthode remplace intentionnellement celle de BaseLayerStore avec une logique spécifique
 
         if (visible) {
             console.log('🔍 Activation du calque des villes familiales');
