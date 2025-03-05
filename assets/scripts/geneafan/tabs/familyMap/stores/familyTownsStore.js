@@ -424,7 +424,7 @@ class FamilyTownsStore extends BaseLayerStore {
     /**
      * Surcharge de la méthode applyVisibility de BaseLayerStore
      * @param {boolean} visible - État de visibilité à appliquer
-        */  
+    */
     applyVisibility(visible) {
         if (!this.map) return;
         

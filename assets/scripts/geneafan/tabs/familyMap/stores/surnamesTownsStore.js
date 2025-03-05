@@ -430,77 +430,6 @@ updateLayerMarkers() {
 }
 
     /**
-     * Surcharge de la méthode applyVisibility de BaseLayerStore
-     * Gestion spécifique pour le calque des patronymes, avec sélection automatique
-     * @param {boolean} visible - État de visibilité à appliquer
-
-    applyVisibility(visible) {
-        console.log(`🔄 applyVisibility appelé avec visible=${visible}, surname=${this.currentSurname}`);
-        
-        if (!this.map) return;
-        
-        if (visible) {
-            // Si le calque est activé mais aucun patronyme n'est sélectionné,
-            // sélectionner automatiquement le premier
-            if (!this.currentSurname) {
-                const select = document.getElementById('surnameFilter');
-                if (select && select.options.length > 1) {  // > 1 car la première option est vide
-                    const firstSurname = select.options[1].value;
-                    console.log(`🔄 Sélection automatique du patronyme: ${firstSurname}`);
-                    
-                    // Mettre à jour le menu déroulant
-                    select.value = firstSurname;
-                    
-                    // Mettre à jour le store
-                    this.currentSurname = firstSurname;
-                }
-            } else {
-                // S'assurer que le menu déroulant affiche le patronyme actuel
-                const select = document.getElementById('surnameFilter');
-                if (select && select.value !== this.currentSurname) {
-                    select.value = this.currentSurname;
-                }
-            }
-            
-            if (this.currentSurname) {
-                console.log('🔍 Activation du calque des patronymes');
-                
-                // 1. S'assurer que le cluster est initialisé
-                if (!this.markerDisplayManager.isInitialized()) {
-                    this.markerDisplayManager.initializeCluster(this.map, this.createClusterMarker);
-                }
-                
-                // 2. Mettre à jour les marqueurs pour le patronyme actuel
-                this.updateMarkersForSurname(this.currentSurname);
-                
-                // 3. Rendre les marqueurs visibles AVANT de les ajouter au cluster
-                const layerMarkers = this.markerDisplayManager.layers.get('surnames');
-                const markerCount = layerMarkers ? layerMarkers.size : 0;
-                console.log(`🔢 Nombre de marqueurs pour ce patronyme: ${markerCount}`);
-                
-                if (layerMarkers && markerCount > 0) {
-                    console.log('🔄 Définition de la visibilité des marqueurs');
-                    layerMarkers.forEach(marker => {
-                        marker.map = this.map;
-                    });
-                    
-                    // 4. Ajouter les marqueurs au cluster SANS les cacher d'abord
-                    console.log('🔄 Ajout des marqueurs au cluster');
-                    this.markerDisplayManager.addMarkersToCluster(this.map);
-                } else {
-                    console.log('⚠️ Aucun marqueur trouvé pour ce patronyme');
-                }
-            } else {
-                console.warn('⚠️ Le calque est activé mais aucun patronyme n\'est disponible');
-            }
-        } else {
-            console.log('🔍 Désactivation du calque des patronymes');
-            this.markerDisplayManager.toggleLayerVisibility('surnames', false, this.map);
-        }
-    }
-             */
-
-    /**
      * Surcharge de la méthode cleanup de BaseLayerStore
      * Nettoyage des ressources spécifiques à ce calque
      */
@@ -520,6 +449,7 @@ updateLayerMarkers() {
  * Updates the surnames dropdown list based on birth events
  * Calculates frequency of each surname and sorts by occurrence
  */
+
 updateSurnamesList() {
     const surnamesCount = new Map();
 
