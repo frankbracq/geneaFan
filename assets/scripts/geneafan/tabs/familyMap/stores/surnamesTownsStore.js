@@ -387,10 +387,53 @@ class SurnamesTownsStore extends BaseLayerStore {
     }
 
     /**
+ * Hook: Préparations avant affichage du calque
+ * Spécifique à SurnamesTownsStore: vérification et sélection de patronyme
+ */
+prepareLayerBeforeShow() {
+    console.log(`🔄 Préparation du calque des patronymes avec surname=${this.currentSurname}`);
+    
+    // Si le calque est activé mais aucun patronyme n'est sélectionné,
+    // sélectionner automatiquement le premier
+    if (!this.currentSurname) {
+        const select = document.getElementById('surnameFilter');
+        if (select && select.options.length > 1) {  // > 1 car la première option est vide
+            const firstSurname = select.options[1].value;
+            console.log(`🔄 Sélection automatique du patronyme: ${firstSurname}`);
+            
+            // Mettre à jour le menu déroulant
+            select.value = firstSurname;
+            
+            // Mettre à jour le store
+            this.currentSurname = firstSurname;
+        }
+    } else {
+        // S'assurer que le menu déroulant affiche le patronyme actuel
+        const select = document.getElementById('surnameFilter');
+        if (select && select.value !== this.currentSurname) {
+            select.value = this.currentSurname;
+        }
+    }
+}
+
+/**
+ * Hook: Mise à jour des marqueurs du calque
+ * Spécifique à SurnamesTownsStore: filtrage par patronyme
+ */
+updateLayerMarkers() {
+    if (this.currentSurname) {
+        console.log(`🔄 Mise à jour des marqueurs pour le patronyme: ${this.currentSurname}`);
+        this.updateMarkersForSurname(this.currentSurname);
+    } else {
+        console.warn('⚠️ Pas de patronyme sélectionné pour mettre à jour les marqueurs');
+    }
+}
+
+    /**
      * Surcharge de la méthode applyVisibility de BaseLayerStore
      * Gestion spécifique pour le calque des patronymes, avec sélection automatique
      * @param {boolean} visible - État de visibilité à appliquer
-     */
+
     applyVisibility(visible) {
         console.log(`🔄 applyVisibility appelé avec visible=${visible}, surname=${this.currentSurname}`);
         
@@ -455,6 +498,7 @@ class SurnamesTownsStore extends BaseLayerStore {
             this.markerDisplayManager.toggleLayerVisibility('surnames', false, this.map);
         }
     }
+             */
 
     /**
      * Surcharge de la méthode cleanup de BaseLayerStore

@@ -22,7 +22,7 @@ class FamilyTownsStore extends BaseLayerStore {
         super('family');
         // Définir explicitement le nom de la couche de marqueurs
         this.markerLayerName = 'familyTowns';
-        
+
         // Primary data storage
         this.eventsData = new Map();
 
@@ -32,11 +32,11 @@ class FamilyTownsStore extends BaseLayerStore {
         this.infoWindowContentCache = new Map();      // Caches info window HTML content
 
         // Primary town data storage
-        this.townsData = new Map();                   
-        
+        this.townsData = new Map();
+
         // State management
         this.isLoading = false;
-        
+
         // Dans BaseLayerStore, disposers est un Set, mais ici on l'utilisait comme Map
         this.disposers = new Map(); // Pour la compatibilité avec le code existant
 
@@ -405,11 +405,11 @@ class FamilyTownsStore extends BaseLayerStore {
 
     updateMarkers() {
         if (!this.map) return;
-    
+
         if (!this.markerDisplayManager.isInitialized()) {
             this.markerDisplayManager.initializeCluster(this.map, this.createClusterMarker);
         }
-    
+
         this.townsData.forEach((townData, townName) => {
             this.getOrCreateMarker(townName, townData);
         });
@@ -424,7 +424,7 @@ class FamilyTownsStore extends BaseLayerStore {
     /**
      * Surcharge de la méthode applyVisibility de BaseLayerStore
      * @param {boolean} visible - État de visibilité à appliquer
-     */
+        */  
     applyVisibility(visible) {
         if (!this.map) return;
         
@@ -455,7 +455,7 @@ class FamilyTownsStore extends BaseLayerStore {
             console.log('🔍 Désactivation du calque des villes familiales');
             this.markerDisplayManager.toggleLayerVisibility(this.markerLayerName, false, this.map);
         }
-    }
+    }   
 
     // Stats and Data Management
     recalculateAllTownsStatistics() {
