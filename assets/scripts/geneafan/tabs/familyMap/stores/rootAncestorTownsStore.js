@@ -19,7 +19,7 @@ class RootAncestorTownsStore extends BaseLayerStore {
     constructor() {
         super('ancestors');
         this.markerLayerName = 'rootAncestors';
-        
+
         // Core data
         this.birthData = [];
 
@@ -319,25 +319,15 @@ class RootAncestorTownsStore extends BaseLayerStore {
     }
 
     /**
-     * Surcharge de la méthode applyVisibility de BaseLayerStore
-     * @param {boolean} visible - État de visibilité à appliquer
-     */
-    applyVisibility(visible) {
-        if (this.map) {
-            this.markerDisplayManager.toggleLayerVisibility(this.markerLayerName, visible, this.map);
-    
-            if (visible && this.birthData && this.birthData.length > 0) {
-                this.updateMarkers(this.birthData);
-    
-                // Utiliser le délai configuré dans le service
-                const config = layerManager.getLayerConfig(this.layerName);
-                const delay = config ? config.clusterDelay : 200;
-                
-                setTimeout(() => {
-                    console.log('📍 Ajout des marqueurs au cluster après délai');
-                    this.markerDisplayManager.addMarkersToCluster(this.map);
-                }, delay);
-            }
+ * Hook: Mise à jour des marqueurs du calque
+ * Spécifique à RootAncestorTownsStore: mise à jour des marqueurs avec birthData
+ */
+    updateLayerMarkers() {
+        if (this.birthData && this.birthData.length > 0) {
+            console.log(`🔄 Mise à jour des marqueurs d'ancêtres pour ${this.birthData.length} lieux.`);
+            this.updateMarkers(this.birthData);
+        } else {
+            console.log('ℹ️ Pas de données d\'ancêtres à afficher.');
         }
     }
 

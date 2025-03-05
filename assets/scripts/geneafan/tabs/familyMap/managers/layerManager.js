@@ -128,8 +128,13 @@ class LayerManager {
      */
     setupLayerControls(elements) {
         if (elements.ancestorLayerSwitch) {
-            elements.ancestorLayerSwitch.checked = this.isLayerVisible('ancestors');
+            // Vérifier que l'état du commutateur correspond à l'état interne
+            const isVisible = this.isLayerVisible('ancestors');
+            elements.ancestorLayerSwitch.checked = isVisible;
+            console.log(`📍 Configuration commutateur ancêtres: ${isVisible ? 'activé' : 'désactivé'}`);
+            
             elements.ancestorLayerSwitch.addEventListener('change', (e) => {
+                console.log(`📍 Changement commutateur ancêtres: ${e.target.checked ? 'activé' : 'désactivé'}`);
                 this.setLayerVisibility('ancestors', e.target.checked);
             });
         }

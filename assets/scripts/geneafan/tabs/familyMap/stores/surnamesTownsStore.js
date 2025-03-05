@@ -2,8 +2,6 @@ import { makeObservable, observable, action, reaction, runInAction } from '../..
 import { infoWindowDisplayManager } from '../managers/infoWindowDisplayManager.js';
 import { infoWindowContentManager } from '../managers/infoWindowContentManager.js';
 import familyTownsStore from './familyTownsStore.js';
-import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
-import { googleMapsStore } from './googleMapsStore.js';
 import { layerManager } from '../managers/layerManager.js';
 import BaseLayerStore from '../managers/baseLayerStore.js';
 
