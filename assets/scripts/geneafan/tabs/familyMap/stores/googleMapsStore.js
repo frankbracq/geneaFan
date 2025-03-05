@@ -612,23 +612,30 @@ class GoogleMapsStore {
     }
 
     cleanup() {
+        console.log('🧹 Nettoyage de GoogleMapsStore');
+        
         if (this.map) {
+            // Supprimer tous les écouteurs de la carte
             google.maps.event.clearInstanceListeners(this.map);
         }
-
+    
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
             this.resizeObserver = null;
         }
-
+    
+        // Supprimer l'élément de mini-carte
         const wrapper = document.getElementById('overview-map-wrapper');
         if (wrapper) {
             wrapper.remove();
         }
-
+    
+        // Réinitialiser les états
         this.overviewMapVisible = false;
         this.history = [];
         this.redoStack = [];
+        
+        console.log('✅ Nettoyage de GoogleMapsStore terminé');
     }
 }
 

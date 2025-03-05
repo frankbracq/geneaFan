@@ -54,8 +54,8 @@ class MarkerDisplayManager {
                 }
             });
         }
-    
-        console.log("🚀 Google Maps cluster initialized");   
+
+        console.log("🚀 Google Maps cluster initialized");
     }
 
     /**
@@ -70,72 +70,120 @@ class MarkerDisplayManager {
     }
 
     /**
-     * Add a marker to a specific layer
-     * @param {string} layerName - Target layer
-     * @param {string} key - Unique identifier for the marker
-     * @param {google.maps.LatLng} position - Marker position
-     * @param {Object} options - Marker options
-     * @param {Function} onClickCallback - Click event handler
-     */
+ * Add a marker to a specific layer with improved validation
+ * @param {string} layerName - Target layer
+ * @param {string} key - Unique identifier for the marker
+ * @param {google.maps.LatLng} position - Marker position
+ * @param {Object} options - Marker options
+ * @param {Function} onClickCallback - Click event handler
+ * @returns {google.maps.marker.AdvancedMarkerElement|null} - Created marker or null if invalid
+ */
     addMarker(layerName, key, position, options, onClickCallback = null) {
+        // Validation des paramètres essentiels
+        if (!layerName) {
+            console.warn('⚠️ Nom de calque manquant pour addMarker');
+            return null;
+        }
+
+        if (!key) {
+            console.warn('⚠️ Clé d\'identifiant manquante pour addMarker');
+            return null;
+        }
+
+        // Vérifier que la position est une instance valide de LatLng
+        if (!position || !(position instanceof google.maps.LatLng)) {
+            console.warn(`⚠️ Position invalide pour le marqueur ${key}`, position);
+            return null;
+        }
+
+        // Vérifier que les options contiennent au moins le contenu ou le titre
+        if (!options || (!options.content && !options.title)) {
+            console.warn(`⚠️ Options invalides pour le marqueur ${key}`);
+            return null;
+        }
+
+        // Créer la couche si elle n'existe pas
         this.addLayer(layerName);
         const layerMarkers = this.layers.get(layerName);
-    
-        if (!layerMarkers.has(key)) {
+
+        // Vérifier si le marqueur existe déjà
+        if (layerMarkers.has(key)) {
+            return layerMarkers.get(key);
+        }
+
+        try {
+            // Créer le marqueur avec gestion des erreurs
             const marker = new google.maps.marker.AdvancedMarkerElement({
                 position,
-                map: null, // Initially invisible
+                map: null, // Initialement invisible
                 ...options
             });
-    
-            if (onClickCallback) {
+
+            // Ajouter l'écouteur de clic si fourni
+            if (onClickCallback && typeof onClickCallback === 'function') {
                 marker.addListener('click', () => onClickCallback(marker));
             }
-    
+
             layerMarkers.set(key, marker);
-            // console.log(`✅ Added marker to ${layerName}:`, key, marker);
+            return marker;
+        } catch (error) {
+            console.error(`❌ Erreur lors de la création du marqueur ${key}:`, error);
+            return null;
         }
-    
-        return layerMarkers.get(key);
     }
 
     /**
-     * Add markers to the cluster
-     * @param {google.maps.Map} map - Google Maps instance
-     */
+ * Add markers to the cluster with improved validation
+ * @param {google.maps.Map} map - Google Maps instance
+ * @returns {boolean} Success status
+ */
     addMarkersToCluster(map) {
+        // Vérifier l'initialisation
         if (!this.isInitialized()) {
             console.warn('⚠️ Cluster ou map non initialisé');
-            return;
+            return false;
         }
-        
-        // 1. Récupérer tous les marqueurs visibles
+
+        // Vérifier que la carte est valide
+        if (!map || !(map instanceof google.maps.Map)) {
+            console.warn('⚠️ Instance de carte invalide');
+            return false;
+        }
+
+        // Récupérer tous les marqueurs visibles
         let markersToAdd = [];
         this.layers.forEach((layerMarkers) => {
             layerMarkers.forEach(marker => {
-                if (marker.map !== null) {
+                // Vérifier que le marqueur est valide et visible
+                if (marker && marker.map !== null) {
                     markersToAdd.push(marker);
                 }
             });
         });
-        
+
         console.log(`📊 Tentative d'ajout de ${markersToAdd.length} marqueurs au cluster`);
-        
+
         if (markersToAdd.length === 0) {
             console.warn('⚠️ Aucun marqueur à afficher dans le cluster');
-            return;
+            return false;
         }
-        
-        // 2. Vider le cluster existant
-        this.cluster.clearMarkers();
-        
-        // 3. Ajouter les marqueurs au cluster SANS les retirer de la carte
-        this.cluster.addMarkers(markersToAdd);
-        
-        // 4. Forcer un rafraîchissement du clustering
-        google.maps.event.trigger(map, 'zoom_changed');
-        
-        console.log('✅ Marqueurs ajoutés au cluster');
+
+        try {
+            // Vider le cluster existant avec gestion des erreurs
+            this.cluster.clearMarkers();
+
+            // Ajouter les marqueurs au cluster
+            this.cluster.addMarkers(markersToAdd);
+
+            // Forcer un rafraîchissement du clustering
+            google.maps.event.trigger(map, 'zoom_changed');
+
+            console.log('✅ Marqueurs ajoutés au cluster');
+            return true;
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'ajout des marqueurs au cluster:', error);
+            return false;
+        }
     }
 
     /**
@@ -151,11 +199,11 @@ class MarkerDisplayManager {
             if (this.cluster && !visible) {
                 this.cluster.clearMarkers();
             }
-    
+
             layerMarkers.forEach(marker => {
                 marker.map = visible ? map : null;
             });
-    
+
             if (visible && map) {
                 console.log(`🔄 Mise à jour du clustering pour ${layerName}`);
                 this.addMarkersToCluster(map);
@@ -166,11 +214,11 @@ class MarkerDisplayManager {
     }
 
     /**
-     * Clear markers from specific layer or all layers
-     * @param {string} layerName - Target layer (optional)
-     */
+ * Clear markers from specific layer or all layers with proper event cleanup
+ * @param {string} layerName - Target layer (optional)
+ */
     clearMarkers(layerName = null) {
-        console.log(`Clearing markers${layerName ? ` for layer ${layerName}` : ' for all layers'}`);
+        console.log(`🧹 Nettoyage des marqueurs${layerName ? ` pour la couche ${layerName}` : ' pour toutes les couches'}`);
 
         if (this.cluster) {
             this.cluster.clearMarkers();
@@ -180,82 +228,146 @@ class MarkerDisplayManager {
         if (layerName) {
             const layerMarkers = this.layers.get(layerName);
             if (layerMarkers) {
-                layerMarkers.forEach(marker => marker.map = null);
+                layerMarkers.forEach(marker => {
+                    // Supprimer tous les écouteurs avant de retirer de la carte
+                    google.maps.event.clearInstanceListeners(marker);
+                    marker.map = null;
+                });
                 this.layers.delete(layerName);
             }
         } else {
             this.layers.forEach(layerMarkers => {
-                layerMarkers.forEach(marker => marker.map = null);
+                layerMarkers.forEach(marker => {
+                    // Supprimer tous les écouteurs avant de retirer de la carte
+                    google.maps.event.clearInstanceListeners(marker);
+                    marker.map = null;
+                });
             });
             this.layers.clear();
         }
 
         this.activeMarkers.clear();
+        this.markerConfigs.clear();
     }
 
     /**
-     * Create marker configuration
-     * @param {string} townName - Name of the town
-     * @param {Object} townData - Town data
-     * @param {Function} createMarkerElementFn - Function to create marker element
-     */
+ * Create marker configuration with improved validation
+ * @param {string} townName - Name of the town
+ * @param {Object} townData - Town data
+ * @param {Function} createMarkerElementFn - Function to create marker element
+ * @returns {Object|null} Marker configuration or null if invalid data
+ */
     createMarkerConfig(townName, townData, createMarkerElementFn) {
-        if (!townData?.latitude || !townData?.longitude) {
-            console.warn(`⚠️ Données de ville invalides pour ${townName}`);
+        // Validation complète des données d'entrée
+        if (!townData) {
+            console.warn(`⚠️ Données manquantes pour la ville ${townName}`);
             return null;
         }
 
+        // Vérification que les coordonnées existent et sont numériques
+        if (!townData.latitude || !townData.longitude ||
+            isNaN(Number(townData.latitude)) || isNaN(Number(townData.longitude))) {
+            console.warn(`⚠️ Coordonnées invalides pour ${townName}: (${townData.latitude}, ${townData.longitude})`);
+            return null;
+        }
+
+        // Vérification des limites des coordonnées (valeurs plausibles)
+        const lat = Number(townData.latitude);
+        const lng = Number(townData.longitude);
+
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+            console.warn(`⚠️ Coordonnées hors limites pour ${townName}: (${lat}, ${lng})`);
+            return null;
+        }
+
+        // Création de la configuration avec les coordonnées validées
         const config = {
-            position: new google.maps.LatLng(
-                Number(townData.latitude),
-                Number(townData.longitude)
-            ),
+            position: new google.maps.LatLng(lat, lng),
             options: {
                 content: createMarkerElementFn(townData),
-                title: townData.townDisplay || townData.town
+                title: townData.townDisplay || townData.town || townName
             }
         };
-        
+
         this.markerConfigs.set(townName, config);
         return config;
     }
 
     /**
-     * Get existing marker or create new one
-     * @param {string} layerName - Target layer
-     * @param {string} townName - Name of the town
-     * @param {Object} townData - Town data
-     * @param {Function} createMarkerElementFn - Function to create marker element
-     * @param {Function} onClickCallback - Click event handler
-     */
+ * Get existing marker or create new one with improved validation
+ * @param {string} layerName - Target layer
+ * @param {string} townName - Name of the town
+ * @param {Object} townData - Town data
+ * @param {Function} createMarkerElementFn - Function to create marker element
+ * @param {Function} onClickCallback - Click event handler
+ * @returns {google.maps.marker.AdvancedMarkerElement|null} - The marker or null if invalid
+ */
     getOrCreateMarker(layerName, townName, townData, createMarkerElementFn, onClickCallback) {
-        let config = this.markerConfigs.get(townName);
-        
-        if (!config) {
-            config = this.createMarkerConfig(townName, townData, createMarkerElementFn);
-            if (!config) return null;
+        // Validation des paramètres essentiels
+        if (!layerName) {
+            console.warn('⚠️ Nom de calque manquant pour getOrCreateMarker');
+            return null;
         }
 
-        const marker = this.addMarker(
+        if (!townName) {
+            console.warn('⚠️ Identifiant de ville manquant pour getOrCreateMarker');
+            return null;
+        }
+
+        if (!createMarkerElementFn || typeof createMarkerElementFn !== 'function') {
+            console.warn(`⚠️ Fonction de création d'élément invalide pour ${townName}`);
+            return null;
+        }
+
+        // Vérifier que les données de ville existent
+        if (!townData) {
+            console.warn(`⚠️ Données manquantes pour la ville ${townName}`);
+            return null;
+        }
+
+        // Utiliser la configuration existante ou en créer une nouvelle
+        let config = this.markerConfigs.get(townName);
+
+        if (!config) {
+            config = this.createMarkerConfig(townName, townData, createMarkerElementFn);
+            if (!config) {
+                console.warn(`⚠️ Impossible de créer la configuration pour ${townName}`);
+                return null;
+            }
+        }
+
+        // Ajouter le marqueur avec la configuration validée
+        return this.addMarker(
             layerName,
             townName,
             config.position,
             config.options,
             onClickCallback
         );
-        
-        // console.log(`🔍 Ajout du marqueur dans layers['rootAncestors']:`, layerName, marker);
-        return marker;
     }
 
     /**
-     * Cleanup resources
-     */
+ * Cleanup resources with proper event handling
+ */
     cleanup() {
+        this.layers.forEach((layerMarkers, layerName) => {
+            layerMarkers.forEach(marker => {
+                // Supprimer les écouteurs d'événements
+                google.maps.event.clearInstanceListeners(marker);
+                marker.map = null;
+            });
+        });
+
         this.clearMarkers();
+
         if (this.cluster) {
+            // Supprimer les écouteurs du cluster également
+            if (this.cluster.onClusterClick) {
+                google.maps.event.clearListeners(this.cluster, 'click');
+            }
             this.cluster.setMap(null);
         }
+
         this.cluster = null;
         this.activeMarkers.clear();
         this.markerConfigs.clear();

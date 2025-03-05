@@ -1,5 +1,5 @@
 import MarkerDisplayManager from './markerDisplayManager.js';
-import { layerManager } from './layerManager.js'; 
+import { layerManager } from './layerManager.js';
 import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 
 /**
@@ -29,15 +29,35 @@ class BaseLayerStore {
     }
 
     /**
-     * Initialise le store avec une instance de Google Maps
-     * @param {google.maps.Map} map - Instance Google Maps
-     */
+ * Initialise le store avec une instance de Google Maps
+ * @param {google.maps.Map} map - Instance Google Maps
+ * @returns {boolean} - Statut de l'initialisation
+ */
     initialize(map) {
+        // Vérifier que la carte est valide
+        if (!map || !(map instanceof google.maps.Map)) {
+            console.error(`❌ Instance de carte invalide pour ${this.layerName}Store`);
+            return false;
+        }
+
         console.log(`🚀 Initialisation de ${this.layerName}Store`);
         this.map = map;
 
-        if (!this.markerDisplayManager.isInitialized()) {
-            this.markerDisplayManager.initializeCluster(map, this.createClusterMarker.bind(this));
+        try {
+            // Initialiser le cluster s'il ne l'est pas déjà
+            if (!this.markerDisplayManager.isInitialized()) {
+                if (!this.createClusterMarker || typeof this.createClusterMarker !== 'function') {
+                    console.error(`❌ Méthode createClusterMarker manquante dans ${this.constructor.name}`);
+                    return false;
+                }
+
+                this.markerDisplayManager.initializeCluster(map, this.createClusterMarker.bind(this));
+            }
+
+            return true;
+        } catch (error) {
+            console.error(`❌ Erreur lors de l'initialisation de ${this.layerName}Store:`, error);
+            return false;
         }
     }
 
@@ -151,14 +171,42 @@ class BaseLayerStore {
     createClusterMarker({ count, position }) {
         throw new Error('createClusterMarker doit être implémenté par les classes dérivées');
     }
+
     /**
-     * Nettoie les ressources utilisées par le store
-     */
+ * Nettoie les ressources utilisées par le store
+ */
     cleanup() {
-        this.markerDisplayManager.clearMarkers(this.layerName);
-        this.disposers.forEach(disposer => disposer());
+        console.log(`🧹 Nettoyage des ressources pour ${this.layerName}Store`);
+
+        // 1. Nettoyage des marqueurs et de leurs écouteurs
+        if (this.markerDisplayManager) {
+            const layerMarkers = this.markerDisplayManager.layers.get(this.markerLayerName);
+            if (layerMarkers) {
+                layerMarkers.forEach((marker, key) => {
+                    // Supprimer tous les écouteurs d'événements Google Maps
+                    if (marker) {
+                        google.maps.event.clearInstanceListeners(marker);
+                        marker.map = null;
+                    }
+                });
+            }
+
+            // Nettoyer les marqueurs après avoir supprimé les écouteurs
+            this.markerDisplayManager.clearMarkers(this.markerLayerName);
+        }
+
+        // 2. Nettoyage des disposers MobX pour éviter les fuites mémoire
+        this.disposers.forEach(disposer => {
+            if (typeof disposer === 'function') {
+                disposer();
+            }
+        });
         this.disposers.clear();
+
+        // 3. Réinitialisation des références
         this.map = null;
+
+        console.log(`✅ Nettoyage terminé pour ${this.layerName}Store`);
     }
 }
 

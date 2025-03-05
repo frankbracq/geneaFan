@@ -169,13 +169,52 @@ class GoogleMapManager {
     }
 
     cleanup() {
+        console.log('🧹 Nettoyage de GoogleMapManager');
+        
+        // Nettoyage des stores de couches
         rootAncestorTownsStore.cleanup();
         familyTownsStore.cleanup();
         surnamesTownsStore.cleanup();
-        this.disposers.forEach(disposer => disposer());
+        
+        // Nettoyage des disposers MobX
+        this.disposers.forEach(disposer => {
+            if (typeof disposer === 'function') {
+                disposer();
+            }
+        });
         this.disposers.clear();
+        
+        // Supprimer les écouteurs d'événements DOM
+        this.removeEventListeners();
+        
         this.initialized = false;
-        this.map = null;
+        
+        console.log('✅ Nettoyage de GoogleMapManager terminé');
+    }
+    
+    // Nouvelle méthode pour supprimer les écouteurs DOM
+    removeEventListeners() {
+        const tabElement = document.querySelector('a[href="#tab2"]');
+        if (tabElement) {
+            // Créer une copie pour supprimer tous les écouteurs
+            const newElement = tabElement.cloneNode(true);
+            tabElement.parentNode.replaceChild(newElement, tabElement);
+        }
+        
+        // Nettoyer les écouteurs pour les contrôles de couches
+        const layerControls = [
+            document.getElementById('layerAncestors'),
+            document.getElementById('layerFamily'),
+            document.getElementById('layerSurnames'),
+            document.getElementById('surnameFilter')
+        ];
+        
+        layerControls.forEach(control => {
+            if (control) {
+                const newControl = control.cloneNode(true);
+                control.parentNode.replaceChild(newControl, control);
+            }
+        });
     }
 }
 

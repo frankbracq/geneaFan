@@ -285,23 +285,44 @@ class FamilyTownsStore extends BaseLayerStore {
         });
     }
 
-    // Town Data Management
+    /**
+ * Ajoute ou met à jour une ville dans la base de données
+ * @param {string} normalizedTownName - Nom normalisé de la ville
+ * @param {Object} townData - Données de la ville
+ * @param {Object} eventData - Données d'événement associées (optionnel)
+ * @returns {boolean} - Succès de l'opération
+ */
     addOrUpdateTown(normalizedTownName, townData, eventData = null) {
-        // console.log('📍 addOrUpdateTown - Début', {
-        //    normalizedTownName,
-        //    townData,
-        //    eventData
-        //});
+        // Validation des paramètres essentiels
+        if (!normalizedTownName) {
+            console.warn('⚠️ Nom de ville normalisé manquant');
+            return false;
+        }
 
-        if (!normalizedTownName || !townData) {
-            console.warn('⚠️ Données manquantes:', { normalizedTownName, townData });
-            return;
+        if (!townData) {
+            console.warn('⚠️ Données de ville manquantes pour', normalizedTownName);
+            return false;
         }
 
         runInAction(() => {
             let town = this.townsData.get(normalizedTownName);
 
             if (!town) {
+                // Validation des coordonnées si présentes
+                if (townData.latitude !== undefined && townData.longitude !== undefined) {
+                    const lat = Number(townData.latitude);
+                    const lng = Number(townData.longitude);
+
+                    if (isNaN(lat) || isNaN(lng) ||
+                        lat < -90 || lat > 90 ||
+                        lng < -180 || lng > 180) {
+                        console.warn(`⚠️ Coordonnées invalides ignorées pour ${normalizedTownName}: (${townData.latitude}, ${townData.longitude})`);
+                        townData.latitude = '';
+                        townData.longitude = '';
+                    }
+                }
+
+                // Création des collections d'événements avec vérification
                 const eventTypes = {
                     BIRT: observable([]),
                     DEAT: observable([]),
@@ -317,6 +338,7 @@ class FamilyTownsStore extends BaseLayerStore {
                     event: observable([])
                 };
 
+                // Création d'une nouvelle ville avec des valeurs par défaut pour les champs manquants
                 town = observable({
                     town: townData.town || '',
                     townDisplay: townData.townDisplay || townData.town || '',
@@ -331,11 +353,10 @@ class FamilyTownsStore extends BaseLayerStore {
                     statistics: TownStatisticsManager.createEmptyStatistics()
                 });
 
-                // console.log('🆕 Création nouvelle ville:', toJS(town));
                 this.townsData.set(normalizedTownName, town);
             } else {
-                // console.log('📝 Mise à jour ville existante:', normalizedTownName);
-
+                // Mise à jour d'une ville existante
+                // Vérifier si events existe et est observable
                 if (!town.events || !isObservable(town.events)) {
                     town.events = observable({
                         BIRT: observable([]),
@@ -353,6 +374,21 @@ class FamilyTownsStore extends BaseLayerStore {
                     });
                 }
 
+                // Validation des coordonnées mises à jour si présentes
+                if (townData.latitude !== undefined && townData.longitude !== undefined) {
+                    const lat = Number(townData.latitude);
+                    const lng = Number(townData.longitude);
+
+                    if (isNaN(lat) || isNaN(lng) ||
+                        lat < -90 || lat > 90 ||
+                        lng < -180 || lng > 180) {
+                        console.warn(`⚠️ Coordonnées de mise à jour invalides ignorées pour ${normalizedTownName}: (${townData.latitude}, ${townData.longitude})`);
+                        delete townData.latitude;
+                        delete townData.longitude;
+                    }
+                }
+
+                // Mise à jour des champs avec vérification de validité
                 Object.entries(townData).forEach(([field, value]) => {
                     if (value !== undefined && value !== null && field !== 'events') {
                         town[field] = value;
@@ -360,14 +396,43 @@ class FamilyTownsStore extends BaseLayerStore {
                 });
             }
 
+            // Traiter les données d'événement si fournies
             if (eventData) {
-                console.log('🎯 Traitement événement pour', normalizedTownName, eventData);
-                this.invalidateCache(normalizedTownName);
-                this.updateTownEvents(town, eventData);
+                if (!this.isValidEventData(eventData)) {
+                    console.warn('⚠️ Données d\'événement invalides pour', normalizedTownName, eventData);
+                } else {
+                    this.invalidateCache(normalizedTownName);
+                    this.updateTownEvents(town, eventData);
+                }
             }
-
-            // console.log('✅ Fin addOrUpdateTown pour', normalizedTownName);
         });
+
+        return true;
+    }
+
+    /**
+     * Vérifie si les données d'événement sont valides
+     * @param {Object} eventData - Données d'événement à valider
+     * @returns {boolean} - Validité des données
+     */
+    isValidEventData(eventData) {
+        // L'événement doit avoir un type
+        if (!eventData || !eventData.type) {
+            return false;
+        }
+
+        // Le type doit être valide
+        const validEventTypes = ['birth', 'death', 'marriage', 'burial', 'occupation', 'event'];
+        if (!validEventTypes.includes(eventData.type)) {
+            return false;
+        }
+
+        // Vérification des détails de personne
+        if (!eventData.personId || !eventData.personDetails) {
+            return false;
+        }
+
+        return true;
     }
 
     updateExistingTownData(town, updates) {
@@ -427,18 +492,18 @@ class FamilyTownsStore extends BaseLayerStore {
     */
     applyVisibility(visible) {
         if (!this.map) return;
-        
+
         if (visible) {
             console.log('🔍 Activation du calque des villes familiales');
-            
+
             // 1. S'assurer que le cluster est bien initialisé
             if (!this.markerDisplayManager.isInitialized()) {
                 this.markerDisplayManager.initializeCluster(this.map, this.createClusterMarker);
             }
-            
+
             // 2. Mettre à jour les marqueurs (crée les marqueurs s'ils n'existent pas)
             this.updateMarkers();
-            
+
             // 3. Rendre les marqueurs visibles AVANT de les ajouter au cluster (directement sur la carte)
             const layerMarkers = this.markerDisplayManager.layers.get(this.markerLayerName);
             if (layerMarkers) {
@@ -446,16 +511,16 @@ class FamilyTownsStore extends BaseLayerStore {
                     marker.map = this.map;
                 });
             }
-            
+
             // 4. Ajouter les marqueurs au cluster SANS les cacher d'abord
             console.log('📍 Ajout des marqueurs au cluster');
             this.markerDisplayManager.addMarkersToCluster(this.map);
-            
+
         } else {
             console.log('🔍 Désactivation du calque des villes familiales');
             this.markerDisplayManager.toggleLayerVisibility(this.markerLayerName, false, this.map);
         }
-    }   
+    }
 
     // Stats and Data Management
     recalculateAllTownsStatistics() {
@@ -748,33 +813,63 @@ class FamilyTownsStore extends BaseLayerStore {
         });
     }
 
+    /**
+ * Met à jour les données d'une ville existante
+ * @param {string} key - Clé de la ville
+ * @param {Object} updates - Mises à jour à appliquer
+ * @returns {boolean} - Succès de la mise à jour
+ */
     updateTown(key, updates) {
+        // Validation des paramètres
+        if (!key) {
+            console.warn('⚠️ Clé de ville manquante pour updateTown');
+            return false;
+        }
+
+        if (!updates || typeof updates !== 'object') {
+            console.warn(`⚠️ Mises à jour invalides pour la ville ${key}`);
+            return false;
+        }
+
         runInAction(() => {
             const town = this.townsData.get(key);
             if (town) {
-                // console.log(`Mise à jour de la ville ${key}:`, {
-                //    avant: { ...town },
-                //    miseAJour: updates,
-                // });
+                // Validation des coordonnées si elles sont mises à jour
+                if (updates.latitude !== undefined || updates.longitude !== undefined) {
+                    const newLat = updates.latitude !== undefined ? updates.latitude : town.latitude;
+                    const newLng = updates.longitude !== undefined ? updates.longitude : town.longitude;
 
-                // Mise à jour des propriétés
+                    if (isNaN(Number(newLat)) || isNaN(Number(newLng)) ||
+                        Number(newLat) < -90 || Number(newLat) > 90 ||
+                        Number(newLng) < -180 || Number(newLng) > 180) {
+                        console.warn(`⚠️ Coordonnées invalides pour ${key}: (${newLat}, ${newLng})`);
+                        // Continuer la mise à jour mais ignorer les coordonnées invalides
+                        delete updates.latitude;
+                        delete updates.longitude;
+                    }
+                }
+
+                // Mise à jour des propriétés avec vérification
                 Object.entries(updates).forEach(([field, value]) => {
                     if (value !== undefined && value !== null) {
                         town[field] = value;
                     }
                 });
 
-                // Si les coordonnées ou données géographiques ont été mises à jour
+                // Mise à jour du stockage si nécessaire
                 if (updates.latitude || updates.longitude ||
                     updates.departement || updates.country) {
                     this.saveToLocalStorage();
                 }
 
-                // console.log('Après mise à jour:', this.townsData.get(key));
+                return true;
             } else {
-                console.warn(`Tentative de mise à jour d'une ville inexistante: ${key}`);
+                console.warn(`⚠️ Tentative de mise à jour d'une ville inexistante: ${key}`);
+                return false;
             }
         });
+
+        return false;
     }
 
     getTown(key) {
