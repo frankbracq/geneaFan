@@ -133,56 +133,86 @@ class MarkerDisplayManager {
     }
 
     /**
- * Add markers to the cluster with improved validation
+ * Add markers to the cluster with incremental approach
  * @param {google.maps.Map} map - Google Maps instance
  * @returns {boolean} Success status
  */
     addMarkersToCluster(map) {
-        // Vérifier l'initialisation
         if (!this.isInitialized()) {
-            console.warn('⚠️ Cluster ou map non initialisé');
+            console.warn('⚠️ Cluster or map not initialized');
             return false;
         }
 
-        // Vérifier que la carte est valide
-        if (!map || !(map instanceof google.maps.Map)) {
-            console.warn('⚠️ Instance de carte invalide');
-            return false;
-        }
-
-        // Récupérer tous les marqueurs visibles
-        let markersToAdd = [];
+        // Collect currently visible markers
+        const currentlyVisibleMarkers = new Set();
         this.layers.forEach((layerMarkers) => {
             layerMarkers.forEach(marker => {
-                // Vérifier que le marqueur est valide et visible
-                if (marker && marker.map !== null) {
-                    markersToAdd.push(marker);
+                if (marker.map !== null) {
+                    currentlyVisibleMarkers.add(marker);
                 }
             });
         });
 
-        console.log(`📊 Tentative d'ajout de ${markersToAdd.length} marqueurs au cluster`);
+        console.log(`📊 Found ${currentlyVisibleMarkers.size} visible markers`);
 
-        if (markersToAdd.length === 0) {
-            console.warn('⚠️ Aucun marqueur à afficher dans le cluster');
+        // If no visible markers, we can skip the rest
+        if (currentlyVisibleMarkers.size === 0) {
+            console.warn('⚠️ No markers to display in cluster');
             return false;
         }
 
+        // If the cluster has no markers yet, simply add all visible ones
+        if (!this.cluster.markers || this.cluster.markers.length === 0) {
+            console.log(`📊 Adding ${currentlyVisibleMarkers.size} markers to empty cluster`);
+            this.cluster.addMarkers([...currentlyVisibleMarkers]);
+            return true;
+        }
+
+        // Calculate differences with current cluster state
+        const currentClusterMarkers = new Set(this.cluster.markers);
+
+        // Markers to add: visible but not in cluster
+        const markersToAdd = [...currentlyVisibleMarkers].filter(
+            marker => !currentClusterMarkers.has(marker)
+        );
+
+        // Markers to remove: in cluster but not visible anymore
+        const markersToRemove = [...currentClusterMarkers].filter(
+            marker => !currentlyVisibleMarkers.has(marker)
+        );
+
+        console.log(`🔄 Updating cluster: +${markersToAdd.length} -${markersToRemove.length}`);
+
         try {
-            // Vider le cluster existant avec gestion des erreurs
-            this.cluster.clearMarkers();
+            // Apply changes incrementally
+            if (markersToRemove.length > 0) {
+                this.cluster.removeMarkers(markersToRemove);
+            }
 
-            // Ajouter les marqueurs au cluster
-            this.cluster.addMarkers(markersToAdd);
+            if (markersToAdd.length > 0) {
+                this.cluster.addMarkers(markersToAdd);
+            }
 
-            // Forcer un rafraîchissement du clustering
-            google.maps.event.trigger(map, 'zoom_changed');
+            // Force a clustering refresh if needed
+            if (markersToAdd.length > 0 || markersToRemove.length > 0) {
+                google.maps.event.trigger(map, 'zoom_changed');
+            }
 
-            console.log('✅ Marqueurs ajoutés au cluster');
+            console.log('✅ Cluster updated successfully');
             return true;
         } catch (error) {
-            console.error('❌ Erreur lors de l\'ajout des marqueurs au cluster:', error);
-            return false;
+            console.error('❌ Error updating cluster:', error);
+
+            // Fallback to full reset in case of error
+            try {
+                console.log('⚠️ Attempting fallback to full cluster reset');
+                this.cluster.clearMarkers();
+                this.cluster.addMarkers([...currentlyVisibleMarkers]);
+                return true;
+            } catch (fallbackError) {
+                console.error('❌ Fallback failed:', fallbackError);
+                return false;
+            }
         }
     }
 
