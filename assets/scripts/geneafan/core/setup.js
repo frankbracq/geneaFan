@@ -22,7 +22,7 @@ export async function setupCore() {
         
         // Initialisation de l'onboarding
         console.log('OnboardingManager prototype:', OnboardingManager.prototype);
-        // const onboarding = new OnboardingManager();
+        const onboarding = new OnboardingManager();
         console.log('✅ Onboarding Manager initialized');
         
         setupEventListeners();

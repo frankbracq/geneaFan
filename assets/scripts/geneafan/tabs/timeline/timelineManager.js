@@ -89,10 +89,13 @@ class TimelineManager {
                 }
                 
                 // Ajouter un bouton d'aide avec un petit délai pour s'assurer que le DOM est prêt
+                // Désactivé provisoirement pour éviter les problèmes de positionnement
+                /*
                 setTimeout(() => {
                     this.addHelpButton();
                     console.log('Help button added with delay');
                 }, 500);
+                */
                 
                 // Émettre l'événement pour indiquer que l'onglet timeline est affiché
                 storeEvents.emit(EVENTS.UI.TABS.TIMELINE_SHOWN);
