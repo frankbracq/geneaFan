@@ -19,6 +19,7 @@ import { placeProcessor } from './processors/placeProcessor.js';
 import { setupPersonLinkEventListener } from "../listeners/eventListeners.js";
 import { googleMapsStore } from '../tabs/familyMap/stores/googleMapsStore.js';
 import { storeEvents, EVENTS } from '../common/stores/storeEvents.js';
+import overlayManager from '../utils/OverlayManager.js';
 
 /* Code to manage the upload of GEDCOM files to Cloudflare R2*/
 let isLoadingFile = false;
@@ -151,6 +152,9 @@ export function loadGedcomFile(input) {
     }
     isLoadingFile = true;
 
+    // Afficher l'overlay global pendant le chargement du fichier
+    overlayManager.showGlobal("Chargement du fichier GEDCOM...");
+
     if (typeof input === 'string') {
         // Load remote file
         const xhr = new XMLHttpRequest();
@@ -169,12 +173,14 @@ export function loadGedcomFile(input) {
                 onFileChange(data);
             } else {
                 console.error("Erreur lors du chargement du fichier :", this.status);
+                overlayManager.hideGlobal();
                 window.alert(__("geneafan.cannot_read_this_file"));
             }
         };
 
         xhr.onerror = function (e) {
             isLoadingFile = false;
+            overlayManager.hideGlobal();
             console.error("Erreur réseau lors du chargement du fichier.");
             window.alert(__("geneafan.cannot_read_this_file"));
         };
@@ -187,8 +193,13 @@ export function loadGedcomFile(input) {
         gedcomFileName = file.name;
         configStore.setGedcomFileName(gedcomFileName);
 
+        // Masquer l'overlay global avant d'afficher la modale
+        overlayManager.hideGlobal(300);
+        
         // Show modal to ask if the user wants to save the file
-        showSaveFileModal(file);
+        setTimeout(() => {
+            showSaveFileModal(file);
+        }, 300);
     }
 }
 
@@ -375,6 +386,10 @@ export async function fetchUserGedcomFiles(userId) {
 function readAndProcessGedcomFile(file) {
     console.log('Reading and processing file:', file);
     isLoadingFile = true;
+    
+    // Afficher l'overlay global avec un message explicite
+    overlayManager.showGlobal("Lecture du fichier GEDCOM...");
+    
     const reader = new FileReader();
 
     reader.addEventListener("loadend", function () {
@@ -491,36 +506,54 @@ async function resetUIForNewGedcom() {
 }
 
 async function onFileChange(data) {
-    storeEvents.emit('process:start', 'Lecture du fichier GEDCOM...');
+    // Utiliser l'overlay global pour indiquer le début du traitement
+    overlayManager.showGlobal('Lecture du fichier GEDCOM...');
+    
+    // Informer les autres composants du début du traitement
+    storeEvents.emit(EVENTS.PROCESS.START, 'Lecture du fichier GEDCOM...');
+    
+    // Désactiver les onglets et ajuster l'UI
     handleTabsAndOverlay(true);
+    
+    // Nettoyer les états
     clearAllStates();
     gedcomDataStore.clearAllState();
 
-    storeEvents.emit(EVENTS.PROCESS.START, 'Lecture du fichier GEDCOM...');
-
-    // Toujours réinitialiser l'UI avant de charger un nouveau fichier
-    await resetUIForNewGedcom();
-    gedcomDataStore.setFileUploaded(true);
-
     try {
-        // Réinitialiser familyTownsStore
+        // Réinitialiser l'UI
+        await resetUIForNewGedcom();
+        gedcomDataStore.setFileUploaded(true);
+
+        // Réinitialiser les données des villes
         familyTownsStore.setTownsData({});
 
-        // Traiter le fichier GEDCOM
+        // Mise à jour du message de l'overlay
+        overlayManager.showGlobal('Analyse du fichier...');
         storeEvents.emit(EVENTS.PROCESS.START, 'Analyse du fichier...');
+        
+        // Traiter le fichier GEDCOM
         let json = toJson(data);
 
-        // Attendre la fin de du traitement des lieux dans getAllPlaces avant d'enregistrer les données source dans le store
+        // Mise à jour du message pour le géocodage
+        overlayManager.showGlobal('Validation du géocodage des villes...');
         storeEvents.emit(EVENTS.PROCESS.START, 'Validation du géocodage des villes...');
+        
+        // Processus de géocodage
         let sourceData = await placeProcessor.processGedcomTowns(json);
 
+        // Mise à jour du message pour la construction des données
+        overlayManager.showGlobal('Construction des données...');
         storeEvents.emit(EVENTS.PROCESS.START, 'Construction des données...');
+        
+        // Enregistrer les données source
         gedcomDataStore.setSourceData(sourceData.json);
 
+        // Finalisation
+        overlayManager.showGlobal('Finalisation...');
         storeEvents.emit(EVENTS.PROCESS.START, 'Finalisation...');
+        
         // Mettre à jour les données des individus
         updateIndividualTownsFromFamilyTowns(gedcomDataStore.getIndividualsCache());
-        // gedcomDataStore.setIndividualsCache(gedcomDataStore.getIndividualsCache());
 
         console.log("Individuals cache updated:", gedcomDataStore.getIndividualsCache());
 
@@ -575,25 +608,20 @@ async function onFileChange(data) {
                 rootPersonStore.setTomSelectValue(rootId);
             }
         }
-        /*
-        [
-            ...document.querySelectorAll(".parameter"),
-            document.getElementById("individual-select"),
-            document.getElementById("download-menu"),
-            document.getElementById("fanParametersDisplay"),
-            document.getElementById("mapParametersDisplay"),
-            document.getElementById("treeParametersDisplay"),
-            document.getElementById("fullscreenButton"),
-        ].forEach((el) => {
-            el.disabled = false;
-        });
-        */
 
+        // Traitement terminé avec succès
         storeEvents.emit(EVENTS.PROCESS.COMPLETE);
+        
+        // Masquer l'overlay global
+        overlayManager.hideGlobal();
 
     } catch (error) {
         console.error("General Error:", error);
         storeEvents.emit(EVENTS.PROCESS.ERROR, error);
+        
+        // En cas d'erreur, masquer l'overlay et afficher un message d'erreur
+        overlayManager.hideGlobal();
+        window.alert("Une erreur est survenue lors du traitement du fichier GEDCOM.");
     } finally {
         handleTabsAndOverlay(false);
         setupPersonLinkEventListener();
@@ -611,14 +639,11 @@ function handleTabsAndOverlay(shouldShowLoading) {
         }
     });
 
+    // Utiliser l'overlayManager pour gérer l'overlay plutôt que la manipulation directe du DOM
     if (shouldShowLoading) {
-        document.getElementById('overlay').classList.remove('overlay-hidden');
-        document.querySelector('a[href="#tab1"]').click(); // Force l'affichage de tab1
-        document.getElementById("loading").style.display = "block";
-    } else {
-        document.getElementById("loading").style.display = "none";
-        document.getElementById("overlay").classList.add("overlay-hidden");
+        // Force l'affichage de tab1
+        document.querySelector('a[href="#tab1"]').click();
     }
 }
 
-export { onFileChange }; // Add this export
+export { onFileChange };

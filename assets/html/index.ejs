@@ -226,22 +226,24 @@
                 </div>
             </nav>
         </div>
-        <div id="overlay">
-            <div id="loading">
-                <div class="spinner-border custom-spinner" role="status">
+        <!-- Overlay global de l'application, avec une structure améliorée pour l'OverlayManager -->
+            <div id="overlay" class="fullscreen-overlay">
+                <div class="overlay-content">
+                    <div class="spinner-border custom-spinner" role="status">
+                        <span class="visually-hidden">Chargement</span>
+                    </div>
+                    <h2 id="loading-text">
+                        Chargement en cours...
+                    </h2>
+                    <em class="text-muted">
+                        Veuillez patienter quelques instants
+                    </em>
                 </div>
-                <h2 id="loading-text">
-                    <%= __('common.loading_ellipsis') %>
-                </h2>
-                <em>
-                    <%= __('common.please_wait') %>
-                </em>
             </div>
-        </div>
-        <div class="alert alert-primary alert-dismissible fade d-none" id="alert" role="alert">
-            <span id="alert-content"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+            <div class="alert alert-primary alert-dismissible fade d-none" id="alert" role="alert">
+                <span id="alert-content"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
     </header>
     <main>
         <div class="container">

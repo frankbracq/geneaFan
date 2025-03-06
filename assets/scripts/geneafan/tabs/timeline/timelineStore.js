@@ -2,6 +2,7 @@ import { makeAutoObservable, action, computed, reaction, runInAction } from '../
 import timelineEventsStore from './timelineEventsStore.js';
 import $ from 'jquery';
 import rootPersonStore from '../../common/stores/rootPersonStore.js';
+import overlayManager from '../../utils/OverlayManager.js';
 
 /**
  * Store responsible for managing the timeline visualization.
@@ -113,228 +114,200 @@ class TimelineStore {
     }
 
     /**
- * Mise à jour de la timeline pour la nouvelle personne racine
- * Avec transition fluide pour éviter les flashs d'affichage
- */
-async updateTimelineForRoot() {
-    console.log("🔄 Début updateTimelineForRoot");
-    try {
-        runInAction(() => {
-            this.setStatus('loading');
-        });
+     * Mise à jour de la timeline pour la nouvelle personne racine
+     * Avec transition fluide pour éviter les flashs d'affichage
+     */
+    async updateTimelineForRoot() {
+        console.log("🔄 Début updateTimelineForRoot");
+        try {
+            runInAction(() => {
+                this.setStatus('loading');
+            });
 
-        console.log("📊 Nombre d'événements:", timelineEventsStore.events.length);
-        console.log("📊 hasEvents:", timelineEventsStore.hasEvents);
+            console.log("📊 Nombre d'événements:", timelineEventsStore.events.length);
+            console.log("📊 hasEvents:", timelineEventsStore.hasEvents);
 
-        // Si pas d'événements, rien à faire
-        if (!timelineEventsStore.hasEvents) {
-            this.setStatus('success');
-            return;
-        }
+            // Si pas d'événements, rien à faire
+            if (!timelineEventsStore.hasEvents) {
+                this.setStatus('success');
+                return;
+            }
 
-        // Récupérer l'élément parent qui contient la timeline
-        const timelineTab = document.getElementById("tab4");
-        if (!timelineTab) {
-            throw new Error('Timeline tab not found');
-        }
+            // Récupérer l'élément parent qui contient la timeline
+            const timelineTab = document.getElementById("tab4");
+            if (!timelineTab) {
+                throw new Error('Timeline tab not found');
+            }
 
-        // Créer un conteneur temporaire invisible pour préparer la nouvelle timeline
-        const tempContainer = document.createElement('div');
-        tempContainer.id = "temp-timeline-container";
-        tempContainer.style.position = "absolute";
-        tempContainer.style.visibility = "hidden";
-        tempContainer.style.pointerEvents = "none";
-        document.body.appendChild(tempContainer);
+            // Utiliser l'OverlayManager pour afficher un overlay de chargement
+            overlayManager.show("tab4", {
+                message: "Mise à jour de la chronologie...",
+                customClass: "timeline-overlay"
+            });
 
-        // Générer le HTML pour le temporaire
-        const html = this.currentTimelineHTML;
-        console.log("📝 HTML généré, longueur:", html.length);
-        tempContainer.innerHTML = html;
+            // Créer un conteneur temporaire invisible pour préparer la nouvelle timeline
+            const tempContainer = document.createElement('div');
+            tempContainer.id = "temp-timeline-container";
+            tempContainer.style.position = "absolute";
+            tempContainer.style.visibility = "hidden";
+            tempContainer.style.pointerEvents = "none";
+            document.body.appendChild(tempContainer);
 
-        // Nettoyage radical de l'ancien conteneur
-        let timelineContainer = document.getElementById("ascendantTimeline");
-        if (timelineContainer) {
-            // Ajouter un overlay de chargement sur l'ancien conteneur
-            const loadingOverlay = document.createElement('div');
-            loadingOverlay.className = 'timeline-loading-overlay';
-            loadingOverlay.style.position = 'absolute';
-            loadingOverlay.style.top = '0';
-            loadingOverlay.style.left = '0';
-            loadingOverlay.style.width = '100%';
-            loadingOverlay.style.height = '100%';
-            loadingOverlay.style.background = 'rgba(255, 255, 255, 0.8)';
-            loadingOverlay.style.display = 'flex';
-            loadingOverlay.style.justifyContent = 'center';
-            loadingOverlay.style.alignItems = 'center';
-            loadingOverlay.style.zIndex = '100';
-            loadingOverlay.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
+            // Générer le HTML pour le temporaire
+            const html = this.currentTimelineHTML;
+            console.log("📝 HTML généré, longueur:", html.length);
+            tempContainer.innerHTML = html;
+
+            // Nettoyage radical de l'ancien conteneur
+            let timelineContainer = document.getElementById("ascendantTimeline");
+            if (timelineContainer) {
+                // Détruire l'instance jQuery
+                this.cleanupTimelineInstance();
+            }
+
+            // Attendre que le DOM soit mis à jour et tous les assets chargés
+            await new Promise(resolve => setTimeout(resolve, 100));
             
-            // Positionner correctement le parent pour l'overlay
-            const timelineParent = timelineContainer.parentElement;
-            if (timelineParent && timelineParent.style.position !== 'relative') {
-                timelineParent.style.position = 'relative';
+            // Maintenant préparer la nouvelle timeline
+            if (timelineContainer) {
+                // Supprimer l'ancien conteneur
+                timelineContainer.remove();
             }
             
-            timelineParent.appendChild(loadingOverlay);
+            // Créer un nouveau conteneur avec le même ID
+            timelineContainer = document.createElement('div');
+            timelineContainer.id = "ascendantTimeline";
+            timelineContainer.className = "horizontal-timeline";
+            timelineContainer.style.opacity = "0";
+            timelineContainer.style.transition = "opacity 0.3s ease-in";
             
-            // Détruire l'instance jQuery
-            this.cleanupTimelineInstance();
-        }
-
-        // Attendre que le DOM soit mis à jour et tous les assets chargés
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Maintenant préparer la nouvelle timeline
-        if (timelineContainer) {
-            // Supprimer l'ancien conteneur
-            timelineContainer.remove();
-        }
-        
-        // Créer un nouveau conteneur avec le même ID
-        timelineContainer = document.createElement('div');
-        timelineContainer.id = "ascendantTimeline";
-        timelineContainer.className = "horizontal-timeline";
-        timelineContainer.style.opacity = "0";
-        timelineContainer.style.transition = "opacity 0.3s ease-in";
-        
-        // S'assurer que le conteneur sera visible
-        timelineContainer.style.display = "block";
-        timelineContainer.style.visibility = "visible";
-        timelineContainer.style.height = "auto";
-        
-        // Ajouter le conteneur au DOM
-        timelineTab.appendChild(timelineContainer);
-        
-        // Attendre que le DOM soit mis à jour
-        await new Promise(resolve => requestAnimationFrame(resolve));
-        
-        // Copier le contenu du conteneur temporaire vers le nouveau conteneur
-        timelineContainer.innerHTML = tempContainer.innerHTML;
-        
-        // Supprimer le conteneur temporaire
-        tempContainer.remove();
-        
-        // Forcer un reflow
-        void timelineContainer.offsetHeight;
-        
-        // Initialiser la timeline
-        await this.initializeHorizontalTimeline();
-        
-        // Afficher progressivement la timeline une fois initialisée
-        timelineContainer.style.opacity = "1";
-        
-        // Supprimer l'overlay de chargement s'il existe
-        const loadingOverlay = document.querySelector('.timeline-loading-overlay');
-        if (loadingOverlay) {
-            // Faire disparaître progressivement l'overlay
-            loadingOverlay.style.transition = "opacity 0.3s ease-out";
-            loadingOverlay.style.opacity = "0";
+            // S'assurer que le conteneur sera visible
+            timelineContainer.style.display = "block";
+            timelineContainer.style.visibility = "visible";
+            timelineContainer.style.height = "auto";
             
-            // Supprimer l'overlay après la transition
-            setTimeout(() => {
-                loadingOverlay.remove();
-            }, 300);
-        }
-        
-        // Mettre à jour le statut
-        this.setStatus('success');
-        
-    } catch (error) {
-        console.error("❌ Erreur dans updateTimelineForRoot:", error);
-        runInAction(() => {
-            this.setStatus('error', error.message);
-        });
-        
-        // Nettoyer en cas d'erreur
-        const tempContainer = document.getElementById("temp-timeline-container");
-        if (tempContainer) tempContainer.remove();
-        
-        const loadingOverlay = document.querySelector('.timeline-loading-overlay');
-        if (loadingOverlay) loadingOverlay.remove();
-    }
-}
-
-
-    /**
- * Initialisation de la timeline horizontale 
- */
-async initializeHorizontalTimeline() {
-    try {
-        if (!window.jQuery) {
-            window.$ = $;
-            window.jQuery = $;
-        }
-
-        // Importer le script de la timeline
-        await import('./horizontalTimeline.js');
-        
-        // Attendre que le DOM soit stabilisé
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Vérifier que l'élément existe et est visible
-        const timelineElement = document.getElementById("ascendantTimeline");
-        if (!timelineElement) {
-            throw new Error("Timeline element not found");
-        }
-        
-        // Vérifier que l'élément a des dimensions
-        const rect = timelineElement.getBoundingClientRect();
-        console.log("📏 Dimensions de la timeline:", rect.width, "x", rect.height);
-        
-        // Si les dimensions sont nulles, forcer des dimensions minimales
-        if (rect.width === 0 || rect.height === 0) {
-            console.warn("⚠️ Timeline sans dimensions, application de dimensions minimales");
-            timelineElement.style.width = "100%";
-            timelineElement.style.minHeight = "200px";
+            // Ajouter le conteneur au DOM
+            timelineTab.appendChild(timelineContainer);
+            
+            // Attendre que le DOM soit mis à jour
+            await new Promise(resolve => requestAnimationFrame(resolve));
+            
+            // Copier le contenu du conteneur temporaire vers le nouveau conteneur
+            timelineContainer.innerHTML = tempContainer.innerHTML;
+            
+            // Supprimer le conteneur temporaire
+            tempContainer.remove();
+            
             // Forcer un reflow
-            void timelineElement.offsetHeight;
+            void timelineContainer.offsetHeight;
+            
+            // Initialiser la timeline
+            await this.initializeHorizontalTimeline();
+            
+            // Afficher progressivement la timeline une fois initialisée
+            timelineContainer.style.opacity = "1";
+            
+            // Masquer l'overlay de chargement avec l'OverlayManager
+            overlayManager.hide("tab4");
+            
+            // Mettre à jour le statut
+            this.setStatus('success');
+            
+        } catch (error) {
+            console.error("❌ Erreur dans updateTimelineForRoot:", error);
+            runInAction(() => {
+                this.setStatus('error', error.message);
+            });
+            
+            // Nettoyer en cas d'erreur
+            const tempContainer = document.getElementById("temp-timeline-container");
+            if (tempContainer) tempContainer.remove();
+            
+            // Masquer l'overlay en cas d'erreur également
+            overlayManager.hide("tab4");
         }
-        
-        // Initialiser avec les options
-        const $timelineElement = $(timelineElement);
-        this.horizontalTimelineInstance = $timelineElement.horizontalTimeline({
-            dateIntervals: {
-                "desktop": 175,
-                "tablet": 150,
-                "mobile": 120,
-                "minimal": true
-            },
-            iconClass: {
-                "base": "fas fa-2x",
-                "scrollLeft": "fa-chevron-circle-left",
-                "scrollRight": "fa-chevron-circle-right",
-                "prev": "fa-arrow-circle-left",
-                "next": "fa-arrow-circle-right",
-                "pause": "fa-pause-circle",
-                "play": "fa-play-circle"
-            },
-            "exit": {
-                "left": "exit-left",
-                "right": "exit-right"
-            },
-            contentContainerSelector: false
-        });
-        
-        // Attendre un court instant pour s'assurer que la timeline est complètement initialisée
-        await new Promise(resolve => setTimeout(resolve, 50));
-        
-        // Forcer un rafraîchissement après initialisation
-        if (this.horizontalTimelineInstance && 
-            typeof this.horizontalTimelineInstance.refresh === 'function') {
-            this.horizontalTimelineInstance.refresh();
-        }
-        
-        console.log("✅ Timeline horizontale initialisée");
-        
-    } catch (error) {
-        console.error('Failed to initialize horizontal timeline:', error);
-        throw error;
     }
-}
 
     /**
- * Nettoyage de l'instance jQuery et des événements
- */
+     * Initialisation de la timeline horizontale 
+     */
+    async initializeHorizontalTimeline() {
+        try {
+            if (!window.jQuery) {
+                window.$ = $;
+                window.jQuery = $;
+            }
+
+            // Importer le script de la timeline
+            await import('./horizontalTimeline.js');
+            
+            // Attendre que le DOM soit stabilisé
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Vérifier que l'élément existe et est visible
+            const timelineElement = document.getElementById("ascendantTimeline");
+            if (!timelineElement) {
+                throw new Error("Timeline element not found");
+            }
+            
+            // Vérifier que l'élément a des dimensions
+            const rect = timelineElement.getBoundingClientRect();
+            console.log("📏 Dimensions de la timeline:", rect.width, "x", rect.height);
+            
+            // Si les dimensions sont nulles, forcer des dimensions minimales
+            if (rect.width === 0 || rect.height === 0) {
+                console.warn("⚠️ Timeline sans dimensions, application de dimensions minimales");
+                timelineElement.style.width = "100%";
+                timelineElement.style.minHeight = "200px";
+                // Forcer un reflow
+                void timelineElement.offsetHeight;
+            }
+            
+            // Initialiser avec les options
+            const $timelineElement = $(timelineElement);
+            this.horizontalTimelineInstance = $timelineElement.horizontalTimeline({
+                dateIntervals: {
+                    "desktop": 175,
+                    "tablet": 150,
+                    "mobile": 120,
+                    "minimal": true
+                },
+                iconClass: {
+                    "base": "fas fa-2x",
+                    "scrollLeft": "fa-chevron-circle-left",
+                    "scrollRight": "fa-chevron-circle-right",
+                    "prev": "fa-arrow-circle-left",
+                    "next": "fa-arrow-circle-right",
+                    "pause": "fa-pause-circle",
+                    "play": "fa-play-circle"
+                },
+                "exit": {
+                    "left": "exit-left",
+                    "right": "exit-right"
+                },
+                contentContainerSelector: false
+            });
+            
+            // Attendre un court instant pour s'assurer que la timeline est complètement initialisée
+            await new Promise(resolve => setTimeout(resolve, 50));
+            
+            // Forcer un rafraîchissement après initialisation
+            if (this.horizontalTimelineInstance && 
+                typeof this.horizontalTimelineInstance.refresh === 'function') {
+                this.horizontalTimelineInstance.refresh();
+            }
+            
+            console.log("✅ Timeline horizontale initialisée");
+            
+        } catch (error) {
+            console.error('Failed to initialize horizontal timeline:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Nettoyage de l'instance jQuery et des événements
+     */
     cleanupTimelineInstance() {
         try {
             // Nettoyage de l'instance jQuery
@@ -359,8 +332,8 @@ async initializeHorizontalTimeline() {
     }
 
     /**
- * Cette méthode n'est plus utilisée directement, mais conservée pour compatibilité
- */
+     * Cette méthode n'est plus utilisée directement, mais conservée pour compatibilité
+     */
     clearTimeline() {
         this.cleanupTimelineInstance();
 
