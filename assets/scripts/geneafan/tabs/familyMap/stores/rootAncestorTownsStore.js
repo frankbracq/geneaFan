@@ -95,6 +95,10 @@ class RootAncestorTownsStore extends BaseLayerStore {
             if (birthData.length > 0 && layerManager.isLayerVisible(this.layerName)) {
                 console.log('🔄 Mise à jour automatique des marqueurs après changement de hiérarchie');
                 this.updateMarkers(birthData);
+
+                // Add this line to adjust zoom after markers are updated
+                console.log('🔍 Ajustement du zoom pour afficher tous les marqueurs');
+                this.centerMapOnMarkers();
             }
 
             console.groupEnd();
