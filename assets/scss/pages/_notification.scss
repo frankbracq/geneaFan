@@ -1,0 +1,108 @@
+// _notification.scss
+// Styles pour les notifications de l'application
+
+// Variables
+$notification-bg-color: white;
+$notification-z-index: 9999;
+$notification-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+$notification-border-width: 4px;
+$transition-duration: 0.3s;
+
+// Couleurs pour les différents types de notifications
+$notification-colors: (
+  'info': #3498db,
+  'success': #2ecc71,
+  'warning': #f39c12,
+  'error': #e74c3c
+);
+
+// Conteneur de notifications
+.notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: $notification-z-index;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 350px;
+  pointer-events: none; // Permet de cliquer à travers le conteneur
+}
+
+// Notification individuelle
+.notification {
+  padding: 15px;
+  border-radius: 6px;
+  box-shadow: $notification-shadow;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: opacity $transition-duration ease, transform $transition-duration ease;
+  background-color: $notification-bg-color;
+  border-left: $notification-border-width solid map-get($notification-colors, 'info');
+  pointer-events: auto; // Rétablit les interactions pour la notification elle-même
+}
+
+// État actif
+.notification.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+// Types de notifications
+@each $type, $color in $notification-colors {
+  .notification.#{$type} {
+    border-left-color: $color;
+  }
+}
+
+// Contenu de la notification
+.notification-content {
+  flex: 1;
+  margin-right: 10px;
+}
+
+// Bouton de fermeture
+.notification-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  color: #7f8c8d;
+  transition: color $transition-duration ease;
+  
+  &:hover {
+    color: #34495e;
+  }
+}
+
+// Responsive
+@media (max-width: 480px) {
+  .notification-container {
+    left: 20px;
+    right: 20px;
+  }
+  
+  .notification {
+    width: 100%;
+  }
+}
+
+// Support du thème sombre
+@media (prefers-color-scheme: dark) {
+  .notification {
+    background-color: #2d3436;
+    color: #ecf0f1;
+  }
+  
+  .notification-close {
+    color: #bdc3c7;
+    
+    &:hover {
+      color: #ecf0f1;
+    }
+  }
+}

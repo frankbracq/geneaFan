@@ -1,6 +1,7 @@
 @import '../map';
 @import 'header';
 @import "overlay";
+@import "notification";
 
 :root {
   --color-dark: #32273b;
@@ -44,48 +45,6 @@ header {
   background-color: var(--bg-color-light);
   margin-left: 0;
   margin-right: auto;
-}
-
-// Overlay styles
-#overlay {
-  background-color: rgba(255, 255, 255, 0.5);
-  height: 100%;
-  left: 0;
-  position: fixed;
-  top: 0;
-  visibility: visible;
-  width: 100%;
-  z-index: 1;
-
-  &.overlay-hidden {
-    opacity: 0;
-    transition: visibility 0.2s, opacity 0.2s linear;
-    visibility: hidden;
-  }
-}
-
-// Loading styles
-#loading {
-  left: 50%;
-  position: absolute;
-  text-align: center;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1000;
-}
-
-.custom-spinner {
-  width: 3rem;
-  height: 3rem;
-  color: var(--color-dark);
-}
-
-// Alert styles
-#alert {
-  position: fixed;
-  top: 0;
-  width: 100%;
-  z-index: 1000;
 }
 
 // Container styles

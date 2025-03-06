@@ -2,7 +2,9 @@ import { makeAutoObservable, action, reaction, runInAction, computed, comparer }
 import 'tom-select/dist/css/tom-select.css';
 import { FanChartManager } from "./fanChartManager.js";
 import _ from 'lodash';
-import { storeEvents, EVENTS } from '../../common/stores/storeEvents.js'; 
+import { storeEvents, EVENTS } from '../../common/stores/storeEvents.js';
+import notificationManager from '../../utils/NotificationManager.js';
+
 class ConfigStore {
     config = {
         fanAngle: 270,
@@ -195,19 +197,16 @@ class ConfigStore {
                             // Ajouter l'événement click sur le label
                             gen8Label.onclick = (e) => {
                                 e.preventDefault();
-                                const alertElement = document.getElementById('alert');
-                                const alertContent = document.getElementById('alert-content');
-                                if (alertElement && alertContent) {
-                                    alertContent.textContent = "Votre fichier Gedcom comporte moins de 8 générations";
-                                    alertElement.classList.remove('d-none');
-                                    alertElement.classList.add('show');
-
-                                    // Cacher l'alerte après 3 secondes
-                                    setTimeout(() => {
-                                        alertElement.classList.remove('show');
-                                        alertElement.classList.add('d-none');
-                                    }, 3000);
-                                }
+                                
+                                // Utiliser le NotificationManager au lieu de l'alerte bootstrap
+                                notificationManager.warning(
+                                    "Votre fichier Gedcom comporte moins de 8 générations"
+                                );
+                                
+                                // Toujours passer à 7 générations
+                                this.setConfig({ maxGenerations: 7 });
+                                gen7Radio.checked = true;
+                                gen8Radio.checked = false;
                             };
 
                             // Toujours passer à 7 générations
