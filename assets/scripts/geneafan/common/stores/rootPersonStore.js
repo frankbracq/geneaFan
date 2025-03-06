@@ -253,6 +253,8 @@ class RootPersonStore {
             config
         );
 
+        console.log("Hierarchy built:", hierarchy);
+
         console.timeEnd("buildHierarchy");
         return hierarchy;
     }

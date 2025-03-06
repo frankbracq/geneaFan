@@ -99,7 +99,15 @@ export function generateEventDescription(eventType, eventData, gender, age, dece
     let eventDate = eventData.date
         ? dateProcessor.prefixedDate(eventData.date)
         : "le (date inconnue)";
-    let eventPlace = eventData.townDisplay || "(lieu inconnu)";
+    
+    // Format the place display based on the country
+    let eventPlace;
+    if (eventData.country === "France") {
+        eventPlace = eventData.town ? `${eventData.town} (${eventData.departement || "département inconnu"})` : "(lieu inconnu)";
+    } else {
+        eventPlace = eventData.town ? `${eventData.town} (${eventData.country || "pays inconnu"})` : "(lieu inconnu)";
+    }
+    
     let townKey = eventData.placeKey || "unknown";
     let eventPlaceMarkup =
         eventPlace === "(lieu inconnu)"
