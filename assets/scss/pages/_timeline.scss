@@ -1,14 +1,15 @@
 // Variables
 $timeline-line-color: #d4d9df;
 $timeline-node-border: #22c0e8;
-$timeline-left-margin: 29px;
+$timeline-left-margin: 12px; // Réduit de 29px à 12px
 $timeline-node-size: 20px;
-$timeline-padding-left: 20px;
+$timeline-padding-left: 10px; // Réduit de 20px à 10px
 
+// Réduire les paddings du conteneur
 .container.timeline-container {
-    padding-left: 10px;
-    padding-right: 10px;
-  }
+  padding-left: 0; // Réduit de 10px à 0
+  padding-right: 10px;
+}
 
 // Style de base de la timeline
 .timeline-3 {
@@ -33,7 +34,7 @@ $timeline-padding-left: 20px;
   // Éléments de la timeline
   > li {
     margin: 20px 0;
-    padding-left: 50px; // Augmenté pour laisser de l'espace pour les noeuds
+    padding-left: 30px; // Réduit de 50px à 30px
     position: relative;
     
     // Nœuds (points) sur la ligne
@@ -97,6 +98,17 @@ $timeline-padding-left: 20px;
       line-height: 1.5;
     }
   }
+}
+
+// Pour s'assurer que tous les conteneurs parents n'ajoutent pas de marge supplémentaire
+#individualTimeline .container,
+#individualTimeline .row .container {
+  padding-left: 0;
+}
+
+// Adapter également le conteneur offcanvas si nécessaire
+.offcanvas-body {
+  padding-left: 0;
 }
 
 // Adaptation pour l'intégration avec personDetailsDisplay.js

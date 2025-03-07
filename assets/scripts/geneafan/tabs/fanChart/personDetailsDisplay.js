@@ -79,8 +79,20 @@ export function displayPersonDetailsUI(personDetails) {
             childBirthCount++;
         }
         const description = getEventDescription(event, childBirthCount);
-
+    
         const li = document.createElement("li");
+        
+        // Ajouter la classe correspondant au type d'événement
+        if (event.type === "birth") {
+            li.classList.add("birth-event");
+        } else if (event.type === "death") {
+            li.classList.add("death-event");
+        } else if (event.type === "marriage") {
+            li.classList.add("marriage-event");
+        } else if (event.type === "child-birth") {
+            li.classList.add("child-birth-event");
+        }
+        
         li.innerHTML = `
             <div class="event-header">
                 <h6 class="mt-0">${description}</h6>
