@@ -84,7 +84,7 @@ export function displayPersonDetailsUI(personDetails) {
         li.innerHTML = `
             <div class="event-header">
                 <h6 class="mt-0">${description}</h6>
-                <h6 class="float-end">${event.date || "Date inconnue"}</h6>
+                <h6 class="float-end">${event.date || "Date ?"}</h6>
             </div>
             <p class="mt-0">${event.description}</p>
         `;
@@ -107,7 +107,7 @@ export function displayPersonDetailsUI(personDetails) {
 
     // Construction du conteneur principal
     const container = document.createElement("div");
-    container.classList.add("container");
+    container.classList.add("timeline-container");
     container.innerHTML = `
         <div class="row">
             <div class="col-md-12">

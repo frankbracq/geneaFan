@@ -1,0 +1,166 @@
+// Variables
+$timeline-line-color: #d4d9df;
+$timeline-node-border: #22c0e8;
+$timeline-left-margin: 29px;
+$timeline-node-size: 20px;
+$timeline-padding-left: 20px;
+
+.container.timeline-container {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+// Style de base de la timeline
+.timeline-3 {
+  list-style-type: none;
+  position: relative;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  
+  // Ligne verticale
+  &::before {
+    content: " ";
+    background: $timeline-line-color;
+    display: inline-block;
+    position: absolute;
+    left: $timeline-left-margin;
+    width: 2px;
+    height: 100%;
+    z-index: 400;
+  }
+  
+  // Éléments de la timeline
+  > li {
+    margin: 20px 0;
+    padding-left: 50px; // Augmenté pour laisser de l'espace pour les noeuds
+    position: relative;
+    
+    // Nœuds (points) sur la ligne
+    &::before {
+      content: " ";
+      background: white;
+      display: inline-block;
+      position: absolute;
+      border-radius: 50%;
+      border: 3px solid $timeline-node-border;
+      left: $timeline-left-margin - ($timeline-node-size / 2) + 1px;
+      width: $timeline-node-size;
+      height: $timeline-node-size;
+      z-index: 400;
+    }
+    
+    // Styles pour les types d'événements - différentes couleurs de nœuds
+    &.birth-event::before {
+      border-color: #22c0e8; // Bleu pour naissance
+    }
+    
+    &.death-event::before {
+      border-color: #6c757d; // Gris pour décès
+    }
+    
+    &.marriage-event::before {
+      border-color: #ffc107; // Jaune pour mariage
+    }
+    
+    &.child-birth-event::before {
+      border-color: #28a745; // Vert pour naissance d'enfant
+    }
+    
+    // Titre de l'événement (lien principal)
+    > a:first-of-type {
+      font-weight: 600;
+      color: var(--color-light, #c8a47e);
+      text-decoration: none;
+      
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+    
+    // Date (lien flottant à droite)
+    > a.float-end {
+      float: right;
+      color: #6c757d;
+      text-decoration: none;
+      
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+    
+    // Paragraphe de description
+    > p {
+      margin-top: 0.5rem;
+      color: var(--color-dark, #333);
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+  }
+}
+
+// Adaptation pour l'intégration avec personDetailsDisplay.js
+// Conversion du format HTML habituel vers le nouveau format
+.timeline-3 > li {
+  .event-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    
+    h6.event-title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+  }
+  
+  .timeline-date {
+    color: #6c757d;
+    font-size: 0.9rem;
+  }
+  
+  .event-description {
+    margin-top: 0.5rem;
+    
+    a, .link-style {
+      color: var(--color-light, #c8a47e);
+      text-decoration: none;
+      
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+    
+    .preposition {
+      color: #6c757d;
+    }
+  }
+}
+
+// Support du thème sombre (optionnel)
+body.dark-theme {
+  .timeline-3 {
+    &::before {
+      background: #4a4a4a; // Ligne plus foncée
+    }
+    
+    > li {
+      &::before {
+        background: #333; // Fond du nœud plus foncé
+      }
+      
+      > a:first-of-type {
+        color: #93c5fd; // Bleu plus clair
+      }
+      
+      > a.float-end {
+        color: #9ca3af; // Gris plus clair
+      }
+      
+      > p {
+        color: #e5e7eb; // Texte plus clair
+      }
+    }
+  }
+}
