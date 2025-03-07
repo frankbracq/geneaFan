@@ -81,6 +81,9 @@ class GoogleMapManager {
 
             // Configurer les contrôles de calques avec le service centralisé
             this.setupLayerControls();
+            
+            // Configurer les écouteurs d'événements pour les changements d'onglet
+            this.setupEventListeners();
 
             // Marquer l'initialisation comme terminée
             this.initialized = true;
@@ -161,11 +164,58 @@ class GoogleMapManager {
         if (tabElement) {
             tabElement.addEventListener('shown.bs.tab', () => {
                 if (googleMapsStore.map) {
+                    console.log('🔄 Tab Map affiché, rafraîchissement de la carte');
+                    
+                    // Déclencher un événement resize pour que Google Maps recalcule sa taille
                     google.maps.event.trigger(googleMapsStore.map, 'resize');
-                    googleMapsStore.centerMapOnMarkers();
+                    
+                    // Réafficher tous les calques actifs
+                    this.refreshAllLayers();
+                    
+                    // Centrer la carte après un court délai pour s'assurer que les marqueurs sont chargés
+                    setTimeout(() => {
+                        googleMapsStore.centerMapOnMarkers();
+                    }, 100);
                 }
             });
         }
+    }
+    
+    refreshAllLayers() {
+        // Obtenir l'état de tous les calques
+        const layers = {
+            ancestors: layerManager.isLayerVisible('ancestors'),
+            family: layerManager.isLayerVisible('family'),
+            surnames: layerManager.isLayerVisible('surnames')
+        };
+        
+        console.log('🔄 Rafraîchissement de tous les calques actifs:', layers);
+        
+        // Réappliquer la visibilité pour forcer le rafraîchissement des marqueurs
+        Object.entries(layers).forEach(([layer, isVisible]) => {
+            if (isVisible) {
+                console.log(`🔄 Réaffichage du calque ${layer}`);
+                
+                // Récupérer la référence au store correspondant
+                let store;
+                switch (layer) {
+                    case 'ancestors':
+                        store = rootAncestorTownsStore;
+                        break;
+                    case 'family':
+                        store = familyTownsStore;
+                        break;
+                    case 'surnames':
+                        store = surnamesTownsStore;
+                        break;
+                    default:
+                        return;
+                }
+                
+                // Réappliquer la visibilité (forcer l'affichage)
+                store.applyVisibility(true);
+            }
+        });
     }
 
     cleanup() {

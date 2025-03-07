@@ -2,6 +2,7 @@ import { Offcanvas } from "bootstrap";
 import { makeObservable, observable, action, runInAction } from '../../../common/stores/mobx-config.js';
 import { Loader } from "@googlemaps/js-api-loader";
 import { rootAncestorTownsStore } from './rootAncestorTownsStore.js';
+import familyTownsStore from './familyTownsStore.js';
 import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 import { layerManager } from '../managers/layerManager.js';
 
@@ -144,6 +145,14 @@ class GoogleMapsStore {
             console.warn('❌ Carte non initialisée');
             return;
         }
+        
+        // Vérifier si le calque familial est visible
+        if (layerManager.isLayerVisible('family')) {
+            console.log('🔍 Utilisation du centrage optimisé pour les marqueurs familiaux');
+            // Utiliser la nouvelle méthode optimisée pour les marqueurs familiaux
+            familyTownsStore.centerMapOnFamilyMarkers(12, 5);
+            return;
+        }
     
         const bounds = new google.maps.LatLngBounds();
         let hasMarkers = false;
@@ -161,9 +170,9 @@ class GoogleMapsStore {
         if (hasMarkers) {
             this.map.fitBounds(bounds);
     
-            // Ajuster le zoom si nécessaire - c'est le seul changement que nous gardons
+            // Ajuster le zoom si nécessaire
             const listener = google.maps.event.addListenerOnce(this.map, 'idle', () => {
-                if (this.map.getZoom() > 12) {  // Limitation du zoom à 12
+                if (this.map.getZoom() > 12) {
                     this.map.setZoom(12);
                 }
             });

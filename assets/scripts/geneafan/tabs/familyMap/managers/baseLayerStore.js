@@ -115,10 +115,22 @@ class BaseLayerStore {
                 setTimeout(() => {
                     console.log(`📍 Ajout des marqueurs au cluster après délai (${delay}ms)`);
                     this.markerDisplayManager.addMarkersToCluster(this.map);
+                    
+                    // 5.1 Si c'est le calque familial, initialiser les bounds pour optimiser le centrage futur
+                    if (this.layerName === 'family' && typeof this.initializeMapBounds === 'function') {
+                        console.log('🗺️ Initialisation des bounds pour le calque familial');
+                        this.initializeMapBounds();
+                    }
                 }, delay);
             } else {
                 console.log('📍 Ajout des marqueurs au cluster sans délai');
                 this.markerDisplayManager.addMarkersToCluster(this.map);
+                
+                // 5.1 Si c'est le calque familial, initialiser les bounds pour optimiser le centrage futur
+                if (this.layerName === 'family' && typeof this.initializeMapBounds === 'function') {
+                    console.log('🗺️ Initialisation des bounds pour le calque familial');
+                    this.initializeMapBounds();
+                }
             }
 
             // 6. Actions post-affichage (hook pour la classe dérivée)

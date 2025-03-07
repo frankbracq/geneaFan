@@ -40,6 +40,11 @@ class FamilyTownsStore extends BaseLayerStore {
         // Dans BaseLayerStore, disposers est un Set, mais ici on l'utilisait comme Map
         this.disposers = new Map(); // Pour la compatibilité avec le code existant
 
+        // Propriétés pour le centrage optimisé
+        this.calculatedBounds = null;         // Les limites calculées une seule fois
+        this.hasTooManyMarkers = false;       // Indique si la carte contient trop de marqueurs espacés
+        this.userIsNavigating = false;        // Indique si l'utilisateur navigue manuellement
+
         // Observable event collections by type
         this.events = observable({
             birth: observable([]),
@@ -583,6 +588,11 @@ class FamilyTownsStore extends BaseLayerStore {
         if (this.map) {
             console.log('📍 Mise à jour des marqueurs après finalisation');
             this.updateMarkers();
+            
+            // Réinitialiser et recalculer les bounds pour le centrage optimisé
+            this.calculatedBounds = null;
+            this.hasTooManyMarkers = false;
+            this.initializeMapBounds();
         }
 
         this.saveToLocalStorage();
@@ -602,6 +612,10 @@ class FamilyTownsStore extends BaseLayerStore {
         return hasMarkers;
     }
 
+    /**
+     * Obtient les limites géographiques des marqueurs affichés
+     * @returns {google.maps.LatLngBounds|null} Limites géographiques ou null
+     */
     getBounds() {
         if (!this.markerDisplayManager) return null;
 
@@ -618,6 +632,98 @@ class FamilyTownsStore extends BaseLayerStore {
         });
 
         return hasMarkers ? bounds : null;
+    }
+    
+    /**
+     * Initialise les limites géographiques du calque pour optimiser le centrage
+     * Cette méthode n'est appelée qu'une fois après le chargement complet des données
+     */
+    initializeMapBounds() {
+        if (!this.markerDisplayManager?.layers?.get(this.markerLayerName) || this.calculatedBounds) {
+            return; // Bounds déjà calculés ou pas de marqueurs
+        }
+        
+        console.log('🗺️ Calcul des limites géographiques pour le calque familial');
+        
+        const markers = [];
+        this.markerDisplayManager.layers.get(this.markerLayerName).forEach(marker => {
+            if (marker && marker.position) {
+                markers.push(marker);
+            }
+        });
+        
+        if (markers.length === 0) {
+            console.log('⚠️ Aucun marqueur pour calculer les limites');
+            return;
+        }
+        
+        const bounds = new google.maps.LatLngBounds();
+        markers.forEach(marker => bounds.extend(marker.position));
+        
+        // Vérifier si les limites sont trop larges
+        const ne = bounds.getNorthEast();
+        const sw = bounds.getSouthWest();
+        const spanLat = Math.abs(ne.lat() - sw.lat());
+        const spanLng = Math.abs(ne.lng() - sw.lng());
+        
+        this.hasTooManyMarkers = (spanLat > 60 || spanLng > 60);
+        this.calculatedBounds = bounds;
+        
+        console.log(`✅ Limites calculées pour ${markers.length} marqueurs familiaux (trop étendu: ${this.hasTooManyMarkers})`);
+    }
+    
+    /**
+     * Centre la carte sur les marqueurs familiaux de manière optimisée
+     * @param {number} maxZoom - Zoom maximum autorisé (par défaut: 12)
+     * @param {number} minZoom - Zoom minimum autorisé (par défaut: 5)
+     * @param {boolean} respectUserView - Si vrai, ne force pas le centrage si l'utilisateur a déplacé la carte manuellement
+     */
+    centerMapOnFamilyMarkers(maxZoom = 12, minZoom = 5, respectUserView = false) {
+        if (!this.map) {
+            console.warn('❌ Carte non initialisée');
+            return;
+        }
+        
+        // Vérifier si l'utilisateur est en train de naviguer manuellement
+        if (respectUserView && this.userIsNavigating) {
+            console.log('👆 Navigation utilisateur en cours, centrage ignoré');
+            return;
+        }
+        
+        // Initialiser les bounds si ce n'est pas déjà fait
+        if (!this.calculatedBounds) {
+            this.initializeMapBounds();
+        }
+        
+        if (!this.calculatedBounds) {
+            console.warn('⚠️ Impossible de centrer la carte : aucun marqueur familial disponible');
+            return;
+        }
+        
+        // Si limites trop larges, utiliser le zoom minimal et centrer
+        if (this.hasTooManyMarkers) {
+            console.log(`🔍 Limites trop étendues, utilisation du zoom minimal (${minZoom})`);
+            this.map.setCenter(this.calculatedBounds.getCenter());
+            this.map.setZoom(minZoom);
+            return;
+        }
+        
+        // Sinon, utiliser fitBounds et ajuster le zoom si nécessaire
+        console.log('🔍 Ajustement de la carte aux limites des marqueurs familiaux');
+        this.map.fitBounds(this.calculatedBounds);
+        
+        google.maps.event.addListenerOnce(this.map, 'idle', () => {
+            const currentZoom = this.map.getZoom();
+            console.log(`🔍 Zoom après ajustement: ${currentZoom} (limites: ${minZoom}-${maxZoom})`);
+            
+            if (currentZoom > maxZoom) {
+                console.log(`🔍 Limitation du zoom à ${maxZoom}`);
+                this.map.setZoom(maxZoom);
+            } else if (currentZoom < minZoom) {
+                console.log(`🔍 Augmentation du zoom à ${minZoom}`);
+                this.map.setZoom(minZoom);
+            }
+        });
     }
 
     cleanData(data) {
@@ -800,6 +906,11 @@ class FamilyTownsStore extends BaseLayerStore {
             this.geoDataCache = null;
             this.eventsData.clear();
             this.clearAllCaches();
+            
+            // Réinitialiser aussi les bounds calculés
+            this.calculatedBounds = null;
+            this.hasTooManyMarkers = false;
+            
             if (this.markerDisplayManager) {
                 this.markerDisplayManager.clearMarkers();
             }
