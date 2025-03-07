@@ -30,6 +30,8 @@ class SurnamesTownsStore extends BaseLayerStore {
         // Set of MobX reaction disposers (en plus de ceux gérés par la classe parente)
         this.localDisposers = new Set();
 
+        this.centeringTimeout = null;
+
         // Configure MobX observables and actions
         makeObservable(this, {
             currentSurname: observable,
@@ -107,6 +109,12 @@ class SurnamesTownsStore extends BaseLayerStore {
         // Mettre à jour le patronyme actuel
         this.currentSurname = surname;
 
+        // Nettoyer un éventuel timeout précédent
+        if (this.centeringTimeout) {
+            clearTimeout(this.centeringTimeout);
+            this.centeringTimeout = null;
+        }
+
         if (surname) {
             console.log(`⚙️ Mise à jour des marqueurs pour le patronyme: ${surname}`);
 
@@ -131,8 +139,9 @@ class SurnamesTownsStore extends BaseLayerStore {
 
                     // Centrer la carte sur les nouveaux marqueurs avec un délai plus long
                     // pour s'assurer que le clustering est terminé
-                    setTimeout(() => {
+                    this.centeringTimeout = setTimeout(() => {
                         this.centerMapOnSurnameMarkers();
+                        this.centeringTimeout = null;
                     }, 500);
                 }
             }
@@ -440,9 +449,15 @@ class SurnamesTownsStore extends BaseLayerStore {
     afterLayerShown() {
         console.log('🔄 Calque des patronymes affiché, centrage automatique');
 
-        // Laisser un délai plus long pour que le clustering soit terminé
-        setTimeout(() => {
+        // Annuler le timeout précédent s'il existe
+        if (this.centeringTimeout) {
+            clearTimeout(this.centeringTimeout);
+        }
+
+        // Créer un nouveau timeout
+        this.centeringTimeout = setTimeout(() => {
             this.centerMapOnSurnameMarkers();
+            this.centeringTimeout = null; // Réinitialiser la référence
         }, 500);
     }
 
@@ -453,6 +468,12 @@ class SurnamesTownsStore extends BaseLayerStore {
     cleanup() {
         // Appel de la méthode parente d'abord
         super.cleanup();
+
+        // Nettoyage des timeouts
+        if (this.centeringTimeout) {
+            clearTimeout(this.centeringTimeout);
+            this.centeringTimeout = null;
+        }
 
         // Gestion des disposers locaux
         this.localDisposers.forEach(disposer => disposer());
@@ -574,8 +595,8 @@ class SurnamesTownsStore extends BaseLayerStore {
         // Ajuster la vue de la carte pour englober tous les marqueurs
         this.map.fitBounds(bounds);
 
-        // Appliquer la limite de zoom maximum après que la carte ait fini de s'ajuster
-        google.maps.event.addListenerOnce(this.map, 'idle', () => {
+        // Stocker une référence à l'écouteur pour pouvoir le nettoyer si nécessaire
+        const idleListener = google.maps.event.addListenerOnce(this.map, 'idle', () => {
             const currentZoom = this.map.getZoom();
             console.log(`🔍 Niveau de zoom après fitBounds: ${currentZoom}, maximum: ${maxZoom}`);
 
@@ -584,6 +605,11 @@ class SurnamesTownsStore extends BaseLayerStore {
                 this.map.setZoom(maxZoom);
             }
         });
+
+        // Ajouter un délai de sécurité pour nettoyer l'écouteur s'il ne s'est pas déclenché
+        setTimeout(() => {
+            google.maps.event.removeListener(idleListener);
+        }, 2000); // 2 secondes devraient être largement suffisantes
 
         console.log('✅ Centrage de la carte effectué');
     }
