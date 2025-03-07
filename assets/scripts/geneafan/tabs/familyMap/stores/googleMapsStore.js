@@ -144,10 +144,10 @@ class GoogleMapsStore {
             console.warn('❌ Carte non initialisée');
             return;
         }
-
+    
         const bounds = new google.maps.LatLngBounds();
         let hasMarkers = false;
-
+    
         // Collecter tous les marqueurs visibles
         if (rootAncestorTownsStore.markers) {
             rootAncestorTownsStore.markers.forEach(marker => {
@@ -157,17 +157,17 @@ class GoogleMapsStore {
                 }
             });
         }
-
+    
         if (hasMarkers) {
             this.map.fitBounds(bounds);
-
-            // Ajuster le zoom si nécessaire
+    
+            // Ajuster le zoom si nécessaire - c'est le seul changement que nous gardons
             const listener = google.maps.event.addListenerOnce(this.map, 'idle', () => {
-                if (this.map.getZoom() > 12) {
+                if (this.map.getZoom() > 12) {  // Limitation du zoom à 12
                     this.map.setZoom(12);
                 }
             });
-
+    
             console.log('✅ Carte centrée sur les marqueurs');
         } else {
             // Si aucun marqueur, revenir à la vue par défaut de la France
