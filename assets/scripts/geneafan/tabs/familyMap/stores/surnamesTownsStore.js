@@ -103,6 +103,12 @@ class SurnamesTownsStore extends BaseLayerStore {
     setSurname(surname) {
         console.log(`🏁 setSurname appelé avec: "${surname}"`);
 
+        // Si le patronyme est identique, ne rien faire
+        if (this.currentSurname === surname) {
+            console.log('ℹ️ Même patronyme déjà sélectionné, aucune action requise');
+            return;
+        }
+
         // Mémoriser l'ancien patronyme
         const previousSurname = this.currentSurname;
 
@@ -129,7 +135,8 @@ class SurnamesTownsStore extends BaseLayerStore {
                 console.log('🔄 Calque des patronymes actif, affichage des nouveaux marqueurs');
 
                 const layerMarkers = this.markerDisplayManager.layers.get('surnames');
-                if (layerMarkers) {
+                if (layerMarkers && layerMarkers.size > 0) {
+                    // Afficher tous les marqueurs sur la carte
                     layerMarkers.forEach(marker => {
                         marker.map = this.map;
                     });
@@ -137,12 +144,15 @@ class SurnamesTownsStore extends BaseLayerStore {
                     // Ajouter au cluster
                     this.markerDisplayManager.addMarkersToCluster(this.map);
 
-                    // Centrer la carte sur les nouveaux marqueurs avec un délai plus long
-                    // pour s'assurer que le clustering est terminé
-                    this.centeringTimeout = setTimeout(() => {
-                        this.centerMapOnSurnameMarkers();
-                        this.centeringTimeout = null;
-                    }, 500);
+                    // Utiliser requestAnimationFrame pour s'assurer que le DOM est mis à jour
+                    // avant de centrer la carte (plus fiable que setTimeout arbitraire)
+                    requestAnimationFrame(() => {
+                        // Le requestAnimationFrame suivant s'exécute après le rendu
+                        requestAnimationFrame(() => {
+                            this.centerMapOnSurnameMarkers();
+                            this.centeringTimeout = null;
+                        });
+                    });
                 }
             }
         } else {
@@ -452,13 +462,23 @@ class SurnamesTownsStore extends BaseLayerStore {
         // Annuler le timeout précédent s'il existe
         if (this.centeringTimeout) {
             clearTimeout(this.centeringTimeout);
+            this.centeringTimeout = null;
         }
 
-        // Créer un nouveau timeout
-        this.centeringTimeout = setTimeout(() => {
-            this.centerMapOnSurnameMarkers();
-            this.centeringTimeout = null; // Réinitialiser la référence
-        }, 500);
+        // Utiliser requestAnimationFrame pour s'assurer que le DOM est mis à jour
+        // avant de centrer la carte (plus fiable que setTimeout arbitraire)
+        requestAnimationFrame(() => {
+            // Un second requestAnimationFrame pour attendre le prochain cycle de rendu
+            requestAnimationFrame(() => {
+                // Vérifier qu'il y a bien des marqueurs à afficher
+                const layerMarkers = this.markerDisplayManager.layers.get('surnames');
+                if (layerMarkers && layerMarkers.size > 0) {
+                    this.centerMapOnSurnameMarkers();
+                } else {
+                    console.log('⚠️ Aucun marqueur disponible pour le centrage après affichage du calque');
+                }
+            });
+        });
     }
 
     /**
@@ -543,10 +563,11 @@ class SurnamesTownsStore extends BaseLayerStore {
 
     /**
  * Centre la carte sur les marqueurs de patronymes actuellement visibles
- * avec une limite de zoom pour éviter un zoom excessif
+ * avec une limite de zoom pour éviter un zoom excessif ou insuffisant
  * @param {number} maxZoom - Niveau de zoom maximum (par défaut: 12)
+ * @param {number} minZoom - Niveau de zoom minimum (par défaut: 5)
  */
-    centerMapOnSurnameMarkers(maxZoom = 12) {
+    centerMapOnSurnameMarkers(maxZoom = 12, minZoom = 5) {
         console.log('🔍 Centrage de la carte sur les marqueurs de patronymes');
 
         if (!this.map) {
@@ -563,20 +584,16 @@ class SurnamesTownsStore extends BaseLayerStore {
 
         console.log(`📊 Nombre de marqueurs disponibles: ${layerMarkers.size}`);
 
-        // Créer les limites pour englober tous les marqueurs
-        const bounds = new google.maps.LatLngBounds();
-        let markerCount = 0;
-
-        // Utiliser tous les marqueurs existants dans la couche, qu'ils soient visibles ou non
-        // La visibilité est gérée par le cluster, pas par la propriété map du marqueur
+        // Filtrer et extraire les marqueurs valides en une seule opération
+        const validMarkers = [];
         layerMarkers.forEach(marker => {
             if (marker && marker.position) {
-                bounds.extend(marker.position);
-                markerCount++;
+                validMarkers.push(marker);
             }
         });
 
-        console.log(`📊 Marqueurs utilisés pour les limites: ${markerCount}`);
+        const markerCount = validMarkers.length;
+        console.log(`📊 Marqueurs valides pour les limites: ${markerCount}`);
 
         if (markerCount === 0) {
             console.warn('⚠️ Aucun marqueur utilisable pour définir les limites');
@@ -586,30 +603,47 @@ class SurnamesTownsStore extends BaseLayerStore {
         // Si un seul marqueur, on centre la carte sur ce marqueur avec un zoom prédéfini
         if (markerCount === 1) {
             console.log('📍 Un seul marqueur, centrage avec zoom fixe');
-            const singleMarker = [...layerMarkers.values()][0];
-            this.map.setCenter(singleMarker.position);
+            this.map.setCenter(validMarkers[0].position);
             this.map.setZoom(Math.min(10, maxZoom)); // Zoom fixe pour un seul marqueur
+            return;
+        }
+
+        // Créer les limites pour englober tous les marqueurs
+        const bounds = new google.maps.LatLngBounds();
+        validMarkers.forEach(marker => bounds.extend(marker.position));
+
+        // Vérifier si les limites sont trop larges (cas de marqueurs très éloignés)
+        const ne = bounds.getNorthEast();
+        const sw = bounds.getSouthWest();
+        const spanLat = Math.abs(ne.lat() - sw.lat());
+        const spanLng = Math.abs(ne.lng() - sw.lng());
+        
+        // Si les limites sont trop larges (plus de 60° de différence), 
+        // utiliser un zoom par défaut plutôt que fitBounds
+        if (spanLat > 60 || spanLng > 60) {
+            console.log('🌍 Limites géographiques très larges, utilisation du zoom minimal');
+            this.map.setCenter(bounds.getCenter());
+            this.map.setZoom(minZoom);
             return;
         }
 
         // Ajuster la vue de la carte pour englober tous les marqueurs
         this.map.fitBounds(bounds);
 
-        // Stocker une référence à l'écouteur pour pouvoir le nettoyer si nécessaire
-        const idleListener = google.maps.event.addListenerOnce(this.map, 'idle', () => {
+        // Utiliser un événement 'idle' pour ajuster le zoom si nécessaire
+        google.maps.event.addListenerOnce(this.map, 'idle', () => {
             const currentZoom = this.map.getZoom();
-            console.log(`🔍 Niveau de zoom après fitBounds: ${currentZoom}, maximum: ${maxZoom}`);
+            console.log(`🔍 Niveau de zoom après fitBounds: ${currentZoom}, limites: [${minZoom}, ${maxZoom}]`);
 
             if (currentZoom > maxZoom) {
-                console.log(`🔍 Limitation du zoom à ${maxZoom}`);
+                console.log(`🔍 Limitation du zoom maximum à ${maxZoom}`);
                 this.map.setZoom(maxZoom);
             }
+            else if (currentZoom < minZoom) {
+                console.log(`🔍 Augmentation du zoom minimum à ${minZoom}`);
+                this.map.setZoom(minZoom);
+            }
         });
-
-        // Ajouter un délai de sécurité pour nettoyer l'écouteur s'il ne s'est pas déclenché
-        setTimeout(() => {
-            google.maps.event.removeListener(idleListener);
-        }, 2000); // 2 secondes devraient être largement suffisantes
 
         console.log('✅ Centrage de la carte effectué');
     }
