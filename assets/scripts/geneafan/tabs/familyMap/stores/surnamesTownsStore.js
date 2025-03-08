@@ -575,6 +575,26 @@ class SurnamesTownsStore extends BaseLayerStore {
             return;
         }
 
+        // Récupérer les dimensions du conteneur pour ajustement
+        const mapDiv = this.map.getDiv();
+        const containerHeight = mapDiv.offsetHeight;
+        const containerWidth = mapDiv.offsetWidth;
+        console.log(`📏 Dimensions du conteneur pour les patronymes: ${containerWidth}x${containerHeight}px`);
+        
+        // Ajuster les niveaux de zoom en fonction de la hauteur du conteneur
+        const dynamicMaxZoom = this.calculateDynamicZoom(containerHeight);
+        console.log(`🔍 Zoom maximal dynamique pour les patronymes: ${dynamicMaxZoom}`);
+        
+        // Calculer le padding dynamique en fonction de la taille du conteneur
+        const paddingPercentage = this.calculatePaddingPercentage(containerHeight);
+        const padding = {
+            top: Math.round(containerHeight * paddingPercentage),
+            right: Math.round(containerWidth * paddingPercentage),
+            bottom: Math.round(containerHeight * paddingPercentage),
+            left: Math.round(containerWidth * paddingPercentage)
+        };
+        console.log(`📏 Padding calculé: T:${padding.top}, R:${padding.right}, B:${padding.bottom}, L:${padding.left}`);
+
         // Récupérer les marqueurs du calque de patronymes
         const layerMarkers = this.markerDisplayManager.layers.get('surnames');
         if (!layerMarkers || layerMarkers.size === 0) {
@@ -604,7 +624,7 @@ class SurnamesTownsStore extends BaseLayerStore {
         if (markerCount === 1) {
             console.log('📍 Un seul marqueur, centrage avec zoom fixe');
             this.map.setCenter(validMarkers[0].position);
-            this.map.setZoom(Math.min(10, maxZoom)); // Zoom fixe pour un seul marqueur
+            this.map.setZoom(Math.min(10, dynamicMaxZoom)); // Zoom fixe pour un seul marqueur
             return;
         }
 
@@ -628,16 +648,16 @@ class SurnamesTownsStore extends BaseLayerStore {
         }
 
         // Ajuster la vue de la carte pour englober tous les marqueurs
-        this.map.fitBounds(bounds);
+        this.map.fitBounds(bounds, padding);
 
         // Utiliser un événement 'idle' pour ajuster le zoom si nécessaire
         google.maps.event.addListenerOnce(this.map, 'idle', () => {
             const currentZoom = this.map.getZoom();
-            console.log(`🔍 Niveau de zoom après fitBounds: ${currentZoom}, limites: [${minZoom}, ${maxZoom}]`);
+            console.log(`🔍 Niveau de zoom après fitBounds: ${currentZoom}, limites: [${minZoom}, ${dynamicMaxZoom}]`);
 
-            if (currentZoom > maxZoom) {
-                console.log(`🔍 Limitation du zoom maximum à ${maxZoom}`);
-                this.map.setZoom(maxZoom);
+            if (currentZoom > dynamicMaxZoom) {
+                console.log(`🔍 Limitation du zoom maximum à ${dynamicMaxZoom}`);
+                this.map.setZoom(dynamicMaxZoom);
             }
             else if (currentZoom < minZoom) {
                 console.log(`🔍 Augmentation du zoom minimum à ${minZoom}`);
@@ -646,6 +666,49 @@ class SurnamesTownsStore extends BaseLayerStore {
         });
 
         console.log('✅ Centrage de la carte effectué');
+    }
+    
+    /**
+     * Calcule le pourcentage de padding à appliquer en fonction de la hauteur du conteneur
+     * @param {number} containerHeight - Hauteur du conteneur en pixels
+     * @returns {number} - Pourcentage de padding (0-0.3)
+     */
+    calculatePaddingPercentage(containerHeight) {
+        // Plus le conteneur est petit, plus le padding est important
+        if (containerHeight < 300) {
+            return 0.25; // 25% de padding pour très petits conteneurs
+        } else if (containerHeight < 500) {
+            return 0.2; // 20% de padding pour petits conteneurs
+        } else if (containerHeight < 700) {
+            return 0.15; // 15% de padding pour conteneurs moyens
+        } else {
+            return 0.1; // 10% de padding pour grands conteneurs
+        }
+    }
+    
+    /**
+     * Calcule un niveau de zoom maximal dynamique en fonction de la hauteur du conteneur
+     * @param {number} containerHeight - Hauteur du conteneur en pixels
+     * @returns {number} - Niveau de zoom maximal calculé
+     */
+    calculateDynamicZoom(containerHeight) {
+        // Définir les seuils de hauteur et les niveaux de zoom correspondants
+        const zoomLevels = [
+            { height: 300, zoom: 10 },   // Petit conteneur
+            { height: 500, zoom: 11 },   // Conteneur moyen
+            { height: 700, zoom: 12 },   // Grand conteneur
+            { height: 900, zoom: 13 }    // Très grand conteneur
+        ];
+        
+        // Trouver le niveau de zoom approprié
+        for (const level of zoomLevels) {
+            if (containerHeight < level.height) {
+                return level.zoom;
+            }
+        }
+        
+        // Par défaut pour très grands écrans
+        return 13;
     }
 
     /**

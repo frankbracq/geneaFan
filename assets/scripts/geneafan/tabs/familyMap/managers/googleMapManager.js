@@ -173,12 +173,40 @@ class GoogleMapManager {
                     this.refreshAllLayers();
                     
                     // Centrer la carte après un court délai pour s'assurer que les marqueurs sont chargés
+                    // et que le conteneur a été complètement redimensionné
                     setTimeout(() => {
                         googleMapsStore.centerMapOnMarkers();
-                    }, 100);
+                    }, 300); // Délai augmenté pour s'assurer que le conteneur est complètement redimensionné
                 }
             });
         }
+        
+        // Ajouter un écouteur pour les redimensionnements de fenêtre
+        // qui pourrait affecter la hauteur du conteneur de carte
+        window.addEventListener('resize', this.#debounce(() => {
+            if (googleMapsStore.map && document.querySelector('#tab2.active')) {
+                console.log('🔍 Redimensionnement détecté, ajustement du zoom');
+                googleMapsStore.centerMapOnMarkers();
+            }
+        }, 500));
+    }
+    
+    /**
+     * Fonction utilitaire pour limiter la fréquence d'appel lors du redimensionnement
+     * @param {Function} func - Fonction à exécuter
+     * @param {number} wait - Délai d'attente en ms
+     * @returns {Function} - Fonction avec limitation de fréquence
+     */
+    #debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
     }
     
     refreshAllLayers() {
@@ -265,6 +293,9 @@ class GoogleMapManager {
                 control.parentNode.replaceChild(newControl, control);
             }
         });
+        
+        // Supprimer l'écouteur de redimensionnement de fenêtre
+        window.removeEventListener('resize', this.#debounce);
     }
 }
 

@@ -146,11 +146,21 @@ class GoogleMapsStore {
             return;
         }
         
+        // Récupérer les dimensions actuelles du conteneur
+        const mapDiv = this.map.getDiv();
+        const containerHeight = mapDiv.offsetHeight;
+        console.log(`📏 Hauteur du conteneur de carte: ${containerHeight}px`);
+        
+        // Définir un zoom maximal en fonction de la hauteur du conteneur
+        // Plus petit conteneur = zoom moins important pour mieux voir
+        const dynamicMaxZoom = this.#calculateDynamicZoom(containerHeight);
+        console.log(`🔍 Zoom maximal dynamique calculé: ${dynamicMaxZoom}`);
+        
         // Vérifier si le calque familial est visible
         if (layerManager.isLayerVisible('family')) {
             console.log('🔍 Utilisation du centrage optimisé pour les marqueurs familiaux');
-            // Utiliser la nouvelle méthode optimisée pour les marqueurs familiaux
-            familyTownsStore.centerMapOnFamilyMarkers(12, 5);
+            // Utiliser la nouvelle méthode optimisée pour les marqueurs familiaux avec zoom dynamique
+            familyTownsStore.centerMapOnFamilyMarkers(dynamicMaxZoom, 5);
             return;
         }
     
@@ -172,18 +182,43 @@ class GoogleMapsStore {
     
             // Ajuster le zoom si nécessaire
             const listener = google.maps.event.addListenerOnce(this.map, 'idle', () => {
-                if (this.map.getZoom() > 12) {
-                    this.map.setZoom(12);
+                if (this.map.getZoom() > dynamicMaxZoom) {
+                    this.map.setZoom(dynamicMaxZoom);
                 }
             });
     
-            console.log('✅ Carte centrée sur les marqueurs');
+            console.log(`✅ Carte centrée sur les marqueurs avec zoom max ${dynamicMaxZoom}`);
         } else {
             // Si aucun marqueur, revenir à la vue par défaut de la France
             this.map.setCenter({ lat: 46.2276, lng: 2.2137 });
             this.map.setZoom(6.2);
             console.log('ℹ️ Aucun marqueur visible, retour à la vue par défaut');
         }
+    }
+    
+    /**
+     * Calcule un niveau de zoom maximal dynamique en fonction de la hauteur du conteneur
+     * @param {number} containerHeight - Hauteur du conteneur en pixels
+     * @returns {number} - Niveau de zoom maximal calculé
+     */
+    #calculateDynamicZoom(containerHeight) {
+        // Définir les seuils de hauteur et les niveaux de zoom correspondants
+        const zoomLevels = [
+            { height: 300, zoom: 10 },   // Petit conteneur
+            { height: 500, zoom: 11 },   // Conteneur moyen
+            { height: 700, zoom: 12 },   // Grand conteneur
+            { height: 900, zoom: 13 }    // Très grand conteneur
+        ];
+        
+        // Trouver le niveau de zoom approprié
+        for (const level of zoomLevels) {
+            if (containerHeight < level.height) {
+                return level.zoom;
+            }
+        }
+        
+        // Par défaut pour très grands écrans
+        return 13;
     }
 
     // Méthode pour modifier l'état d'un calque
