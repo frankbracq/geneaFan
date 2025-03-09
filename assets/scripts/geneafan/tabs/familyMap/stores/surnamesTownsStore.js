@@ -556,16 +556,15 @@ class SurnamesTownsStore extends BaseLayerStore {
     }
 
     /**
-     * Centre la carte sur les marqueurs de patronymes actuellement visibles
-     * avec une limite de zoom pour éviter un zoom excessif
-     * @param {number} maxZoom - Niveau de zoom maximum (par défaut: 12)
-     */
-
-    /**
- * Centre la carte sur les marqueurs de patronymes actuellement visibles
- * avec une limite de zoom pour éviter un zoom excessif ou insuffisant
- * @param {number} maxZoom - Niveau de zoom maximum (par défaut: 12)
- * @param {number} minZoom - Niveau de zoom minimum (par défaut: 5)
+ * Centers the map on the currently visible surname markers with dynamic adjustment.
+ * This function is specifically designed for the dynamically changing surname markers:
+ * - Recalculates bounds completely on each surname change
+ * - Handles special cases like single marker or widely spread markers
+ * - Adjusts zoom level based on container height for optimal marker visibility
+ * - Uses padding proportional to container size for better visualization
+ * 
+ * @param {number} maxZoom - Maximum zoom level allowed (default: 12)
+ * @param {number} minZoom - Minimum zoom level allowed (default: 5)
  */
     centerMapOnSurnameMarkers(maxZoom = 12, minZoom = 5) {
         console.log('🔍 Centrage de la carte sur les marqueurs de patronymes');
@@ -580,11 +579,11 @@ class SurnamesTownsStore extends BaseLayerStore {
         const containerHeight = mapDiv.offsetHeight;
         const containerWidth = mapDiv.offsetWidth;
         console.log(`📏 Dimensions du conteneur pour les patronymes: ${containerWidth}x${containerHeight}px`);
-        
+
         // Ajuster les niveaux de zoom en fonction de la hauteur du conteneur
         const dynamicMaxZoom = this.calculateDynamicZoom(containerHeight);
         console.log(`🔍 Zoom maximal dynamique pour les patronymes: ${dynamicMaxZoom}`);
-        
+
         // Calculer le padding dynamique en fonction de la taille du conteneur
         const paddingPercentage = this.calculatePaddingPercentage(containerHeight);
         const padding = {
@@ -637,7 +636,7 @@ class SurnamesTownsStore extends BaseLayerStore {
         const sw = bounds.getSouthWest();
         const spanLat = Math.abs(ne.lat() - sw.lat());
         const spanLng = Math.abs(ne.lng() - sw.lng());
-        
+
         // Si les limites sont trop larges (plus de 60° de différence), 
         // utiliser un zoom par défaut plutôt que fitBounds
         if (spanLat > 60 || spanLng > 60) {
@@ -667,7 +666,7 @@ class SurnamesTownsStore extends BaseLayerStore {
 
         console.log('✅ Centrage de la carte effectué');
     }
-    
+
     /**
      * Calcule le pourcentage de padding à appliquer en fonction de la hauteur du conteneur
      * @param {number} containerHeight - Hauteur du conteneur en pixels
@@ -685,7 +684,7 @@ class SurnamesTownsStore extends BaseLayerStore {
             return 0.1; // 10% de padding pour grands conteneurs
         }
     }
-    
+
     /**
      * Calcule un niveau de zoom maximal dynamique en fonction de la hauteur du conteneur
      * @param {number} containerHeight - Hauteur du conteneur en pixels
@@ -699,14 +698,14 @@ class SurnamesTownsStore extends BaseLayerStore {
             { height: 700, zoom: 12 },   // Grand conteneur
             { height: 900, zoom: 13 }    // Très grand conteneur
         ];
-        
+
         // Trouver le niveau de zoom approprié
         for (const level of zoomLevels) {
             if (containerHeight < level.height) {
                 return level.zoom;
             }
         }
-        
+
         // Par défaut pour très grands écrans
         return 13;
     }

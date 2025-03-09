@@ -141,20 +141,28 @@ class RootAncestorTownsStore extends BaseLayerStore {
     }
 
     /**
-     * Center the map on all visible markers with proper padding based on container size
-     */
+ * Centers the map on ancestor markers with appropriate zoom level.
+ * Optimized for ancestor markers which remain static after initial loading:
+ * - Calculates bounds based on all visible ancestor markers
+ * - Applies dynamic padding based on container height
+ * - Adjusts maximum zoom level based on container size
+ * - Ensures all ancestors remain visible while maintaining context
+ * 
+ * This function is called once after ancestor data is loaded and
+ * doesn't need to handle dynamic marker changes.
+ */
     centerMapOnMarkers() {
         if (!this.map) return;
 
         const bounds = this.getBounds();
         if (!bounds) return;
-        
+
         // Récupérer les dimensions du conteneur pour ajustement
         const mapDiv = this.map.getDiv();
         const containerHeight = mapDiv.offsetHeight;
         const containerWidth = mapDiv.offsetWidth;
         console.log(`📏 Dimensions du conteneur pour les ancêtres: ${containerWidth}x${containerHeight}px`);
-        
+
         // Calculer le padding dynamique en fonction de la taille du conteneur
         const paddingPercentage = this.calculatePaddingPercentage(containerHeight);
         const padding = {
@@ -164,25 +172,25 @@ class RootAncestorTownsStore extends BaseLayerStore {
             left: Math.round(containerWidth * paddingPercentage)
         };
         console.log(`📏 Padding calculé: T:${padding.top}, R:${padding.right}, B:${padding.bottom}, L:${padding.left}`);
-        
+
         // Ajuster le zoom maximal en fonction de la hauteur du conteneur
         const maxZoom = this.calculateDynamicZoom(containerHeight);
-        
+
         // Appliquer les limites géographiques avec padding
         this.map.fitBounds(bounds, padding);
-        
+
         // Limiter le zoom après l'ajustement automatique
         google.maps.event.addListenerOnce(this.map, 'idle', () => {
             const currentZoom = this.map.getZoom();
             console.log(`🔍 Zoom après ajustement pour ancêtres: ${currentZoom} (max: ${maxZoom})`);
-            
+
             if (currentZoom > maxZoom) {
                 console.log(`🔍 Limitation du zoom à ${maxZoom}`);
                 this.map.setZoom(maxZoom);
             }
         });
     }
-    
+
     /**
      * Calcule le pourcentage de padding à appliquer en fonction de la hauteur du conteneur
      * @param {number} containerHeight - Hauteur du conteneur en pixels
@@ -200,7 +208,7 @@ class RootAncestorTownsStore extends BaseLayerStore {
             return 0.1; // 10% de padding pour grands conteneurs
         }
     }
-    
+
     /**
      * Calcule un niveau de zoom maximal dynamique en fonction de la hauteur du conteneur
      * @param {number} containerHeight - Hauteur du conteneur en pixels
@@ -214,14 +222,14 @@ class RootAncestorTownsStore extends BaseLayerStore {
             { height: 700, zoom: 12 },   // Grand conteneur
             { height: 900, zoom: 13 }    // Très grand conteneur
         ];
-        
+
         // Trouver le niveau de zoom approprié
         for (const level of zoomLevels) {
             if (containerHeight < level.height) {
                 return level.zoom;
             }
         }
-        
+
         // Par défaut pour très grands écrans
         return 13;
     }

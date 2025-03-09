@@ -588,7 +588,7 @@ class FamilyTownsStore extends BaseLayerStore {
         if (this.map) {
             console.log('📍 Mise à jour des marqueurs après finalisation');
             this.updateMarkers();
-            
+
             // Réinitialiser et recalculer les bounds pour le centrage optimisé
             this.calculatedBounds = null;
             this.hasTooManyMarkers = false;
@@ -633,7 +633,7 @@ class FamilyTownsStore extends BaseLayerStore {
 
         return hasMarkers ? bounds : null;
     }
-    
+
     /**
      * Initialise les limites géographiques du calque pour optimiser le centrage
      * Cette méthode n'est appelée qu'une fois après le chargement complet des données
@@ -642,60 +642,66 @@ class FamilyTownsStore extends BaseLayerStore {
         if (!this.markerDisplayManager?.layers?.get(this.markerLayerName) || this.calculatedBounds) {
             return; // Bounds déjà calculés ou pas de marqueurs
         }
-        
+
         console.log('🗺️ Calcul des limites géographiques pour le calque familial');
-        
+
         const markers = [];
         this.markerDisplayManager.layers.get(this.markerLayerName).forEach(marker => {
             if (marker && marker.position) {
                 markers.push(marker);
             }
         });
-        
+
         if (markers.length === 0) {
             console.log('⚠️ Aucun marqueur pour calculer les limites');
             return;
         }
-        
+
         const bounds = new google.maps.LatLngBounds();
         markers.forEach(marker => bounds.extend(marker.position));
-        
+
         // Vérifier si les limites sont trop larges
         const ne = bounds.getNorthEast();
         const sw = bounds.getSouthWest();
         const spanLat = Math.abs(ne.lat() - sw.lat());
         const spanLng = Math.abs(ne.lng() - sw.lng());
-        
+
         this.hasTooManyMarkers = (spanLat > 60 || spanLng > 60);
         this.calculatedBounds = bounds;
-        
+
         console.log(`✅ Limites calculées pour ${markers.length} marqueurs familiaux (trop étendu: ${this.hasTooManyMarkers})`);
     }
-    
+
     /**
-     * Centre la carte sur les marqueurs familiaux de manière optimisée
-     * @param {number} maxZoom - Zoom maximum autorisé (par défaut: 12)
-     * @param {number} minZoom - Zoom minimum autorisé (par défaut: 5)
-     * @param {boolean} respectUserView - Si vrai, ne force pas le centrage si l'utilisateur a déplacé la carte manuellement
-     */
+ * Centers the map on family town markers with cached bounds optimization.
+ * Designed for fixed markers that don't change position after initial loading:
+ * - Uses pre-calculated and cached bounds for better performance
+ * - Respects user navigation when specified to avoid disrupting exploration
+ * - Handles special case of widely spread markers with minimum zoom
+ * - Applies proportional padding based on container dimensions
+ * 
+ * @param {number} maxZoom - Maximum zoom level allowed (default: 12)
+ * @param {number} minZoom - Minimum zoom level allowed (default: 5)
+ * @param {boolean} respectUserView - If true, won't recenter if user is navigating (default: false)
+ */
     centerMapOnFamilyMarkers(maxZoom = 12, minZoom = 5, respectUserView = false) {
         if (!this.map) {
             console.warn('❌ Carte non initialisée');
             return;
         }
-        
+
         // Vérifier si l'utilisateur est en train de naviguer manuellement
         if (respectUserView && this.userIsNavigating) {
             console.log('👆 Navigation utilisateur en cours, centrage ignoré');
             return;
         }
-        
+
         // Récupérer les dimensions du conteneur pour ajustement
         const mapDiv = this.map.getDiv();
         const containerHeight = mapDiv.offsetHeight;
         const containerWidth = mapDiv.offsetWidth;
         console.log(`📏 Dimensions du conteneur: ${containerWidth}x${containerHeight}px`);
-        
+
         // Ajuster le padding en fonction de la taille du conteneur
         // (plus de padding pour les petits conteneurs)
         const paddingPercentage = this.#calculatePaddingPercentage(containerHeight);
@@ -706,17 +712,17 @@ class FamilyTownsStore extends BaseLayerStore {
             left: Math.round(containerWidth * paddingPercentage)
         };
         console.log(`📏 Padding calculé: T:${padding.top}, R:${padding.right}, B:${padding.bottom}, L:${padding.left}`);
-        
+
         // Initialiser les bounds si ce n'est pas déjà fait
         if (!this.calculatedBounds) {
             this.initializeMapBounds();
         }
-        
+
         if (!this.calculatedBounds) {
             console.warn('⚠️ Impossible de centrer la carte : aucun marqueur familial disponible');
             return;
         }
-        
+
         // Si limites trop larges, utiliser le zoom minimal et centrer
         if (this.hasTooManyMarkers) {
             console.log(`🔍 Limites trop étendues, utilisation du zoom minimal (${minZoom})`);
@@ -724,15 +730,15 @@ class FamilyTownsStore extends BaseLayerStore {
             this.map.setZoom(minZoom);
             return;
         }
-        
+
         // Sinon, utiliser fitBounds avec le padding calculé
         console.log('🔍 Ajustement de la carte aux limites des marqueurs familiaux avec padding');
         this.map.fitBounds(this.calculatedBounds, padding);
-        
+
         google.maps.event.addListenerOnce(this.map, 'idle', () => {
             const currentZoom = this.map.getZoom();
             console.log(`🔍 Zoom après ajustement: ${currentZoom} (limites: ${minZoom}-${maxZoom})`);
-            
+
             if (currentZoom > maxZoom) {
                 console.log(`🔍 Limitation du zoom à ${maxZoom}`);
                 this.map.setZoom(maxZoom);
@@ -742,7 +748,7 @@ class FamilyTownsStore extends BaseLayerStore {
             }
         });
     }
-    
+
     /**
      * Calcule le pourcentage de padding à appliquer en fonction de la hauteur du conteneur
      * @param {number} containerHeight - Hauteur du conteneur en pixels
@@ -941,11 +947,11 @@ class FamilyTownsStore extends BaseLayerStore {
             this.geoDataCache = null;
             this.eventsData.clear();
             this.clearAllCaches();
-            
+
             // Réinitialiser aussi les bounds calculés
             this.calculatedBounds = null;
             this.hasTooManyMarkers = false;
-            
+
             if (this.markerDisplayManager) {
                 this.markerDisplayManager.clearMarkers();
             }
