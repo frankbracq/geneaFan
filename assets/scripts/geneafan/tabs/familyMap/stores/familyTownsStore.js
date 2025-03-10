@@ -679,53 +679,6 @@ class FamilyTownsStore extends BaseLayerStore {
     }
 
     /**
- * Obtient les limites géographiques de tous les marqueurs, y compris ceux regroupés en clusters
- * Version améliorée qui inclut tous les marqueurs même s'ils sont masqués par le clusterer
- * @returns {google.maps.LatLngBounds|null} Limites géographiques ou null
- */
-    getBounds() {
-        if (!this.markerDisplayManager) return null;
-
-        const bounds = new google.maps.LatLngBounds();
-        let hasMarkers = false;
-
-        // Récupérer les marqueurs de la couche familyTowns
-        const layerMarkers = this.markerDisplayManager.layers.get(this.markerLayerName);
-
-        if (layerMarkers && layerMarkers.size > 0) {
-            console.log(`📊 Calcul des bounds pour ${layerMarkers.size} marqueurs de villes familiales`);
-
-            // Parcourir TOUS les marqueurs, peu importe s'ils sont visibles ou masqués par un cluster
-            layerMarkers.forEach((marker, key) => {
-                if (marker && marker.position) {
-                    bounds.extend(marker.position);
-                    hasMarkers = true;
-                }
-            });
-
-            console.log(`✅ Bounds calculés incluant ${hasMarkers ? 'tous les' : 'aucun'} marqueurs`);
-        } else {
-            console.log('⚠️ Aucun marqueur trouvé pour la couche familyTowns');
-        }
-
-        // Si aucun marqueur trouvé, essayer avec les autres couches
-        if (!hasMarkers) {
-            this.markerDisplayManager.layers.forEach((layerMarkers, layerName) => {
-                if (layerName !== this.markerLayerName) { // Éviter la duplication
-                    layerMarkers.forEach(marker => {
-                        if (marker && marker.position) {
-                            bounds.extend(marker.position);
-                            hasMarkers = true;
-                        }
-                    });
-                }
-            });
-        }
-
-        return hasMarkers ? bounds : null;
-    }
-
-    /**
      * Initialise les limites géographiques du calque pour optimiser le centrage
      * Cette méthode n'est appelée qu'une fois après le chargement complet des données
      */
@@ -765,11 +718,12 @@ class FamilyTownsStore extends BaseLayerStore {
 
     /**
  * Centers the map on family town markers.
- * Version améliorée avec un padding supplémentaire pour les clusters.
- * 
  * @param {number} maxZoom - Maximum zoom level allowed (default: 12)
  * @param {number} minZoom - Minimum zoom level allowed (default: 5)
  * @param {boolean} respectUserView - If true, won't recenter if user is navigating (default: false)
+ * 
+ * TODO: Consider refactoring this method into a generic one in BaseLayerStore
+ * when appropriate, as part of the ongoing standardization effort.
  */
     centerMapOnFamilyMarkers(maxZoom = 12, minZoom = 5, respectUserView = false) {
         if (!this.map) {

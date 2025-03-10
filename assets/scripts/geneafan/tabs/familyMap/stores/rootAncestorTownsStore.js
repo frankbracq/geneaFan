@@ -143,14 +143,9 @@ class RootAncestorTownsStore extends BaseLayerStore {
 
     /**
  * Centers the map on ancestor markers with appropriate zoom level.
- * Optimized for ancestor markers which remain static after initial loading:
- * - Calculates bounds based on all visible ancestor markers
- * - Applies dynamic padding based on container height
- * - Adjusts maximum zoom level based on container size
- * - Ensures all ancestors remain visible while maintaining context
  * 
- * This function is called once after ancestor data is loaded and
- * doesn't need to handle dynamic marker changes.
+ * TODO: Consider refactoring this method into a generic one in BaseLayerStore
+ * when appropriate, as part of the ongoing standardization effort.
  */
     centerMapOnAncestorMarkers() {
         if (!this.map) return;
@@ -368,24 +363,6 @@ class RootAncestorTownsStore extends BaseLayerStore {
             });
         });
         return hasMarkers;
-    }
-
-    getBounds() {
-        if (!this.markerDisplayManager) return null;
-
-        const bounds = new google.maps.LatLngBounds();
-        let hasMarkers = false;
-
-        this.markerDisplayManager.layers.forEach(layerMarkers => {
-            layerMarkers.forEach(marker => {
-                if (marker.map !== null) {
-                    bounds.extend(marker.position);
-                    hasMarkers = true;
-                }
-            });
-        });
-
-        return hasMarkers ? bounds : null;
     }
 
     /**

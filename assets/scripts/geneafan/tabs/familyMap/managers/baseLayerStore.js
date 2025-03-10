@@ -81,24 +81,72 @@ class BaseLayerStore {
     }
 
     /**
+ * Obtient les limites géographiques de tous les marqueurs du calque
+ * Méthode mutualisée qui inclut tous les marqueurs, même ceux masqués par un clusterer
+ * @returns {google.maps.LatLngBounds|null} Limites géographiques ou null
+ */
+    getBounds() {
+        if (!this.markerDisplayManager) return null;
+
+        const bounds = new google.maps.LatLngBounds();
+        let hasMarkers = false;
+
+        // Récupérer les marqueurs de la couche principale
+        const layerMarkers = this.markerDisplayManager.layers.get(this.markerLayerName);
+
+        if (layerMarkers && layerMarkers.size > 0) {
+            console.log(`📊 Calcul des bounds pour ${layerMarkers.size} marqueurs de ${this.layerName}`);
+
+            // Parcourir TOUS les marqueurs, peu importe s'ils sont visibles ou masqués par un cluster
+            layerMarkers.forEach((marker, key) => {
+                if (marker && marker.position) {
+                    bounds.extend(marker.position);
+                    hasMarkers = true;
+                }
+            });
+
+            console.log(`✅ Bounds calculés incluant ${hasMarkers ? 'tous les' : 'aucun'} marqueurs pour ${this.layerName}`);
+        } else {
+            console.log(`⚠️ Aucun marqueur trouvé pour la couche ${this.markerLayerName}`);
+        }
+
+        // Si aucun marqueur trouvé et que nous sommes dans un calque spécifique,
+        // on peut essayer avec les autres couches
+        if (!hasMarkers) {
+            this.markerDisplayManager.layers.forEach((markers, layerName) => {
+                if (layerName !== this.markerLayerName) { // Éviter la duplication
+                    markers.forEach(marker => {
+                        if (marker && marker.position) {
+                            bounds.extend(marker.position);
+                            hasMarkers = true;
+                        }
+                    });
+                }
+            });
+        }
+
+        return hasMarkers ? bounds : null;
+    }
+
+    /**
  * Applique l'état de visibilité aux marqueurs
  * @param {boolean} visible - État de visibilité
  */
     applyVisibility(visible) {
         if (!this.map) return;
-    
+
         if (visible) {
             // 1. Préparation du calque avant affichage (hook pour la classe dérivée)
             this.prepareLayerBeforeShow();
-    
+
             // 2. S'assurer que le cluster est bien initialisé
             if (!this.markerDisplayManager.isInitialized()) {
                 this.markerDisplayManager.initializeCluster(this.map, this.createClusterMarker.bind(this));
             }
-    
+
             // 3. Préparer/rafraîchir les marqueurs si nécessaire (hook pour la classe dérivée)
             this.updateLayerMarkers();
-    
+
             // 4. Rendre les marqueurs visibles
             const layerMarkers = this.markerDisplayManager.layers.get(this.markerLayerName);
             if (layerMarkers) {
@@ -106,22 +154,22 @@ class BaseLayerStore {
                     marker.map = this.map;
                 });
             }
-    
+
             // 5. Ajouter les marqueurs au cluster avec délai configurable
             const config = layerManager.getLayerConfig(this.layerName);
             const delay = config ? config.clusterDelay : 0;
-    
+
             if (delay > 0) {
                 setTimeout(() => {
                     console.log(`📍 Ajout des marqueurs au cluster après délai (${delay}ms)`);
                     this.markerDisplayManager.addMarkersToCluster(this.map);
-                    
+
                     // 5.1 Si c'est le calque familial, initialiser les bounds pour optimiser le centrage futur
                     if (this.layerName === 'family' && typeof this.initializeMapBounds === 'function') {
                         console.log('🗺️ Initialisation des bounds pour le calque familial');
                         this.initializeMapBounds();
                     }
-                    
+
                     // Centrage différé après que les marqueurs ont été ajoutés
                     setTimeout(() => {
                         // 6. Actions post-affichage (hook pour la classe dérivée)
@@ -131,13 +179,13 @@ class BaseLayerStore {
             } else {
                 console.log('📍 Ajout des marqueurs au cluster sans délai');
                 this.markerDisplayManager.addMarkersToCluster(this.map);
-                
+
                 // 5.1 Si c'est le calque familial, initialiser les bounds pour optimiser le centrage futur
                 if (this.layerName === 'family' && typeof this.initializeMapBounds === 'function') {
                     console.log('🗺️ Initialisation des bounds pour le calque familial');
                     this.initializeMapBounds();
                 }
-                
+
                 // Centrage différé après que les marqueurs ont été ajoutés
                 setTimeout(() => {
                     // 6. Actions post-affichage (hook pour la classe dérivée)
@@ -147,7 +195,7 @@ class BaseLayerStore {
         } else {
             console.log(`🔍 Désactivation du calque ${this.layerName}`);
             this.markerDisplayManager.toggleLayerVisibility(this.markerLayerName, false, this.map);
-    
+
             // 7. Actions après masquage (hook pour la classe dérivée)
             this.afterLayerHidden();
         }

@@ -557,102 +557,77 @@ class SurnamesTownsStore extends BaseLayerStore {
     }
 
     /**
- * Centers the map on the currently visible surname markers with dynamic adjustment.
- * This function is specifically designed for the dynamically changing surname markers:
- * - Recalculates bounds completely on each surname change
- * - Handles special cases like single marker or widely spread markers
- * - Adjusts zoom level based on container height for optimal marker visibility
- * - Uses padding proportional to container size for better visualization
+ * Centers the map on surname markers using the standardized approach.
+ * Uses the inherited getBounds() method from BaseLayerStore
  * 
  * @param {number} maxZoom - Maximum zoom level allowed (default: 12)
  * @param {number} minZoom - Minimum zoom level allowed (default: 5)
+ * 
+ * TODO: Consider refactoring this method into a generic one in BaseLayerStore
+ * when appropriate, as part of the ongoing standardization effort.
  */
     centerMapOnSurnameMarkers(maxZoom = 12, minZoom = 5) {
         console.log('🔍 Centrage de la carte sur les marqueurs de patronymes');
-    
+
         if (!this.map) {
             console.warn('❌ Carte non initialisée');
             return;
         }
-    
-        // Utiliser les méthodes centralisées de googleMapsStore
-        const mapDiv = this.map.getDiv();
-        const dynamicMaxZoom = calculateDynamicZoom(mapDiv.offsetHeight);
-        const padding = calculatePadding(mapDiv);
-        
-        console.log(`🔍 Zoom maximal dynamique pour les patronymes: ${dynamicMaxZoom}`);
-        console.log(`📏 Padding calculé: T:${padding.top}, R:${padding.right}, B:${padding.bottom}, L:${padding.left}`);
-    
-        // Récupérer les marqueurs du calque de patronymes
-        const layerMarkers = this.markerDisplayManager.layers.get('surnames');
-        if (!layerMarkers || layerMarkers.size === 0) {
-            console.warn('⚠️ Aucun marqueur de patronyme disponible');
-            return;
-        }
-    
-        console.log(`📊 Nombre de marqueurs disponibles: ${layerMarkers.size}`);
-    
-        // Filtrer et extraire les marqueurs valides en une seule opération
-        const validMarkers = [];
-        layerMarkers.forEach(marker => {
-            if (marker && marker.position) {
-                validMarkers.push(marker);
+
+        // Forcer un événement de redimensionnement
+        google.maps.event.trigger(this.map, 'resize');
+
+        // Utiliser setTimeout pour s'assurer que l'événement resize a été traité
+        setTimeout(() => {
+            // Utiliser la méthode getBounds() héritée de BaseLayerStore
+            const bounds = this.getBounds();
+            if (!bounds) {
+                console.warn('⚠️ Impossible de centrer la carte : aucun marqueur de patronyme disponible');
+                return;
             }
-        });
-    
-        const markerCount = validMarkers.length;
-        console.log(`📊 Marqueurs valides pour les limites: ${markerCount}`);
-    
-        if (markerCount === 0) {
-            console.warn('⚠️ Aucun marqueur utilisable pour définir les limites');
-            return;
-        }
-    
-        // Si un seul marqueur, on centre la carte sur ce marqueur avec un zoom prédéfini
-        if (markerCount === 1) {
-            console.log('📍 Un seul marqueur, centrage avec zoom fixe');
-            this.map.setCenter(validMarkers[0].position);
-            this.map.setZoom(Math.min(10, dynamicMaxZoom)); // Zoom fixe pour un seul marqueur
-            return;
-        }
-    
-        // Créer les limites pour englober tous les marqueurs
-        const bounds = new google.maps.LatLngBounds();
-        validMarkers.forEach(marker => bounds.extend(marker.position));
-    
-        // Vérifier si les limites sont trop larges (cas de marqueurs très éloignés)
-        const ne = bounds.getNorthEast();
-        const sw = bounds.getSouthWest();
-        const spanLat = Math.abs(ne.lat() - sw.lat());
-        const spanLng = Math.abs(ne.lng() - sw.lng());
-    
-        // Si les limites sont trop larges, utiliser un zoom par défaut plutôt que fitBounds
-        if (spanLat > 60 || spanLng > 60) {
-            console.log('🌍 Limites géographiques très larges, utilisation du zoom minimal');
-            this.map.setCenter(bounds.getCenter());
-            this.map.setZoom(minZoom);
-            return;
-        }
-    
-        // Ajuster la vue de la carte pour englober tous les marqueurs
-        this.map.fitBounds(bounds, padding);
-    
-        // Utiliser un événement 'idle' pour ajuster le zoom si nécessaire
-        google.maps.event.addListenerOnce(this.map, 'idle', () => {
-            const currentZoom = this.map.getZoom();
-            console.log(`🔍 Niveau de zoom après fitBounds: ${currentZoom}, limites: [${minZoom}, ${dynamicMaxZoom}]`);
-    
-            if (currentZoom > dynamicMaxZoom) {
-                console.log(`🔍 Limitation du zoom maximum à ${dynamicMaxZoom}`);
-                this.map.setZoom(dynamicMaxZoom);
-            }
-            else if (currentZoom < minZoom) {
-                console.log(`🔍 Augmentation du zoom minimum à ${minZoom}`);
+
+            // Utiliser les méthodes centralisées pour le calcul du padding et du zoom
+            const mapDiv = this.map.getDiv();
+            const dynamicMaxZoom = calculateDynamicZoom(mapDiv.offsetHeight);
+            const padding = calculatePadding(mapDiv);
+
+            console.log(`🔍 Zoom maximal dynamique pour les patronymes: ${dynamicMaxZoom}`);
+            console.log(`📏 Padding calculé: T:${padding.top}, R:${padding.right}, B:${padding.bottom}, L:${padding.left}`);
+
+            // Vérifier si les limites sont trop larges (cas de marqueurs très éloignés)
+            const ne = bounds.getNorthEast();
+            const sw = bounds.getSouthWest();
+            const spanLat = Math.abs(ne.lat() - sw.lat());
+            const spanLng = Math.abs(ne.lng() - sw.lng());
+
+            // Si les limites sont trop larges, utiliser un zoom par défaut plutôt que fitBounds
+            if (spanLat > 60 || spanLng > 60) {
+                console.log('🌍 Limites géographiques très larges, utilisation du zoom minimal');
+                this.map.setCenter(bounds.getCenter());
                 this.map.setZoom(minZoom);
+                return;
             }
-        });
-    
-        console.log('✅ Centrage de la carte effectué');
+
+            // Ajuster la vue de la carte pour englober tous les marqueurs
+            this.map.fitBounds(bounds, padding);
+
+            // Utiliser un événement 'idle' pour ajuster le zoom si nécessaire
+            google.maps.event.addListenerOnce(this.map, 'idle', () => {
+                const currentZoom = this.map.getZoom();
+                console.log(`🔍 Niveau de zoom après fitBounds: ${currentZoom}, limites: [${minZoom}, ${dynamicMaxZoom}]`);
+
+                if (currentZoom > dynamicMaxZoom) {
+                    console.log(`🔍 Limitation du zoom maximum à ${dynamicMaxZoom}`);
+                    this.map.setZoom(dynamicMaxZoom);
+                }
+                else if (currentZoom < minZoom) {
+                    console.log(`🔍 Augmentation du zoom minimum à ${minZoom}`);
+                    this.map.setZoom(minZoom);
+                }
+            });
+
+            console.log('✅ Centrage de la carte effectué');
+        }, 50); // Court délai pour permettre au resize de se propager
     }
 
     /**
