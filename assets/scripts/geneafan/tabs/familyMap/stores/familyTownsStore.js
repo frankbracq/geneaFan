@@ -45,6 +45,7 @@ class FamilyTownsStore extends BaseLayerStore {
         this.calculatedBounds = null;         // Les limites calculées une seule fois
         this.hasTooManyMarkers = false;       // Indique si la carte contient trop de marqueurs espacés
         this.userIsNavigating = false;        // Indique si l'utilisateur navigue manuellement
+        this.lastContainerDimensions = null;  // Mémorise les dimensions du conteneur lors du dernier calcul
 
         // Observable event collections by type
         this.events = observable({
@@ -495,12 +496,23 @@ class FamilyTownsStore extends BaseLayerStore {
     /**
  * Hook: Actions après affichage du calque
  * Centre automatiquement la carte sur les marqueurs de villes familiales
+ * Simplifié pour correspondre à l'approche de rootAncestorTownsStore
  */
     afterLayerShown() {
         console.log('🔄 Calque des villes familiales affiché, centrage automatique');
+
+        // Forcer un événement de redimensionnement
+        if (this.map) {
+            google.maps.event.trigger(this.map, 'resize');
+        }
+
         // Vérifier qu'il y a des marqueurs avant de tenter le centrage
+        // Utiliser la même logique simple que rootAncestorTownsStore
         if (this.townsData && this.townsData.size > 0) {
             console.log(`📊 Centrage sur ${this.townsData.size} villes familiales`);
+
+            // Appeler centerMapOnFamilyMarkers sans paramètres supplémentaires
+            // comme le fait rootAncestorTownsStore
             this.centerMapOnFamilyMarkers();
         } else {
             console.log('⚠️ Pas de données de villes familiales pour le centrage');
@@ -509,17 +521,17 @@ class FamilyTownsStore extends BaseLayerStore {
 
     /**
  * Surcharge de la méthode applyVisibility de BaseLayerStore
+ * Modifiée pour intégrer les délais appropriés tout en conservant les spécificités de familyTownsStore
  * @param {boolean} visible - État de visibilité à appliquer
  */
     applyVisibility(visible) {
         if (!this.map) return;
 
-        // Ne pas appeler super.applyVisibility() car nous avons besoin d'une implémentation complètement personnalisée
-        // Mais documenter explicitement cette décision
-        // Note: Cette méthode remplace intentionnellement celle de BaseLayerStore avec une logique spécifique
-
         if (visible) {
             console.log('🔍 Activation du calque des villes familiales');
+
+            // Forcer un redimensionnement de la carte avant toute opération
+            google.maps.event.trigger(this.map, 'resize');
 
             // 1. S'assurer que le cluster est bien initialisé
             if (!this.markerDisplayManager.isInitialized()) {
@@ -529,7 +541,7 @@ class FamilyTownsStore extends BaseLayerStore {
             // 2. Mettre à jour les marqueurs (crée les marqueurs s'ils n'existent pas)
             this.updateMarkers();
 
-            // 3. Rendre les marqueurs visibles AVANT de les ajouter au cluster (directement sur la carte)
+            // 3. Rendre les marqueurs visibles (directement sur la carte)
             const layerMarkers = this.markerDisplayManager.layers.get(this.markerLayerName);
             if (layerMarkers) {
                 layerMarkers.forEach(marker => {
@@ -537,13 +549,50 @@ class FamilyTownsStore extends BaseLayerStore {
                 });
             }
 
-            // 4. Ajouter les marqueurs au cluster SANS les cacher d'abord
-            console.log('📍 Ajout des marqueurs au cluster');
-            this.markerDisplayManager.addMarkersToCluster(this.map);
+            // 4. Ajouter les marqueurs au cluster avec délai configurable
+            // Utiliser le délai configuré dans layerManager comme dans BaseLayerStore
+            const config = layerManager.getLayerConfig(this.layerName);
+            const delay = config ? config.clusterDelay : 0;
 
+            if (delay > 0) {
+                setTimeout(() => {
+                    console.log(`📍 Ajout des marqueurs au cluster après délai (${delay}ms)`);
+                    this.markerDisplayManager.addMarkersToCluster(this.map);
+
+                    // 5. Réinitialiser les bounds si nécessaire (spécifique à familyTownsStore)
+                    console.log('🗺️ Initialisation des bounds pour le calque familial');
+                    this.calculatedBounds = null; // Forcer le recalcul des bounds
+                    this.hasTooManyMarkers = false;
+                    this.initializeMapBounds();
+
+                    // 6. Centrage différé après que les marqueurs ont été ajoutés
+                    setTimeout(() => {
+                        // Actions post-affichage
+                        this.afterLayerShown();
+                    }, 100);
+                }, delay);
+            } else {
+                console.log('📍 Ajout des marqueurs au cluster sans délai');
+                this.markerDisplayManager.addMarkersToCluster(this.map);
+
+                // 5. Réinitialiser les bounds si nécessaire
+                console.log('🗺️ Initialisation des bounds pour le calque familial');
+                this.calculatedBounds = null;
+                this.hasTooManyMarkers = false;
+                this.initializeMapBounds();
+
+                // 6. Centrage différé
+                setTimeout(() => {
+                    // Actions post-affichage 
+                    this.afterLayerShown();
+                }, 100);
+            }
         } else {
             console.log('🔍 Désactivation du calque des villes familiales');
             this.markerDisplayManager.toggleLayerVisibility(this.markerLayerName, false, this.map);
+
+            // Appeler afterLayerHidden comme dans BaseLayerStore
+            this.afterLayerHidden();
         }
     }
 
@@ -608,6 +657,7 @@ class FamilyTownsStore extends BaseLayerStore {
             // Réinitialiser et recalculer les bounds pour le centrage optimisé
             this.calculatedBounds = null;
             this.hasTooManyMarkers = false;
+            this.lastContainerDimensions = null; // Réinitialiser aussi les dimensions mémorisées
             this.initializeMapBounds();
         }
 
@@ -629,23 +679,48 @@ class FamilyTownsStore extends BaseLayerStore {
     }
 
     /**
-     * Obtient les limites géographiques des marqueurs affichés
-     * @returns {google.maps.LatLngBounds|null} Limites géographiques ou null
-     */
+ * Obtient les limites géographiques de tous les marqueurs, y compris ceux regroupés en clusters
+ * Version améliorée qui inclut tous les marqueurs même s'ils sont masqués par le clusterer
+ * @returns {google.maps.LatLngBounds|null} Limites géographiques ou null
+ */
     getBounds() {
         if (!this.markerDisplayManager) return null;
 
         const bounds = new google.maps.LatLngBounds();
         let hasMarkers = false;
 
-        this.markerDisplayManager.layers.forEach(layerMarkers => {
-            layerMarkers.forEach(marker => {
-                if (marker.map !== null) {
+        // Récupérer les marqueurs de la couche familyTowns
+        const layerMarkers = this.markerDisplayManager.layers.get(this.markerLayerName);
+
+        if (layerMarkers && layerMarkers.size > 0) {
+            console.log(`📊 Calcul des bounds pour ${layerMarkers.size} marqueurs de villes familiales`);
+
+            // Parcourir TOUS les marqueurs, peu importe s'ils sont visibles ou masqués par un cluster
+            layerMarkers.forEach((marker, key) => {
+                if (marker && marker.position) {
                     bounds.extend(marker.position);
                     hasMarkers = true;
                 }
             });
-        });
+
+            console.log(`✅ Bounds calculés incluant ${hasMarkers ? 'tous les' : 'aucun'} marqueurs`);
+        } else {
+            console.log('⚠️ Aucun marqueur trouvé pour la couche familyTowns');
+        }
+
+        // Si aucun marqueur trouvé, essayer avec les autres couches
+        if (!hasMarkers) {
+            this.markerDisplayManager.layers.forEach((layerMarkers, layerName) => {
+                if (layerName !== this.markerLayerName) { // Éviter la duplication
+                    layerMarkers.forEach(marker => {
+                        if (marker && marker.position) {
+                            bounds.extend(marker.position);
+                            hasMarkers = true;
+                        }
+                    });
+                }
+            });
+        }
 
         return hasMarkers ? bounds : null;
     }
@@ -689,12 +764,8 @@ class FamilyTownsStore extends BaseLayerStore {
     }
 
     /**
- * Centers the map on family town markers with cached bounds optimization.
- * Designed for fixed markers that don't change position after initial loading:
- * - Uses pre-calculated and cached bounds for better performance
- * - Respects user navigation when specified to avoid disrupting exploration
- * - Handles special case of widely spread markers with minimum zoom
- * - Applies proportional padding based on container dimensions
+ * Centers the map on family town markers.
+ * Version améliorée avec un padding supplémentaire pour les clusters.
  * 
  * @param {number} maxZoom - Maximum zoom level allowed (default: 12)
  * @param {number} minZoom - Minimum zoom level allowed (default: 5)
@@ -712,45 +783,65 @@ class FamilyTownsStore extends BaseLayerStore {
             return;
         }
 
-        // Utiliser les méthodes centralisées de googleMapsStore
-        const mapDiv = this.map.getDiv();
-        const padding = calculatePadding(mapDiv);
-        console.log(`📏 Padding calculé: T:${padding.top}, R:${padding.right}, B:${padding.bottom}, L:${padding.left}`);
+        // Forcer la mise à jour des dimensions de la carte
+        google.maps.event.trigger(this.map, 'resize');
 
-        // Initialiser les bounds si ce n'est pas déjà fait
-        if (!this.calculatedBounds) {
-            this.initializeMapBounds();
-        }
-
-        if (!this.calculatedBounds) {
-            console.warn('⚠️ Impossible de centrer la carte : aucun marqueur familial disponible');
-            return;
-        }
-
-        // Si limites trop larges, utiliser le zoom minimal et centrer
-        if (this.hasTooManyMarkers) {
-            console.log(`🔍 Limites trop étendues, utilisation du zoom minimal (${minZoom})`);
-            this.map.setCenter(this.calculatedBounds.getCenter());
-            this.map.setZoom(minZoom);
-            return;
-        }
-
-        // Sinon, utiliser fitBounds avec le padding calculé
-        console.log('🔍 Ajustement de la carte aux limites des marqueurs familiaux avec padding');
-        this.map.fitBounds(this.calculatedBounds, padding);
-
-        google.maps.event.addListenerOnce(this.map, 'idle', () => {
-            const currentZoom = this.map.getZoom();
-            console.log(`🔍 Zoom après ajustement: ${currentZoom} (limites: ${minZoom}-${maxZoom})`);
-
-            if (currentZoom > maxZoom) {
-                console.log(`🔍 Limitation du zoom à ${maxZoom}`);
-                this.map.setZoom(maxZoom);
-            } else if (currentZoom < minZoom) {
-                console.log(`🔍 Augmentation du zoom à ${minZoom}`);
-                this.map.setZoom(minZoom);
+        // Petit délai pour s'assurer que les dimensions sont mises à jour
+        setTimeout(() => {
+            // Obtenir les bounds (maintenant incluant tous les marqueurs, même clusterisés)
+            const bounds = this.getBounds();
+            if (!bounds) {
+                console.warn('⚠️ Impossible de centrer la carte : aucun marqueur familial disponible');
+                return;
             }
-        });
+
+            // Vérifier si les limites sont trop larges
+            const ne = bounds.getNorthEast();
+            const sw = bounds.getSouthWest();
+            const spanLat = Math.abs(ne.lat() - sw.lat());
+            const spanLng = Math.abs(ne.lng() - sw.lng());
+            const hasTooManyMarkers = (spanLat > 60 || spanLng > 60);
+
+            // Utiliser les méthodes centralisées pour obtenir le padding standard
+            const mapDiv = this.map.getDiv();
+            const padding = calculatePadding(mapDiv);
+
+            // Ajouter un padding supplémentaire pour les clusters
+            const clusterPadding = 20; // pixels supplémentaires
+            const enhancedPadding = {
+                top: padding.top + clusterPadding,
+                right: padding.right + clusterPadding,
+                bottom: padding.bottom + clusterPadding,
+                left: padding.left + clusterPadding
+            };
+
+            console.log(`📏 Padding amélioré: T:${enhancedPadding.top}, R:${enhancedPadding.right}, B:${enhancedPadding.bottom}, L:${enhancedPadding.left}`);
+
+            // Si limites trop larges, utiliser le zoom minimal et centrer
+            if (hasTooManyMarkers) {
+                console.log(`🔍 Limites trop étendues, utilisation du zoom minimal (${minZoom})`);
+                this.map.setCenter(bounds.getCenter());
+                this.map.setZoom(minZoom);
+                return;
+            }
+
+            // Sinon, utiliser fitBounds avec le padding amélioré
+            console.log('🔍 Ajustement de la carte aux limites des marqueurs familiaux avec padding amélioré');
+            this.map.fitBounds(bounds, enhancedPadding);
+
+            google.maps.event.addListenerOnce(this.map, 'idle', () => {
+                const currentZoom = this.map.getZoom();
+                console.log(`🔍 Zoom après ajustement: ${currentZoom} (limites: ${minZoom}-${maxZoom})`);
+
+                if (currentZoom > maxZoom) {
+                    console.log(`🔍 Limitation du zoom à ${maxZoom}`);
+                    this.map.setZoom(maxZoom);
+                } else if (currentZoom < minZoom) {
+                    console.log(`🔍 Augmentation du zoom à ${minZoom}`);
+                    this.map.setZoom(minZoom);
+                }
+            });
+        }, 50); // Délai court pour s'assurer que l'événement resize est traité
     }
 
     cleanData(data) {
