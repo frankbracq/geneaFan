@@ -5,6 +5,7 @@ import { rootAncestorTownsStore } from './rootAncestorTownsStore.js';
 import familyTownsStore from './familyTownsStore.js';
 import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 import { layerManager } from '../managers/layerManager.js';
+import { calculateDynamicZoom, calculatePadding } from '../utils/mapUtils.js';
 
 class GoogleMapsStore {
     constructor() {
@@ -140,6 +141,38 @@ class GoogleMapsStore {
         this.resizeObserver = await this.#initializeOverviewMap();
     }
 
+    /**
+ * Calcule le pourcentage de padding à appliquer en fonction de la hauteur du conteneur
+ * Méthode centralisée pour remplacer les implémentations dans chaque store
+ * @param {number} containerHeight - Hauteur du conteneur en pixels
+ * @returns {number} - Pourcentage de padding (0-0.3)
+ */
+    calculatePaddingPercentage(containerHeight) {
+        // Plus le conteneur est petit, plus le padding est important
+        if (containerHeight < 300) {
+            return 0.25; // 25% de padding pour très petits conteneurs
+        } else if (containerHeight < 500) {
+            return 0.2; // 20% de padding pour petits conteneurs
+        } else if (containerHeight < 700) {
+            return 0.15; // 15% de padding pour conteneurs moyens
+        } else {
+            return 0.1; // 10% de padding pour grands conteneurs
+        }
+    }
+
+    calculateDynamicZoom(containerHeight) {
+        return calculateDynamicZoom(containerHeight);
+        
+    }
+
+    calculatePadding(mapDiv) {
+        return calculatePadding(mapDiv);
+    }
+
+    /**
+     * Version améliorée de centerMapOnMarkers pour déléguer à tous les stores
+     * et centraliser la logique commune
+     */
     centerMapOnMarkers() {
         if (!this.map) {
             console.warn('❌ Carte non initialisée');
@@ -152,41 +185,57 @@ class GoogleMapsStore {
         console.log(`📏 Hauteur du conteneur de carte: ${containerHeight}px`);
         
         // Définir un zoom maximal en fonction de la hauteur du conteneur
-        // Plus petit conteneur = zoom moins important pour mieux voir
-        const dynamicMaxZoom = this.#calculateDynamicZoom(containerHeight);
+        const dynamicMaxZoom = calculateDynamicZoom(containerHeight);
+        const padding = calculatePadding(mapDiv);
         console.log(`🔍 Zoom maximal dynamique calculé: ${dynamicMaxZoom}`);
         
-        // Vérifier si le calque familial est visible
-        if (layerManager.isLayerVisible('family')) {
-            console.log('🔍 Utilisation du centrage optimisé pour les marqueurs familiaux');
-            // Utiliser la nouvelle méthode optimisée pour les marqueurs familiaux avec zoom dynamique
-            familyTownsStore.centerMapOnFamilyMarkers(dynamicMaxZoom, 5);
-            return;
+        // Récupérer le calque actif depuis le layerManager et utiliser le store associé
+        const activeLayerName = layerManager.activeLayer;
+        
+        if (activeLayerName) {
+            // Récupérer la référence du store à partir du layerManager
+            const activeStore = layerManager.layerConfig[activeLayerName]?.storeRef;
+            
+            if (activeStore) {
+                console.log(`🔍 Délégation du centrage au calque actif: ${activeLayerName}`);
+                
+                // Mettre à jour cette section pour utiliser le nouveau nom de méthode
+                if (activeLayerName === 'family') {
+                    activeStore.centerMapOnFamilyMarkers(dynamicMaxZoom, 5);
+                } else if (activeLayerName === 'ancestors') {
+                    activeStore.centerMapOnAncestorMarkers(); // Nom mis à jour ici
+                } else if (activeLayerName === 'surnames') {
+                    activeStore.centerMapOnSurnameMarkers(dynamicMaxZoom, 5);
+                }
+                
+                return;
+            }
         }
-    
+        
+        // Logique de repli si aucun calque actif ou si le store n'est pas disponible
         const bounds = new google.maps.LatLngBounds();
         let hasMarkers = false;
-    
-        // Collecter tous les marqueurs visibles
-        if (rootAncestorTownsStore.markers) {
-            rootAncestorTownsStore.markers.forEach(marker => {
-                if (marker.getVisible()) {
-                    bounds.extend(marker.getPosition());
+        
+        // Recherche de marqueurs visibles à travers les stores
+        layerManager.layerConfig.ancestors?.storeRef?.markerDisplayManager.layers.forEach(layerMarkers => {
+            layerMarkers.forEach(marker => {
+                if (marker.map !== null) {
+                    bounds.extend(marker.position);
                     hasMarkers = true;
                 }
             });
-        }
-    
+        });
+        
         if (hasMarkers) {
-            this.map.fitBounds(bounds);
-    
+            this.map.fitBounds(bounds, padding);
+        
             // Ajuster le zoom si nécessaire
             const listener = google.maps.event.addListenerOnce(this.map, 'idle', () => {
                 if (this.map.getZoom() > dynamicMaxZoom) {
                     this.map.setZoom(dynamicMaxZoom);
                 }
             });
-    
+        
             console.log(`✅ Carte centrée sur les marqueurs avec zoom max ${dynamicMaxZoom}`);
         } else {
             // Si aucun marqueur, revenir à la vue par défaut de la France
@@ -194,31 +243,6 @@ class GoogleMapsStore {
             this.map.setZoom(6.2);
             console.log('ℹ️ Aucun marqueur visible, retour à la vue par défaut');
         }
-    }
-    
-    /**
-     * Calcule un niveau de zoom maximal dynamique en fonction de la hauteur du conteneur
-     * @param {number} containerHeight - Hauteur du conteneur en pixels
-     * @returns {number} - Niveau de zoom maximal calculé
-     */
-    #calculateDynamicZoom(containerHeight) {
-        // Définir les seuils de hauteur et les niveaux de zoom correspondants
-        const zoomLevels = [
-            { height: 300, zoom: 10 },   // Petit conteneur
-            { height: 500, zoom: 11 },   // Conteneur moyen
-            { height: 700, zoom: 12 },   // Grand conteneur
-            { height: 900, zoom: 13 }    // Très grand conteneur
-        ];
-        
-        // Trouver le niveau de zoom approprié
-        for (const level of zoomLevels) {
-            if (containerHeight < level.height) {
-                return level.zoom;
-            }
-        }
-        
-        // Par défaut pour très grands écrans
-        return 13;
     }
 
     // Méthode pour modifier l'état d'un calque
@@ -657,28 +681,28 @@ class GoogleMapsStore {
 
     cleanup() {
         console.log('🧹 Nettoyage de GoogleMapsStore');
-        
+
         if (this.map) {
             // Supprimer tous les écouteurs de la carte
             google.maps.event.clearInstanceListeners(this.map);
         }
-    
+
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
             this.resizeObserver = null;
         }
-    
+
         // Supprimer l'élément de mini-carte
         const wrapper = document.getElementById('overview-map-wrapper');
         if (wrapper) {
             wrapper.remove();
         }
-    
+
         // Réinitialiser les états
         this.overviewMapVisible = false;
         this.history = [];
         this.redoStack = [];
-        
+
         console.log('✅ Nettoyage de GoogleMapsStore terminé');
     }
 }

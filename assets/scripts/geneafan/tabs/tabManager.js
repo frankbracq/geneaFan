@@ -67,7 +67,7 @@ storeEvents.subscribe(EVENTS.UI.TABS.SHOWN, async ({ id }) => {
             googleMapManager.setupEventListeners();
 
             if (rootAncestorTownsStore.hasActiveMarkers()) {
-                rootAncestorTownsStore.centerMapOnMarkers();
+                rootAncestorTownsStore.centerMapOnAncestorMarkers();
             }
 
         } catch (error) {
@@ -147,7 +147,7 @@ export async function initializeTabs() {
                 
                 // Centrage sur les marqueurs si nécessaire (maintenant géré par rootAncestorTownsStore)
                 if (rootAncestorTownsStore.hasActiveMarkers()) {
-                    rootAncestorTownsStore.centerMapOnMarkers();
+                    rootAncestorTownsStore.centerMapOnAncestorMarkers();
                 }
                 
                 console.log('✅ Carte initialisée dans tab2');

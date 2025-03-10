@@ -86,19 +86,19 @@ class BaseLayerStore {
  */
     applyVisibility(visible) {
         if (!this.map) return;
-
+    
         if (visible) {
             // 1. Préparation du calque avant affichage (hook pour la classe dérivée)
             this.prepareLayerBeforeShow();
-
+    
             // 2. S'assurer que le cluster est bien initialisé
             if (!this.markerDisplayManager.isInitialized()) {
                 this.markerDisplayManager.initializeCluster(this.map, this.createClusterMarker.bind(this));
             }
-
+    
             // 3. Préparer/rafraîchir les marqueurs si nécessaire (hook pour la classe dérivée)
             this.updateLayerMarkers();
-
+    
             // 4. Rendre les marqueurs visibles
             const layerMarkers = this.markerDisplayManager.layers.get(this.markerLayerName);
             if (layerMarkers) {
@@ -106,11 +106,11 @@ class BaseLayerStore {
                     marker.map = this.map;
                 });
             }
-
+    
             // 5. Ajouter les marqueurs au cluster avec délai configurable
             const config = layerManager.getLayerConfig(this.layerName);
             const delay = config ? config.clusterDelay : 0;
-
+    
             if (delay > 0) {
                 setTimeout(() => {
                     console.log(`📍 Ajout des marqueurs au cluster après délai (${delay}ms)`);
@@ -121,6 +121,12 @@ class BaseLayerStore {
                         console.log('🗺️ Initialisation des bounds pour le calque familial');
                         this.initializeMapBounds();
                     }
+                    
+                    // Centrage différé après que les marqueurs ont été ajoutés
+                    setTimeout(() => {
+                        // 6. Actions post-affichage (hook pour la classe dérivée)
+                        this.afterLayerShown();
+                    }, 100);
                 }, delay);
             } else {
                 console.log('📍 Ajout des marqueurs au cluster sans délai');
@@ -131,14 +137,17 @@ class BaseLayerStore {
                     console.log('🗺️ Initialisation des bounds pour le calque familial');
                     this.initializeMapBounds();
                 }
+                
+                // Centrage différé après que les marqueurs ont été ajoutés
+                setTimeout(() => {
+                    // 6. Actions post-affichage (hook pour la classe dérivée)
+                    this.afterLayerShown();
+                }, 100);
             }
-
-            // 6. Actions post-affichage (hook pour la classe dérivée)
-            this.afterLayerShown();
         } else {
             console.log(`🔍 Désactivation du calque ${this.layerName}`);
             this.markerDisplayManager.toggleLayerVisibility(this.markerLayerName, false, this.map);
-
+    
             // 7. Actions après masquage (hook pour la classe dérivée)
             this.afterLayerHidden();
         }

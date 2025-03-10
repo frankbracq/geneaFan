@@ -2,6 +2,7 @@ import { makeObservable, observable, action, runInAction } from '../../../common
 import { infoWindowDisplayManager } from '../managers/infoWindowDisplayManager.js';
 import { layerManager } from '../managers/layerManager.js';
 import BaseLayerStore from '../managers/baseLayerStore.js';
+import { calculateDynamicZoom, calculatePadding } from '../utils/mapUtils.js';
 
 /**
  * Manages the display of ancestor birth locations on the map for the current root person
@@ -96,9 +97,9 @@ class RootAncestorTownsStore extends BaseLayerStore {
                 console.log('🔄 Mise à jour automatique des marqueurs après changement de hiérarchie');
                 this.updateMarkers(birthData);
 
-                // Add this line to adjust zoom after markers are updated
+                // Remplacer cette ligne
                 console.log('🔍 Ajustement du zoom pour afficher tous les marqueurs');
-                this.centerMapOnMarkers();
+                this.centerMapOnAncestorMarkers();
             }
 
             console.groupEnd();
@@ -151,30 +152,16 @@ class RootAncestorTownsStore extends BaseLayerStore {
  * This function is called once after ancestor data is loaded and
  * doesn't need to handle dynamic marker changes.
  */
-    centerMapOnMarkers() {
+    centerMapOnAncestorMarkers() {
         if (!this.map) return;
 
         const bounds = this.getBounds();
         if (!bounds) return;
 
-        // Récupérer les dimensions du conteneur pour ajustement
+        // Utiliser les fonctions utilitaires
         const mapDiv = this.map.getDiv();
-        const containerHeight = mapDiv.offsetHeight;
-        const containerWidth = mapDiv.offsetWidth;
-        console.log(`📏 Dimensions du conteneur pour les ancêtres: ${containerWidth}x${containerHeight}px`);
-
-        // Calculer le padding dynamique en fonction de la taille du conteneur
-        const paddingPercentage = this.calculatePaddingPercentage(containerHeight);
-        const padding = {
-            top: Math.round(containerHeight * paddingPercentage),
-            right: Math.round(containerWidth * paddingPercentage),
-            bottom: Math.round(containerHeight * paddingPercentage),
-            left: Math.round(containerWidth * paddingPercentage)
-        };
-        console.log(`📏 Padding calculé: T:${padding.top}, R:${padding.right}, B:${padding.bottom}, L:${padding.left}`);
-
-        // Ajuster le zoom maximal en fonction de la hauteur du conteneur
-        const maxZoom = this.calculateDynamicZoom(containerHeight);
+        const maxZoom = calculateDynamicZoom(mapDiv.offsetHeight);
+        const padding = calculatePadding(mapDiv);
 
         // Appliquer les limites géographiques avec padding
         this.map.fitBounds(bounds, padding);
@@ -191,48 +178,6 @@ class RootAncestorTownsStore extends BaseLayerStore {
         });
     }
 
-    /**
-     * Calcule le pourcentage de padding à appliquer en fonction de la hauteur du conteneur
-     * @param {number} containerHeight - Hauteur du conteneur en pixels
-     * @returns {number} - Pourcentage de padding (0-0.3)
-     */
-    calculatePaddingPercentage(containerHeight) {
-        // Plus le conteneur est petit, plus le padding est important
-        if (containerHeight < 300) {
-            return 0.25; // 25% de padding pour très petits conteneurs
-        } else if (containerHeight < 500) {
-            return 0.2; // 20% de padding pour petits conteneurs
-        } else if (containerHeight < 700) {
-            return 0.15; // 15% de padding pour conteneurs moyens
-        } else {
-            return 0.1; // 10% de padding pour grands conteneurs
-        }
-    }
-
-    /**
-     * Calcule un niveau de zoom maximal dynamique en fonction de la hauteur du conteneur
-     * @param {number} containerHeight - Hauteur du conteneur en pixels
-     * @returns {number} - Niveau de zoom maximal calculé
-     */
-    calculateDynamicZoom(containerHeight) {
-        // Définir les seuils de hauteur et les niveaux de zoom correspondants
-        const zoomLevels = [
-            { height: 300, zoom: 10 },   // Petit conteneur
-            { height: 500, zoom: 11 },   // Conteneur moyen
-            { height: 700, zoom: 12 },   // Grand conteneur
-            { height: 900, zoom: 13 }    // Très grand conteneur
-        ];
-
-        // Trouver le niveau de zoom approprié
-        for (const level of zoomLevels) {
-            if (containerHeight < level.height) {
-                return level.zoom;
-            }
-        }
-
-        // Par défaut pour très grands écrans
-        return 13;
-    }
 
     /**
      * Create a single marker for a location
@@ -453,6 +398,21 @@ class RootAncestorTownsStore extends BaseLayerStore {
             this.updateMarkers(this.birthData);
         } else {
             console.log('ℹ️ Pas de données d\'ancêtres à afficher.');
+        }
+    }
+
+    /**
+ * Hook: Actions après affichage du calque
+ * Centre automatiquement la carte sur les marqueurs d'ancêtres
+ */
+    afterLayerShown() {
+        console.log('🔄 Calque des ancêtres affiché, centrage automatique');
+        // Vérifier qu'il y a des marqueurs avant de tenter le centrage
+        if (this.birthData && this.birthData.length > 0) {
+            console.log(`📊 Centrage sur ${this.birthData.length} lieux d'ancêtres`);
+            this.centerMapOnAncestorMarkers();
+        } else {
+            console.log('⚠️ Pas de données d\'ancêtres pour le centrage');
         }
     }
 

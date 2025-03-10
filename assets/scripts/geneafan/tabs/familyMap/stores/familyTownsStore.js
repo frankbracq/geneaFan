@@ -6,6 +6,7 @@ import { TownStatisticsManager } from '../../../gedcom/stores/townStatisticsMana
 import { infoWindowContentManager } from '../managers/infoWindowContentManager.js';
 import { layerManager } from '../managers/layerManager.js';
 import BaseLayerStore from '../managers/baseLayerStore.js';
+import { calculateDynamicZoom, calculatePadding } from '../utils/mapUtils.js';
 
 /**
  * Manage the display of all towns mentioned in the GEDCOM file
@@ -492,6 +493,21 @@ class FamilyTownsStore extends BaseLayerStore {
     }
 
     /**
+ * Hook: Actions après affichage du calque
+ * Centre automatiquement la carte sur les marqueurs de villes familiales
+ */
+    afterLayerShown() {
+        console.log('🔄 Calque des villes familiales affiché, centrage automatique');
+        // Vérifier qu'il y a des marqueurs avant de tenter le centrage
+        if (this.townsData && this.townsData.size > 0) {
+            console.log(`📊 Centrage sur ${this.townsData.size} villes familiales`);
+            this.centerMapOnFamilyMarkers();
+        } else {
+            console.log('⚠️ Pas de données de villes familiales pour le centrage');
+        }
+    }
+
+    /**
  * Surcharge de la méthode applyVisibility de BaseLayerStore
  * @param {boolean} visible - État de visibilité à appliquer
  */
@@ -696,21 +712,9 @@ class FamilyTownsStore extends BaseLayerStore {
             return;
         }
 
-        // Récupérer les dimensions du conteneur pour ajustement
+        // Utiliser les méthodes centralisées de googleMapsStore
         const mapDiv = this.map.getDiv();
-        const containerHeight = mapDiv.offsetHeight;
-        const containerWidth = mapDiv.offsetWidth;
-        console.log(`📏 Dimensions du conteneur: ${containerWidth}x${containerHeight}px`);
-
-        // Ajuster le padding en fonction de la taille du conteneur
-        // (plus de padding pour les petits conteneurs)
-        const paddingPercentage = this.#calculatePaddingPercentage(containerHeight);
-        const padding = {
-            top: Math.round(containerHeight * paddingPercentage),
-            right: Math.round(containerWidth * paddingPercentage),
-            bottom: Math.round(containerHeight * paddingPercentage),
-            left: Math.round(containerWidth * paddingPercentage)
-        };
+        const padding = calculatePadding(mapDiv);
         console.log(`📏 Padding calculé: T:${padding.top}, R:${padding.right}, B:${padding.bottom}, L:${padding.left}`);
 
         // Initialiser les bounds si ce n'est pas déjà fait
@@ -747,24 +751,6 @@ class FamilyTownsStore extends BaseLayerStore {
                 this.map.setZoom(minZoom);
             }
         });
-    }
-
-    /**
-     * Calcule le pourcentage de padding à appliquer en fonction de la hauteur du conteneur
-     * @param {number} containerHeight - Hauteur du conteneur en pixels
-     * @returns {number} - Pourcentage de padding (0-0.3)
-     */
-    #calculatePaddingPercentage(containerHeight) {
-        // Plus le conteneur est petit, plus le padding est important
-        if (containerHeight < 300) {
-            return 0.25; // 25% de padding pour très petits conteneurs
-        } else if (containerHeight < 500) {
-            return 0.2; // 20% de padding pour petits conteneurs
-        } else if (containerHeight < 700) {
-            return 0.15; // 15% de padding pour conteneurs moyens
-        } else {
-            return 0.1; // 10% de padding pour grands conteneurs
-        }
     }
 
     cleanData(data) {
