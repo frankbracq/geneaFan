@@ -2,7 +2,6 @@ import { Offcanvas } from "bootstrap";
 import { makeObservable, observable, action, runInAction } from '../../../common/stores/mobx-config.js';
 import { Loader } from "@googlemaps/js-api-loader";
 import { rootAncestorTownsStore } from './rootAncestorTownsStore.js';
-import familyTownsStore from './familyTownsStore.js';
 import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 import { layerManager } from '../managers/layerManager.js';
 import { calculateDynamicZoom, calculatePadding } from '../utils/mapUtils.js';
@@ -48,19 +47,19 @@ class GoogleMapsStore {
         if (this.isApiLoaded) {
             return Promise.resolve();
         }
-
+    
         if (this.apiLoadPromise) {
             return this.apiLoadPromise;
         }
-
+    
         console.group('🚀 Initialisation de l\'API Google Maps');
-
+    
         const loader = new Loader({
             apiKey: this.mapsApiKey,
             version: "weekly",
-            libraries: ['marker']
+            libraries: ['marker', 'geometry'] // Ajout de 'geometry'
         });
-
+    
         this.apiLoadPromise = loader.load()
             .then(() => {
                 runInAction(() => {
@@ -78,7 +77,7 @@ class GoogleMapsStore {
             .finally(() => {
                 console.groupEnd();
             });
-
+    
         return this.apiLoadPromise;
     }
 
@@ -86,46 +85,56 @@ class GoogleMapsStore {
         if (!this.isApiLoaded) {
             throw new Error('Google Maps API not initialized');
         }
-
+    
         try {
             console.group('🗺️ Initialisation de la carte');
-
+    
             const mapElement = document.getElementById(elementId);
             if (!mapElement) {
                 throw new Error(`Element with id ${elementId} not found`);
             }
-
+    
             // Nettoyage de la carte existante si elle existe
             if (this.map) {
                 await this.cleanup();
                 this.map = null;
             }
-
+    
             const defaultOptions = {
                 mapId: this.MAP_ID,
                 zoom: 6.2,
                 center: { lat: 46.2276, lng: 2.2137 },
-                streetViewControl: false,
-                zoomControl: true,
+                streetViewControl: false, // Désactiver StreetView
+                zoomControl: false, // Activer le contrôle du zoom
                 zoomControlOptions: {
+                    position: google.maps.ControlPosition.RIGHT_BOTTOM
+                },
+                fullscreenControl: true, // Activer le mode plein écran
+                fullscreenControlOptions: {
                     position: google.maps.ControlPosition.TOP_RIGHT
                 },
-                fullscreenControl: true,
-                fullscreenControlOptions: {
+                cameraControl: true,
+                cameraControlOptions: {
+                    position: google.maps.ControlPosition.TOP_RIGHT
+                },
+                mapTypeControl: true, // Désactiver le choix du type de carte
+                mapTypeControlOptions: {
                     position: google.maps.ControlPosition.TOP_CENTER
-                }
+                },
+                rotateControl: false, // Activer la rotation
+                gestureHandling: "greedy", // Permet le contrôle des mouvements à la souris et tactile
+                tilt: 45 // Ajoute un effet 3D en inclinaison
             };
-
+    
             this.map = new google.maps.Map(mapElement, {
                 ...defaultOptions,
                 ...options
             });
-
+    
             await this.#initializeMapComponents();
-
+    
             console.log('✅ Carte initialisée avec succès');
             return this.map;
-
         } catch (error) {
             console.error('❌ Erreur lors de l\'initialisation de la carte:', error);
             throw error;
@@ -133,6 +142,7 @@ class GoogleMapsStore {
             console.groupEnd();
         }
     }
+    
 
     async #initializeMapComponents() {
         this.#addMapControls();
@@ -402,6 +412,7 @@ class GoogleMapsStore {
     #addMapControls() {
         this.#addResetControl();
         this.#addUndoRedoControls();
+        // this.#addPanControl(); // Ajouter cette ligne
     }
 
     #addResetControl() {
@@ -437,6 +448,88 @@ class GoogleMapsStore {
         controlDiv.appendChild(undoButton);
         controlDiv.appendChild(redoButton);
         this.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlDiv);
+    }
+
+    #addPanControl() {
+        const controlDiv = document.createElement('div');
+        controlDiv.style.margin = '10px';
+        controlDiv.style.display = 'flex';
+        controlDiv.style.flexWrap = 'wrap';
+        controlDiv.style.justifyContent = 'center';
+        controlDiv.style.alignItems = 'center';
+        controlDiv.style.width = '120px';
+        controlDiv.style.position = 'absolute';
+        controlDiv.style.bottom = '10px';
+        controlDiv.style.right = '10px';
+    
+        const controls = [
+            { id: 'north', icon: 'bi bi-chevron-up' },
+            { id: 'west', icon: 'bi bi-chevron-left' },
+            { id: 'reset', icon: 'bi bi-house' },
+            { id: 'east', icon: 'bi bi-chevron-right' },
+            { id: 'south', icon: 'bi bi-chevron-down' },
+            { id: 'zoomin', icon: 'bi bi-plus' },
+            { id: 'zoomout', icon: 'bi bi-dash' },
+            { id: 'fullscreen', icon: 'bi bi-arrows-fullscreen' }
+        ];
+    
+        controls.forEach(control => {
+            const button = document.createElement('button');
+            button.style.width = '36px';
+            button.style.height = '36px';
+            button.style.backgroundColor = '#fff';
+            button.style.border = 'none';
+            button.style.borderRadius = '50%';
+            button.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
+            button.style.cursor = 'pointer';
+            button.style.margin = '4px';
+            button.style.display = 'flex';
+            button.style.alignItems = 'center';
+            button.style.justifyContent = 'center';
+    
+            const icon = document.createElement('i');
+            icon.className = control.icon;
+            icon.style.fontSize = '18px';
+            button.appendChild(icon);
+    
+            button.addEventListener('click', () => {
+                switch (control.id) {
+                    case 'north':
+                        this.map.panBy(0, -100);
+                        break;
+                    case 'south':
+                        this.map.panBy(0, 100);
+                        break;
+                    case 'west':
+                        this.map.panBy(-100, 0);
+                        break;
+                    case 'east':
+                        this.map.panBy(100, 0);
+                        break;
+                    case 'zoomin':
+                        this.map.setZoom(this.map.getZoom() + 1);
+                        break;
+                    case 'zoomout':
+                        this.map.setZoom(this.map.getZoom() - 1);
+                        break;
+                    case 'fullscreen':
+                        const mapDiv = this.map.getDiv();
+                        if (document.fullscreenElement) {
+                            document.exitFullscreen();
+                        } else {
+                            mapDiv.requestFullscreen();
+                        }
+                        break;
+                    case 'reset':
+                        this.centerMapOnMarkers();
+                        break;
+                }
+            });
+    
+            controlDiv.appendChild(button);
+        });
+    
+        this.map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(controlDiv);
     }
 
     #styleControlButton(button) {
