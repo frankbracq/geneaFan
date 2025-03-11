@@ -108,12 +108,34 @@ class RootPersonStore {
         }
         this.root = newRoot;
         this.updateHistory(newRoot);
-
+    
+        // Obtenir le nom de la personne pour l'inclure dans l'événement
+        const person = gedcomDataStore.individualsCache.get(newRoot);
+        const rootPersonName = person ? (person.name || `${person.firstName || ''} ${person.lastName || ''}`.trim()) : '';
+        
+        // Émettre l'événement avec le nom inclus
+        storeEvents.emit(EVENTS.ROOT.CHANGED, { 
+            root: newRoot, 
+            skipDraw: this._skipNextDraw,
+            rootPersonName: rootPersonName
+        });
+    
         document.dispatchEvent(new Event('rootChange'));
     });
 
     setRootPersonName = action((name) => {
+        // Ne rien faire si le nom est identique
+        if (this.rootPersonName === name) return;
+        
         this.rootPersonName = name;
+        
+        // Émettre un événement ROOT.UPDATED avec le nouveau nom
+        if (this.root) {
+            storeEvents.emit(EVENTS.ROOT.UPDATED, {
+                root: this.root,
+                rootPersonName: name
+            });
+        }
     });
 
     buildHierarchy(currentRoot) {
