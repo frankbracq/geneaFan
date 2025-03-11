@@ -1,7 +1,7 @@
 import { makeObservable, observable, action, runInAction } from '../../../common/stores/mobx-config.js';
 import { infoWindowDisplayManager } from '../managers/infoWindowDisplayManager.js';
 import { layerManager } from '../managers/layerManager.js';
-import BaseLayerStore from '../managers/baseLayerStore.js';
+import BaseLayerStore from './baseLayerStore.js';
 import { calculateDynamicZoom, calculatePadding } from '../utils/mapUtils.js';
 
 /**

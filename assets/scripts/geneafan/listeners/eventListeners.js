@@ -180,8 +180,7 @@ function setupFileMenuToggle() {
   }
 }
 
-// Fonction pour gérer le comportement du bouton d'outils contextuel
-// Fonction pour gérer le comportement du bouton d'outils contextuel
+// Fonction pour gérer le comportement du bouton d'outils contextuels
 function setupToolsButton() {
   const toolsButton = document.getElementById("toolsButton");
 

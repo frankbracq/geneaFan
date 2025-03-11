@@ -47,19 +47,19 @@ class GoogleMapsStore {
         if (this.isApiLoaded) {
             return Promise.resolve();
         }
-    
+
         if (this.apiLoadPromise) {
             return this.apiLoadPromise;
         }
-    
+
         console.group('🚀 Initialisation de l\'API Google Maps');
-    
+
         const loader = new Loader({
             apiKey: this.mapsApiKey,
             version: "weekly",
             libraries: ['marker', 'geometry'] // Ajout de 'geometry'
         });
-    
+
         this.apiLoadPromise = loader.load()
             .then(() => {
                 runInAction(() => {
@@ -77,7 +77,7 @@ class GoogleMapsStore {
             .finally(() => {
                 console.groupEnd();
             });
-    
+
         return this.apiLoadPromise;
     }
 
@@ -104,12 +104,12 @@ class GoogleMapsStore {
                 mapId: this.MAP_ID,
                 zoom: 6.2,
                 center: { lat: 46.2276, lng: 2.2137 },
-                streetViewControl: false, // Désactiver StreetView
-                zoomControl: false, // Activer le contrôle du zoom
+                streetViewControl: false, 
+                zoomControl: false,
                 zoomControlOptions: {
                     position: google.maps.ControlPosition.RIGHT_BOTTOM
                 },
-                fullscreenControl: true, // Activer le mode plein écran
+                fullscreenControl: true,
                 fullscreenControlOptions: {
                     position: google.maps.ControlPosition.TOP_RIGHT
                 },
@@ -117,13 +117,13 @@ class GoogleMapsStore {
                 cameraControlOptions: {
                     position: google.maps.ControlPosition.TOP_RIGHT
                 },
-                mapTypeControl: true, // Désactiver le choix du type de carte
+                mapTypeControl: true,
                 mapTypeControlOptions: {
                     position: google.maps.ControlPosition.TOP_CENTER
                 },
-                rotateControl: false, // Activer la rotation
-                gestureHandling: "greedy", // Permet le contrôle des mouvements à la souris et tactile
-                tilt: 45 // Ajoute un effet 3D en inclinaison
+                rotateControl: false,
+                gestureHandling: "greedy",
+                tilt: 45
             };
     
             this.map = new google.maps.Map(mapElement, {
@@ -132,6 +132,9 @@ class GoogleMapsStore {
             });
     
             await this.#initializeMapComponents();
+            
+            // Simplement ajouter le contrôle de carte à l'initialisation
+            this.#addFamilyMapControl();
     
             console.log('✅ Carte initialisée avec succès');
             return this.map;
@@ -142,7 +145,6 @@ class GoogleMapsStore {
             console.groupEnd();
         }
     }
-    
 
     async #initializeMapComponents() {
         this.#addMapControls();
@@ -172,7 +174,7 @@ class GoogleMapsStore {
 
     calculateDynamicZoom(containerHeight) {
         return calculateDynamicZoom(containerHeight);
-        
+
     }
 
     calculatePadding(mapDiv) {
@@ -188,27 +190,27 @@ class GoogleMapsStore {
             console.warn('❌ Carte non initialisée');
             return;
         }
-        
+
         // Récupérer les dimensions actuelles du conteneur
         const mapDiv = this.map.getDiv();
         const containerHeight = mapDiv.offsetHeight;
         console.log(`📏 Hauteur du conteneur de carte: ${containerHeight}px`);
-        
+
         // Définir un zoom maximal en fonction de la hauteur du conteneur
         const dynamicMaxZoom = calculateDynamicZoom(containerHeight);
         const padding = calculatePadding(mapDiv);
         console.log(`🔍 Zoom maximal dynamique calculé: ${dynamicMaxZoom}`);
-        
+
         // Récupérer le calque actif depuis le layerManager et utiliser le store associé
         const activeLayerName = layerManager.activeLayer;
-        
+
         if (activeLayerName) {
             // Récupérer la référence du store à partir du layerManager
             const activeStore = layerManager.layerConfig[activeLayerName]?.storeRef;
-            
+
             if (activeStore) {
                 console.log(`🔍 Délégation du centrage au calque actif: ${activeLayerName}`);
-                
+
                 // Mettre à jour cette section pour utiliser le nouveau nom de méthode
                 if (activeLayerName === 'family') {
                     activeStore.centerMapOnFamilyMarkers(dynamicMaxZoom, 5);
@@ -217,15 +219,15 @@ class GoogleMapsStore {
                 } else if (activeLayerName === 'surnames') {
                     activeStore.centerMapOnSurnameMarkers(dynamicMaxZoom, 5);
                 }
-                
+
                 return;
             }
         }
-        
+
         // Logique de repli si aucun calque actif ou si le store n'est pas disponible
         const bounds = new google.maps.LatLngBounds();
         let hasMarkers = false;
-        
+
         // Recherche de marqueurs visibles à travers les stores
         layerManager.layerConfig.ancestors?.storeRef?.markerDisplayManager.layers.forEach(layerMarkers => {
             layerMarkers.forEach(marker => {
@@ -235,17 +237,17 @@ class GoogleMapsStore {
                 }
             });
         });
-        
+
         if (hasMarkers) {
             this.map.fitBounds(bounds, padding);
-        
+
             // Ajuster le zoom si nécessaire
             const listener = google.maps.event.addListenerOnce(this.map, 'idle', () => {
                 if (this.map.getZoom() > dynamicMaxZoom) {
                     this.map.setZoom(dynamicMaxZoom);
                 }
             });
-        
+
             console.log(`✅ Carte centrée sur les marqueurs avec zoom max ${dynamicMaxZoom}`);
         } else {
             // Si aucun marqueur, revenir à la vue par défaut de la France
@@ -483,16 +485,78 @@ class GoogleMapsStore {
         this.map.setCenter(state.center);
     }
 
+    #addFamilyMapControl() {
+        // Création du div de contrôle
+        const controlDiv = document.createElement('div');
+        controlDiv.className = 'family-map-control-container';
+        controlDiv.style.margin = '10px';
+        
+        // Style du conteneur de contrôle
+        controlDiv.style.backgroundColor = '#fff';
+        controlDiv.style.borderRadius = '4px';
+        controlDiv.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
+        controlDiv.style.overflow = 'hidden';
+        
+        // Création du bouton de paramètres
+        const settingsButton = document.createElement('button');
+        settingsButton.className = 'family-map-control-button';
+        settingsButton.title = 'Options de la carte';
+        settingsButton.innerHTML = '<i class="fa fa-cog"></i> Options';
+        
+        // Style du bouton
+        this.#styleControlButton(settingsButton);
+        settingsButton.style.padding = '8px 16px';
+        settingsButton.style.display = 'flex';
+        settingsButton.style.alignItems = 'center';
+        settingsButton.style.gap = '8px';
+        
+        // Ajout d'une icône (si Font Awesome est disponible)
+        if (window.FontAwesome) {
+            const icon = document.createElement('i');
+            icon.className = 'fas fa-cog';
+            settingsButton.prepend(icon);
+        }
+        
+        // Événement au clic
+        settingsButton.addEventListener('click', () => {
+            // Ouvrir l'offcanvas mapParameters standard
+            const mapParameters = document.getElementById("mapParameters");
+            if (mapParameters) {
+                const offcanvas = new Offcanvas(mapParameters, {
+                    backdrop: true,
+                    keyboard: true,
+                    scroll: false,
+                });
+                offcanvas.show();
+            } else {
+                console.warn("L'élément mapParameters n'a pas été trouvé");
+            }
+        });
+        
+        // Ajout du bouton au div de contrôle
+        controlDiv.appendChild(settingsButton);
+        
+        // Ajout du contrôle à la carte
+        this.map.controls[google.maps.ControlPosition.TOP_LEFT].push(controlDiv);
+        
+        console.log('✅ Contrôle de carte ajouté en position TOP_LEFT');
+        
+        // Stocker une référence pour pouvoir le supprimer plus tard
+        this.familyMapControlDiv = controlDiv;
+        
+        return controlDiv;
+    }
+
     // Gestion de la mini-carte
     async #initializeInsetMap() {
         console.group('📍 Initialisation de l\'Inset Overview Map');
-        
+
         try {
             // Constantes pour la mini-carte
             const OVERVIEW_DIFFERENCE = 5;
             const OVERVIEW_MIN_ZOOM = 3;
             const OVERVIEW_MAX_ZOOM = 10;
-            
+
             // Créer l'élément pour l'Inset Map
             const insetMapDiv = document.createElement('div');
             insetMapDiv.id = 'overview';
@@ -505,10 +569,10 @@ class GoogleMapsStore {
                 overflow: hidden;
                 box-shadow: 0 2px 6px rgba(0,0,0,0.3);
             `;
-            
+
             // Ajouter l'élément à l'angle inférieur droit de la carte
             this.map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(insetMapDiv);
-            
+
             // Créer l'Inset Map avec des options personnalisées
             const insetMapOptions = {
                 center: this.map.getCenter(),
@@ -518,14 +582,14 @@ class GoogleMapsStore {
                 gestureHandling: "none",
                 zoomControl: false,
             };
-            
+
             const insetMap = new google.maps.Map(insetMapDiv, insetMapOptions);
-            
+
             // Fonction utilitaire pour limiter la valeur entre min et max
             function clamp(num, min, max) {
                 return Math.min(Math.max(num, min), max);
             }
-            
+
             // Mise à jour de la mini-carte basée sur les changements de la carte principale
             this.map.addListener("bounds_changed", () => {
                 insetMap.setCenter(this.map.getCenter());
@@ -537,7 +601,7 @@ class GoogleMapsStore {
                     )
                 );
             });
-            
+
             // Afficher ou masquer l'inset map en fonction du niveau de zoom
             const updateVisibility = () => {
                 if (this.map.getZoom() >= this.ZOOM_THRESHOLD) {
@@ -548,13 +612,13 @@ class GoogleMapsStore {
                     this.overviewMapVisible = false;
                 }
             };
-            
+
             // Écouter les changements de zoom pour gérer la visibilité
             this.map.addListener("zoom_changed", updateVisibility);
-            
+
             // Définir l'état initial de visibilité
             updateVisibility();
-            
+
             // Ajouter un indicateur visuel du viewport actuel (rectangle)
             const viewportRect = new google.maps.Rectangle({
                 strokeColor: '#FF0000',
@@ -564,48 +628,48 @@ class GoogleMapsStore {
                 fillOpacity: 0.1,
                 map: insetMap
             });
-            
+
             // Mettre à jour le rectangle quand la carte principale change
             this.map.addListener("bounds_changed", () => {
                 if (this.map.getBounds()) {
                     viewportRect.setBounds(this.map.getBounds());
                 }
             });
-            
+
             // Faire un resize observer pour redimensionner l'inset map si nécessaire
             const resizeObserver = new ResizeObserver(() => {
                 const mapContainer = this.map.getDiv().parentElement;
                 const containerWidth = mapContainer.offsetWidth;
-                
+
                 // Ajuster la taille de l'inset map en fonction de la taille du conteneur
                 const size = Math.min(Math.max(Math.round(containerWidth * 0.2), 150), 300);
                 insetMapDiv.style.width = `${size}px`;
                 insetMapDiv.style.height = `${size}px`;
-                
+
                 // Déclencher un redimensionnement pour que Google Maps mette à jour l'affichage
                 google.maps.event.trigger(insetMap, 'resize');
             });
-            
+
             resizeObserver.observe(this.map.getDiv().parentElement);
-            
+
             console.log('✅ Inset Overview Map initialisée avec succès');
             console.groupEnd();
-            
+
             return resizeObserver;
         } catch (error) {
             console.error('❌ Erreur lors de l\'initialisation de l\'Inset Overview Map:', error);
             console.groupEnd();
             throw error;
         }
-    }    
+    }
 
     cleanup() {
         console.log('🧹 Nettoyage de GoogleMapsStore');
-    
+
         if (this.map) {
             // Supprimer tous les écouteurs de la carte
             google.maps.event.clearInstanceListeners(this.map);
-            
+
             // Récupérer et supprimer l'élément de la mini-carte des contrôles
             const overviewElement = document.getElementById('overview');
             if (overviewElement) {
@@ -613,18 +677,31 @@ class GoogleMapsStore {
                 // lorsque la carte est détruite
                 overviewElement.remove();
             }
+
+            // Supprimer le contrôle familyMap s'il existe
+            if (this.familyMapControlDiv) {
+                const index = this.map.controls[google.maps.ControlPosition.TOP_LEFT]
+                    .getArray()
+                    .indexOf(this.familyMapControlDiv);
+
+                if (index > -1) {
+                    this.map.controls[google.maps.ControlPosition.TOP_LEFT].removeAt(index);
+                }
+
+                this.familyMapControlDiv = null;
+            }
         }
-    
+
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
             this.resizeObserver = null;
         }
-    
+
         // Réinitialiser les états
         this.overviewMapVisible = false;
         this.history = [];
         this.redoStack = [];
-    
+
         console.log('✅ Nettoyage de GoogleMapsStore terminé');
     }
 }

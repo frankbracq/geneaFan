@@ -1,5 +1,5 @@
-import MarkerDisplayManager from './markerDisplayManager.js';
-import { layerManager } from './layerManager.js';
+import MarkerDisplayManager from '../managers/markerDisplayManager.js';
+import { layerManager } from '../managers/layerManager.js';
 import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 
 /**

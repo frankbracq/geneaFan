@@ -5,7 +5,7 @@ import { normalizeGeoString } from "../../../utils/geo.js";
 import { TownStatisticsManager } from '../../../gedcom/stores/townStatisticsManager.js';
 import { infoWindowContentManager } from '../managers/infoWindowContentManager.js';
 import { layerManager } from '../managers/layerManager.js';
-import BaseLayerStore from '../managers/baseLayerStore.js';
+import BaseLayerStore from './baseLayerStore.js';
 import { calculateDynamicZoom, calculatePadding } from '../utils/mapUtils.js';
 
 /**
