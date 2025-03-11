@@ -148,7 +148,7 @@ class GoogleMapsStore {
         this.#addMapControls();
         this.#setupMapListeners();
         this.#recordState();
-        this.resizeObserver = await this.#initializeOverviewMap();
+        await this.#initializeInsetMap();
     }
 
     /**
@@ -484,235 +484,147 @@ class GoogleMapsStore {
     }
 
     // Gestion de la mini-carte
-    async #initializeOverviewMap() {
-        console.group('📍 Initialisation de la mini-carte');
-
+    async #initializeInsetMap() {
+        console.group('📍 Initialisation de l\'Inset Overview Map');
+        
         try {
-            const mapContainer = this.map.getDiv().parentElement;
-
-            // Fonction pour calculer la taille de la mini-carte avec des dimensions entières
-            const calculateMinimapSize = () => {
-                const containerWidth = mapContainer.offsetWidth;
-                // Arrondir à l'entier le plus proche
-                return Math.min(Math.max(Math.round(containerWidth * 0.2), 150), 300);
-            };
-
-            // Suppression de l'ancienne mini-carte si elle existe
-            const existingWrapper = document.getElementById('overview-map-wrapper');
-            if (existingWrapper) {
-                existingWrapper.remove();
-            }
-
-            // Création du wrapper
-            const wrapper = document.createElement('div');
-            wrapper.id = 'overview-map-wrapper';
-            wrapper.style.cssText = `
-                position: absolute;
-                bottom: 0;
-                right: 0;
-                width: 100%;
-                height: 100%;
-                pointer-events: none;
-                z-index: 1000;
-            `;
-            mapContainer.appendChild(wrapper);
-
-            const initialSize = calculateMinimapSize();
-            const container = document.createElement('div');
-            container.id = 'overview-map-container';
-            container.style.cssText = `
-                position: absolute;
-                bottom: 24px;
-                right: 24px;
-                width: ${initialSize}px;
-                height: ${initialSize}px;
-                background-color: #fff;
-                border: 2px solid rgba(0, 0, 0, 0.3);
+            // Constantes pour la mini-carte
+            const OVERVIEW_DIFFERENCE = 5;
+            const OVERVIEW_MIN_ZOOM = 3;
+            const OVERVIEW_MAX_ZOOM = 10;
+            
+            // Créer l'élément pour l'Inset Map
+            const insetMapDiv = document.createElement('div');
+            insetMapDiv.id = 'overview';
+            insetMapDiv.style.cssText = `
+                width: 175x;
+                height: 175px;
+                margin: 10px;
                 border-radius: 4px;
-                opacity: 0;
-                transition: opacity 0.3s ease;
-                pointer-events: none;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                border: 2px solid rgba(0, 0, 0, 0.3);
                 overflow: hidden;
-                display: block;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.3);
             `;
-            wrapper.appendChild(container);
-
-            // Image statique
-            const staticMap = document.createElement('img');
-            staticMap.id = 'overview-static-map';
-            staticMap.style.cssText = `
-                width: 100%;
-                height: 100%;
-                object-fit: cover;
-                display: block;
-            `;
-
-            staticMap.onerror = (error) => {
-                console.error('❌ Erreur lors du chargement de la carte statique:', error);
-                container.style.display = 'none';
+            
+            // Ajouter l'élément à l'angle inférieur droit de la carte
+            this.map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(insetMapDiv);
+            
+            // Créer l'Inset Map avec des options personnalisées
+            const insetMapOptions = {
+                center: this.map.getCenter(),
+                zoom: Math.max(this.map.getZoom() - OVERVIEW_DIFFERENCE, OVERVIEW_MIN_ZOOM),
+                mapId: this.MAP_ID,
+                disableDefaultUI: true,
+                gestureHandling: "none",
+                zoomControl: false,
             };
-
-            staticMap.onload = () => {
-                container.style.opacity = '1';
-                container.style.display = 'block';
-                console.log('✅ Image de la carte statique chargée');
-            };
-
-            container.appendChild(staticMap);
-
-            // Viewport
-            const viewport = document.createElement('div');
-            viewport.id = 'overview-viewport';
-            viewport.style.cssText = `
-                position: absolute;
-                border: 2px solid #FF0000;
-                background-color: rgba(255, 0, 0, 0.1);
-                pointer-events: none;
-                transition: all 0.3s ease;
-            `;
-            container.appendChild(viewport);
-
-            // Debounce pour les mises à jour
-            let updateTimeout = null;
-
-            // Fonction de mise à jour
-            const updateOverview = () => {
-                if (!this.overviewMapVisible) return;
-
-                if (updateTimeout) {
-                    clearTimeout(updateTimeout);
-                }
-
-                updateTimeout = setTimeout(() => {
-                    const bounds = this.map.getBounds();
-                    const center = this.map.getCenter();
-                    if (!bounds || !center) return;
-
-                    const size = calculateMinimapSize();
-                    container.style.width = `${size}px`;
-                    container.style.height = `${size}px`;
-
-                    const mapParams = new URLSearchParams({
-                        center: `${center.lat()},${center.lng()}`,
-                        zoom: '5',
-                        size: `${size}x${size}`,
-                        key: this.staticApiKey,
-                        map_id: this.MAP_ID,
-                        scale: '2',
-                        language: 'fr',
-                        region: 'FR'
-                    });
-
-                    console.log('🔄 Mise à jour de la mini-carte');
-                    staticMap.src = `https://maps.googleapis.com/maps/api/staticmap?${mapParams}`;
-
-                    const ne = bounds.getNorthEast();
-                    const sw = bounds.getSouthWest();
-                    const staticMapSpan = {
-                        lat: 360 / Math.pow(2, 6),
-                        lng: 360 / Math.pow(2, 6)
-                    };
-
-                    const mapSpan = {
-                        lat: Math.abs(ne.lat() - sw.lat()),
-                        lng: Math.abs(ne.lng() - sw.lng())
-                    };
-
-                    const pixelSpan = {
-                        lat: Math.round(mapSpan.lat / staticMapSpan.lat * size),
-                        lng: Math.round(mapSpan.lng / staticMapSpan.lng * size)
-                    };
-
-                    viewport.style.width = `${pixelSpan.lng}px`;
-                    viewport.style.height = `${pixelSpan.lat}px`;
-                    viewport.style.left = `${Math.round(size / 2 - pixelSpan.lng / 2)}px`;
-                    viewport.style.top = `${Math.round(size / 2 - pixelSpan.lat / 2)}px`;
-                }, 300);
-            };
-
-            // Observer de redimensionnement
-            const resizeObserver = new ResizeObserver(() => {
-                if (this.overviewMapVisible) {
-                    updateOverview();
-                }
-            });
-
-            resizeObserver.observe(mapContainer);
-
-            // Gestion du zoom
-            this.map.addListener('zoom_changed', () => {
-                const zoom = this.map.getZoom();
-                console.log('🔍 Niveau de zoom:', zoom);
-
-                if (zoom >= this.ZOOM_THRESHOLD && !this.overviewMapVisible) {
-                    console.log('📍 Affichage de la mini-carte');
-                    this.overviewMapVisible = true;
-                    container.style.display = 'block';
-                    requestAnimationFrame(() => {
-                        container.style.opacity = '1';
-                        updateOverview();
-                    });
-                } else if (zoom < this.ZOOM_THRESHOLD && this.overviewMapVisible) {
-                    console.log('📍 Masquage de la mini-carte');
-                    this.overviewMapVisible = false;
-                    container.style.opacity = '0';
-                    container.style.display = 'none';
-                }
-            });
-
-            // Écouteurs pour les changements de position
-            ['bounds_changed', 'center_changed'].forEach(event => {
-                this.map.addListener(event, () => {
-                    if (this.overviewMapVisible) {
-                        updateOverview();
-                    }
-                });
-            });
-
-            // Vérification initiale du zoom
-            const initialZoom = this.map.getZoom();
-            if (initialZoom >= this.ZOOM_THRESHOLD) {
-                this.overviewMapVisible = true;
-                container.style.opacity = '1';
-                container.style.display = 'block';
-                updateOverview();
+            
+            const insetMap = new google.maps.Map(insetMapDiv, insetMapOptions);
+            
+            // Fonction utilitaire pour limiter la valeur entre min et max
+            function clamp(num, min, max) {
+                return Math.min(Math.max(num, min), max);
             }
-
-            console.log('✅ Mini-carte initialisée avec succès');
+            
+            // Mise à jour de la mini-carte basée sur les changements de la carte principale
+            this.map.addListener("bounds_changed", () => {
+                insetMap.setCenter(this.map.getCenter());
+                insetMap.setZoom(
+                    clamp(
+                        this.map.getZoom() - OVERVIEW_DIFFERENCE,
+                        OVERVIEW_MIN_ZOOM,
+                        OVERVIEW_MAX_ZOOM
+                    )
+                );
+            });
+            
+            // Afficher ou masquer l'inset map en fonction du niveau de zoom
+            const updateVisibility = () => {
+                if (this.map.getZoom() >= this.ZOOM_THRESHOLD) {
+                    insetMapDiv.style.display = 'block';
+                    this.overviewMapVisible = true;
+                } else {
+                    insetMapDiv.style.display = 'none';
+                    this.overviewMapVisible = false;
+                }
+            };
+            
+            // Écouter les changements de zoom pour gérer la visibilité
+            this.map.addListener("zoom_changed", updateVisibility);
+            
+            // Définir l'état initial de visibilité
+            updateVisibility();
+            
+            // Ajouter un indicateur visuel du viewport actuel (rectangle)
+            const viewportRect = new google.maps.Rectangle({
+                strokeColor: '#FF0000',
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: '#FF0000',
+                fillOpacity: 0.1,
+                map: insetMap
+            });
+            
+            // Mettre à jour le rectangle quand la carte principale change
+            this.map.addListener("bounds_changed", () => {
+                if (this.map.getBounds()) {
+                    viewportRect.setBounds(this.map.getBounds());
+                }
+            });
+            
+            // Faire un resize observer pour redimensionner l'inset map si nécessaire
+            const resizeObserver = new ResizeObserver(() => {
+                const mapContainer = this.map.getDiv().parentElement;
+                const containerWidth = mapContainer.offsetWidth;
+                
+                // Ajuster la taille de l'inset map en fonction de la taille du conteneur
+                const size = Math.min(Math.max(Math.round(containerWidth * 0.2), 150), 300);
+                insetMapDiv.style.width = `${size}px`;
+                insetMapDiv.style.height = `${size}px`;
+                
+                // Déclencher un redimensionnement pour que Google Maps mette à jour l'affichage
+                google.maps.event.trigger(insetMap, 'resize');
+            });
+            
+            resizeObserver.observe(this.map.getDiv().parentElement);
+            
+            console.log('✅ Inset Overview Map initialisée avec succès');
             console.groupEnd();
+            
             return resizeObserver;
         } catch (error) {
-            console.error('❌ Erreur lors de l\'initialisation de la mini-carte:', error);
+            console.error('❌ Erreur lors de l\'initialisation de l\'Inset Overview Map:', error);
             console.groupEnd();
             throw error;
         }
-    }
+    }    
 
     cleanup() {
         console.log('🧹 Nettoyage de GoogleMapsStore');
-
+    
         if (this.map) {
             // Supprimer tous les écouteurs de la carte
             google.maps.event.clearInstanceListeners(this.map);
+            
+            // Récupérer et supprimer l'élément de la mini-carte des contrôles
+            const overviewElement = document.getElementById('overview');
+            if (overviewElement) {
+                // S'il a été ajouté aux contrôles, il sera automatiquement supprimé
+                // lorsque la carte est détruite
+                overviewElement.remove();
+            }
         }
-
+    
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
             this.resizeObserver = null;
         }
-
-        // Supprimer l'élément de mini-carte
-        const wrapper = document.getElementById('overview-map-wrapper');
-        if (wrapper) {
-            wrapper.remove();
-        }
-
+    
         // Réinitialiser les états
         this.overviewMapVisible = false;
         this.history = [];
         this.redoStack = [];
-
+    
         console.log('✅ Nettoyage de GoogleMapsStore terminé');
     }
 }
