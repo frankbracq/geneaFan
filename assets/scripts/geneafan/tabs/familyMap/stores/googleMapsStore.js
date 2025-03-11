@@ -5,6 +5,7 @@ import { rootAncestorTownsStore } from './rootAncestorTownsStore.js';
 import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 import { layerManager } from '../managers/layerManager.js';
 import { calculateDynamicZoom, calculatePadding } from '../utils/mapUtils.js';
+import { LayerDropdownControl } from '../components/layerDropdownControl.js';
 
 class GoogleMapsStore {
     constructor() {
@@ -12,6 +13,7 @@ class GoogleMapsStore {
         this.isApiLoaded = false;
         this.apiLoadPromise = null;
         this.isTimelineActive = true;
+        this.layerControl = null; // Référence au contrôle de couches
 
         // Propriété pour stocker les infos de la personne racine
         this.rootPersonInfo = {
@@ -30,10 +32,6 @@ class GoogleMapsStore {
         this.overviewMapVisible = false;
         this.ZOOM_THRESHOLD = 9;
         this.STATIC_MAP_SIZE = 200;
-
-        // Initialisation explicite de l'historique
-        this.history = [];
-        this.redoStack = [];
 
         makeObservable(this, {
             map: observable,
@@ -157,14 +155,6 @@ class GoogleMapsStore {
         } finally {
             console.groupEnd();
         }
-    }
-
-    async #initializeMapComponents() {
-        this.#addMapControls();
-        this.#setupMapListeners();
-        this.#recordState();
-        this.#addLayerControlDropdown();
-        await this.#initializeInsetMap();
     }
 
     /**
@@ -386,122 +376,46 @@ class GoogleMapsStore {
         }
     }
 
-    // Gestion de l'historique
-    #setupMapListeners() {
-        this.map.addListener('zoom_changed', () => this.#recordState());
-        this.map.addListener('center_changed', () => this.#recordState());
-    }
-
-    #recordState() {
-        if (!this.map) return;
-
-        const currentState = {
-            zoom: this.map.getZoom(),
-            center: this.map.getCenter().toJSON()
-        };
-
-        // Initialiser this.history s'il n'existe pas
-        if (!this.history) {
-            this.history = [];
-        }
-
-        // Initialiser this.redoStack s'il n'existe pas
-        if (!this.redoStack) {
-            this.redoStack = [];
-        }
-
-        const lastState = this.history.length > 0 ? this.history[this.history.length - 1] : null;
-        if (!this.#isSameState(lastState, currentState)) {
-            this.history.push(currentState);
-            this.redoStack = [];
-        }
-    }
-
-    #isSameState(state1, state2) {
-        if (!state1 || !state2) return false;
-        return state1.zoom === state2.zoom &&
-            state1.center.lat === state2.center.lat &&
-            state1.center.lng === state2.center.lng;
+    async #initializeMapComponents() {
+        this.#addMapControls();
+        this.#addLayerControl(); // Remplacé par cette méthode
+        await this.#initializeInsetMap();
     }
 
     #addMapControls() {
         this.#addResetControl();
-        this.#addUndoRedoControls();
     }
 
-    #addResetControl() {
-        const controlDiv = document.createElement('div');
-        controlDiv.style.margin = '10px';
-
-        const button = document.createElement('button');
-        this.#styleControlButton(button);
-        button.title = 'Reset map';
-        button.innerText = 'Reset Map';
-        button.addEventListener('click', () => this.clearMap());
-
-        controlDiv.appendChild(button);
-        this.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlDiv);
-    }
-
-    #addUndoRedoControls() {
-        const controlDiv = document.createElement('div');
-        controlDiv.style.margin = '10px';
-
-        const undoButton = document.createElement('button');
-        this.#styleControlButton(undoButton);
-        undoButton.title = 'Undo';
-        undoButton.innerText = 'Undo';
-        undoButton.addEventListener('click', () => this.undo());
-
-        const redoButton = document.createElement('button');
-        this.#styleControlButton(redoButton);
-        redoButton.title = 'Redo';
-        redoButton.innerText = 'Redo';
-        redoButton.addEventListener('click', () => this.redo());
-
-        controlDiv.appendChild(undoButton);
-        controlDiv.appendChild(redoButton);
-        this.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlDiv);
-    }
-
-    #styleControlButton(button) {
-        Object.assign(button.style, {
-            backgroundColor: '#fff',
-            border: '2px solid #fff',
-            borderRadius: '3px',
-            boxShadow: '0 2px 6px rgba(0,0,0,.3)',
-            cursor: 'pointer',
-            marginRight: '5px',
-            textAlign: 'center'
-        });
-    }
-
-    undo() {
-        if (this.history.length > 1) {
-            const lastState = this.history.pop();
-            this.redoStack.push(lastState);
-            const previousState = this.history[this.history.length - 1];
-            this.#applyState(previousState);
+    /**
+     * Ajoute le contrôle de couches à la carte
+     */
+    #addLayerControl() {
+        if (!this.map) {
+            console.warn('❌ Carte non initialisée');
+            return null;
         }
-    }
 
-    redo() {
-        if (this.redoStack.length > 0) {
-            const stateToRestore = this.redoStack.pop();
-            this.history.push(stateToRestore);
-            this.#applyState(stateToRestore);
-        }
-    }
-
-    #applyState(state) {
-        this.map.setZoom(state.zoom);
-        this.map.setCenter(state.center);
+        // Créer le contrôle de couches
+        this.layerControl = new LayerDropdownControl(this.map);
+        
+        // Initialiser le contrôle avec les infos de la personne racine
+        this.layerControl.setRootPersonInfo(this.rootPersonInfo);
+        
+        // Ajouter le contrôle à la carte
+        this.layerControl.addToMap();
+        
+        return this.layerControl;
     }
 
     // Méthode pour définir les infos de la personne racine
     setRootPersonInfo = action((info) => {
         this.rootPersonInfo = info;
         console.log('Infos de personne racine mises à jour:', info);
+        
+        // Mettre à jour aussi le contrôle de couches
+        if (this.layerControl) {
+            this.layerControl.setRootPersonInfo(info);
+        }
     });
 
     // Méthode pour gérer le changement de personne racine
@@ -523,317 +437,35 @@ class GoogleMapsStore {
                 this.setRootPersonInfo({ ...this.rootPersonInfo, name: name });
                 console.log(`Nom de la personne racine récupéré de rootPersonStore: ${name}`);
             }
-
-            // Si le contrôle de couches est déjà créé, mettre à jour son tooltip
-            if (this.layerControlDiv && this.updateLayerControlTooltip) {
-                this.updateLayerControlTooltip();
-            }
         } catch (error) {
             console.error('❌ Erreur lors de la mise à jour de la personne racine:', error);
         }
     });
 
-    #addLayerControlDropdown() {
-        // Création du div de contrôle principal
+    #addResetControl() {
         const controlDiv = document.createElement('div');
-        controlDiv.className = 'map-layer-control-container';
         controlDiv.style.margin = '10px';
-        controlDiv.style.position = 'relative';
 
-        // Style du conteneur de contrôle
-        controlDiv.style.backgroundColor = '#fff';
-        controlDiv.style.borderRadius = '4px';
-        controlDiv.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
-        controlDiv.style.overflow = 'visible';
+        const button = document.createElement('button');
+        this.#styleControlButton(button);
+        button.title = 'Reset map';
+        button.innerText = 'Reset Map';
+        button.addEventListener('click', () => this.clearMap());
 
-        // Création du bouton principal qui déclenche le dropdown
-        const mainButton = document.createElement('button');
-        mainButton.className = 'map-layer-main-button';
-        mainButton.title = 'Couches et options';
-        mainButton.innerHTML = '<i class="fa fa-layers"></i> Couches';
+        controlDiv.appendChild(button);
+        this.map.controls[google.maps.ControlPosition.TOP_RIGHT].push(controlDiv);
+    }
 
-        // Style du bouton principal
-        this.#styleControlButton(mainButton);
-        mainButton.style.padding = '8px 16px';
-        mainButton.style.display = 'flex';
-        mainButton.style.alignItems = 'center';
-        mainButton.style.gap = '8px';
-        mainButton.style.width = '100%';
-        mainButton.style.justifyContent = 'space-between';
-
-        // Ajout d'une icône (si Font Awesome est disponible)
-        if (window.FontAwesome) {
-            const icon = document.createElement('i');
-            icon.className = 'fas fa-layers';
-            mainButton.prepend(icon);
-        }
-
-        // Ajout de l'icône de flèche pour indiquer le dropdown
-        const arrowSpan = document.createElement('span');
-        arrowSpan.innerHTML = '▼';
-        arrowSpan.style.fontSize = '10px';
-        mainButton.appendChild(arrowSpan);
-
-        // Création du tooltip qui affichera dynamiquement la couche active
-        const tooltip = document.createElement('div');
-        tooltip.className = 'map-layer-tooltip';
-        tooltip.style.display = 'none';
-        tooltip.style.position = 'absolute';
-        tooltip.style.top = '-40px';
-        tooltip.style.left = '0';
-        tooltip.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-        tooltip.style.color = 'white';
-        tooltip.style.padding = '5px 10px';
-        tooltip.style.borderRadius = '4px';
-        tooltip.style.fontSize = '12px';
-        tooltip.style.pointerEvents = 'none';
-        tooltip.style.whiteSpace = 'nowrap';
-        tooltip.style.zIndex = '1001';
-
-        // Création du contenu du dropdown
-        const dropdownContent = document.createElement('div');
-        dropdownContent.className = 'map-layer-dropdown-content';
-        dropdownContent.style.display = 'none';
-        dropdownContent.style.position = 'absolute';
-        dropdownContent.style.top = '100%';
-        dropdownContent.style.left = '0';
-        dropdownContent.style.backgroundColor = '#fff';
-        dropdownContent.style.minWidth = '200px';
-        dropdownContent.style.boxShadow = '0 8px 16px rgba(0,0,0,0.2)';
-        dropdownContent.style.zIndex = '1000';
-        dropdownContent.style.borderRadius = '4px';
-        dropdownContent.style.marginTop = '5px';
-
-        // Création des éléments du dropdown pour les couches
-        const layerItems = [
-            { key: 'ancestors', label: 'Ancêtres' },
-            { key: 'family', label: 'Famille' },
-            { key: 'surnames', label: 'Patronymes' }
-        ];
-
-        layerItems.forEach(layer => {
-            const layerItem = document.createElement('div');
-            layerItem.className = 'map-layer-item';
-            layerItem.style.padding = '10px 16px';
-            layerItem.style.cursor = 'pointer';
-            layerItem.style.display = 'flex';
-            layerItem.style.alignItems = 'center';
-            layerItem.style.gap = '8px';
-            layerItem.style.transition = 'background-color 0.2s';
-
-            // Hover effect
-            layerItem.addEventListener('mouseenter', () => {
-                layerItem.style.backgroundColor = '#f0f0f0';
-            });
-            layerItem.addEventListener('mouseleave', () => {
-                layerItem.style.backgroundColor = '';
-            });
-
-            // Créer le bouton radio pour la couche
-            const radioInput = document.createElement('input');
-            radioInput.type = 'radio';
-            radioInput.name = 'mapLayer';
-            radioInput.value = layer.key;
-            radioInput.id = `layer-${layer.key}`;
-
-            // Vérifier si cette couche est actuellement active
-            const isActive = layerManager.isLayerVisible(layer.key);
-            radioInput.checked = isActive;
-
-            // Label pour le radio button
-            const label = document.createElement('label');
-            label.htmlFor = `layer-${layer.key}`;
-            label.textContent = layer.label;
-            label.style.margin = '0';
-            label.style.cursor = 'pointer';
-
-            // Ajouter les éléments au conteneur de couche
-            layerItem.appendChild(radioInput);
-            layerItem.appendChild(label);
-
-            // Événement au clic pour activer/désactiver la couche
-            layerItem.addEventListener('click', (e) => {
-                e.stopPropagation();
-
-                // Activer cette couche
-                layerManager.setLayerVisibility(layer.key, true);
-
-                // Mettre à jour l'état des radios
-                document.querySelectorAll('input[name="mapLayer"]').forEach(input => {
-                    input.checked = (input.value === layer.key);
-                });
-
-                // Mettre à jour le texte du tooltip
-                updateTooltipText();
-
-                // Fermer le dropdown
-                dropdownContent.style.display = 'none';
-                isDropdownOpen = false;
-            });
-
-            // Ajouter l'élément de couche au dropdown
-            dropdownContent.appendChild(layerItem);
+    #styleControlButton(button) {
+        Object.assign(button.style, {
+            backgroundColor: '#fff',
+            border: '2px solid #fff',
+            borderRadius: '3px',
+            boxShadow: '0 2px 6px rgba(0,0,0,.3)',
+            cursor: 'pointer',
+            marginRight: '5px',
+            textAlign: 'center'
         });
-
-        // Ajouter un séparateur
-        const separator = document.createElement('hr');
-        separator.style.margin = '5px 0';
-        separator.style.border = '0';
-        separator.style.borderTop = '1px solid #e0e0e0';
-        dropdownContent.appendChild(separator);
-
-        // Ajouter un élément pour les options avancées
-        const optionsItem = document.createElement('div');
-        optionsItem.className = 'map-layer-item';
-        optionsItem.style.padding = '10px 16px';
-        optionsItem.style.cursor = 'pointer';
-        optionsItem.style.display = 'flex';
-        optionsItem.style.alignItems = 'center';
-        optionsItem.style.gap = '8px';
-        optionsItem.textContent = '⚙️ Options avancées';
-
-        // Hover effect pour options
-        optionsItem.addEventListener('mouseenter', () => {
-            optionsItem.style.backgroundColor = '#f0f0f0';
-        });
-        optionsItem.addEventListener('mouseleave', () => {
-            optionsItem.style.backgroundColor = '';
-        });
-
-        // Événement au clic pour les options
-        optionsItem.addEventListener('click', (e) => {
-            e.stopPropagation();
-
-            // Ouvrir l'offcanvas mapParameters standard
-            const mapParameters = document.getElementById("mapParameters");
-            if (mapParameters) {
-                const offcanvas = new Offcanvas(mapParameters, {
-                    backdrop: true,
-                    keyboard: true,
-                    scroll: false,
-                });
-                offcanvas.show();
-            } else {
-                console.warn("L'élément mapParameters n'a pas été trouvé");
-            }
-
-            // Fermer le dropdown
-            dropdownContent.style.display = 'none';
-            isDropdownOpen = false;
-        });
-
-        dropdownContent.appendChild(optionsItem);
-
-        // Variable pour suivre l'état du dropdown
-        let isDropdownOpen = false;
-
-        // Événement au clic pour le bouton principal
-        mainButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-
-            if (isDropdownOpen) {
-                dropdownContent.style.display = 'none';
-            } else {
-                dropdownContent.style.display = 'block';
-            }
-            isDropdownOpen = !isDropdownOpen;
-        });
-
-        // Fonction pour obtenir le texte du tooltip
-        const getTooltipText = () => {
-            const activeLayer = layerManager.activeLayer;
-            let tooltipText = '';
-
-            if (activeLayer) {
-                // Titre de base avec le nom de la couche
-                const layerName = layerItems.find(item => item.key === activeLayer)?.label || activeLayer;
-                tooltipText = `Couche active: ${layerName}`;
-
-                // Si c'est la couche ancêtres, ajouter le nom de la personne racine
-                if (activeLayer === 'ancestors' && this.rootPersonInfo && this.rootPersonInfo.name) {
-                    tooltipText += ` (${this.rootPersonInfo.name})`;
-                    console.log('Ajout du nom de la personne racine au tooltip:', this.rootPersonInfo.name);
-                }
-            } else {
-                tooltipText = 'Aucune couche active';
-            }
-
-            return tooltipText;
-        };
-
-        // Fonction pour mettre à jour le contenu du tooltip
-        const updateTooltipText = () => {
-            const tooltipText = getTooltipText();
-            tooltip.textContent = tooltipText;
-
-            // Mettre à jour aussi le titre du bouton principal
-            mainButton.title = tooltipText;
-
-            console.log('Tooltip mis à jour:', tooltipText);
-        };
-
-        // Exposer cette fonction pour permettre des mises à jour externes
-        this.updateLayerControlTooltip = updateTooltipText;
-
-        // Événements pour afficher/masquer le tooltip
-        controlDiv.addEventListener('mouseenter', () => {
-            // Mettre à jour le texte du tooltip avant de l'afficher
-            updateTooltipText();
-            tooltip.style.display = 'block';
-        });
-
-        controlDiv.addEventListener('mouseleave', () => {
-            tooltip.style.display = 'none';
-        });
-
-        // Initialiser le tooltip
-        updateTooltipText();
-
-        // Fermer le dropdown si on clique ailleurs sur la carte ou le document
-        this.map.addListener('click', () => {
-            if (isDropdownOpen) {
-                dropdownContent.style.display = 'none';
-                isDropdownOpen = false;
-            }
-        });
-
-        // Ajouter un écouteur global pour fermer le dropdown
-        document.addEventListener('click', (e) => {
-            if (isDropdownOpen && !controlDiv.contains(e.target)) {
-                dropdownContent.style.display = 'none';
-                isDropdownOpen = false;
-            }
-        });
-
-        // Écouter les changements d'état des couches pour mettre à jour les radios et le tooltip
-        const layerChangedHandler = ({ layer, state }) => {
-            const radio = document.getElementById(`layer-${layer}`);
-            if (radio) {
-                radio.checked = state;
-            }
-
-            // Mettre à jour le tooltip si la couche est active
-            if (state) {
-                updateTooltipText();
-            }
-        };
-
-        storeEvents.subscribe(EVENTS.VISUALIZATIONS.MAP.LAYERS.CHANGED, layerChangedHandler);
-
-        // Ajouter le bouton, le tooltip et le dropdown au div de contrôle
-        controlDiv.appendChild(mainButton);
-        controlDiv.appendChild(tooltip);
-        controlDiv.appendChild(dropdownContent);
-
-        // Ajouter le contrôle à la carte
-        this.map.controls[google.maps.ControlPosition.TOP_LEFT].push(controlDiv);
-
-        console.log('✅ Contrôle de couches ajouté en position TOP_LEFT');
-
-        // Stocker une référence pour pouvoir le supprimer plus tard
-        this.layerControlDiv = controlDiv;
-
-        return controlDiv;
     }
 
     // Gestion de la mini-carte
@@ -968,16 +600,9 @@ class GoogleMapsStore {
             }
 
             // Supprimer le contrôle de couches s'il existe
-            if (this.layerControlDiv) {
-                const index = this.map.controls[google.maps.ControlPosition.TOP_LEFT]
-                    .getArray()
-                    .indexOf(this.layerControlDiv);
-
-                if (index > -1) {
-                    this.map.controls[google.maps.ControlPosition.TOP_LEFT].removeAt(index);
-                }
-
-                this.layerControlDiv = null;
+            if (this.layerControl) {
+                this.layerControl.remove();
+                this.layerControl = null;
             }
         }
 
@@ -988,32 +613,23 @@ class GoogleMapsStore {
 
         // Réinitialiser les états
         this.overviewMapVisible = false;
-        this.history = [];
-        this.redoStack = [];
 
         console.log('✅ Nettoyage de GoogleMapsStore terminé');
     }
 
     // Méthodes publiques pour la gestion des contrôles (pour compatibilité avec le code existant)
     addLayerControlDropdown() {
-        if (this.map && !this.layerControlDiv) {
-            this.#addLayerControlDropdown();
-            return true;
+        if (this.map && !this.layerControl) {
+            return this.#addLayerControl();
         }
         return false;
     }
 
     removeLayerControlDropdown() {
-        if (this.map && this.layerControlDiv) {
-            const index = this.map.controls[google.maps.ControlPosition.TOP_LEFT]
-                .getArray()
-                .indexOf(this.layerControlDiv);
-
-            if (index > -1) {
-                this.map.controls[google.maps.ControlPosition.TOP_LEFT].removeAt(index);
-                this.layerControlDiv = null;
-                return true;
-            }
+        if (this.map && this.layerControl) {
+            this.layerControl.remove();
+            this.layerControl = null;
+            return true;
         }
         return false;
     }
