@@ -51,9 +51,17 @@ class RootPersonStore {
         
                     gedcomDataStore.setHierarchy(newHierarchy);
                     
-                    // Émettre un événement de changement de racine
-                    storeEvents.emit(EVENTS.ROOT.CHANGED, { root, skipDraw: this._skipNextDraw });
-        
+                    // Obtenir le nom de la personne pour l'inclure dans l'événement
+                    const person = gedcomDataStore.individualsCache.get(root);
+                    const rootPersonName = person ? (person.name || `${person.firstName || ''} ${person.lastName || ''}`.trim()) : '';
+                    
+                    // Émettre l'événement avec les données complètes
+                    storeEvents.emit(EVENTS.ROOT.CHANGED, { 
+                        root, 
+                        skipDraw: this._skipNextDraw,
+                        rootPersonName: rootPersonName
+                    });
+                    
                     this.updateHistory(root);
                     document.getElementById('initial-group').style.display = 'none';
         
@@ -106,19 +114,9 @@ class RootPersonStore {
         if (options.skipDraw) {
             this._skipNextDraw = true;
         }
+        
         this.root = newRoot;
         this.updateHistory(newRoot);
-    
-        // Obtenir le nom de la personne pour l'inclure dans l'événement
-        const person = gedcomDataStore.individualsCache.get(newRoot);
-        const rootPersonName = person ? (person.name || `${person.firstName || ''} ${person.lastName || ''}`.trim()) : '';
-        
-        // Émettre l'événement avec le nom inclus
-        storeEvents.emit(EVENTS.ROOT.CHANGED, { 
-            root: newRoot, 
-            skipDraw: this._skipNextDraw,
-            rootPersonName: rootPersonName
-        });
     
         document.dispatchEvent(new Event('rootChange'));
     });
