@@ -78,9 +78,6 @@ class GoogleMapManager {
                 console.log('🔄 Forçage de l\'affichage des marqueurs ancestraux');
                 rootAncestorTownsStore.applyVisibility(layerManager.isLayerVisible('ancestors'));
             }
-
-            // Configurer les contrôles de calques avec le service centralisé
-            this.setupLayerControls();
             
             // Configurer les écouteurs d'événements pour les changements d'onglet
             this.setupEventListeners();
@@ -118,45 +115,6 @@ class GoogleMapManager {
             console.groupEnd();
             throw error;
         }
-    }
-
-    setupLayerControls() {
-        if (!rootAncestorTownsStore.markerDisplayManager.isInitialized()) {
-            console.warn("⚠️ MarkerDisplayManager pas encore initialisé");
-            return;
-        }
-    
-        console.log("🔍 Configuration des contrôles de calques");
-    
-        // Utiliser le service centralisé pour configurer les contrôles
-        layerManager.setupLayerControls({
-            ancestorLayerSwitch: document.getElementById('layerAncestors'),
-            familyTownsSwitch: document.getElementById('layerFamily'),
-            surnamesLayerSwitch: document.getElementById('layerSurnames'),
-            surnameFilter: document.getElementById('surnameFilter')
-        });
-    
-        // Ajouter l'écouteur spécifique pour le sélecteur de patronymes
-        const surnameFilter = document.getElementById('surnameFilter');
-        if (surnameFilter) {
-            console.log('📋 Configuration de l\'écouteur pour le sélecteur de patronymes');
-            
-            // Technique pour remplacer les écouteurs existants
-            const old_element = surnameFilter;
-            const new_element = old_element.cloneNode(true);
-            old_element.parentNode.replaceChild(new_element, old_element);
-            
-            // Ajouter le nouvel écouteur
-            new_element.addEventListener('change', (event) => {
-                const selectedSurname = event.target.value;
-                console.log(`🔄 Changement de patronyme via l'interface: ${selectedSurname}`);
-                
-                // Utiliser directement le store importé
-                surnamesTownsStore.setSurname(selectedSurname);
-            });
-        }
-    
-        console.log("✅ Contrôles de calques configurés");
     }
 
     setupEventListeners() {
@@ -278,21 +236,6 @@ class GoogleMapManager {
             const newElement = tabElement.cloneNode(true);
             tabElement.parentNode.replaceChild(newElement, tabElement);
         }
-        
-        // Nettoyer les écouteurs pour les contrôles de couches
-        const layerControls = [
-            document.getElementById('layerAncestors'),
-            document.getElementById('layerFamily'),
-            document.getElementById('layerSurnames'),
-            document.getElementById('surnameFilter')
-        ];
-        
-        layerControls.forEach(control => {
-            if (control) {
-                const newControl = control.cloneNode(true);
-                control.parentNode.replaceChild(newControl, control);
-            }
-        });
         
         // Supprimer l'écouteur de redimensionnement de fenêtre
         window.removeEventListener('resize', this.#debounce);

@@ -5,6 +5,7 @@ import { layerManager } from '../managers/layerManager.js';
 import BaseLayerStore from './baseLayerStore.js';
 import { calculateDynamicZoom, calculatePadding } from '../utils/mapUtils.js';
 import familyTownsStore from './familyTownsStore.js';
+import { storeEvents, EVENTS } from '../../../common/stores/storeEvents.js';
 
 /**
  * Store that dynamically filters and displays towns on a Google Map based on genealogical events
@@ -103,48 +104,48 @@ class SurnamesTownsStore extends BaseLayerStore {
  */
     setSurname(surname) {
         console.log(`🏁 setSurname appelé avec: "${surname}"`);
-
+    
         // Si le patronyme est identique, ne rien faire
         if (this.currentSurname === surname) {
             console.log('ℹ️ Même patronyme déjà sélectionné, aucune action requise');
             return;
         }
-
+    
         // Mémoriser l'ancien patronyme
         const previousSurname = this.currentSurname;
-
+    
         // Mettre à jour le patronyme actuel
         this.currentSurname = surname;
-
+    
         // Nettoyer un éventuel timeout précédent
         if (this.centeringTimeout) {
             clearTimeout(this.centeringTimeout);
             this.centeringTimeout = null;
         }
-
+    
         if (surname) {
             console.log(`⚙️ Mise à jour des marqueurs pour le patronyme: ${surname}`);
-
+    
             // 1. Nettoyer les marqueurs existants
             this.clearSurnameMarkers();
-
+    
             // 2. Créer les nouveaux marqueurs
             this.updateMarkersForSurname(surname);
-
+    
             // 3. Si le calque est déjà visible, afficher les nouveaux marqueurs
             if (this.map && layerManager.isLayerVisible('surnames')) {
                 console.log('🔄 Calque des patronymes actif, affichage des nouveaux marqueurs');
-
+    
                 const layerMarkers = this.markerDisplayManager.layers.get('surnames');
                 if (layerMarkers && layerMarkers.size > 0) {
                     // Afficher tous les marqueurs sur la carte
                     layerMarkers.forEach(marker => {
                         marker.map = this.map;
                     });
-
+    
                     // Ajouter au cluster
                     this.markerDisplayManager.addMarkersToCluster(this.map);
-
+    
                     // Utiliser requestAnimationFrame pour s'assurer que le DOM est mis à jour
                     // avant de centrer la carte (plus fiable que setTimeout arbitraire)
                     requestAnimationFrame(() => {
@@ -156,9 +157,19 @@ class SurnamesTownsStore extends BaseLayerStore {
                     });
                 }
             }
+            
+            // Émettre un événement pour informer les autres composants
+            storeEvents.emit(EVENTS.VISUALIZATIONS.MAP.SURNAME_CHANGED, { 
+                surname: this.currentSurname 
+            });
         } else {
             console.log('❌ Pas de patronyme sélectionné, masquage des marqueurs');
             this.clearSurnameMarkers();
+            
+            // Émettre un événement avec surname null
+            storeEvents.emit(EVENTS.VISUALIZATIONS.MAP.SURNAME_CHANGED, { 
+                surname: null 
+            });
         }
     }
 

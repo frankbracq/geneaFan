@@ -59,7 +59,8 @@ export const EVENTS = {
             API_ERROR: 'visualization:map:api:error',
             LAYERS: {
                 CHANGED: 'visualization:map:layers:changed',
-            }
+            },
+            SURNAME_CHANGED: 'visualization.map.surname.changed'
         }
     },
 
