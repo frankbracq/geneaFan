@@ -20,6 +20,7 @@
   "main": "index.js",
   "scripts": {
     "build": "cross-env NODE_OPTIONS=--max-old-space-size=8000 webpack --mode production --progress",
+    "build:proxy": "cross-env USE_APP_PREFIX=true NODE_OPTIONS=--max-old-space-size=8000 webpack --mode production --progress",
     "dev:fr": "webpack serve --config-name config-fr --mode development --progress --stats verbose",
     "dev:en": "webpack serve --config-name config-en --mode development",
     "dev:watch": "webpack --mode development --watch --progress",
