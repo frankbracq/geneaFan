@@ -79,10 +79,8 @@ module.exports = (env, argv) => {
             output: {
                 path: path.resolve(__dirname, 'dist'), // Output directory
                 filename: './js/[name].bundle.[contenthash].js', // Bundle output with hash
-                globalObject: 'self'
-            ,
-  publicPath: process.env.USE_APP_PREFIX ? '/app/' : '/' 
-},
+                globalObject: 'self',
+            },
             stats: {
     errorDetails: true,
     children: true,
