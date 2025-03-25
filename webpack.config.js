@@ -28,14 +28,14 @@ function pageUrl(lang, pageRel) {
     return lang === defaultLocale ? pageRel : `${lang}/${pageRel}`;
 }
 
+// Function to generate the full URL for a page
+function urlGenerator(lang, page) {
+    return `https://genealogie.app/${pageUrl(lang, page)}`.replace(/\/$/, "");
+}
+
 // Function to map language to locale format
 function langToLocale(lang) {
     return lang === 'fr' ? 'fr-FR' : lang === 'en' ? 'en-US' : null;
-}
-
-// Function to generate the full URL for a page
-function urlGenerator(lang, page) {
-    return `https://arbre.app/${pageUrl(lang, page)}`.replace(/\/$/, "");
 }
 
 module.exports = (env, argv) => {
@@ -74,15 +74,20 @@ module.exports = (env, argv) => {
             name: `config-${lang}`, // Unique name for each configuration
             devtool: isProduction ? false : 'eval-source-map', // Disable source maps in production
             entry: {
-                geneafan: './assets/geneafan.js', // Entry point for the application
+                geneafan: './assets/geneafan.js',
+                embed: './assets/scripts/embed/embed.js' // Ajout du point d'entrée pour embed.js
             },
             output: {
-                path: path.resolve(__dirname, 'dist'), // Output directory
-                filename: './js/[name].bundle.[contenthash].js', // Bundle output with hash
-                globalObject: 'self'
-            ,
-  publicPath: process.env.USE_APP_PREFIX ? '/app/' : '/' 
-},
+                path: path.resolve(__dirname, 'dist'),
+                filename: (pathData) => {
+                    return pathData.chunk.name === 'embed' 
+                        ? './embed.js'  // Fichier embed.js à la racine
+                        : './js/[name].bundle.[contenthash].js';
+                },
+                globalObject: 'self',
+                publicPath: process.env.USE_APP_PREFIX ? '/app/' : '/'
+            },
+            
             stats: {
     errorDetails: true,
     children: true,
@@ -205,11 +210,10 @@ module.exports = (env, argv) => {
                     { test: /src[/\\]assets/, loader: 'arraybuffer-loader' }, // Load arraybuffer
                     { test: /\.afm$/, loader: 'raw-loader' }, // Load raw files (fonts)
                     {
-                        test: /\.(html)$/, // HTML loader
+                        test: /\.(html)$/,
                         loader: 'html-loader',
                         options: {
-                            interpolate: true,
-                            minimize: false, // Do not minimize HTML
+                            minimize: false,
                         },
                         exclude: /node_modules/,
                     },
@@ -317,6 +321,13 @@ module.exports = (env, argv) => {
                     filename: pageUrl(lang, 'index.html'),
                     chunks: ['geneafan', 'commons', 'i18n'],
                     hash: true,
+                }),
+                new HtmlWebpackPlugin({
+                    template: './assets/html/embed/index.html',
+                    filename: 'embed/index.html',
+                    chunks: ['embed'],
+                    hash: true,
+                    inject: false, // Empêche l'injection automatique des scripts pour avoir un contrôle total
                 }),
                 new MiniCssExtractPlugin({
                     filename: './css/[name].css' // Output CSS filename
