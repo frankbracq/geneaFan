@@ -1,0 +1,60 @@
+<!-- /embed/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Genealogie.app Embed</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100vh;
+    }
+    #app-container {
+      width: 100%;
+    }
+    #open-fullscreen {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div id="app-container"></div>
+  <button id="open-fullscreen">Ouvrir en plein écran</button>
+  <script>
+    const container = document.getElementById("app-container");
+    const iframe = document.createElement("iframe");
+    iframe.src = `https://genealogie.app`;
+    iframe.style = "border:none; width:100%; min-height:100vh; display:block;";
+    iframe.loading = "lazy";
+    iframe.allowFullscreen = true;
+    container.appendChild(iframe);
+
+    // Redimensionnement dynamique
+    function postHeight() {
+      const height = document.documentElement.scrollHeight;
+      window.parent.postMessage({ type: "resize", height }, "*");
+    }
+
+    window.addEventListener("load", postHeight);
+    window.addEventListener("resize", postHeight);
+
+    // Bouton pour ouvrir en plein écran dans un nouvel onglet
+    document.getElementById("open-fullscreen").addEventListener("click", () => {
+      window.open(iframe.src, "_blank");
+    });
+  </script>
+</body>
+</html>

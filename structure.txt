@@ -1,0 +1,185 @@
+.
+├── assets
+│   ├── gedcom
+│   │   └── filter
+│   ├── geneafan.js
+│   ├── html
+│   │   ├── geneafan
+│   │   │   └── advancedModal.html
+│   │   └── index.ejs
+│   ├── images
+│   │   ├── filetype-ged.svg
+│   │   ├── icon1.png
+│   │   └── icons
+│   │       ├── android-icon-144x144.png
+│   │       ├── android-icon-192x192.png
+│   │       ├── android-icon-36x36.png
+│   │       ├── android-icon-48x48.png
+│   │       ├── android-icon-72x72.png
+│   │       ├── android-icon-96x96.png
+│   │       ├── apple-icon-114x114.png
+│   │       ├── apple-icon-120x120.png
+│   │       ├── apple-icon-144x144.png
+│   │       ├── apple-icon-152x152.png
+│   │       ├── apple-icon-180x180.png
+│   │       ├── apple-icon-57x57.png
+│   │       ├── apple-icon-60x60.png
+│   │       ├── apple-icon-72x72.png
+│   │       ├── apple-icon-76x76.png
+│   │       ├── apple-icon.png
+│   │       ├── apple-icon-precomposed.png
+│   │       ├── browserconfig.xml
+│   │       ├── favicon-16x16.png
+│   │       ├── favicon-32x32.png
+│   │       ├── favicon-96x96.png
+│   │       ├── favicon.ico
+│   │       ├── logo_big.png
+│   │       ├── logo_L50-min.svg
+│   │       ├── manifest.json
+│   │       ├── ms-icon-144x144.png
+│   │       ├── ms-icon-150x150.png
+│   │       ├── ms-icon-310x310.png
+│   │       └── ms-icon-70x70.png
+│   ├── other
+│   │   └── robots.txt
+│   ├── scripts
+│   │   ├── geneafan
+│   │   │   ├── common
+│   │   │   │   ├── downloadManager.js
+│   │   │   │   └── stores
+│   │   │   │       ├── authStore.js
+│   │   │   │       ├── mobx-config.js
+│   │   │   │       ├── rootPersonStore.js
+│   │   │   │       ├── state.js
+│   │   │   │       ├── storeEvents.js
+│   │   │   │       └── uiStore.js
+│   │   │   ├── core
+│   │   │   │   ├── app.js
+│   │   │   │   ├── auth.js
+│   │   │   │   ├── errorHandler.js
+│   │   │   │   ├── events.js
+│   │   │   │   └── setup.js
+│   │   │   ├── gedcom
+│   │   │   │   ├── builders
+│   │   │   │   │   └── personBuilder.js
+│   │   │   │   ├── countryData.js
+│   │   │   │   ├── departementData.js
+│   │   │   │   ├── gedcomFileHandler.js
+│   │   │   │   ├── gedcomModalUtils.js
+│   │   │   │   ├── gedcom_output.txt
+│   │   │   │   ├── parse.js
+│   │   │   │   ├── processors
+│   │   │   │   │   ├── dateProcessor.js
+│   │   │   │   │   ├── eventProcessor.js
+│   │   │   │   │   └── placeProcessor.js
+│   │   │   │   ├── stores
+│   │   │   │   │   ├── gedcomConstantsStore.js
+│   │   │   │   │   ├── gedcomDataStore.js
+│   │   │   │   │   ├── indices
+│   │   │   │   │   │   └── familyIndices.js
+│   │   │   │   │   ├── shareFormStore.js
+│   │   │   │   │   └── townStatisticsManager.js
+│   │   │   │   ├── test-readgedcom.mjs
+│   │   │   │   └── test_utf8.ged
+│   │   │   ├── listeners
+│   │   │   │   ├── eventListeners.js
+│   │   │   │   └── protectedFeatures.js
+│   │   │   ├── onboarding
+│   │   │   │   ├── OnboardingManager.js
+│   │   │   │   └── tours
+│   │   │   │       ├── fanTour.js
+│   │   │   │       ├── index.js
+│   │   │   │       ├── mapTour.js
+│   │   │   │       ├── timelineTour.js
+│   │   │   │       └── welcomeTour.js
+│   │   │   ├── tabs
+│   │   │   │   ├── familyMap
+│   │   │   │   │   ├── components
+│   │   │   │   │   │   └── layerDropdownControl.js
+│   │   │   │   │   ├── managers
+│   │   │   │   │   │   ├── googleMapManager.js
+│   │   │   │   │   │   ├── infoWindowContentManager.js
+│   │   │   │   │   │   ├── infoWindowDisplayManager.js
+│   │   │   │   │   │   ├── layerManager.js
+│   │   │   │   │   │   └── markerDisplayManager.js
+│   │   │   │   │   ├── stores
+│   │   │   │   │   │   ├── baseLayerStore.js
+│   │   │   │   │   │   ├── familyTownsStore.js
+│   │   │   │   │   │   ├── googleMapsStore.js
+│   │   │   │   │   │   ├── rootAncestorTownsStore.js
+│   │   │   │   │   │   └── surnamesTownsStore.js
+│   │   │   │   │   └── utils
+│   │   │   │   │       ├── mapConfig.js
+│   │   │   │   │       └── mapUtils.js
+│   │   │   │   ├── familyTree
+│   │   │   │   │   ├── ancestorUtils.js
+│   │   │   │   │   ├── familyTreeDataStore.js
+│   │   │   │   │   └── familyTreeManager.js
+│   │   │   │   ├── fanChart
+│   │   │   │   │   ├── fanChartManager.js
+│   │   │   │   │   ├── fanConfigStore.js
+│   │   │   │   │   ├── fan.js
+│   │   │   │   │   ├── offcanvasManager.js
+│   │   │   │   │   ├── personDetailsDisplay.js
+│   │   │   │   │   └── SVGPanZoomManager.js
+│   │   │   │   ├── responsiveTabs.js
+│   │   │   │   ├── statistics
+│   │   │   │   │   ├── services
+│   │   │   │   │   │   └── statisticsService.js
+│   │   │   │   │   ├── statisticsManager.js
+│   │   │   │   │   ├── statisticsStore.js
+│   │   │   │   │   └── workers
+│   │   │   │   │       └── statisticsWorker.js
+│   │   │   │   ├── tabManager.js
+│   │   │   │   └── timeline
+│   │   │   │       ├── horizontalTimeline.js
+│   │   │   │       ├── timelineEventsStore.js
+│   │   │   │       ├── timelineManager.js
+│   │   │   │       └── timelineStore.js
+│   │   │   ├── updateTownsDB.worker.js
+│   │   │   └── utils
+│   │   │       ├── geo.js
+│   │   │       ├── NotificationManager.js
+│   │   │       ├── OverlayManager.js
+│   │   │       ├── spinners.js
+│   │   │       ├── tooltips.js
+│   │   │       └── utils.js
+│   │   └── vendor
+│   │       └── pdfkitFontRegister.js
+│   └── scss
+│       ├── main.scss
+│       ├── map.scss
+│       ├── pages
+│       │   ├── driverjs-custom.scss
+│       │   ├── _header.scss
+│       │   ├── horizontal-timeline.scss
+│       │   ├── _index.scss
+│       │   ├── _notification.scss
+│       │   ├── _overlay.scss
+│       │   └── _timeline.scss
+│       └── vendors
+│           └── _bootstrap.scss
+├── babel.config.js
+├── DUAL_DEPLOYMENT_SETUP.md
+├── flowChart.mmd
+├── geneafanCert.crt
+├── geneafanKey.key
+├── geneafanKey_nopass.key
+├── horizontalTimeline_recommandations.txt
+├── LICENSE
+├── locales
+│   ├── en.json
+│   └── fr.json
+├── package.json
+├── package-lock.json
+├── README.md
+├── stats.json
+├── structure.ini
+├── structure.txt
+├── TODO.md
+├── update.sh
+├── vercel.json
+├── webpack.config.js
+└── webpack.config.old.js
+
+39 directories, 144 files
