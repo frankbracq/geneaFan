@@ -1,4 +1,3 @@
-const CopyWebpackPlugin = require('copy-webpack-plugin');
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
@@ -55,20 +54,7 @@ module.exports = (env, argv) => {
             compact: false,
             plugins: [
                 // Remove console.log statements in production
-                ...(isProduction ? ['transform-remove-console',
-new HtmlWebpackPlugin({
-      template: './assets/html/embed/index.html',
-      filename: 'embed/index.html',
-      inject: false,
-    }),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: 'assets/scripts/embed/embed.js',
-          to: 'embed.js',
-        },
-      ],
-    }),] : []),
+                ...(isProduction ? ['transform-remove-console'] : []),
             ],
         }
     };
@@ -329,20 +315,7 @@ new HtmlWebpackPlugin({
                     template: './assets/html/index.ejs', // Template for HTML file
                     templateParameters: globals,
                     filename: pageUrl(lang, 'index.html'),
-                    chunks: ['geneafan', 'commons', 'i18n',
-new HtmlWebpackPlugin({
-      template: './assets/html/embed/index.html',
-      filename: 'embed/index.html',
-      inject: false,
-    }),
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: 'assets/scripts/embed/embed.js',
-          to: 'embed.js',
-        },
-      ],
-    }),],
+                    chunks: ['geneafan', 'commons', 'i18n'],
                     hash: true,
                 }),
                 new MiniCssExtractPlugin({
