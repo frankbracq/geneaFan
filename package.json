@@ -33,7 +33,6 @@
   },
   "dependencies": {
     "@balkangraph/familytree.js": "^1.9.36",
-    "@clerk/clerk-js": "^5.26.3",
     "@googlemaps/js-api-loader": "^1.16.6",
     "@googlemaps/markerclusterer": "^2.5.3",
     "@popperjs/core": "^2.11.8",

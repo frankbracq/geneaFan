@@ -1,9 +1,10 @@
-import { initializeAuth } from './auth.js';
 import { initializeTabs } from '../tabs/tabManager.js';
 import { setupEventListeners } from './events.js';
 import { v4 as uuidv4 } from 'uuid';
 import OnboardingManager from '../onboarding/OnboardingManager.js';
 import rootPersonStore from '../common/stores/rootPersonStore.js';
+
+// Import de initializeAuth retiré
 
 export async function setupCore() {
     console.group('🚀 Initialisation du core');
@@ -11,7 +12,9 @@ export async function setupCore() {
         setupBeforeUnload();
         await initializeDOMContent();
         ensureUserId();
-        await initializeAuth();
+        
+        // Retrait de l'appel à initializeAuth()
+        console.log('🔒 Authentification désactivée - prêt pour Cloudflare Access');
 
         // Unique call to initializeTabs
         await initializeTabs();

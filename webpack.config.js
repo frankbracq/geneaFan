@@ -172,7 +172,7 @@ module.exports = (env, argv) => {
                 rules: [
                     {
                         test: /\.js$/, // JavaScript files
-                        exclude: /node_modules\/(lodash|@clerk\/clerk-js|fontkit)/, // Exclude specific modules
+                        exclude: /node_modules\/(lodash|fontkit)/, // Exclude specific modules
                         use: babelConf
                     },
                     {

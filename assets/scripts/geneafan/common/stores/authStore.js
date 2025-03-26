@@ -1,19 +1,19 @@
-// authStore.js
+// authStore.js - Version démontée sans Clerk
 
 import { makeAutoObservable, runInAction } from './mobx-config';
-import { Clerk } from '@clerk/clerk-js';
+// Import de Clerk supprimé
 
 class AuthStore {
     clerk = null;
     userInfo = null;
-    isClerkLoaded = false;
+    isClerkLoaded = true; // Toujours true pour éviter les vérifications
     isLoading = false;
     error = null;
     authenticationListener = null;
 
     constructor() {
         makeAutoObservable(this, {
-            clerk: false // Do not observe clerk directly
+            clerk: false
         });
     }
 
@@ -30,171 +30,72 @@ class AuthStore {
     }
 
     async initializeClerk(publishableKey) {
-        if (this.clerk) return; // Avoid double initialization
-
-        try {
-            this.setLoading(true);
-            this.clerk = new Clerk(publishableKey);
-            this.clerk.navigate = () => {};
-            
-            await this.clerk.load();
-            
-            runInAction(() => {
-                this.isClerkLoaded = true;
-                if (this.clerk.user) {
-                    this.userInfo = this.extractUserInfo(this.clerk.user);
-                }
-            });
-        } catch (error) {
-            this.setError(error);
-            console.error("Error loading Clerk:", error);
-        } finally {
-            this.setLoading(false);
-        }
+        console.log('Clerk initialization bypassed');
+        // Ne fait plus rien, simule juste un succès
+        return Promise.resolve();
     }
 
-    // Extract user info into a separate method
+    // Retourne un objet utilisateur factice si nécessaire pour les tests
     extractUserInfo(user) {
-        if (!user) return null;
-        return {
-            id: user.id,
-            email: user.primaryEmailAddress?.emailAddress,
-            fullName: user.fullName,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            profileImageUrl: user.profileImageUrl,
-        };
+        return null; // Aucun utilisateur authentifié
     }
 
     setupAuthenticationListener(onAuthChange) {
-        this.removeAuthenticationListener(); // Clean up previous listener
-
-        this.authenticationListener = this.clerk.addListener(({ session }) => {
-            const userInfo = this.clerk.user ? this.extractUserInfo(this.clerk.user) : null;
-            runInAction(() => {
-                this.userInfo = userInfo;
-            });
-            if (onAuthChange) onAuthChange(userInfo);
-        });
+        // Ne fait plus rien
+        console.log('Authentication listener setup bypassed');
     }
 
     removeAuthenticationListener() {
-        if (this.authenticationListener) {
-            this.authenticationListener();
-            this.authenticationListener = null;
-        }
+        // Ne fait plus rien
+        console.log('Authentication listener removal bypassed');
     }
 
     async accessFeature(onAuthenticated, onUnauthenticated) {
-        if (!this.clerk) {
-            this.setError(new Error("Clerk not initialized"));
-            return;
-        }
-
-        try {
-            if (this.userInfo) {
-                onAuthenticated(this.userInfo);
-                return;
-            }
-
-            if (this.clerk.user) {
-                const userInfo = this.extractUserInfo(this.clerk.user);
-                runInAction(() => {
-                    this.userInfo = userInfo;
-                });
-                onAuthenticated(userInfo);
-                return;
-            }
-
-            this.showSignInForm(this.clerk, onUnauthenticated);
-            this.setupAuthenticationListener((userInfo) => {
-                if (userInfo) onAuthenticated(userInfo);
-            });
-        } catch (error) {
-            this.setError(error);
-            onUnauthenticated?.();
+        // Durant la phase de test, permettre l'accès à toutes les fonctionnalités
+        // Pour simuler un utilisateur connecté, décommentez les lignes suivantes:
+        /*
+        const mockUser = {
+            id: 'temp-user-id',
+            email: 'test@example.com',
+            fullName: 'Test User',
+            firstName: 'Test',
+            lastName: 'User',
+            profileImageUrl: '',
+        };
+        onAuthenticated(mockUser);
+        */
+        
+        // Pour la phase initiale, simuler un utilisateur non authentifié :
+        if (onUnauthenticated) {
+            onUnauthenticated();
         }
     }
 
     async handleUserAuthentication(clerk, callback) {
-        if (!clerk?.loaded) {
-            try {
-                await clerk.load();
-            } catch (error) {
-                this.setError(error);
-                callback(null);
-                return;
-            }
-        }
-
-        const userInfo = clerk.user ? this.extractUserInfo(clerk.user) : null;
-        callback(userInfo);
-        
-        this.setupAuthenticationListener(callback);
+        // Ne fait plus rien
+        callback(null);
     }
 
     showSignInForm(clerk, onUnauthenticated) {
-        if (!clerk) return;
-        if (this.userInfo) return; // Early return si l'utilisateur est déjà connecté
-    
-        const handleClose = () => {
-            if (!clerk.user && onUnauthenticated) {
-                onUnauthenticated();
-            }
-            this.removeAuthenticationListener();
-        };
-    
-        clerk.navigate = () => {
-            const signInButton = document.getElementById('sign-in-button');
-            const userButtonDiv = document.getElementById('user-button');
-    
-            if (signInButton) signInButton.style.display = 'none';
-            if (userButtonDiv) {
-                userButtonDiv.style.display = 'block';
-                if (!userButtonDiv.hasChildNodes()) {
-                    clerk.mountUserButton(userButtonDiv);
-                    clerk.navigate = () => {
-                        onUnauthenticated?.();
-                        if (signInButton) signInButton.style.display = 'block';
-                        userButtonDiv.style.display = 'none';
-                    };
-                }
-            }
-        };
-    
-        clerk.openSignIn();
-    }
-
-    async logout() {
-        if (!this.clerk) return;
-
-        try {
-            this.setLoading(true);
-            await this.clerk.signOut();
-            this.removeAuthenticationListener();
-            
-            runInAction(() => {
-                this.userInfo = null;
-            });
-
-            this.cleanupData();
-        } catch (error) {
-            this.setError(error);
-        } finally {
-            this.setLoading(false);
+        console.log('Sign in form display bypassed');
+        // Appelle directement onUnauthenticated puisqu'il n'y a plus d'authentification
+        if (onUnauthenticated) {
+            onUnauthenticated();
         }
     }
 
+    async logout() {
+        console.log('Logout bypassed');
+        return Promise.resolve();
+    }
+
     cleanupData() {
-        // Clean up data
-        runInAction(() => {
-            this.userInfo = null;
-            this.error = null;
-        });
+        // Ne fait plus rien
+        console.log('Data cleanup bypassed');
     }
 
     get isAuthenticated() {
-        return !!this.userInfo;
+        return false; // Toujours retourner false (non authentifié)
     }
 }
 
