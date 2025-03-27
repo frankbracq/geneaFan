@@ -11,7 +11,6 @@ const Dotenv = require('dotenv-webpack');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const os = require('os');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 // Workaround for MD4 algorithm used by Webpack in crypto hashing
 const crypto_orig_createHash = crypto.createHash;
@@ -179,7 +178,7 @@ module.exports = (env, argv) => {
                 modules: [path.resolve(__dirname, 'node_modules')],
                 
                 fallback: {
-                    'stream': require.resolve('stream-browserify'),
+                    //'stream': require.resolve('stream-browserify'),
                     'zlib': require.resolve('browserify-zlib'),
                     'util': require.resolve('util/'),
                     'crypto': require.resolve('crypto-browserify'),
@@ -335,6 +334,7 @@ module.exports = (env, argv) => {
                         test: /\.css$/,
                         use: ['style-loader', 'css-loader']
                     },
+                    /*
                     {
                         test: /\.js$/,
                         use: {
@@ -348,6 +348,7 @@ module.exports = (env, argv) => {
                             })
                         }
                     },
+                    */
                     {
                         test: /\.svg$/,
                         use: [
@@ -426,8 +427,6 @@ module.exports = (env, argv) => {
                 
                 // Internationalisation
                 new I18nPlugin(locale[lang], { nested: true }),
-
-                new NodePolyfillPlugin(),
                 
                 // Analyser le bundle si demandé
                 ...(process.env.ANALYZE ? [new BundleAnalyzerPlugin()] : []),
