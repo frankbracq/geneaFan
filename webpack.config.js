@@ -23,6 +23,10 @@ const locale = {
 
 const defaultLocale = 'fr';
 
+require('dotenv').config({
+    path: argv.mode === 'production' ? './.env.production' : './.env.development'
+});
+
 // Function to generate a page URL based on the selected language
 function pageUrl(lang, pageRel) {
     return lang === defaultLocale ? pageRel : `${lang}/${pageRel}`;
@@ -40,6 +44,7 @@ function langToLocale(lang) {
 
 module.exports = (env, argv) => {
     const isProduction = argv.mode === 'production';
+    const removeConsole = process.env.REMOVE_CONSOLE === 'true';
 
     if (!isProduction) {
         process.env.WEBPACK_DEV_SERVER = true;
@@ -53,11 +58,12 @@ module.exports = (env, argv) => {
             ],
             compact: false,
             plugins: [
-                // Remove console.log statements in production
-                ...(isProduction ? ['transform-remove-console'] : []),
+                // Utilisez la variable d'environnement pour déterminer si les console.log doivent être supprimés
+                ...(removeConsole ? ['transform-remove-console'] : []),
             ],
         }
     };
+
     // Create a configuration for each locale
     return Object.keys(locale).map((lang, index) => {
         const globals = {
@@ -80,21 +86,21 @@ module.exports = (env, argv) => {
             output: {
                 path: path.resolve(__dirname, 'dist'),
                 filename: (pathData) => {
-                    return pathData.chunk.name === 'embed' 
+                    return pathData.chunk.name === 'embed'
                         ? './embed.js'  // Fichier embed.js à la racine
                         : './js/[name].bundle.[contenthash].js';
                 },
                 globalObject: 'self',
                 publicPath: process.env.USE_APP_PREFIX ? '/app/' : '/'
             },
-            
+
             stats: {
-    errorDetails: true,
-    children: true,
-    performance: false,
-    moduleTrace: false,
-    warningsFilter: /exceeded the size limit/
-},
+                errorDetails: true,
+                children: true,
+                performance: false,
+                moduleTrace: false,
+                warningsFilter: /exceeded the size limit/
+            },
 
             optimization: {
                 splitChunks: {
@@ -124,10 +130,10 @@ module.exports = (env, argv) => {
                     new TerserPlugin({
                         terserOptions: {
                             compress: {
-                                drop_console: isProduction, // Remove console logs in production
+                                drop_console: removeConsole, // Utilisez la même variable ici
                             },
                         },
-                        parallel: true, // Enable parallel minification
+                        parallel: true,
                     }),
                     new CssMinimizerPlugin(),
                 ],
