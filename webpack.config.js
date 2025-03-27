@@ -174,16 +174,9 @@ module.exports = (env, argv) => {
                 hints: false,
             },
             resolve: {
-                // Ajouter des extensions à résoudre automatiquement
-                extensions: ['.js', '.mjs', '.json'],
-                
-                // Limiter la recherche de modules aux répertoires essentiels
-                modules: [path.resolve(__dirname, 'node_modules')],
-                
-                
-                alias: {
-                    fs: 'pdfkit/js/virtual-fs.js',
-                    'process/browser': 'process/browser.js'
+                extensions: ['.js', '.json'],
+                fallback: {
+                    process: require.resolve('process/browser')
                 }
             },
             // Webpack Dev Server configuration
