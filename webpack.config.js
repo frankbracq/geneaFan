@@ -23,10 +23,6 @@ const locale = {
 
 const defaultLocale = 'fr';
 
-require('dotenv').config({
-    path: argv.mode === 'production' ? './.env.production' : './.env.development'
-});
-
 // Function to generate a page URL based on the selected language
 function pageUrl(lang, pageRel) {
     return lang === defaultLocale ? pageRel : `${lang}/${pageRel}`;
@@ -45,8 +41,12 @@ function langToLocale(lang) {
 module.exports = (env, argv) => {
     const isProduction = argv.mode === 'production';
     
-    // Placez l'initialisation de removeConsole ici, après avoir accès à argv
-    // Vous pouvez soit utiliser directement la variable d'environnement
+    // Chargez dotenv ici, avec accès à argv
+    require('dotenv').config({
+        path: isProduction ? './.env.production' : './.env.development'
+    });
+    
+    // Récupérez la variable d'environnement après avoir chargé dotenv
     const removeConsole = process.env.REMOVE_CONSOLE === 'true';
     // Ou vous pourriez décider de combiner avec le mode de production
     // const removeConsole = isProduction && process.env.REMOVE_CONSOLE !== 'false';
