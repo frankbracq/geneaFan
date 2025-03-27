@@ -44,12 +44,18 @@ function langToLocale(lang) {
 
 module.exports = (env, argv) => {
     const isProduction = argv.mode === 'production';
+    
+    // Placez l'initialisation de removeConsole ici, après avoir accès à argv
+    // Vous pouvez soit utiliser directement la variable d'environnement
     const removeConsole = process.env.REMOVE_CONSOLE === 'true';
-
+    // Ou vous pourriez décider de combiner avec le mode de production
+    // const removeConsole = isProduction && process.env.REMOVE_CONSOLE !== 'false';
+    
     if (!isProduction) {
         process.env.WEBPACK_DEV_SERVER = true;
         require('webpack').performance = { hints: false };
     }
+    
     const babelConf = {
         loader: 'babel-loader',
         options: {
@@ -58,7 +64,7 @@ module.exports = (env, argv) => {
             ],
             compact: false,
             plugins: [
-                // Utilisez la variable d'environnement pour déterminer si les console.log doivent être supprimés
+                // Utilisez la variable removeConsole pour les plugins
                 ...(removeConsole ? ['transform-remove-console'] : []),
             ],
         }
