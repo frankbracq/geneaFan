@@ -98,7 +98,8 @@ module.exports = (env, argv) => {
         return {
             name: `config-${lang}`, // Unique name for each configuration
             mode: isProduction ? 'production' : 'development', // Explicit mode setting
-            devtool: isProduction ? false : 'eval-cheap-module-source-map', // Plus rapide que eval-source-map
+            // devtool: isProduction ? false : 'eval-cheap-module-source-map', // Plus rapide que eval-source-map
+            devtool: isProduction ? 'source-map' : 'eval-cheap-module-source-map',
             entry: {
                 geneafan: './assets/geneafan.js',
                 embed: './assets/scripts/embed/embed.js'
