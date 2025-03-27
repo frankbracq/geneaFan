@@ -12,23 +12,66 @@ class StatisticsService {
             this.worker.terminate();
         }
 
-        this.worker = new Worker(
-            new URL('../workers/statisticsWorker.js', import.meta.url),
-            { type: 'module' }
-        );
-        
-        this.worker.addEventListener('message', (e) => {
-            switch (e.data.type) {
-                case 'statistics':
-                    this.updateStatisticsStore(e.data.data, e.data.scope);
-                    break;
-                case 'progress':
-                    if (this.onProgressCallback) {
-                        this.onProgressCallback(e.data.data);
+        try {
+            const workerRelativePath = '../workers/statisticsWorker.js';
+            
+            // Vérifier si nous avons notre fonction de fallback pour les Workers
+            if (window.createWorkerWithFallback) {
+                // Utiliser notre fonction de fallback qui gère les chemins en environnement proxifié
+                this.worker = window.createWorkerWithFallback(workerRelativePath, { type: 'module' });
+                console.log('Worker créé avec helper de proxy');
+            } else {
+                // Approche standard avec gestion des erreurs
+                try {
+                    // Essayer d'abord avec import.meta si disponible
+                    if (typeof import.meta !== 'undefined' && import.meta.url) {
+                        const workerUrl = new URL(workerRelativePath, import.meta.url);
+                        this.worker = new Worker(workerUrl, { type: 'module' });
+                        console.log('Worker créé avec import.meta.url');
+                    } else {
+                        // Sinon, utiliser directement le chemin relatif
+                        this.worker = new Worker(workerRelativePath, { type: 'module' });
+                        console.log('Worker créé avec chemin relatif standard');
                     }
-                    break;
+                } catch (e) {
+                    console.warn('Erreur lors de la création du worker, essai avec chemins alternatifs:', e);
+                    
+                    // Si nous avons une configuration d'application, utiliser le chemin de base
+                    if (window.APP_CONFIG && window.APP_CONFIG.basePath) {
+                        const fullPath = `${window.APP_CONFIG.basePath}tabs/statistics/workers/statisticsWorker.js`;
+                        this.worker = new Worker(fullPath, { type: 'module' });
+                        console.log('Worker créé avec chemin basé sur APP_CONFIG:', fullPath);
+                    } else {
+                        // Dernier recours : essayer juste avec le chemin relatif sans URL
+                        this.worker = new Worker(workerRelativePath, { type: 'module' });
+                        console.log('Worker créé avec chemin relatif (dernier recours)');
+                    }
+                }
             }
-        });
+            
+            // Configurer les gestionnaires d'événements pour le worker
+            this.worker.addEventListener('message', (e) => {
+                switch (e.data.type) {
+                    case 'statistics':
+                        this.updateStatisticsStore(e.data.data, e.data.scope);
+                        break;
+                    case 'progress':
+                        if (this.onProgressCallback) {
+                            this.onProgressCallback(e.data.data);
+                        }
+                        break;
+                }
+            });
+            
+            // Ajouter un gestionnaire d'erreurs pour le débogage
+            this.worker.addEventListener('error', (error) => {
+                console.error('Erreur du worker:', error);
+            });
+            
+        } catch (error) {
+            console.error('Échec de l\'initialisation du worker:', error);
+            // On pourrait implémenter une solution de secours sans worker ici
+        }
     }
 
     onProgress(callback) {
@@ -78,6 +121,7 @@ class StatisticsService {
     sanitizeIndividuals(individuals) {
         return individuals.map(individual => {
             return {
+                id: individual.id, // S'assurer que l'ID est inclus
                 stats: {
                     demography: {
                         birthInfo: {
