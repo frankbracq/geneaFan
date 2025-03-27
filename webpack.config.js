@@ -49,6 +49,8 @@ module.exports = (env, argv) => {
     
     // Récupérez la variable d'environnement après avoir chargé dotenv
     const removeConsole = process.env.REMOVE_CONSOLE === 'true';
+    console.log('removeConsole setting:', removeConsole); // Add logging to check the value
+
     
     if (!isProduction) {
         process.env.WEBPACK_DEV_SERVER = true;
@@ -177,15 +179,7 @@ module.exports = (env, argv) => {
                 // Limiter la recherche de modules aux répertoires essentiels
                 modules: [path.resolve(__dirname, 'node_modules')],
                 
-                fallback: {
-                    //'stream': require.resolve('stream-browserify'),
-                    'zlib': require.resolve('browserify-zlib'),
-                    'util': require.resolve('util/'),
-                    'crypto': require.resolve('crypto-browserify'),
-                    'buffer': require.resolve('buffer'),
-                    "path": require.resolve("path-browserify"),
-                    "os": require.resolve("os-browserify/browser"),
-                },
+                
                 alias: {
                     fs: 'pdfkit/js/virtual-fs.js',
                     'process/browser': 'process/browser.js'
@@ -282,11 +276,27 @@ module.exports = (env, argv) => {
                                 loader: 'css-loader',
                                 options: {
                                     importLoaders: 2,
+                                    sourceMap: true // Add this line
                                 }
                             },
-                            'resolve-url-loader',
-                            'postcss-loader',
-                            'sass-loader'
+                            {
+                                loader: 'resolve-url-loader',
+                                options: {
+                                    sourceMap: true // Add this line
+                                }
+                            },
+                            {
+                                loader: 'postcss-loader',
+                                options: {
+                                    sourceMap: true // Add this line
+                                }
+                            },
+                            {
+                                loader: 'sass-loader',
+                                options: {
+                                    sourceMap: true // Add this line
+                                }
+                            }
                         ],
                         exclude: /node_modules/,
                     },
@@ -419,7 +429,6 @@ module.exports = (env, argv) => {
                 // Définir des variables globales
                 new webpack.DefinePlugin({
                     'process.env.NODE_ENV': JSON.stringify(argv.mode),
-                    'process.env.REMOVE_CONSOLE': JSON.stringify(removeConsole),
                 }),
                 
                 // String replacement pour corriger des problèmes de compatibilité
