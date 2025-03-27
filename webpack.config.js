@@ -10,6 +10,7 @@ const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
 const Dotenv = require('dotenv-webpack');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+const os = require('os');
 
 // Workaround for MD4 algorithm used by Webpack in crypto hashing
 const crypto_orig_createHash = crypto.createHash;
@@ -48,14 +49,22 @@ module.exports = (env, argv) => {
     
     // Récupérez la variable d'environnement après avoir chargé dotenv
     const removeConsole = process.env.REMOVE_CONSOLE === 'true';
-    // Ou vous pourriez décider de combiner avec le mode de production
-    // const removeConsole = isProduction && process.env.REMOVE_CONSOLE !== 'false';
     
     if (!isProduction) {
         process.env.WEBPACK_DEV_SERVER = true;
         require('webpack').performance = { hints: false };
     }
     
+    // Configuration pour esbuild-loader (plus rapide que babel-loader)
+    const esbuildConf = {
+        loader: 'esbuild-loader',
+        options: {
+            target: 'es2015',
+            drop: removeConsole ? ['console'] : [],
+        }
+    };
+    
+    // Garde babel-loader comme fallback si nécessaire pour des plugins spécifiques
     const babelConf = {
         loader: 'babel-loader',
         options: {
@@ -64,11 +73,13 @@ module.exports = (env, argv) => {
             ],
             compact: false,
             plugins: [
-                // Utilisez la variable removeConsole pour les plugins
                 ...(removeConsole ? ['transform-remove-console'] : []),
             ],
         }
     };
+
+    // Déterminer le nombre optimal de workers pour thread-loader
+    const workerPoolSize = Math.max(1, os.cpus().length - 1);
 
     // Create a configuration for each locale
     return Object.keys(locale).map((lang, index) => {
@@ -84,28 +95,38 @@ module.exports = (env, argv) => {
 
         return {
             name: `config-${lang}`, // Unique name for each configuration
-            devtool: isProduction ? false : 'eval-source-map', // Disable source maps in production
+            mode: isProduction ? 'production' : 'development', // Explicit mode setting
+            devtool: isProduction ? false : 'eval-cheap-module-source-map', // Plus rapide que eval-source-map
             entry: {
                 geneafan: './assets/geneafan.js',
-                embed: './assets/scripts/embed/embed.js' // Ajout du point d'entrée pour embed.js
+                embed: './assets/scripts/embed/embed.js'
             },
             output: {
                 path: path.resolve(__dirname, 'dist'),
                 filename: (pathData) => {
                     return pathData.chunk.name === 'embed'
-                        ? './embed.js'  // Fichier embed.js à la racine
+                        ? './embed.js'
                         : './js/[name].bundle.[contenthash].js';
                 },
                 globalObject: 'self',
                 publicPath: process.env.USE_APP_PREFIX ? '/app/' : '/'
             },
-
+            
             stats: {
                 errorDetails: true,
                 children: true,
                 performance: false,
                 moduleTrace: false,
                 warningsFilter: /exceeded the size limit/
+            },
+
+            // Activer le cache pour accélérer les builds consécutifs
+            cache: {
+                type: 'filesystem',
+                buildDependencies: {
+                    config: [__filename],
+                },
+                name: `${lang}-cache`,
             },
 
             optimization: {
@@ -128,30 +149,34 @@ module.exports = (env, argv) => {
                             reuseExistingChunk: true,
                             enforce: true,
                         },
-                        default: false, // Disable default chunk group to avoid conflicts
+                        default: false,
                     },
                 },
-                minimize: isProduction, // Minimize assets in production
+                minimize: isProduction,
                 minimizer: [
                     new TerserPlugin({
+                        parallel: true, // Activer la parallélisation
                         terserOptions: {
                             compress: {
-                                drop_console: removeConsole, // Utilisez la même variable ici
+                                drop_console: removeConsole,
                             },
                         },
-                        parallel: true,
                     }),
-                    new CssMinimizerPlugin(),
+                    new CssMinimizerPlugin({
+                        parallel: true, // Activer la parallélisation
+                    }),
                 ],
             },
             performance: {
-                hints: false, // Désactive temporairement les warnings
-                // Si vous préférez garder les warnings mais avec des limites plus élevées :
-                // hints: 'warning',
-                // maxAssetSize: 1024 * 1024,      // 1MB
-                // maxEntrypointSize: 2048 * 1024,  // 2MB
+                hints: false,
             },
             resolve: {
+                // Ajouter des extensions à résoudre automatiquement
+                extensions: ['.js', '.mjs', '.json'],
+                
+                // Limiter la recherche de modules aux répertoires essentiels
+                modules: [path.resolve(__dirname, 'node_modules')],
+                
                 fallback: {
                     'stream': require.resolve('stream-browserify'),
                     'zlib': require.resolve('browserify-zlib'),
@@ -176,27 +201,47 @@ module.exports = (env, argv) => {
                     logging: 'info',
                     overlay: {
                         errors: true,
-                        warnings: false  // N'affiche que les erreurs, pas les warnings
+                        warnings: false
                     }
                 },
             },
             module: {
                 rules: [
                     {
-                        test: /\.js$/, // JavaScript files
-                        exclude: /node_modules\/(lodash|fontkit)/, // Exclude specific modules
-                        use: babelConf
+                        test: /\.js$/,
+                        exclude: /node_modules\/(lodash|fontkit)/,
+                        use: [
+                            // Paralléliser avec thread-loader
+                            {
+                                loader: 'thread-loader',
+                                options: {
+                                    workers: workerPoolSize,
+                                }
+                            },
+                            // Utiliser esbuild-loader au lieu de babel-loader
+                            esbuildConf
+                        ]
                     },
                     {
                         test: /\.js$/,
                         include: /(pdfkit|saslprep|unicode-trie|unicode-properties|dfa|linebreak|panzoom)/,
-                        use: babelConf
+                        use: [
+                            {
+                                loader: 'thread-loader',
+                                options: {
+                                    workers: workerPoolSize,
+                                }
+                            },
+                            // Pour ces modules spécifiques, garder babel si nécessaire
+                            // ou essayer esbuild si compatible
+                            babelConf
+                        ]
                     },
                     {
-                        test: /\.mjs$/, // Support for .mjs files
+                        test: /\.mjs$/,
                         include: /node_modules/,
                         type: 'javascript/auto',
-                        use: babelConf
+                        use: esbuildConf // Utiliser esbuild pour .mjs aussi
                     },
                     {
                         enforce: 'post',
@@ -219,8 +264,8 @@ module.exports = (env, argv) => {
                             loader: "transform-loader?brfs"
                         }
                     },
-                    { test: /src[/\\]assets/, loader: 'arraybuffer-loader' }, // Load arraybuffer
-                    { test: /\.afm$/, loader: 'raw-loader' }, // Load raw files (fonts)
+                    { test: /src[/\\]assets/, loader: 'arraybuffer-loader' },
+                    { test: /\.afm$/, loader: 'raw-loader' },
                     {
                         test: /\.(html)$/,
                         loader: 'html-loader',
@@ -230,10 +275,15 @@ module.exports = (env, argv) => {
                         exclude: /node_modules/,
                     },
                     {
-                        test: /\.(css|sass|scss)$/, // CSS, Sass, and SCSS files
+                        test: /\.(css|sass|scss)$/,
                         use: [
-                            MiniCssExtractPlugin.loader, // Extract CSS into files
-                            'css-loader',
+                            MiniCssExtractPlugin.loader,
+                            {
+                                loader: 'css-loader',
+                                options: {
+                                    importLoaders: 2,
+                                }
+                            },
                             'resolve-url-loader',
                             'postcss-loader',
                             'sass-loader'
@@ -241,7 +291,7 @@ module.exports = (env, argv) => {
                         exclude: /node_modules/,
                     },
                     {
-                        test: /\.(jpe?g|png|gif|svg)$/, // Image files
+                        test: /\.(jpe?g|png|gif|svg)$/,
                         use: [
                             {
                                 loader: 'file-loader',
@@ -250,21 +300,21 @@ module.exports = (env, argv) => {
                                     name: '[name].[ext]',
                                 },
                             },
-                            {
+                            // N'utiliser image-webpack-loader qu'en production
+                            ...(isProduction ? [{
                                 loader: 'image-webpack-loader',
                                 options: {
-                                    disable: !isProduction, // Disable in development
                                     mozjpeg: {
                                         progressive: true,
                                         quality: 75
                                     },
                                 },
-                            }
+                            }] : [])
                         ],
                     },
                     {
                         type: 'javascript/auto',
-                        test: /(favicon\.ico|site\.webmanifest|manifest\.json|browserconfig\.xml|robots\.txt|humans\.txt)$/, // Handle various assets
+                        test: /(favicon\.ico|site\.webmanifest|manifest\.json|browserconfig\.xml|robots\.txt|humans\.txt)$/,
                         loader: 'file-loader',
                         options: {
                             name: '[name].[ext]',
@@ -272,7 +322,7 @@ module.exports = (env, argv) => {
                         exclude: /node_modules/,
                     },
                     {
-                        test: /\.(woff(2)?|ttf|eot)(\?[a-z0-9=.]+)?$/, // Font files
+                        test: /\.(woff(2)?|ttf|eot)(\?[a-z0-9=.]+)?$/,
                         loader: 'file-loader',
                         options: {
                             outputPath: 'fonts',
@@ -290,7 +340,7 @@ module.exports = (env, argv) => {
                             loader: StringReplacePlugin.replace({
                                 replacements: [
                                     {
-                                        pattern: /trimLeft\(\)/ig, // Replace deprecated trimLeft with trim
+                                        pattern: /trimLeft\(\)/ig,
                                         replacement: () => 'trim()'
                                     }
                                 ]
@@ -307,28 +357,33 @@ module.exports = (env, argv) => {
                                     name: '[name].[ext]',
                                 },
                             },
-                            {
+                            ...(isProduction ? [{
                                 loader: 'image-webpack-loader',
                                 options: {
-                                    disable: !isProduction,
                                     mozjpeg: {
                                         progressive: true,
                                         quality: 75
                                     },
                                 },
-                            }
+                            }] : [])
                         ],
                     },
                 ]
             },
             plugins: [
-                new webpack.ProgressPlugin(), // Show progress bar during build
+                new webpack.ProgressPlugin({
+                    percentBy: 'entries', // Plus précis pour voir la progression
+                }),
+                
+                // Charge les variables d'environnement
                 new Dotenv({
-                    path: isProduction ? './.env.production' : './.env.development', // Load environment variables
+                    path: isProduction ? './.env.production' : './.env.development',
                     safe: false,
                 }),
+                
+                // Plugins HTML
                 new HtmlWebpackPlugin({
-                    template: './assets/html/index.ejs', // Template for HTML file
+                    template: './assets/html/index.ejs',
                     templateParameters: globals,
                     filename: pageUrl(lang, 'index.html'),
                     chunks: ['geneafan', 'commons', 'i18n'],
@@ -339,27 +394,40 @@ module.exports = (env, argv) => {
                     filename: 'embed/index.html',
                     chunks: ['embed'],
                     hash: true,
-                    inject: false, // Empêche l'injection automatique des scripts pour avoir un contrôle total
+                    inject: false,
                 }),
+                
+                // Extraction CSS
                 new MiniCssExtractPlugin({
-                    filename: './css/[name].css' // Output CSS filename
+                    filename: './css/[name].css'
                 }),
+                
+                // Manifest pour asset management
                 new WebpackManifestPlugin({
-                    fileName: 'asset-manifest.json', // Generate manifest file
+                    fileName: 'asset-manifest.json',
                     publicPath: 'dist/'
                 }),
+                
+                // Fournir des modules globalement
                 new webpack.ProvidePlugin({
-                    Buffer: ['buffer', 'Buffer'], // Provide Buffer globally
+                    Buffer: ['buffer', 'Buffer'],
+                    process: 'process/browser',
                 }),
+                
+                // Définir des variables globales
                 new webpack.DefinePlugin({
-                    'process.env.NODE_ENV': JSON.stringify(argv.mode), // Define environment mode
+                    'process.env.NODE_ENV': JSON.stringify(argv.mode),
+                    'process.env.REMOVE_CONSOLE': JSON.stringify(removeConsole),
                 }),
-                new StringReplacePlugin(), // Replace strings in files
-                new I18nPlugin(locale[lang], { nested: true }), // Internationalization plugin
-                new webpack.ProvidePlugin({
-                    process: 'process/browser', // Provide browser process object
-                }),
-                ...(process.env.ANALYZE ? [new BundleAnalyzerPlugin()] : []), // Analyze bundle if requested
+                
+                // String replacement pour corriger des problèmes de compatibilité
+                new StringReplacePlugin(),
+                
+                // Internationalisation
+                new I18nPlugin(locale[lang], { nested: true }),
+                
+                // Analyser le bundle si demandé
+                ...(process.env.ANALYZE ? [new BundleAnalyzerPlugin()] : []),
             ]
         };
     });
