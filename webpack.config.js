@@ -1,3 +1,4 @@
+
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
@@ -39,6 +40,43 @@ function langToLocale(lang) {
     return lang === 'fr' ? 'fr-FR' : lang === 'en' ? 'en-US' : null;
 }
 
+// Déterminer le nombre optimal de workers pour thread-loader
+const cpuCount = os.cpus().length;
+const workerPoolSize = Math.max(1, cpuCount - 1);
+
+// Configuration pour les workers partagés
+const threadLoaderOptions = {
+    workers: workerPoolSize,
+    poolTimeout: 2000, // Conservez le pool plus longtemps en développement
+    workerParallelJobs: 50,
+    workerNodeArgs: ['--max-old-space-size=4096'], // Augmenter la mémoire allouée
+};
+
+// Fonction pour créer différentes instances de TerserPlugin
+const createTerserPlugin = (test, options = {}) => {
+    return new TerserPlugin({
+        test,
+        parallel: true,
+        extractComments: false,
+        terserOptions: {
+            compress: {
+                drop_console: options.removeConsole || false,
+                ...options.compress
+            },
+            mangle: {
+                safari10: true,
+                ...options.mangle
+            },
+            format: {
+                comments: false,
+                ...options.format
+            },
+            sourceMap: true,
+            ...options.terserOptions
+        }
+    });
+};
+
 module.exports = (env, argv) => {
     const isProduction = argv.mode === 'production';
     
@@ -49,8 +87,7 @@ module.exports = (env, argv) => {
     
     // Récupérez la variable d'environnement après avoir chargé dotenv
     const removeConsole = process.env.REMOVE_CONSOLE === 'true';
-    console.log('removeConsole setting:', removeConsole); // Add logging to check the value
-
+    console.log('removeConsole setting:', removeConsole);
     
     if (!isProduction) {
         process.env.WEBPACK_DEV_SERVER = true;
@@ -80,9 +117,6 @@ module.exports = (env, argv) => {
         }
     };
 
-    // Déterminer le nombre optimal de workers pour thread-loader
-    const workerPoolSize = Math.max(1, os.cpus().length - 1);
-
     // Create a configuration for each locale
     return Object.keys(locale).map((lang, index) => {
         const globals = {
@@ -98,8 +132,7 @@ module.exports = (env, argv) => {
         return {
             name: `config-${lang}`, // Unique name for each configuration
             mode: isProduction ? 'production' : 'development', // Explicit mode setting
-            // devtool: isProduction ? false : 'eval-cheap-module-source-map', // Plus rapide que eval-source-map
-            devtool: isProduction ? 'source-map' : 'eval-cheap-module-source-map',
+            devtool: isProduction ? 'source-map' : 'eval-cheap-module-source-map', // Source maps pour production
             entry: {
                 geneafan: './assets/geneafan.js',
                 embed: './assets/scripts/embed/embed.js'
@@ -130,6 +163,9 @@ module.exports = (env, argv) => {
                     config: [__filename],
                 },
                 name: `${lang}-cache`,
+                compression: 'gzip', // Compresser le cache
+                cacheDirectory: path.resolve(__dirname, '.webpack-cache'), // Emplacement personnalisé
+                idleTimeoutForInitialStore: 0, // Pas de timeout pour le stockage initial
             },
 
             optimization: {
@@ -157,26 +193,104 @@ module.exports = (env, argv) => {
                 },
                 minimize: isProduction,
                 minimizer: [
-                    new TerserPlugin({
-                        parallel: true, // Activer la parallélisation
-                        terserOptions: {
-                            compress: {
-                                drop_console: removeConsole,
-                            },
+                    // Configuration pour le code applicatif principal
+                    createTerserPlugin(/\.js$/i, {
+                        removeConsole,
+                        compress: {
+                            pure_funcs: removeConsole ? ['console.log', 'console.info', 'console.debug'] : [],
+                            passes: 2, // Multiple passes pour une meilleure minification
+                            toplevel: true, // Autorise les optimisations de niveau supérieur
+                            unsafe_math: true, // Optimisations mathématiques plus agressives
+                            unsafe_methods: true,
+                            unsafe_proto: true
                         },
+                        mangle: {
+                            safari10: true,
+                            reserved: ['process', 'require', '__webpack_require__']
+                        },
+                        format: {
+                            ascii_only: true,
+                        },
+                        terserOptions: {
+                            ecma: 2015,
+                            keep_classnames: false,
+                            keep_fnames: false,
+                            ie8: false,
+                            safari10: true,
+                        }
                     }),
+                    
+                    // Configuration plus légère pour les vendors
+                    createTerserPlugin(/[\\/]node_modules[\\/].+\.js$/i, {
+                        removeConsole: false, // Ne pas supprimer console.log des modules externes
+                        compress: {
+                            passes: 1, // Moins de passes pour les modules tiers
+                            pure_funcs: [],
+                            toplevel: false,
+                            unsafe_math: false,
+                        }
+                    }),
+                    
+                    // Configuration pour les modules critiques nécessitant une attention particulière
+                    /*
+                    createTerserPlugin(/pdfkit|linebreak|unicode-properties|fontkit/i, {
+                        mangle: {
+                            keep_fnames: true // Garder les noms de fonction pour ces modules sensibles
+                        },
+                        compress: {
+                            sequences: false, // Désactiver certaines optimisations qui peuvent causer des problèmes
+                            dead_code: true,
+                            conditionals: true,
+                            booleans: true,
+                            unused: true,
+                            if_return: true,
+                            join_vars: true,
+                            drop_debugger: true,
+                            unsafe: false, // Désactiver les optimisations unsafe pour ces modules
+                            passes: 1
+                        }
+                    }),
+                    */
+                    
+                    // Configuration CSS
                     new CssMinimizerPlugin({
-                        parallel: true, // Activer la parallélisation
+                        parallel: true,
+                        minimizerOptions: {
+                            preset: [
+                                'default',
+                                {
+                                    discardComments: { removeAll: true },
+                                    normalizeWhitespace: true
+                                }
+                            ]
+                        }
                     }),
                 ],
+                // Optimisations additionnelles
+                nodeEnv: isProduction ? 'production' : 'development',
+                flagIncludedChunks: isProduction,
+                sideEffects: isProduction,
+                usedExports: isProduction,
+                concatenateModules: isProduction,
+                emitOnErrors: !isProduction,
+                checkWasmTypes: isProduction,
+                mangleExports: isProduction ? 'size' : false,
+                moduleIds: isProduction ? 'deterministic' : 'named',
+                chunkIds: isProduction ? 'deterministic' : 'named',
+                providedExports: true
             },
             performance: {
                 hints: false,
             },
             resolve: {
-                extensions: ['.js', '.json'],
-                fallback: {
-                    process: require.resolve('process/browser')
+                // Ajouter des extensions à résoudre automatiquement
+                extensions: ['.js', '.mjs', '.json'],
+                
+                // Limiter la recherche de modules aux répertoires essentiels
+                modules: [path.resolve(__dirname, 'node_modules')],
+                
+                alias: {
+                    'process/browser': 'process/browser.js'
                 }
             },
             // Webpack Dev Server configuration
@@ -202,35 +316,34 @@ module.exports = (env, argv) => {
                             // Paralléliser avec thread-loader
                             {
                                 loader: 'thread-loader',
-                                options: {
-                                    workers: workerPoolSize,
-                                }
+                                options: threadLoaderOptions
                             },
                             // Utiliser esbuild-loader au lieu de babel-loader
                             esbuildConf
                         ]
                     },
+                    /*
                     {
                         test: /\.js$/,
                         include: /(pdfkit|saslprep|unicode-trie|unicode-properties|dfa|linebreak|panzoom)/,
                         use: [
                             {
                                 loader: 'thread-loader',
-                                options: {
-                                    workers: workerPoolSize,
-                                }
+                                options: threadLoaderOptions
                             },
                             // Pour ces modules spécifiques, garder babel si nécessaire
                             // ou essayer esbuild si compatible
                             babelConf
                         ]
                     },
+                    */
                     {
                         test: /\.mjs$/,
                         include: /node_modules/,
                         type: 'javascript/auto',
                         use: esbuildConf // Utiliser esbuild pour .mjs aussi
                     },
+                    /*
                     {
                         enforce: 'post',
                         test: /fontkit[/\\]index.js$/,
@@ -254,6 +367,7 @@ module.exports = (env, argv) => {
                     },
                     { test: /src[/\\]assets/, loader: 'arraybuffer-loader' },
                     { test: /\.afm$/, loader: 'raw-loader' },
+                    */ 
                     {
                         test: /\.(html)$/,
                         loader: 'html-loader',
@@ -270,25 +384,25 @@ module.exports = (env, argv) => {
                                 loader: 'css-loader',
                                 options: {
                                     importLoaders: 2,
-                                    sourceMap: true // Add this line
+                                    sourceMap: true
                                 }
                             },
                             {
                                 loader: 'resolve-url-loader',
                                 options: {
-                                    sourceMap: true // Add this line
+                                    sourceMap: true
                                 }
                             },
                             {
                                 loader: 'postcss-loader',
                                 options: {
-                                    sourceMap: true // Add this line
+                                    sourceMap: true
                                 }
                             },
                             {
                                 loader: 'sass-loader',
                                 options: {
-                                    sourceMap: true // Add this line
+                                    sourceMap: true
                                 }
                             }
                         ],
@@ -405,7 +519,9 @@ module.exports = (env, argv) => {
                 
                 // Extraction CSS
                 new MiniCssExtractPlugin({
-                    filename: './css/[name].css'
+                    filename: './css/[name].css',
+                    chunkFilename: './css/[id].css',
+                    ignoreOrder: false,
                 }),
                 
                 // Manifest pour asset management
@@ -431,8 +547,42 @@ module.exports = (env, argv) => {
                 // Internationalisation
                 new I18nPlugin(locale[lang], { nested: true }),
                 
+                // Source maps pour production
+                ...(isProduction ? [
+                    new webpack.SourceMapDevToolPlugin({
+                        filename: '[file].map',
+                        // Optionnel: exclure les vendor chunks si nécessaire
+                        exclude: ['vendors', 'commons'],
+                    })
+                ] : []),
+                
                 // Analyser le bundle si demandé
                 ...(process.env.ANALYZE ? [new BundleAnalyzerPlugin()] : []),
+                
+                // Monitoring des performances webpack
+                {
+                    apply: (compiler) => {
+                        let startTime = Date.now();
+                        compiler.hooks.beforeCompile.tap('PerformanceMonitor', () => {
+                            startTime = Date.now();
+                            console.log('Compilation started...');
+                        });
+                        
+                        compiler.hooks.afterCompile.tap('PerformanceMonitor', (compilation) => {
+                            const duration = (Date.now() - startTime) / 1000;
+                            console.log(`Compilation finished in ${duration.toFixed(2)}s`);
+                            
+                            // Analyser la taille des chunks après minification
+                            const totalSize = Object.keys(compilation.assets)
+                                .reduce((total, asset) => {
+                                    const size = compilation.assets[asset].size();
+                                    return total + size;
+                                }, 0);
+                            
+                            console.log(`Total bundle size: ${(totalSize / 1024 / 1024).toFixed(2)}MB`);
+                        });
+                    }
+                }
             ]
         };
     });
