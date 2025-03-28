@@ -32,41 +32,47 @@ class AuthStore {
         try {
             this.setLoading(true);
             
-            // Afficher les en-têtes de la requête pour déboguer
-            console.log('📤 En-têtes de la requête actuelle:', [...new Headers(window.headers || {})].map(([key, value]) => `${key}: ${value}`).join(', ') || 'Aucun en-tête disponible');
+            // Détecter si nous sommes chargés via un proxy
+            const isProxied = window.location.hostname !== 'genealogie.app';
+            console.log(`🔍 Application chargée ${isProxied ? 'via proxy' : 'directement'}`);
             
-            // Appeler l'API pour récupérer les informations d'authentification
-            console.log('📡 Appel de l\'API auth-info...');
-            const response = await fetch('/api/auth-info');
+            let apiUrl;
+            if (isProxied) {
+                apiUrl = './proxy-auth-info';
+            } else {
+                apiUrl = '/api/auth-info';
+            }
+            
+            console.log('📡 Appel de l\'API auth-info à l\'URL:', apiUrl);
+            const response = await fetch(apiUrl);
             
             console.log(`📥 Réponse reçue - Status: ${response.status}`);
             
             if (response.ok) {
-                const authData = await response.json();
-                console.log('📦 Données d\'authentification:', authData);
-                
-                if (authData.userId && authData.email) {
-                    // Mettre à jour l'état d'authentification
-                    runInAction(() => {
-                        this.userInfo = {
-                            id: authData.userId,
-                            email: authData.email,
-                            // Vous pouvez ajouter d'autres informations si disponibles
-                            fullName: authData.email.split('@')[0], // Fallback simple pour le nom
-                        };
-                    });
-                    console.log('✅ Utilisateur authentifié:', this.userInfo);
-                } else {
-                    console.log('⚠️ Données incomplètes:', authData);
+                try {
+                    const authData = await response.json();
+                    console.log('📦 Données d\'authentification:', authData);
+                    
+                    if (authData.isAuthenticated && authData.userId && authData.email) {
+                        // Mettre à jour l'état d'authentification
+                        runInAction(() => {
+                            this.userInfo = {
+                                id: authData.userId,
+                                email: authData.email,
+                                fullName: authData.email.split('@')[0], // Fallback simple pour le nom
+                            };
+                        });
+                        console.log('✅ Utilisateur authentifié:', this.userInfo);
+                    } else {
+                        console.log('🔒 Utilisateur non authentifié');
+                    }
+                } catch (parseError) {
+                    console.error('❌ Erreur lors du parsing JSON:', parseError);
+                    const textContent = await response.clone().text();
+                    console.error('Contenu brut reçu:', textContent.substring(0, 500));
                 }
             } else {
                 console.error('❌ Erreur lors de la récupération des informations d\'authentification:', response.statusText);
-                try {
-                    const errorData = await response.text();
-                    console.error('Détails de l\'erreur:', errorData);
-                } catch (e) {
-                    console.error('Impossible de lire les détails de l\'erreur');
-                }
             }
         } catch (error) {
             console.error('❌ Exception lors de la vérification de l\'authentification:', error);
