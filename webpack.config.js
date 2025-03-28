@@ -79,21 +79,21 @@ const createTerserPlugin = (test, options = {}) => {
 
 module.exports = (env, argv) => {
     const isProduction = argv.mode === 'production';
-    
+
     // Chargez dotenv ici, avec accès à argv
     require('dotenv').config({
         path: isProduction ? './.env.production' : './.env.development'
     });
-    
+
     // Récupérez la variable d'environnement après avoir chargé dotenv
     const removeConsole = process.env.REMOVE_CONSOLE === 'true';
     console.log('removeConsole setting:', removeConsole);
-    
+
     if (!isProduction) {
         process.env.WEBPACK_DEV_SERVER = true;
         require('webpack').performance = { hints: false };
     }
-    
+
     // Configuration pour esbuild-loader (plus rapide que babel-loader)
     const esbuildConf = {
         loader: 'esbuild-loader',
@@ -102,7 +102,7 @@ module.exports = (env, argv) => {
             drop: removeConsole ? ['console'] : [],
         }
     };
-    
+
     // Garde babel-loader comme fallback si nécessaire pour des plugins spécifiques
     const babelConf = {
         loader: 'babel-loader',
@@ -147,7 +147,7 @@ module.exports = (env, argv) => {
                 globalObject: 'self',
                 publicPath: process.env.USE_APP_PREFIX ? '/app/' : '/'
             },
-            
+
             stats: {
                 errorDetails: true,
                 children: true,
@@ -169,11 +169,34 @@ module.exports = (env, argv) => {
             },
 
             optimization: {
+
                 splitChunks: {
                     chunks: 'all',
                     minSize: 20000,
                     maxSize: 200000,
+                    // Augmenter le nombre maximal de fichiers parallèles par page
+                    maxInitialRequests: 30,
+                    // Augmenter le nombre maximal de fichiers asynchrones
+                    maxAsyncRequests: 30,
                     cacheGroups: {
+                        // Séparer les frameworks majeurs en chunks dédiés
+                        react: {
+                            test: /[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom)[\\/]/,
+                            name: 'framework-react',
+                            chunks: 'all',
+                            priority: 40,
+                            reuseExistingChunk: true,
+                        },
+                        // Si vous utilisez d'autres frameworks, vous pouvez créer des chunks dédiés
+                        // Par exemple pour lodash
+                        lodash: {
+                            test: /[\\/]node_modules[\\/](lodash|lodash-es)[\\/]/,
+                            name: 'utility-lodash',
+                            chunks: 'all',
+                            priority: 30,
+                            reuseExistingChunk: true,
+                        },
+                        // Autres librairies courantes
                         vendors: {
                             test: /[\\/]node_modules[\\/]/,
                             name: 'vendors',
@@ -181,12 +204,40 @@ module.exports = (env, argv) => {
                             priority: -10,
                             reuseExistingChunk: true,
                         },
+                        // Extraire les modules de grande taille dans des chunks séparés
+                        largeModules: {
+                            test: module => {
+                                return module.size() > 160000 &&
+                                    (module.nameForCondition() && !module.nameForCondition().includes('node_modules'));
+                            },
+                            name(module) {
+                                // Générer un nom basé sur le module pour éviter les collisions
+                                const moduleFileName = module.nameForCondition()
+                                    ? module.nameForCondition().split('/').slice(-2).join('~')
+                                    : 'large';
+                                return `large-modules/${moduleFileName}`;
+                            },
+                            chunks: 'all',
+                            minSize: 120000,
+                            priority: 20,
+                            reuseExistingChunk: true,
+                            enforce: true,
+                        },
+                        // Code partagé entre plusieurs parties de l'application
                         commons: {
                             name: 'commons',
                             minChunks: 2,
                             priority: 10,
                             reuseExistingChunk: true,
                             enforce: true,
+                        },
+                        // CSS dans des fichiers séparés
+                        styles: {
+                            name: 'styles',
+                            test: /\.css$/,
+                            chunks: 'all',
+                            enforce: true,
+                            priority: 50,
                         },
                         default: false,
                     },
@@ -219,7 +270,7 @@ module.exports = (env, argv) => {
                             safari10: true,
                         }
                     }),
-                    
+
                     // Configuration plus légère pour les vendors
                     createTerserPlugin(/[\\/]node_modules[\\/].+\.js$/i, {
                         removeConsole: false, // Ne pas supprimer console.log des modules externes
@@ -230,28 +281,7 @@ module.exports = (env, argv) => {
                             unsafe_math: false,
                         }
                     }),
-                    
-                    // Configuration pour les modules critiques nécessitant une attention particulière
-                    /*
-                    createTerserPlugin(/pdfkit|linebreak|unicode-properties|fontkit/i, {
-                        mangle: {
-                            keep_fnames: true // Garder les noms de fonction pour ces modules sensibles
-                        },
-                        compress: {
-                            sequences: false, // Désactiver certaines optimisations qui peuvent causer des problèmes
-                            dead_code: true,
-                            conditionals: true,
-                            booleans: true,
-                            unused: true,
-                            if_return: true,
-                            join_vars: true,
-                            drop_debugger: true,
-                            unsafe: false, // Désactiver les optimisations unsafe pour ces modules
-                            passes: 1
-                        }
-                    }),
-                    */
-                    
+
                     // Configuration CSS
                     new CssMinimizerPlugin({
                         parallel: true,
@@ -285,10 +315,10 @@ module.exports = (env, argv) => {
             resolve: {
                 // Ajouter des extensions à résoudre automatiquement
                 extensions: ['.js', '.mjs', '.json'],
-                
+
                 // Limiter la recherche de modules aux répertoires essentiels
                 modules: [path.resolve(__dirname, 'node_modules')],
-                
+
                 alias: {
                     'process/browser': 'process/browser.js'
                 }
@@ -322,52 +352,12 @@ module.exports = (env, argv) => {
                             esbuildConf
                         ]
                     },
-                    /*
-                    {
-                        test: /\.js$/,
-                        include: /(pdfkit|saslprep|unicode-trie|unicode-properties|dfa|linebreak|panzoom)/,
-                        use: [
-                            {
-                                loader: 'thread-loader',
-                                options: threadLoaderOptions
-                            },
-                            // Pour ces modules spécifiques, garder babel si nécessaire
-                            // ou essayer esbuild si compatible
-                            babelConf
-                        ]
-                    },
-                    */
                     {
                         test: /\.mjs$/,
                         include: /node_modules/,
                         type: 'javascript/auto',
                         use: esbuildConf // Utiliser esbuild pour .mjs aussi
                     },
-                    /*
-                    {
-                        enforce: 'post',
-                        test: /fontkit[/\\]index.js$/,
-                        use: {
-                            loader: "transform-loader?brfs"
-                        }
-                    },
-                    {
-                        enforce: 'post',
-                        test: /unicode-properties[/\\]index.js$/,
-                        use: {
-                            loader: "transform-loader?brfs"
-                        }
-                    },
-                    {
-                        enforce: 'post',
-                        test: /linebreak[/\\]src[/\\]linebreaker.js/,
-                        use: {
-                            loader: "transform-loader?brfs"
-                        }
-                    },
-                    { test: /src[/\\]assets/, loader: 'arraybuffer-loader' },
-                    { test: /\.afm$/, loader: 'raw-loader' },
-                    */ 
                     {
                         test: /\.(html)$/,
                         loader: 'html-loader',
@@ -452,21 +442,6 @@ module.exports = (env, argv) => {
                         test: /\.css$/,
                         use: ['style-loader', 'css-loader']
                     },
-                    /*
-                    {
-                        test: /\.js$/,
-                        use: {
-                            loader: StringReplacePlugin.replace({
-                                replacements: [
-                                    {
-                                        pattern: /trimLeft\(\)/ig,
-                                        replacement: () => 'trim()'
-                                    }
-                                ]
-                            })
-                        }
-                    },
-                    */
                     {
                         test: /\.svg$/,
                         use: [
@@ -494,13 +469,13 @@ module.exports = (env, argv) => {
                 new webpack.ProgressPlugin({
                     percentBy: 'entries', // Plus précis pour voir la progression
                 }),
-                
+
                 // Charge les variables d'environnement
                 new Dotenv({
                     path: isProduction ? './.env.production' : './.env.development',
                     safe: false,
                 }),
-                
+
                 // Plugins HTML
                 new HtmlWebpackPlugin({
                     template: './assets/html/index.ejs',
@@ -516,37 +491,37 @@ module.exports = (env, argv) => {
                     hash: true,
                     inject: false,
                 }),
-                
+
                 // Extraction CSS
                 new MiniCssExtractPlugin({
                     filename: './css/[name].css',
                     chunkFilename: './css/[id].css',
                     ignoreOrder: false,
                 }),
-                
+
                 // Manifest pour asset management
                 new WebpackManifestPlugin({
                     fileName: 'asset-manifest.json',
                     publicPath: 'dist/'
                 }),
-                
+
                 // Fournir des modules globalement
                 new webpack.ProvidePlugin({
                     Buffer: ['buffer', 'Buffer'],
                     process: 'process/browser',
                 }),
-                
+
                 // Définir des variables globales
                 new webpack.DefinePlugin({
                     'process.env.NODE_ENV': JSON.stringify(argv.mode),
                 }),
-                
+
                 // String replacement pour corriger des problèmes de compatibilité
                 new StringReplacePlugin(),
-                
+
                 // Internationalisation
                 new I18nPlugin(locale[lang], { nested: true }),
-                
+
                 // Source maps pour production
                 ...(isProduction ? [
                     new webpack.SourceMapDevToolPlugin({
@@ -555,10 +530,10 @@ module.exports = (env, argv) => {
                         exclude: ['vendors', 'commons'],
                     })
                 ] : []),
-                
+
                 // Analyser le bundle si demandé
                 ...(process.env.ANALYZE ? [new BundleAnalyzerPlugin()] : []),
-                
+
                 // Monitoring des performances webpack
                 {
                     apply: (compiler) => {
@@ -567,18 +542,18 @@ module.exports = (env, argv) => {
                             startTime = Date.now();
                             console.log('Compilation started...');
                         });
-                        
+
                         compiler.hooks.afterCompile.tap('PerformanceMonitor', (compilation) => {
                             const duration = (Date.now() - startTime) / 1000;
                             console.log(`Compilation finished in ${duration.toFixed(2)}s`);
-                            
+
                             // Analyser la taille des chunks après minification
                             const totalSize = Object.keys(compilation.assets)
                                 .reduce((total, asset) => {
                                     const size = compilation.assets[asset].size();
                                     return total + size;
                                 }, 0);
-                            
+
                             console.log(`Total bundle size: ${(totalSize / 1024 / 1024).toFixed(2)}MB`);
                         });
                     }
