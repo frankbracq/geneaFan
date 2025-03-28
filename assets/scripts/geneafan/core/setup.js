@@ -3,8 +3,7 @@ import { setupEventListeners } from './events.js';
 import { v4 as uuidv4 } from 'uuid';
 import OnboardingManager from '../onboarding/OnboardingManager.js';
 import rootPersonStore from '../common/stores/rootPersonStore.js';
-
-// Import de initializeAuth retiré
+import authStore from '../common/stores/authStore.js';
 
 export async function setupCore() {
     console.group('🚀 Initialisation du core');
@@ -13,8 +12,14 @@ export async function setupCore() {
         await initializeDOMContent();
         ensureUserId();
         
-        // Retrait de l'appel à initializeAuth()
-        console.log('🔒 Authentification désactivée - prêt pour Cloudflare Access');
+        console.log('🔒 Initialisation du système d\'authentification...');
+        
+        // Détection du contexte de l'application
+        const isProxied = window.location.hostname !== 'genealogie.app';
+        console.log(`📌 Application ${isProxied ? 'servie via proxy' : 'accédée directement'}`);
+        
+        // Initialiser l'authentification APRÈS avoir détecté le contexte
+        await authStore.checkAuthentication();
 
         // Unique call to initializeTabs
         await initializeTabs();

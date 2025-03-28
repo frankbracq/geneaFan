@@ -10,9 +10,6 @@ class AuthStore {
         makeAutoObservable(this, {
             clerk: false
         });
-        
-        // Vérifier l'authentification au démarrage
-        this.checkAuthentication();
     }
 
     setError(error) {
