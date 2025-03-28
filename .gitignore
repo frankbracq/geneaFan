@@ -5,6 +5,7 @@ dist
 *.tmp
 *.tmp.*
 *.log.* 
-.webpack-cache
+.webpack-cache/
+.vscode/
 *.crt
 *.key
