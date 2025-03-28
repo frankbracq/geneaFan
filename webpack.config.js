@@ -145,7 +145,7 @@ module.exports = (env, argv) => {
                         : './js/[name].bundle.[contenthash].js';
                 },
                 globalObject: 'self',
-                publicPath: process.env.USE_APP_PREFIX ? '/app/' : '/'
+                publicPath: process.env.USE_APP_PREFIX ? '/genealogie.app/' : '/'
             },
 
             stats: {
