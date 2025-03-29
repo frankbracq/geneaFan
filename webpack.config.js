@@ -32,7 +32,7 @@ function pageUrl(lang, pageRel) {
 
 // Function to generate the full URL for a page
 function urlGenerator(lang, page) {
-    return `https://genealogie.app/${pageUrl(lang, page)}`.replace(/\/$/, "");
+    return `https://app/${pageUrl(lang, page)}`.replace(/\/$/, "");
 }
 
 // Function to map language to locale format
@@ -145,7 +145,7 @@ module.exports = (env, argv) => {
                         : './js/[name].bundle.[contenthash].js';
                 },
                 globalObject: 'self',
-                publicPath: process.env.USE_APP_PREFIX ? '/genealogie.app/' : '/'
+                publicPath: process.env.USE_APP_PREFIX ? '/app/' : '/'
             },
 
             stats: {

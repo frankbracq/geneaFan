@@ -23,7 +23,7 @@ function setupAppEnvironment() {
     
     // Déterminer si nous sommes sur familystory.live ou un autre proxy
     const isOnProxyDomain = currentOrigin.includes('familystory.live') || 
-                           (currentPath.includes('/genalogie.app/') && !currentPath.startsWith('/genealogie.app/'));
+                           (currentPath.includes('/genalogie.app/') && !currentPath.startsWith('/app/'));
     
     // Trouver le chemin de base de l'application
     let basePath = '/';
