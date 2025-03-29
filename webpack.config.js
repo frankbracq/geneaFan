@@ -12,6 +12,7 @@ const Dotenv = require('dotenv-webpack');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const os = require('os');
+const CopyPlugin = require('copy-webpack-plugin');
 
 // Workaround for MD4 algorithm used by Webpack in crypto hashing
 const crypto_orig_createHash = crypto.createHash;
@@ -521,6 +522,15 @@ module.exports = (env, argv) => {
 
                 // Internationalisation
                 new I18nPlugin(locale[lang], { nested: true }),
+
+                new CopyPlugin({
+                    patterns: [
+                        {
+                            from: path.resolve(__dirname, 'public/partner-access-only'),
+                            to: path.resolve(__dirname, 'dist/partner-access-only')
+                        }
+                    ]
+                }),
 
                 // Source maps pour production
                 ...(isProduction ? [

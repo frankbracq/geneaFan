@@ -8,10 +8,7 @@
 │   │   │   └── index.html
 │   │   ├── geneafan
 │   │   │   └── advancedModal.html
-│   │   ├── index.ejs
-│   │   └── public
-│   │       └── partner-access-only
-│   │           └── index.html
+│   │   └── index.ejs
 │   ├── images
 │   │   ├── filetype-ged.svg
 │   │   ├── icon1.png
@@ -184,11 +181,16 @@
 │   └── fr.json
 ├── package.json
 ├── package-lock.json
+├── public
+│   └── partner-access-only
+│       ├── hjjh.html
+│       └── index.html
 ├── README.md
 ├── stats.json
+├── structure.txr
 ├── structure.txt
 ├── update.sh
 ├── vercel.json
 └── webpack.config.js
 
-44 directories, 148 files
+44 directories, 150 files
