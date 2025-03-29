@@ -8,7 +8,10 @@
 │   │   │   └── index.html
 │   │   ├── geneafan
 │   │   │   └── advancedModal.html
-│   │   └── index.ejs
+│   │   ├── index.ejs
+│   │   └── public
+│   │       └── partner-access-only
+│   │           └── index.html
 │   ├── images
 │   │   ├── filetype-ged.svg
 │   │   ├── icon1.png
@@ -47,109 +50,107 @@
 │   ├── scripts
 │   │   ├── embed
 │   │   │   └── embed.js
-│   │   ├── geneafan
-│   │   │   ├── common
-│   │   │   │   ├── downloadManager.js
-│   │   │   │   └── stores
-│   │   │   │       ├── authStore.js
-│   │   │   │       ├── mobx-config.js
-│   │   │   │       ├── rootPersonStore.js
-│   │   │   │       ├── state.js
-│   │   │   │       ├── storeEvents.js
-│   │   │   │       └── uiStore.js
-│   │   │   ├── core
-│   │   │   │   ├── app.js
-│   │   │   │   ├── auth.js
-│   │   │   │   ├── errorHandler.js
-│   │   │   │   ├── events.js
-│   │   │   │   └── setup.js
-│   │   │   ├── gedcom
-│   │   │   │   ├── builders
-│   │   │   │   │   └── personBuilder.js
-│   │   │   │   ├── countryData.js
-│   │   │   │   ├── departementData.js
-│   │   │   │   ├── gedcomFileHandler.js
-│   │   │   │   ├── gedcomModalUtils.js
-│   │   │   │   ├── gedcom_output.txt
-│   │   │   │   ├── parse.js
-│   │   │   │   ├── processors
-│   │   │   │   │   ├── dateProcessor.js
-│   │   │   │   │   ├── eventProcessor.js
-│   │   │   │   │   └── placeProcessor.js
-│   │   │   │   ├── stores
-│   │   │   │   │   ├── gedcomConstantsStore.js
-│   │   │   │   │   ├── gedcomDataStore.js
-│   │   │   │   │   ├── indices
-│   │   │   │   │   │   └── familyIndices.js
-│   │   │   │   │   ├── shareFormStore.js
-│   │   │   │   │   └── townStatisticsManager.js
-│   │   │   │   ├── test-readgedcom.mjs
-│   │   │   │   └── test_utf8.ged
-│   │   │   ├── listeners
-│   │   │   │   ├── eventListeners.js
-│   │   │   │   └── protectedFeatures.js
-│   │   │   ├── onboarding
-│   │   │   │   ├── OnboardingManager.js
-│   │   │   │   └── tours
-│   │   │   │       ├── fanTour.js
-│   │   │   │       ├── index.js
-│   │   │   │       ├── mapTour.js
-│   │   │   │       ├── timelineTour.js
-│   │   │   │       └── welcomeTour.js
-│   │   │   ├── tabs
-│   │   │   │   ├── familyMap
-│   │   │   │   │   ├── components
-│   │   │   │   │   │   └── layerDropdownControl.js
-│   │   │   │   │   ├── managers
-│   │   │   │   │   │   ├── googleMapManager.js
-│   │   │   │   │   │   ├── infoWindowContentManager.js
-│   │   │   │   │   │   ├── infoWindowDisplayManager.js
-│   │   │   │   │   │   ├── layerManager.js
-│   │   │   │   │   │   └── markerDisplayManager.js
-│   │   │   │   │   ├── stores
-│   │   │   │   │   │   ├── baseLayerStore.js
-│   │   │   │   │   │   ├── familyTownsStore.js
-│   │   │   │   │   │   ├── googleMapsStore.js
-│   │   │   │   │   │   ├── rootAncestorTownsStore.js
-│   │   │   │   │   │   └── surnamesTownsStore.js
-│   │   │   │   │   └── utils
-│   │   │   │   │       ├── mapConfig.js
-│   │   │   │   │       └── mapUtils.js
-│   │   │   │   ├── familyTree
-│   │   │   │   │   ├── ancestorUtils.js
-│   │   │   │   │   ├── familyTreeDataStore.js
-│   │   │   │   │   └── familyTreeManager.js
-│   │   │   │   ├── fanChart
-│   │   │   │   │   ├── fanChartManager.js
-│   │   │   │   │   ├── fanConfigStore.js
-│   │   │   │   │   ├── fan.js
-│   │   │   │   │   ├── offcanvasManager.js
-│   │   │   │   │   ├── personDetailsDisplay.js
-│   │   │   │   │   └── SVGPanZoomManager.js
-│   │   │   │   ├── responsiveTabs.js
-│   │   │   │   ├── statistics
-│   │   │   │   │   ├── services
-│   │   │   │   │   │   └── statisticsService.js
-│   │   │   │   │   ├── statisticsManager.js
-│   │   │   │   │   ├── statisticsStore.js
-│   │   │   │   │   └── workers
-│   │   │   │   │       └── statisticsWorker.js
-│   │   │   │   ├── tabManager.js
-│   │   │   │   └── timeline
-│   │   │   │       ├── horizontalTimeline.js
-│   │   │   │       ├── timelineEventsStore.js
-│   │   │   │       ├── timelineManager.js
-│   │   │   │       └── timelineStore.js
-│   │   │   ├── updateTownsDB.worker.js
-│   │   │   └── utils
-│   │   │       ├── geo.js
-│   │   │       ├── NotificationManager.js
-│   │   │       ├── OverlayManager.js
-│   │   │       ├── spinners.js
-│   │   │       ├── tooltips.js
-│   │   │       └── utils.js
-│   │   └── vendor
-│   │       └── pdfkitFontRegister.js
+│   │   └── geneafan
+│   │       ├── common
+│   │       │   ├── downloadManager.js
+│   │       │   └── stores
+│   │       │       ├── authStore.js
+│   │       │       ├── mobx-config.js
+│   │       │       ├── rootPersonStore.js
+│   │       │       ├── state.js
+│   │       │       ├── storeEvents.js
+│   │       │       └── uiStore.js
+│   │       ├── core
+│   │       │   ├── app.js
+│   │       │   ├── errorHandler.js
+│   │       │   ├── events.js
+│   │       │   └── setup.js
+│   │       ├── gedcom
+│   │       │   ├── builders
+│   │       │   │   └── personBuilder.js
+│   │       │   ├── countryData.js
+│   │       │   ├── departementData.js
+│   │       │   ├── gedcomFileHandler.js
+│   │       │   ├── gedcomModalUtils.js
+│   │       │   ├── gedcom_output.txt
+│   │       │   ├── parse.js
+│   │       │   ├── processors
+│   │       │   │   ├── dateProcessor.js
+│   │       │   │   ├── eventProcessor.js
+│   │       │   │   └── placeProcessor.js
+│   │       │   ├── stores
+│   │       │   │   ├── gedcomConstantsStore.js
+│   │       │   │   ├── gedcomDataStore.js
+│   │       │   │   ├── indices
+│   │       │   │   │   └── familyIndices.js
+│   │       │   │   ├── shareFormStore.js
+│   │       │   │   └── townStatisticsManager.js
+│   │       │   ├── test-readgedcom.mjs
+│   │       │   └── test_utf8.ged
+│   │       ├── listeners
+│   │       │   ├── eventListeners.js
+│   │       │   └── protectedFeatures.js
+│   │       ├── onboarding
+│   │       │   ├── OnboardingManager.js
+│   │       │   └── tours
+│   │       │       ├── fanTour.js
+│   │       │       ├── index.js
+│   │       │       ├── mapTour.js
+│   │       │       ├── timelineTour.js
+│   │       │       └── welcomeTour.js
+│   │       ├── tabs
+│   │       │   ├── familyMap
+│   │       │   │   ├── components
+│   │       │   │   │   └── layerDropdownControl.js
+│   │       │   │   ├── managers
+│   │       │   │   │   ├── googleMapManager.js
+│   │       │   │   │   ├── infoWindowContentManager.js
+│   │       │   │   │   ├── infoWindowDisplayManager.js
+│   │       │   │   │   ├── layerManager.js
+│   │       │   │   │   └── markerDisplayManager.js
+│   │       │   │   ├── stores
+│   │       │   │   │   ├── baseLayerStore.js
+│   │       │   │   │   ├── familyTownsStore.js
+│   │       │   │   │   ├── googleMapsStore.js
+│   │       │   │   │   ├── rootAncestorTownsStore.js
+│   │       │   │   │   └── surnamesTownsStore.js
+│   │       │   │   └── utils
+│   │       │   │       ├── mapConfig.js
+│   │       │   │       └── mapUtils.js
+│   │       │   ├── familyTree
+│   │       │   │   ├── ancestorUtils.js
+│   │       │   │   ├── familyTreeDataStore.js
+│   │       │   │   └── familyTreeManager.js
+│   │       │   ├── fanChart
+│   │       │   │   ├── fanChartManager.js
+│   │       │   │   ├── fanConfigStore.js
+│   │       │   │   ├── fan.js
+│   │       │   │   ├── offcanvasManager.js
+│   │       │   │   ├── personDetailsDisplay.js
+│   │       │   │   └── SVGPanZoomManager.js
+│   │       │   ├── responsiveTabs.js
+│   │       │   ├── statistics
+│   │       │   │   ├── services
+│   │       │   │   │   └── statisticsService.js
+│   │       │   │   ├── statisticsManager.js
+│   │       │   │   ├── statisticsStore.js
+│   │       │   │   └── workers
+│   │       │   │       └── statisticsWorker.js
+│   │       │   ├── tabManager.js
+│   │       │   └── timeline
+│   │       │       ├── horizontalTimeline.js
+│   │       │       ├── timelineEventsStore.js
+│   │       │       ├── timelineManager.js
+│   │       │       └── timelineStore.js
+│   │       ├── updateTownsDB.worker.js
+│   │       └── utils
+│   │           ├── DOMAccessManager.js
+│   │           ├── geo.js
+│   │           ├── NotificationManager.js
+│   │           ├── OverlayManager.js
+│   │           ├── spinners.js
+│   │           ├── tooltips.js
+│   │           └── utils.js
 │   └── scss
 │       ├── main.scss
 │       ├── map.scss
@@ -164,12 +165,19 @@
 │       └── vendors
 │           └── _bootstrap.scss
 ├── babel.config.js
-├── DUAL_DEPLOYMENT_SETUP.md
-├── flowChart.mmd
-├── geneafanCert.crt
-├── geneafanKey.key
-├── geneafanKey_nopass.key
-├── horizontalTimeline_recommandations.txt
+├── docsDev
+│   ├── auth-mechanism.md
+│   ├── AUTH_SYSTEM.md
+│   ├── DUAL_DEPLOYMENT_SETUP.md
+│   ├── flowChart.mmd
+│   ├── horizontalTimeline_recommandations.txt
+│   ├── memo-implementation-integration.md
+│   ├── README-embed-kit.md
+│   ├── SHADOW_DOM_REFACTORING.md
+│   ├── TODO.md
+│   └── updated-auth-system.md
+├── functions
+│   └── _middleware.js
 ├── LICENSE
 ├── locales
 │   ├── en.json
@@ -178,12 +186,9 @@
 ├── package-lock.json
 ├── README.md
 ├── stats.json
-├── structure.ini
 ├── structure.txt
-├── TODO.md
 ├── update.sh
 ├── vercel.json
-├── webpack.config.js
-└── webpack.config.old.js
+└── webpack.config.js
 
-41 directories, 146 files
+44 directories, 148 files
